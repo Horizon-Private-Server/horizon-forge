@@ -307,7 +307,7 @@ public enum GameRegion
 
 public static class Constants
 {
-    public static readonly string ForgeVersion = "v1.1.1";
+    public static readonly string ForgeVersion = "v1.1.2";
 
     public static readonly int GameVersion = 4;
 
