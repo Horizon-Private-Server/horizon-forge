@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 2871
+  m_Shader: {fileID: -6465566751694194690, guid: 6e2d135ca94bcfd4d925929e7717c88f, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 2500
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: _Base_Tiling
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Overlay_Tex:
+        m_Texture: {fileID: 2800000, guid: 0e686223dd4a89f41814398f3697163a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Underlay_Tex:
+        m_Texture: {fileID: 2800000, guid: a5301639e728daa429849b1866cb45b8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AO: 1
+    - _BUILTIN_QueueControl: 1
+    - _BUILTIN_QueueOffset: 50
+    - _Base_Tiling: 0.004
+    - _Brightness: 2
+    - _BumpScale: 1
+    - _Cutoff: 0.5
+    - _DetailNormalMapScale: 1
+    - _DstBlend: 0
+    - _Emission: 0
+    - _Fog_Far_Distance: 350
+    - _Fog_Far_Intensity: 1
+    - _Fog_Near_Distance: 50
+    - _Fog_Near_Intensity: 0
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Metallic: 0
+    - _Mode: 0
+    - _Normal_Strength: 5
+    - _OcclusionStrength: 1
+    - _Overlay_Additive: 1
+    - _Overlay_Tiling: 20.83333
+    - _Parallax: 0.02
+    - _Rim_Ramp: 10
+    - _Rim_Scale: 0.6
+    - _Smoothness: 0
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _UVSec: 0
+    - _Underlay_Rotation: -90
+    - _Underlay_Tex_Refraction: 0.1
+    - _Underlay_Tiling: 4
+    - _WATER_HOLES: 0
+    - _Wave_Angle: 20
+    - _Wave_Frequency: 0.4166667
+    - _Wave_Height: 0.125
+    - _Wave_Intersect_Angle: 0.3
+    - _Wave_Noise_Intensity: 0.3
+    - _Wave_Noise_Scale: 50
+    - _Wave_Overlay: 3
+    - _Wave_Overlay_Intersect_Angle: 0.2
+    - _Wave_Overlay_Speed: 0.3
+    - _Wave_Speed: 2
+    - _ZWrite: 1
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Fog_Color: {r: 1, g: 1, b: 1, a: 1}
+    - _IdColor: {r: 0, g: 0, b: 0, a: 0}
+    - _Overlay_Color: {r: 0.39215687, g: 0.39215687, b: 0.29411766, a: 0.15686275}
+    - _Overlay_Direction: {r: -0.0146827, g: -0.005344064, b: 0, a: 0}
+    - _Underlay_Color: {r: 0.29411766, g: 0.3137255, b: 0.21568628, a: 1}
+  m_BuildTextureStacks: []
+--- !u!114 &6005474320277309942
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 639247ca83abc874e893eb93af2b5e44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 0

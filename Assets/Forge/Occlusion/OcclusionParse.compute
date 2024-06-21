@@ -1,0 +1,30 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+#pragma kernel CSMain_Clear
+
+#include "UnityCG.cginc"
+
+Texture2D<float4> In;
+RWStructuredBuffer<int> OutIds;
+
+int Width;
+int Height;
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+	uint size = Width * Height;
+	uint i = id.x + (id.y * Width);
+	if (i >= size)
+		return;
+
+	float4 rgba = 255 * In[id.xy];
+	int v = (int)(rgba.r + 0.5) + ((int)(rgba.g + 0.5) * 256) + ((int)(rgba.b + 0.5) * 256 * 256);
+	OutIds[v] += 1;
+}
+
+[numthreads(32, 1, 1)]
+void CSMain_Clear(uint3 id : SV_DispatchThreadID)
+{
+	OutIds[id.x] = 0;
+}

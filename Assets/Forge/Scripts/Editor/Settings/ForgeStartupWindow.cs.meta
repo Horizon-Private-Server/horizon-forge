@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: a8ebadbd7426c77499eb475eaee87ede
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_ViewDataDictionary: {instanceID: 0}
+  - LogoBlender: {fileID: 2800000, guid: 499b7f79163e68a4189cd027ed552add, type: 3}
+  - IconCheck: {fileID: 2800000, guid: 59e57d895c5704643985e81e8f170d09, type: 3}
+  - IconCross: {fileID: 2800000, guid: f89ba9fde2d05d641be42dfe5e54124a, type: 3}
+  - IconWrench: {fileID: 2800000, guid: f10c934f4b07eb54ea08caad52e439a8, type: 3}
+  - IconDotNetCore: {fileID: 2800000, guid: b4463516e47ba004084c844b1d4c498a, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
