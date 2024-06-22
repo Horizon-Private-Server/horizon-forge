@@ -76,9 +76,10 @@ Shader "Horizon Forge/Universal"
                 float3 wpos : TEXCOORD3;
                 float3 normal : TEXCOORD4;
             };
-
+            
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            float4 _MainTex_TexelSize;
             int _Id;
             int _Faded;
             int _Faded2;
@@ -108,27 +109,6 @@ Shader "Horizon Forge/Universal"
             float3 _WorldLightRays[32];
             float3 _WorldLightColors[32];
             float4 _FORGE_SELECTION_COLOR;
-            
-            float2 ClampWhole(float2 uv, float margin)
-            {
-                int2 uvInt = int2(uv);
-	            float2 dt = uv - uvInt;
-
-                float2 uvlow = uvInt + margin;
-                float2 uvhigh = (uvInt+1) - margin;
-                
-                if (abs(dt.x) < margin)
-                    uv.x = uvlow.x;
-                else if (abs(dt.x-1) < margin)
-                    uv.x = uvhigh.x;
-                    
-                if (abs(dt.y) < margin)
-                    uv.y = uvlow.y;
-                else if (abs(dt.y-1) < margin)
-                    uv.y = uvhigh.y;
-
-                return uv;
-            }
 
             v2f vert (appdata v)
             {
@@ -154,8 +134,6 @@ Shader "Horizon Forge/Universal"
 
             float4 frag(v2f i, float FacingSign : VFACE) : SV_Target
             {
-                i.uv = ClampWhole(i.uv, 0.005);
-
 #ifdef _DEPTH
                 if (_RenderIgnore) clip(-1);
 
