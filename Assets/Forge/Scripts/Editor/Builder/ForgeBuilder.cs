@@ -1018,11 +1018,10 @@ public static class ForgeBuilder
                 if (teamTexCnt > 0)
                     Debug.LogWarning($"Moby {mobyClass} uses team palettes but does not have a packed tex.bin. Textures will not render correctly.");
 
-                var renderers = srcMobyGo.GetComponentsInChildren<Renderer>();
-                var materials = renderers.SelectMany(x => x.sharedMaterials).Distinct().ToArray();
                 for (int j = 0; j < 16; ++j)
                 {
-                    var mat = materials.FirstOrDefault(x => x.name == $"{mobyClass}-{j}");
+                    var matPath = Path.Combine(srcMobyDir, "Materials", $"{mobyClass}-{j}.mat");
+                    var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
                     if (!mat || mat.shader.name != "Horizon Forge/Universal") break;
 
                     var baseTex = mat.GetTexture("_MainTex") as Texture2D;
