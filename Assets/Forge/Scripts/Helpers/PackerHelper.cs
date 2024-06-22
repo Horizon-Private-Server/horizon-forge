@@ -553,7 +553,7 @@ public static class PackerHelper
         var shader = Shader.Find("Horizon Forge/Universal");
         var files = Directory.GetFiles(srcAssetFolder, "*.*", SearchOption.AllDirectories);
         var filesToCopy = new List<string>();
-        var texturesToConfigureImporterSettings = new List<string>();
+        var texturesToConfigureImporterSettings = new List<(string source, string dest)>();
         var modelsToConfigureImporterSettings = new List<string>();
         string[] tags = null;
         foreach (var file in files)
@@ -605,7 +605,7 @@ public static class PackerHelper
 
             switch (Path.GetExtension(dstFile))
             {
-                case ".png": texturesToConfigureImporterSettings.Add(dstFile); break;
+                case ".png": texturesToConfigureImporterSettings.Add((file, dstFile)); break;
                 case ".fbx": modelsToConfigureImporterSettings.Add(dstFile); break;
                 case ".blend": modelsToConfigureImporterSettings.Add(dstFile); break;
             }
@@ -618,19 +618,22 @@ public static class PackerHelper
         {
             AssetDatabase.StartAssetEditing();
             i = 0;
-            foreach (var textureAssetPath in texturesToConfigureImporterSettings)
+            foreach (var textureAssetSourceDestPath in texturesToConfigureImporterSettings)
             {
-                WrenchHelper.SetDefaultWrenchModelTextureImportSettings(textureAssetPath);
+                var srcPath = textureAssetSourceDestPath.source;
+                var dstPath = textureAssetSourceDestPath.dest;
+
+                WrenchHelper.CopyWrenchModelTextureImportSettings(srcPath, dstPath);
 
                 // create matching material
-                var matAssetPath = Path.Combine(dstAssetFolder, "Materials", Path.GetFileNameWithoutExtension(textureAssetPath) + ".mat");
+                var matAssetPath = Path.Combine(dstAssetFolder, "Materials", Path.GetFileNameWithoutExtension(dstPath) + ".mat");
                 var mat = new Material(shader);
 
                 if (!Directory.Exists(Path.GetDirectoryName(matAssetPath))) { Directory.CreateDirectory(Path.GetDirectoryName(matAssetPath)); }
-                mat.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(textureAssetPath));
+                mat.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(dstPath));
                 AssetDatabase.CreateAsset(mat, matAssetPath);
 
-                EditorUtility.DisplayProgressBar($"Importing Textures", $"{textureAssetPath} ({i}/{texturesToConfigureImporterSettings.Count})", i / (float)texturesToConfigureImporterSettings.Count);
+                EditorUtility.DisplayProgressBar($"Importing Textures", $"{dstPath} ({i}/{texturesToConfigureImporterSettings.Count})", i / (float)texturesToConfigureImporterSettings.Count);
                 ++i;
             }
         }
@@ -639,6 +642,7 @@ public static class PackerHelper
             AssetDatabase.StopAssetEditing();
         }
 
+        AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
         // configure model importers

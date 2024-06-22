@@ -195,6 +195,29 @@ public static class WrenchHelper
         //importer.SaveAndReimport();
     }
 
+    public static void CopyWrenchModelTextureImportSettings(string fromPath, string toPath)
+    {
+        var fromAssetPath = UnityHelper.GetProjectRelativePath(fromPath);
+        var toAssetPath = UnityHelper.GetProjectRelativePath(toPath);
+
+        TextureImporter toImporter = (TextureImporter)TextureImporter.GetAtPath(toAssetPath);
+        TextureImporter fromImporter = (TextureImporter)TextureImporter.GetAtPath(fromAssetPath);
+        if (fromImporter == null) return;
+        if (toImporter == null)
+        {
+            SetDefaultWrenchModelTextureImportSettings(toPath);
+            return;
+        }
+
+        toImporter.alphaIsTransparency = fromImporter.alphaIsTransparency;
+        toImporter.maxTextureSize = fromImporter.maxTextureSize;
+        toImporter.wrapModeU = fromImporter.wrapModeU;
+        toImporter.wrapModeV = fromImporter.wrapModeV;
+
+        //importer.isReadable = true;
+        //importer.SaveAndReimport();
+    }
+
     public static Dictionary<int, (TextureWrapMode?, TextureWrapMode?)> GetColladaTextureWraps(string colladaPath)
     {
         var wraps = new Dictionary<int, (TextureWrapMode?, TextureWrapMode?)>();
