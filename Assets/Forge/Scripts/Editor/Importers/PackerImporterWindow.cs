@@ -148,7 +148,8 @@ public class PackerImporterWindow : EditorWindow
         {
             List<(PackerAssetImport, string, string)> modelsToConfigureImporterSettings = new List<(PackerAssetImport, string, string)>();
             List<bool> modelPrependedToTextureNames = new List<bool>();
-            List<(PackerAssetImport Import, string Path)> texturesToConfigureImporterSettings = new List<(PackerAssetImport, string)>();
+            List<(PackerAssetImport Import, string Path, int Idx)> texturesToConfigureImporterSettings = new List<(PackerAssetImport, string, int)>();
+            List<(PackerAssetImport Import, string ColladaPath)> importedColladaFiles = new List<(PackerAssetImport Import, string ColladaPath)>();
             List<string> materialsToConfigureImporterSettings = new List<string>();
             var cancel = false;
 
@@ -234,6 +235,7 @@ public class PackerImporterWindow : EditorWindow
                                         postfix = ".gs";
                                     }
 
+                                    var texIdx = int.TryParse(idx, out var tidx) ? tidx : -1;
                                     if (import.GetTexName != null)
                                     {
                                         idx = import.GetTexName(Path.GetFileName(assetFile)) ?? idx;
@@ -263,7 +265,7 @@ public class PackerImporterWindow : EditorWindow
 
                                     lock (lockObject)
                                     {
-                                        texturesToConfigureImporterSettings.Add((import, texAssetPath));
+                                        texturesToConfigureImporterSettings.Add((import, texAssetPath, texIdx));
                                         materialsToConfigureImporterSettings.Add(matAssetPath);
                                     }
                                     break;
@@ -289,6 +291,7 @@ public class PackerImporterWindow : EditorWindow
                                         case "tie":
                                             meshFileName = assetFile + ".dae";
                                             WrenchHelper.ExportTie(assetFile, meshFileName, import.RacVersion);
+                                            importedColladaFiles.Add((import, meshFileName));
                                             break;
                                         case "moby":
 
@@ -380,7 +383,7 @@ public class PackerImporterWindow : EditorWindow
 
                             lock (lockObject)
                             {
-                                texturesToConfigureImporterSettings.Add((import, UnityHelper.GetProjectRelativePath(texPath)));
+                                texturesToConfigureImporterSettings.Add((import, UnityHelper.GetProjectRelativePath(texPath), texIdx));
                                 materialsToConfigureImporterSettings.Add(null);
                             }
                         }
@@ -421,7 +424,12 @@ public class PackerImporterWindow : EditorWindow
                     Material mat;
                     // import
                     //AssetDatabase.ImportAsset(texAssetPath, ImportAssetOptions.Default);
-                    WrenchHelper.SetDefaultWrenchModelTextureImportSettings(texConfig.Path, texConfig.Import.MaxTexSize);
+                    var matchingColladaImport = importedColladaFiles.FirstOrDefault(x => x.Import == texConfig.Import).ColladaPath;
+                    var wraps = new Dictionary<int, (TextureWrapMode?, TextureWrapMode?)>();
+                    if (File.Exists(matchingColladaImport))
+                        wraps = WrenchHelper.GetColladaTextureWraps(matchingColladaImport);
+
+                    WrenchHelper.SetDefaultWrenchModelTextureImportSettings(texConfig.Path, texConfig.Import.MaxTexSize, wraps.GetValueOrDefault(texConfig.Idx).Item1, wraps.GetValueOrDefault(texConfig.Idx).Item2);
 
                     // create matching material
                     var matAssetPath = materialsToConfigureImporterSettings[i];
@@ -446,7 +454,8 @@ public class PackerImporterWindow : EditorWindow
                             }
                     }
 
-                    mat.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(texConfig.Path));
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texConfig.Path);
+                    mat.SetTexture("_MainTex", tex);
                     AssetDatabase.CreateAsset(mat, matAssetPath);
 
                     EditorUtility.DisplayProgressBar($"Importing Textures", $"{texConfig} ({i}/{texturesToConfigureImporterSettings.Count})", i / (float)texturesToConfigureImporterSettings.Count);
@@ -492,6 +501,7 @@ public class PackerImporterWindow : EditorWindow
         finally
         {
             EditorUtility.ClearProgressBar();
+            AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
         }
     }

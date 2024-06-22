@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
@@ -173,7 +174,7 @@ public static class WrenchHelper
         }
     }
 
-    public static void SetDefaultWrenchModelTextureImportSettings(string path, int? maxTexSize = null)
+    public static void SetDefaultWrenchModelTextureImportSettings(string path, int? maxTexSize = null, TextureWrapMode? wrapu = null, TextureWrapMode? wrapv = null)
     {
         var assetPath = UnityHelper.GetProjectRelativePath(path);
 
@@ -185,8 +186,60 @@ public static class WrenchHelper
         if (maxTexSize.HasValue)
             importer.maxTextureSize = maxTexSize.Value;
 
+        if (wrapu.HasValue)
+            importer.wrapModeU = wrapu.Value;
+        if (wrapv.HasValue)
+            importer.wrapModeV = wrapv.Value;
+
         //importer.isReadable = true;
         //importer.SaveAndReimport();
+    }
+
+    public static Dictionary<int, (TextureWrapMode?, TextureWrapMode?)> GetColladaTextureWraps(string colladaPath)
+    {
+        var wraps = new Dictionary<int, (TextureWrapMode?, TextureWrapMode?)>();
+        var lines = File.ReadAllLines(colladaPath);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var regexSamplerBegin = new Regex(@$"<newparam sid=""(\d)_sampler"">");
+            var regexSamplerEnd = new Regex(@"</sampler2D>");
+            var regexWrapS = new Regex(@"<wrap_s>(.*)</wrap_s>");
+            var regexWrapT = new Regex(@"<wrap_t>(.*)</wrap_t>");
+
+            if (regexSamplerBegin.IsMatch(line))
+            {
+                var idStr = regexSamplerBegin.Match(line).Result("$1");
+                var id = int.Parse(idStr);
+                TextureWrapMode? wrap_s = null;
+                TextureWrapMode? wrap_t = null;
+
+                ++i;
+                while (i < lines.Length && !regexSamplerEnd.IsMatch(lines[i]))
+                {
+                    var wrapS = regexWrapS.Match(lines[i]);
+                    var wrapT = regexWrapT.Match(lines[i]);
+                    if (wrapS.Success)
+                    {
+                        var wrapSStr = wrapS.Result("$1");
+                        if (wrapSStr == "WRAP") wrap_s = TextureWrapMode.Repeat;
+                        else if (wrapSStr == "CLAMP") wrap_s = TextureWrapMode.Clamp;
+                    }
+                    else if (wrapT.Success)
+                    {
+                        var wrapTStr = wrapT.Result("$1");
+                        if (wrapTStr == "WRAP") wrap_t = TextureWrapMode.Repeat;
+                        else if (wrapTStr == "CLAMP") wrap_t = TextureWrapMode.Clamp;
+                    }
+
+                    ++i;
+                }
+
+                wraps[id] = (wrap_s, wrap_t);
+            }
+        }
+
+        return wraps;
     }
 
     public static dynamic ParseWrenchAssetFile(string assetPath)

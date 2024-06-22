@@ -168,12 +168,14 @@ public static class UnityHelper
 
     public static string GetProjectRelativePath(string absolutePath) => Path.GetRelativePath(Environment.CurrentDirectory, absolutePath);
 
-    public static void ImportTexture(string path)
+    public static void ImportTexture(string path, TextureWrapMode? wrapu = null, TextureWrapMode? wrapv = null)
     {
         var assetPath = UnityHelper.GetProjectRelativePath(path);
         AssetDatabase.ImportAsset(assetPath);
         TextureImporter importer = (TextureImporter)TextureImporter.GetAtPath(assetPath);
         importer.alphaIsTransparency = true;
+        if (wrapu.HasValue) importer.wrapModeU = wrapu.Value;
+        if (wrapv.HasValue) importer.wrapModeV = wrapv.Value;
         importer.SaveAndReimport();
     }
 

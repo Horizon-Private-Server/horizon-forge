@@ -1736,6 +1736,13 @@ public class LevelImporterWindow : EditorWindow
 
         UpdateImportProgressBar(ImportStage.Importing_Tfrags);
 
+        // convert tfrags bin to collada and import
+        WrenchHelper.ExportTfrags(terrainBinFile, terrainOutColladaFile, ImportSourceRacVersion());
+        if (!File.Exists(terrainOutColladaFile)) return;
+
+        // parse wrapping
+        var wrappings = WrenchHelper.GetColladaTextureWraps(terrainOutColladaFile);
+
         // import textures
         var texFiles = Directory.GetFiles(terrainBinFolder, "*.0.png");
         foreach (var texFile in texFiles)
@@ -1743,10 +1750,12 @@ public class LevelImporterWindow : EditorWindow
             var texFileName = Path.GetFileNameWithoutExtension(texFile);
             var texIdx = int.Parse(texFileName.Split('.')[1]);
 
+            var wrap = wrappings?.GetValueOrDefault(texIdx);
+
             // import texture
             var outTexFile = Path.Combine(terrainTexturesMapResourcesFolder, $"tfrags-{texIdx}.png");
             File.Copy(texFile, outTexFile, true);
-            UnityHelper.ImportTexture(outTexFile);
+            UnityHelper.ImportTexture(outTexFile, wrapu: wrap?.Item1, wrapv: wrap?.Item2);
 
             // create material
             var outMatFile = Path.Combine(terrainMaterialsMapResourcesFolder, $"tfrags-{texIdx}.mat");
@@ -1755,9 +1764,6 @@ public class LevelImporterWindow : EditorWindow
             AssetDatabase.CreateAsset(mat, outMatFile);
         }
 
-        // convert tfrags bin to collada and import
-        WrenchHelper.ExportTfrags(terrainBinFile, terrainOutColladaFile, ImportSourceRacVersion());
-        if (!File.Exists(terrainOutColladaFile)) return;
         BlenderHelper.ImportMesh(terrainOutColladaFile, terrainMapResourcesFolder, "tfrags", overwrite: true, out var outMeshFile, fixNormals: false);
         AssetDatabase.ImportAsset(UnityHelper.GetProjectRelativePath(outMeshFile));
         SetModelImportSettings(outMeshFile, addCollider: false, remapMaterials: true);

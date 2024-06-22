@@ -8,6 +8,7 @@ public class TexturePostProcessor : AssetPostprocessor
 {
     private static readonly Dictionary<TextureImporterFormat, TextureImporterFormat> _formatRemap = new()
     {
+        { TextureImporterFormat.Automatic, TextureImporterFormat.RGBA32 },
         { TextureImporterFormat.RGB24, TextureImporterFormat.RGBA32 },
         { TextureImporterFormat.RGB16, TextureImporterFormat.RGBA32 },
         { TextureImporterFormat.RGB48, TextureImporterFormat.RGBA64 },

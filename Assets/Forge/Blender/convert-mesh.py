@@ -3,6 +3,29 @@ import bpy
 import os
 import time
 
+def add(obj, face, u_off, v_off):
+    for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+        uv_coords = obj.data.uv_layers.active.data[loop_idx].uv
+        uv_coords[0] += u_off
+        uv_coords[1] += v_off
+        obj.data.uv_layers.active.data[loop_idx].uv = uv_coords
+
+def avg(obj, face):
+    uAvg = 0
+    vAvg = 0
+    count = 0
+    
+    for vert_idx, loop_idx in zip(face.vertices, face.loop_indices):
+        uv_coords = obj.data.uv_layers.active.data[loop_idx].uv
+        uAvg += uv_coords[0]
+        vAvg += uv_coords[1]
+        count += 1
+    
+    if count > 0:
+        return (uAvg / count, vAvg / count)
+    
+    return 0
+
 argv = sys.argv
 try:
     argv = argv[argv.index("--") + 1:]  # get all args after "--"
@@ -35,8 +58,8 @@ elif ext == ".glb" or ext == ".gltf":
     bpy.ops.import_scene.gltf(filepath = in_filepath) 
 
 C = bpy.context
-ob = C.object
-me = ob.data
+obj = C.object
+me = obj.data
 uvlayer = me.uv_layers.active
 
 # Object Mode
@@ -60,6 +83,32 @@ if fix_normals:
         bpy.ops.mesh.normals_make_consistent(inside=False)
         # go object mode again
         bpy.ops.object.editmode_toggle()
+
+    # Object Mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+# fix uvs
+if True:
+    all_objects = [x for x in C.scene.objects]
+    for obj in all_objects:
+        me = obj.data
+
+        # cycle all loops
+        if obj.data is not None and obj.data.uv_layers.active is not None and len(obj.data.uv_layers.active.data) > 0:
+            for face in obj.data.polygons:
+                uAvg, vAvg = avg(obj, face)
+                while uAvg > 1 or uAvg < 0 or vAvg > 1 or vAvg < 0:
+                    if uAvg > 1:
+                        add(obj, face, -1, 0)
+                    elif uAvg < 0:
+                        add(obj, face, 1, 0)
+                    
+                    if vAvg > 1:
+                        add(obj, face, 0, -1)
+                    elif vAvg < 0:
+                        add(obj, face, 0, 1)
+                        
+                    uAvg, vAvg = avg(obj, face)
 
 # Convert material names to "0","1","2",etc
 # for obj in bpy.data.objects:
