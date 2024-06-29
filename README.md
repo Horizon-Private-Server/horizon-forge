@@ -10,7 +10,7 @@ Forge is a tool to make custom maps for Ratchet: Deadlocked Multiplayer (PS2).
 https://github.com/Horizon-Private-Server/horizon-forge/assets/2020854/c6561f28-258b-4f94-ac1a-32418d37458f
 
 Forge consists of
-- Special fork of [wrench](https://github.com/Dnawrkshp/wrench/tree/forge) created by [chaoticgd](https://github.com/chaoticgd)
+- Modified fork of [wrench](https://github.com/Dnawrkshp/wrench/tree/forge)
 - Commandline packing tool (not yet open source)
 - Unity Editor scripts to facilitate the importing, editing, and exporting of map data.
 
