@@ -40,6 +40,8 @@ public class MobyEditor : Editor
             for (int i = 0; i < materials.Length; i++)
             {
                 var mat = materials[i];
+                if (!mat || mat.shader.name == "Horizon Forge/Collider") continue;
+
                 var matEditor = (MaterialEditor)CreateEditor(mat);
                 var canEdit = AssetDatabase.GetAssetPath(mat).StartsWith("Assets");
                 _materialEditors.Add((matEditor, canEdit));

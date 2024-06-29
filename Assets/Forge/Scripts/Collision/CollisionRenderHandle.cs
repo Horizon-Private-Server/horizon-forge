@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -33,6 +34,7 @@ public class CollisionRenderHandle
     public Color IdColor { get => _idColor; set { _changed |= value != _idColor; _idColor = value; } }
     public CollisionRenderHandleNormalMode Normals { get => _normals; set { _regenerate |= value != _normals; _normals = value; } }
     public float RecalculateNormalsFactor { get => _recalculateNormalsFactor; set { _regenerate |= value != _recalculateNormalsFactor; _recalculateNormalsFactor = value; } }
+    public IEnumerable<ColliderIdOverride> CollisionIdOverrides { get => _idOverrides; set { _regenerate |= value != _idOverrides; _idOverrides = value; } }
 
     private bool _changed = false;
     private bool _regenerate = false;
@@ -46,9 +48,12 @@ public class CollisionRenderHandle
     private CollisionRenderHandleNormalMode _normals = CollisionRenderHandleNormalMode.FrontSide;
     private float _recalculateNormalsFactor = 1f;
     private Color _idColor = Color.clear;
+    private IEnumerable<ColliderIdOverride> _idOverrides = null;
     private GameObject _prefab = null;
     private Mesh _mesh = null;
     private Action<Renderer, MaterialPropertyBlock> _updateRenderer;
+    private Dictionary<Renderer, Material[]> _instancedMaterials = null;
+    private Dictionary<Material, string> _instancedMaterialsNameBackup = null;
     private int? _colliderGeneratedMaterialId = null;
 
     public CollisionRenderHandle(Action<Renderer, MaterialPropertyBlock> updateRenderer)
@@ -220,6 +225,20 @@ public class CollisionRenderHandle
                             GameObject.DestroyImmediate(mf);
                     });
 
+                    _instancedMaterials = new Dictionary<Renderer, Material[]>();
+                    var renderers = assetInstance.GetComponentsInChildren<Renderer>();
+                    foreach (var renderer in renderers)
+                    {
+                        _instancedMaterials[renderer] = new Material[renderer.sharedMaterials.Length];
+                        for (int i = 0; i < renderer.sharedMaterials.Length; i++)
+                        {
+                            var newMat = Material.Instantiate(renderer.sharedMaterials[i]);
+                            newMat.name = renderer.sharedMaterials[i].name;
+                            _instancedMaterials[renderer][i] = newMat;
+                        }
+                        renderer.sharedMaterials = _instancedMaterials[renderer];
+                    }
+
                     assetInstance.name = CHILD_ASSET_COLLIDER_NAME;
                     assetInstance.transform.localRotation = Rotation;
                     assetInstance.transform.localPosition = Offset;
@@ -245,6 +264,23 @@ public class CollisionRenderHandle
         var renderers = AssetInstance.GetComponentsInChildren<Renderer>();
         foreach (var renderer in renderers)
         {
+            var materialsAffected = new List<Material>();
+            if (_idOverrides != null && _idOverrides.Any() && _instancedMaterials.TryGetValue(renderer, out var materials))
+            {
+                foreach (var idOverride in _idOverrides)
+                {
+                    if (int.TryParse(idOverride.OverrideId, System.Globalization.NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var colIdInt))
+                    {
+                        var mat = materials.FirstOrDefault(x => x.name == idOverride.MaterialName && !materialsAffected.Contains(x));
+                        if (mat)
+                        {
+                            mat.SetInteger("_ColId", colIdInt);
+                            materialsAffected.Add(mat);
+                        }
+                    }
+                }
+            }
+            
             // fix reflection causing objects to clip early
             // expands bounds so renderer renders even in periphery
             renderer.ResetLocalBounds();
@@ -411,10 +447,51 @@ public class CollisionRenderHandle
         //go.hideFlags = HideFlags.DontSave;
     }
 
+    #region Collision Bake
+
+    public void OnPreBake()
+    {
+        _instancedMaterialsNameBackup = null;
+        if (_instancedMaterials != null)
+        {
+            _instancedMaterialsNameBackup = new Dictionary<Material, string>();
+            foreach (var material in _instancedMaterials.SelectMany(x => x.Value))
+            {
+                var newName = $"col_{material.GetInteger("_ColId"):x}";
+                _instancedMaterialsNameBackup[material] = material.name;
+                material.name = newName;
+            }
+        }
+    }
+
+    public void OnPostBake()
+    {
+        if (_instancedMaterialsNameBackup != null)
+        {
+            foreach (var item in _instancedMaterialsNameBackup)
+                item.Key.name = item.Value;
+        }
+
+        _instancedMaterialsNameBackup = null;
+    }
+
+    #endregion
+
 }
 
 public interface IInstancedCollider
 {
     bool HasInstancedCollider();
     CollisionRenderHandle GetInstancedCollider();
+}
+
+[Serializable]
+public class ColliderIdOverride
+{
+    public string MaterialName;
+    public string OverrideId;
+
+    public ColliderIdOverride() { }
+    public ColliderIdOverride(string materialName, string overrideId) { this.MaterialName = materialName; this.OverrideId = overrideId; }
+    public ColliderIdOverride(ColliderIdOverride copyFrom) { this.MaterialName = copyFrom.MaterialName; this.OverrideId = copyFrom.OverrideId; }
 }

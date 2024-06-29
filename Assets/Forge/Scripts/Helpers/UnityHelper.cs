@@ -39,6 +39,7 @@ public static class UnityHelper
             if (GUILayout.Button("Reset"))
                 SetMatrix4x4PropertyField(property, Matrix4x4.identity);
         }
+        EditorGUILayout.EndFoldoutHeaderGroup();
         EditorGUI.EndDisabledGroup();
     }
 

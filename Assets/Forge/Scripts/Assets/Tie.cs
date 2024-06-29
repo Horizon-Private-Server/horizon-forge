@@ -30,6 +30,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
     [Header("Collision")]
     [Tooltip("Enable instanced collider.")] public bool InstancedCollider;
     [Tooltip("Render instanced collider.")] public bool RenderInstancedCollider;
+    public ColliderIdOverride[] InstancedColliderIdOverrides;
     [Tooltip("When set, instanced collider will use the corresponding model. Model must have correct collision materials configured.")] public GameObject InstancedColliderOverride;
 
     public Vector3[] Octants { get => _octants; set => _octants = value; }
@@ -106,6 +107,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
             collisionRenderHandle.IsHidden = SceneVisibilityManager.instance.IsHidden(this.gameObject) || !RenderInstancedCollider;
             collisionRenderHandle.IsSelected = renderHandle.IsSelected;
             collisionRenderHandle.IsPicking = renderHandle.IsPicking;
+            collisionRenderHandle.CollisionIdOverrides = InstancedColliderOverride ? null : InstancedColliderIdOverrides;
             collisionRenderHandle.Update(this.gameObject, InstancedColliderOverride ? InstancedColliderOverride : collisionPrefab);
         }
         else
