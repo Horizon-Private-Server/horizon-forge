@@ -19,6 +19,7 @@ public class Shrub : RenderSelectionBase, IAsset, IInstancedCollider
     [Header("Collision")]
     [Tooltip("Enable instanced collider.")] public bool InstancedCollider;
     [Tooltip("Render instanced collider.")] public bool RenderInstancedCollider;
+    public ColliderIdOverride[] InstancedColliderIdOverrides;
     [Tooltip("When set, instanced collider will use the corresponding model. Model must have correct collision materials configured.")] public GameObject InstancedColliderOverride;
 
     public GameObject GameObject => this ? this.gameObject : null;
@@ -70,6 +71,7 @@ public class Shrub : RenderSelectionBase, IAsset, IInstancedCollider
             collisionRenderHandle.IsSelected = renderHandle.IsSelected;
             collisionRenderHandle.IsPicking = renderHandle.IsPicking;
             collisionRenderHandle.Rotation = Quaternion.Euler(0, -90f, 0);
+            collisionRenderHandle.CollisionIdOverrides = InstancedColliderOverride ? null : InstancedColliderIdOverrides;
             collisionRenderHandle.Update(this.gameObject, InstancedColliderOverride ? InstancedColliderOverride : collisionPrefab);
         }
         else

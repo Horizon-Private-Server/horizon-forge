@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using UnityEditor;
 using UnityEngine;
 
@@ -16,12 +17,16 @@ public class TieEditor : Editor
     private SerializedProperty m_GroupIdProperty;
     private SerializedProperty m_InstancedColliderProperty;
     private SerializedProperty m_RenderInstancedColliderProperty;
+    private SerializedProperty m_InstancedColliderIdOverridesProperty;
     private SerializedProperty m_InstancedColliderOverrideProperty;
 
     private MapConfig m_MapConfig;
     private SerializedProperty m_TiesProperty;
 
+    private static Tie _clipboardTie = null;
+
     private bool HasOneTarget => targets == null || targets.Length == 1;
+    private bool TargetsShareOClass => targets?.All(x => (x as Tie).OClass == (target as Tie).OClass) ?? false;
 
     private void OnEnable()
     {
@@ -33,6 +38,7 @@ public class TieEditor : Editor
         m_GroupIdProperty = serializedObject.FindProperty("GroupId");
         m_InstancedColliderProperty = serializedObject.FindProperty("InstancedCollider");
         m_RenderInstancedColliderProperty = serializedObject.FindProperty("RenderInstancedCollider");
+        m_InstancedColliderIdOverridesProperty = serializedObject.FindProperty("InstancedColliderIdOverrides");
         m_InstancedColliderOverrideProperty = serializedObject.FindProperty("InstancedColliderOverride");
 
         if (HasOneTarget)
@@ -45,6 +51,8 @@ public class TieEditor : Editor
                 for (int i = 0; i < materials.Length; i++)
                 {
                     var mat = materials[i];
+                    if (!mat || mat.shader.name == "Horizon Forge/Collider") continue;
+
                     var matEditor = (MaterialEditor)CreateEditor(mat);
                     var canEdit = AssetDatabase.GetAssetPath(mat).StartsWith("Assets");
                     _materialEditors.Add((matEditor, canEdit));
@@ -129,6 +137,15 @@ public class TieEditor : Editor
                 // additional collision params
                 EditorGUILayout.PropertyField(m_RenderInstancedColliderProperty);
                 EditorGUILayout.PropertyField(m_InstancedColliderOverrideProperty);
+
+                if (HasOneTarget && target is Tie tie)
+                {
+                    // draw collision id overrides if there isn't a model override already
+                    if (!m_InstancedColliderOverrideProperty.objectReferenceValue)
+                    {
+                        DrawCollisionIdOverrides(tie);
+                    }
+                }
             }
 
             if (targets.Select(x => x as Tie).Any(x => x.HasInstancedCollider() && !x.GetInstancedCollider()?.AssetInstance))
@@ -241,6 +258,99 @@ public class TieEditor : Editor
                     tie.UpdateAsset();
                 }
             }
+        }
+    }
+
+    private void DrawCollisionIdOverrides(Tie tie)
+    {
+        var changed = false;
+        ValidateCollisionOverrideMaterials(tie);
+
+        // editors
+        m_InstancedColliderIdOverridesProperty.isExpanded = EditorGUILayout.BeginFoldoutHeaderGroup(m_InstancedColliderIdOverridesProperty.isExpanded, "Collider ID Overrides");
+        if (m_InstancedColliderIdOverridesProperty.isExpanded)
+        {
+            var colIdOverrides = tie.InstancedColliderIdOverrides;
+            foreach (var colIdOverride in colIdOverrides)
+            {
+                var newColId = EditorGUILayout.TextField(colIdOverride.MaterialName, colIdOverride.OverrideId);
+                if (newColId != colIdOverride.OverrideId)
+                {
+                    if (!changed) Undo.RecordObjects(targets, "Update Collision Id Overrides");
+                    colIdOverride.OverrideId = newColId;
+                    changed = true;
+                }
+            }
+
+            // copy/paste
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Copy Overrides"))
+            {
+                _clipboardTie = tie;
+            }
+            EditorGUI.BeginDisabledGroup(!_clipboardTie || _clipboardTie.OClass != tie.OClass);
+            if (GUILayout.Button($"Paste Overrides{(_clipboardTie ? $" ({_clipboardTie.name})" : "")}"))
+            {
+                // copy refs
+                Undo.RecordObject(tie, "Paste Collision Id Overrides");
+                tie.InstancedColliderIdOverrides = _clipboardTie.InstancedColliderIdOverrides.Select(x => new ColliderIdOverride(x)).ToArray();
+                changed = true;
+            }
+            EditorGUI.EndDisabledGroup();
+            GUILayout.EndHorizontal();
+
+            if (changed)
+            {
+                tie.UpdateAsset();
+                Undo.FlushUndoRecordObjects();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+    }
+
+    private void ValidateCollisionOverrideMaterials(Tie tie)
+    {
+        var colIdOverrides = tie.InstancedColliderIdOverrides;
+        var validColIdOverrides = new List<ColliderIdOverride>();
+
+        // init list
+        if (tie.InstancedColliderIdOverrides == null)
+            tie.InstancedColliderIdOverrides = new ColliderIdOverride[0];
+
+        // validate materials
+        var materials = tie.GetComponentsInChildren<MeshRenderer>()?.SelectMany(x => x.sharedMaterials)?.ToArray();
+        if (materials != null)
+        {
+            var changed = false;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                var mat = materials[i];
+                if (!mat || mat.shader.name != "Horizon Forge/Collider") continue;
+
+                var existingOverride = colIdOverrides.FirstOrDefault(x => x.MaterialName == mat.name && !validColIdOverrides.Contains(x));
+                if (existingOverride != null)
+                {
+                    validColIdOverrides.Add(existingOverride);
+                }
+                else
+                {
+                    changed = true;
+                    validColIdOverrides.Add(new ColliderIdOverride()
+                    {
+                        MaterialName = mat.name,
+                        OverrideId = mat.GetInteger("_ColId").ToString("x")
+                    });
+                }
+            }
+
+            if (changed)
+            {
+                tie.InstancedColliderIdOverrides = validColIdOverrides.ToArray();
+            }
+        }
+        else
+        {
+            tie.InstancedColliderIdOverrides = new ColliderIdOverride[0];
         }
     }
 }

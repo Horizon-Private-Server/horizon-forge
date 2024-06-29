@@ -26,6 +26,7 @@ public static class CollisionBaker
         var collisionBinFile = Path.Combine(binFolder, FolderNames.BinaryCollisionBinFile);
         var rootGo = new GameObject("collisionbake");
         var reparentGos = new List<(GameObject, Transform)>();
+        var affectedInstancedColliders = new List<CollisionRenderHandle>();
 
         var exportSettings = new ExportSettings
         {
@@ -64,6 +65,8 @@ public static class CollisionBaker
                     // move collider to collision bake root temporarily for export
                     reparentGos.Add((instancedCollider.AssetInstance, instancedCollider.AssetInstance.transform.parent));
                     instancedCollider.AssetInstance.transform.SetParent(rootGo.transform, true);
+                    instancedCollider.OnPreBake();
+                    affectedInstancedColliders.Add(instancedCollider);
                 }
             }
 
@@ -111,6 +114,10 @@ public static class CollisionBaker
         }
         finally
         {
+            // post bake
+            foreach (var instance in affectedInstancedColliders)
+                instance.OnPostBake();
+
             // move colliders back to original parents
             if (rootGo) rootGo.transform.rotation = Quaternion.identity;
             foreach (var reparent in reparentGos)
