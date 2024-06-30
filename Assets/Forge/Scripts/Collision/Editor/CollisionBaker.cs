@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 public static class CollisionBaker
@@ -24,9 +25,8 @@ public static class CollisionBaker
         var collisionDaeFile = Path.Combine(binFolder, FolderNames.BinaryCollisionColladaFile);
         var collisionAssetFile = Path.Combine(binFolder, FolderNames.BinaryCollisionAssetFile);
         var collisionBinFile = Path.Combine(binFolder, FolderNames.BinaryCollisionBinFile);
-        var rootGo = new GameObject("collisionbake");
-        var reparentGos = new List<(GameObject, Transform)>();
         var affectedInstancedColliders = new List<CollisionRenderHandle>();
+        GameObject combinedRootGo = null;
 
         var exportSettings = new ExportSettings
         {
@@ -63,8 +63,6 @@ public static class CollisionBaker
                     if (instancedCollider == null || !instancedCollider.AssetInstance) continue;
 
                     // move collider to collision bake root temporarily for export
-                    reparentGos.Add((instancedCollider.AssetInstance, instancedCollider.AssetInstance.transform.parent));
-                    instancedCollider.AssetInstance.transform.SetParent(rootGo.transform, true);
                     instancedCollider.OnPreBake();
                     affectedInstancedColliders.Add(instancedCollider);
                 }
@@ -74,9 +72,12 @@ public static class CollisionBaker
             EditorUtility.DisplayProgressBar("Baking Collision", "Merging Colliders", 0.5f);
             var export = new GameObjectExport(exportSettings, gameObjectExportSettings);
 
+            // merge
+            combinedRootGo = CombineMeshes(affectedInstancedColliders.Select(x => x.AssetInstance).ToArray());
+
             // export scene
-            rootGo.transform.rotation = Quaternion.AngleAxis(180f, Vector3.up);
-            export.AddScene(new GameObject[] { rootGo });
+            combinedRootGo.transform.rotation = Quaternion.AngleAxis(180f, Vector3.up);
+            export.AddScene(new GameObject[] { combinedRootGo });
 
             // save glb file
             var outInstancedCollisionGlbFile = Path.Combine(FolderNames.GetTempFolder(), $"instanced-collision.glb");
@@ -118,13 +119,8 @@ public static class CollisionBaker
             foreach (var instance in affectedInstancedColliders)
                 instance.OnPostBake();
 
-            // move colliders back to original parents
-            if (rootGo) rootGo.transform.rotation = Quaternion.identity;
-            foreach (var reparent in reparentGos)
-                reparent.Item1.transform.SetParent(reparent.Item2, true);
-
             // remove temporary collision bake root
-            if (rootGo) GameObject.DestroyImmediate(rootGo);
+            if (combinedRootGo) GameObject.DestroyImmediate(combinedRootGo);
 
             EditorUtility.ClearProgressBar();
         }
@@ -132,4 +128,165 @@ public static class CollisionBaker
         return true;
     }
 
+
+    static GameObject CombineMeshes(GameObject[] gameObjects)
+    {
+        // Locals
+        Dictionary<int, List<MeshFilterSubMesh>> colIdToMeshFilterList = new Dictionary<int, List<MeshFilterSubMesh>>();
+        List<GameObject> combinedObjects = new List<GameObject>();
+
+        MeshFilter[] meshFilters = gameObjects.SelectMany(x => x.GetComponentsInChildren<MeshFilter>()).ToArray();
+
+        // Go through all mesh filters and establish the mapping between the materials and all mesh filters using it.
+        foreach (var meshFilter in meshFilters)
+        {
+            var meshRenderer = meshFilter.GetComponent<MeshRenderer>();
+            if (meshRenderer == null)
+            {
+                Debug.LogWarning("Mesh Combine Wizard: The Mesh Filter on object " + meshFilter.name + " has no Mesh Renderer component attached. Skipping.");
+                continue;
+            }
+
+            var materials = meshRenderer.sharedMaterials;
+            if (materials == null)
+            {
+                Debug.LogWarning("Mesh Combine Wizard: The Mesh Renderer on object " + meshFilter.name + " has no material assigned. Skipping.");
+                continue;
+            }
+
+            // If there are more materials than submeshes, cancel.
+            if (materials.Length > meshFilter.sharedMesh.subMeshCount)
+            {
+                // Rollback: return the object to original position
+                Debug.LogError("Mesh Combine Wizard: Objects with multiple materials on the same mesh are not supported. Create multiple meshes from this object's sub-meshes in an external 3D tool and assign separate materials to each. Operation cancelled.");
+                return null;
+            }
+
+            var colors = meshFilter.sharedMesh.colors;
+            var reflectionMatrix = Matrix4x4.identity;
+            var tie = meshRenderer.GetComponentInParent<Tie>();
+            var shrub = meshRenderer.GetComponentInParent<Shrub>();
+            if (tie)
+            {
+                reflectionMatrix = tie.Reflection;
+                var color = tie.GetBaseVertexColor().HalveRGB(); // dzo expect vertex color RGB to be same as game, but alpha to be corrected without bloom
+                colors = Enumerable.Repeat(color, meshFilter.sharedMesh.vertexCount).ToArray();
+            }
+            else if (shrub)
+            {
+                reflectionMatrix = shrub.Reflection;
+                var color = shrub.Tint.HalveRGB(); // dzo expect vertex color RGB to be same as game, but alpha to be corrected without bloom
+                colors = Enumerable.Repeat(color, meshFilter.sharedMesh.vertexCount).ToArray();
+            }
+
+            // create a clone of the mesh and bake any vertex colors
+            var meshWithColors = new Mesh()
+            {
+                vertices = meshFilter.sharedMesh.vertices,
+                normals = meshFilter.sharedMesh.normals,
+                uv = meshFilter.sharedMesh.uv,
+                tangents = meshFilter.sharedMesh.tangents,
+                colors = colors,
+                subMeshCount = meshFilter.sharedMesh.subMeshCount,
+                indexFormat = meshFilter.sharedMesh.indexFormat,
+                boneWeights = meshFilter.sharedMesh.boneWeights,
+                bindposes = meshFilter.sharedMesh.bindposes,
+                bounds = meshFilter.sharedMesh.bounds,
+            };
+
+            for (int i = 0; i < meshWithColors.subMeshCount; ++i)
+            {
+                var triangles = meshFilter.sharedMesh.GetTriangles(i);
+                meshWithColors.SetTriangles(triangles, i);
+            }
+
+            for (int i = 0; i < materials.Length; ++i)
+            {
+                var material = materials[i];
+                if (material.shader.name != "Horizon Forge/Collider")
+                {
+                    Debug.LogWarning($"Collision Baker: ignoring bad collider material {material.name} with shader {material.shader.name} for object {meshFilter.gameObject.name}");
+                    continue;
+                }
+
+                var entry = new MeshFilterSubMesh()
+                {
+                    Mesh = meshWithColors,
+                    SubmeshIdx = i,
+                    WorldMatrix = reflectionMatrix * meshFilter.transform.localToWorldMatrix
+                };
+
+                var colId = material.GetInteger("_ColId");
+
+                // Add material to mesh filter mapping to dictionary
+                if (colIdToMeshFilterList.ContainsKey(colId)) colIdToMeshFilterList[colId].Add(entry);
+                else colIdToMeshFilterList.Add(colId, new List<MeshFilterSubMesh>() { entry });
+            }
+        }
+
+        // For each material, create a new merged object, in the scene and in the assets.
+        foreach (var entry in colIdToMeshFilterList)
+        {
+            List<MeshFilterSubMesh> meshesWithSameMaterial = entry.Value;
+
+            // create mat name from col id
+            string materialName = "col_" + entry.Key.ToString("x");
+
+            CombineInstance[] combine = new CombineInstance[meshesWithSameMaterial.Count];
+            for (int i = 0; i < meshesWithSameMaterial.Count; i++)
+            {
+                combine[i].mesh = meshesWithSameMaterial[i].Mesh;
+                combine[i].transform = meshesWithSameMaterial[i].WorldMatrix;
+                combine[i].subMeshIndex = meshesWithSameMaterial[i].SubmeshIdx;
+            }
+
+            // Create a new mesh using the combined properties
+            var format = true ? IndexFormat.UInt32 : IndexFormat.UInt16;
+            Mesh combinedMesh = new Mesh { indexFormat = format };
+            combinedMesh.CombineMeshes(combine);
+
+            //if (generateSecondaryUVs)
+            //{
+            //    Unwrapping.GenerateSecondaryUVSet(combinedMesh);
+            //}
+
+            // try and convert Universal shader to Standard, so gltf can export correctly
+            var newMat = new Material(Shader.Find("Horizon Forge/Collider"));
+            newMat.SetInteger("_ColId", entry.Key);
+
+            // Create asset
+            newMat.name = materialName;
+
+            // Create game object
+            string goName = materialName;
+            GameObject combinedObject = new GameObject(goName);
+            var filter = combinedObject.AddComponent<MeshFilter>();
+            filter.sharedMesh = combinedMesh;
+            var renderer = combinedObject.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = newMat;
+            combinedObjects.Add(combinedObject);
+        }
+
+        // If there was more than one material, and thus multiple GOs created, parent them and work with result
+        GameObject resultGO = null;
+        if (combinedObjects.Count > 1)
+        {
+            resultGO = new GameObject("combined");
+            foreach (var combinedObject in combinedObjects) combinedObject.transform.parent = resultGO.transform;
+        }
+        else if (combinedObjects.Count == 1)
+        {
+            resultGO = combinedObjects[0];
+        }
+
+        // Disable the original and return both to original positions
+        return resultGO;
+    }
+
+    class MeshFilterSubMesh
+    {
+        public Mesh Mesh { get; set; }
+        public int SubmeshIdx { get; set; }
+        public Matrix4x4 WorldMatrix { get; set; } = Matrix4x4.identity;
+    }
 }
