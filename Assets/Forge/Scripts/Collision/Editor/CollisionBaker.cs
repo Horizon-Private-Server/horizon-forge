@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -101,10 +102,50 @@ public static class CollisionBaker
 
             // build collision
             EditorUtility.DisplayProgressBar("Baking Collision", "Packing Collision", 0.9f);
-            if (!WrenchHelper.BuildCollision(Path.Combine(Environment.CurrentDirectory, collisionAssetFile), Path.Combine(Environment.CurrentDirectory, collisionBinFile)))
+            if (!WrenchHelper.BuildCollision(Path.Combine(Environment.CurrentDirectory, collisionAssetFile), Path.Combine(Environment.CurrentDirectory, collisionBinFile), out var buildOutput))
             {
                 Debug.LogError($"Failed to pack collision. Please make sure all faces are quads/tris and that all mesh data exists in the positive quadrant");
                 return false;
+            }
+
+            // parse wrench output, looking for bad sectors
+            var collisionResultsVisualizer = GameObject.FindObjectOfType<CollisionResultsVisualizer>();
+            var regex = new Regex(@"warning: Collision sector (\d+) (\d+) (\d+) dropped: (.+)");
+            var matches = regex.Matches(buildOutput);
+            if (matches.Any())
+            {
+                if (!collisionResultsVisualizer)
+                {
+                    // create new
+                    var go = new GameObject("Collision Results Visualizer");
+                    collisionResultsVisualizer = go.AddComponent<CollisionResultsVisualizer>();
+                }
+                else
+                {
+                    // delete children
+                    while (collisionResultsVisualizer.transform.childCount > 0)
+                        GameObject.DestroyImmediate(collisionResultsVisualizer.transform.GetChild(0).gameObject);
+                }
+
+                foreach (Match match in matches)
+                {
+                    var y = match.Groups.ElementAtOrDefault(1).Value;
+                    var z = match.Groups.ElementAtOrDefault(2).Value;
+                    var x = match.Groups.ElementAtOrDefault(3).Value;
+                    var reason = match.Groups.ElementAtOrDefault(4).Value;
+
+                    var go = new GameObject(reason);
+                    go.transform.SetParent(collisionResultsVisualizer.transform, false);
+                    var node = go.AddComponent<CollisionResultsVisualizerNode>();
+                    node.transform.position = new Vector3(float.Parse(x) + 0.5f, float.Parse(y) + 0.5f, float.Parse(z) + 0.5f) * 4;
+                    Debug.Log($"{reason}: {node.transform.position}");
+                }
+
+                collisionResultsVisualizer.UpdateShaderGlobals();
+            }
+            else
+            {
+                GameObject.DestroyImmediate(collisionResultsVisualizer.gameObject);
             }
 
             Debug.Log("Collision successfully baked!");

@@ -104,9 +104,9 @@ public static class WrenchHelper
         return r == 0;
     }
 
-    public static bool BuildCollision(string collisionAssetPath, string outCollisionBinFile)
+    public static bool BuildCollision(string collisionAssetPath, string outCollisionBinFile, out string output)
     {
-        var r = RunWrench(out _, "build_collision", Path.GetDirectoryName(collisionAssetPath).Replace("\\", "/"), "-o", outCollisionBinFile.Replace("\\", "/"), "-h", Path.GetFileNameWithoutExtension(collisionAssetPath));
+        var r = RunWrench(out output, "build_collision", Path.GetDirectoryName(collisionAssetPath).Replace("\\", "/"), "-o", outCollisionBinFile.Replace("\\", "/"), "-h", Path.GetFileNameWithoutExtension(collisionAssetPath));
         return r == 0;
     }
 

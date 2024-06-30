@@ -39,6 +39,9 @@ Shader "Horizon Forge/Collider"
             #include "AutoLight.cginc"
             #include "UniversalInc.hlsl"
 
+			int _COLLISION_RESULTS_BAD_SECTORS_COUNT;
+			float4 _COLLISION_RESULTS_BAD_SECTORS[1024];
+
             int _ColId;
             int _Faded2;
             int _Picking;
@@ -76,6 +79,7 @@ Shader "Horizon Forge/Collider"
 				float4 worldSpacePosition : TEXCOORD1;
 				float4 dist : TEXCOORD2;
 				float4 worldSpaceNormal : TEXCOORD3;
+				float4 color : TEXCOORD4;
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
 			
@@ -90,11 +94,55 @@ Shader "Horizon Forge/Collider"
 				o.worldSpaceNormal = mul(unity_ObjectToWorld, float4(v.normal.xyz, 0));
 				return o;
 			}
+
+			bool intersect_sector(float3 v0, float3 v1, float3 v2)
+			{
+				float3 e0 = v1 - v0;
+				float3 e1 = v2 - v1;
+				float3 e2 = v0 - v2;
+
+				float3 u0 = float3(1,0,0);
+				float3 u1 = float3(0,1,0);
+				float3 u2 = float3(0,0,1);
+
+				float3 axes[] = {
+					cross(u0, e0), cross(u0, e1), cross(u0, e2),
+					cross(u1, e0), cross(u1, e1), cross(u1, e2),
+					cross(u2, e0), cross(u2, e1), cross(u2, e2),
+					u0, u1, u2, cross(e0, e1)
+				};
+
+				for (int i = 0; i < 13; ++i) {
+					float3 axis = axes[i];
+					float p0 = dot(v0, axis);
+					float p1 = dot(v1, axis);
+					float p2 = dot(v2, axis);
+					float r = 0;
+					r += abs(dot(u0, axis));
+					r += abs(dot(u1, axis));
+					r += abs(dot(u2, axis));
+					r *= 2;
+					if (max(-max(max(p0, p1), p2), min(min(p0, p1), p2)) > r) {
+						return false;
+					}
+				}
+
+				return true;
+			}
 			
 			[maxvertexcount(3)]
 			void geom(triangle v2g i[3], inout TriangleStream<g2f> triangleStream)
 			{
 				float _WireThickness = 0.1;
+				float4 baseColor = float4(0,0,0,0);
+				
+				for (int idx = 0; idx < _COLLISION_RESULTS_BAD_SECTORS_COUNT; ++idx) {
+					float3 sector = _COLLISION_RESULTS_BAD_SECTORS[idx];
+					if (intersect_sector(i[0].worldSpacePosition - sector, i[1].worldSpacePosition - sector, i[2].worldSpacePosition - sector)) {
+						baseColor = float4(1,0,0,1);
+						break;
+					}
+				}
 
 				float2 p0 = i[0].projectionSpaceVertex.xy / i[0].projectionSpaceVertex.w;
 				float2 p1 = i[1].projectionSpaceVertex.xy / i[1].projectionSpaceVertex.w;
@@ -121,6 +169,7 @@ Shader "Horizon Forge/Collider"
 				o.dist.xyz = float3( (area / length(edge0)), 0.0, 0.0) * o.projectionSpaceVertex.w * wireThickness;
 				o.dist.w = 1.0 / o.projectionSpaceVertex.w;
 				o.worldSpaceNormal = i[0].worldSpaceNormal;
+				o.color = baseColor;
 				UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(i[0], o);
 				triangleStream.Append(o);
 
@@ -130,6 +179,7 @@ Shader "Horizon Forge/Collider"
 				o.dist.xyz = float3(0.0, (area / length(edge1)), 0.0) * o.projectionSpaceVertex.w * wireThickness;
 				o.dist.w = 1.0 / o.projectionSpaceVertex.w;
 				o.worldSpaceNormal = i[1].worldSpaceNormal;
+				o.color = baseColor;
 				UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(i[1], o);
 				triangleStream.Append(o);
 
@@ -139,6 +189,7 @@ Shader "Horizon Forge/Collider"
 				o.dist.xyz = float3(0.0, 0.0, (area / length(edge2))) * o.projectionSpaceVertex.w * wireThickness;
 				o.dist.w = 1.0 / o.projectionSpaceVertex.w;
 				o.worldSpaceNormal = i[2].worldSpaceNormal;
+				o.color = baseColor;
 				UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(i[2], o);
 				triangleStream.Append(o);
 			}
@@ -163,12 +214,13 @@ Shader "Horizon Forge/Collider"
 				float _WireSmoothness = 1;
 				float4 _WireColor = 1;
 				float minDistanceToEdge = min(i.dist[0], min(i.dist[1], i.dist[2])) * i.dist[3];
-
+				
 				float4 baseColor = 1;
 				baseColor.r = ((_ColId & 0x03) << 6) / 255.0;
                 baseColor.g = ((_ColId & 0x0C) << 4)  / 255.0;
                 baseColor.b = ((_ColId & 0xF0) << 0)  / 255.0;
-				
+				baseColor = lerp(baseColor, i.color, i.color.a);
+
 				// rim lighting
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.worldSpacePosition.xyz);
                 half rim = 1.0 - (abs(dot(viewDirection, normalize(i.worldSpaceNormal))) * 0.25);// rimlight based on view and normal

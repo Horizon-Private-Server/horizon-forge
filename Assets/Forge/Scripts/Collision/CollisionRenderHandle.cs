@@ -22,6 +22,8 @@ public class CollisionRenderHandle
     // collider meshes
     private static Dictionary<GameObject, Mesh> _colliderCache = new Dictionary<GameObject, Mesh>();
 
+    public static bool ForceRenderAllCollisionHandles = false;
+
     public GameObject AssetInstance { get; private set; }
 
     public Matrix4x4 Reflection { get => _reflection; set { _changed |= value != _reflection; _reflection = value; } }
@@ -29,7 +31,7 @@ public class CollisionRenderHandle
     public Vector3 Offset { get => _offset; set { _changed |= value != _offset; _offset = value; } }
     public Vector3 Scale { get => _scale; set { _changed |= value != _scale; _scale = value; } }
     public bool IsSelected { get => _isSelected; set { _changed |= value != _isSelected; _isSelected = value; } }
-    public bool IsHidden { get => _isHidden; set { _changed |= value != _isHidden; _isHidden = value; } }
+    public bool IsHidden { get => _isHidden && !ForceRenderAllCollisionHandles; set { _changed |= value != _isHidden; _isHidden = value; } }
     public bool IsPicking { get => _isPicking; set { _changed |= value != _isPicking; _isPicking = value; } }
     public Color IdColor { get => _idColor; set { _changed |= value != _idColor; _idColor = value; } }
     public CollisionRenderHandleNormalMode Normals { get => _normals; set { _regenerate |= value != _normals; _normals = value; } }
