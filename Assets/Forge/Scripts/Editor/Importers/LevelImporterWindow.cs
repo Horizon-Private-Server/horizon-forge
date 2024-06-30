@@ -1136,7 +1136,7 @@ public class LevelImporterWindow : EditorWindow
         UpdateImportProgressBar(ImportStage.Importing_Collision);
         BlenderHelper.ImportMeshAsBlend(collisionDaeFile, mapResourcesFolder, "collision", true, out var outMeshFile);
         AssetDatabase.ImportAsset(UnityHelper.GetProjectRelativePath(outMeshFile));
-        SetModelImportSettings(outMeshFile, addCollider: true);
+        SetModelImportSettings(outMeshFile, addCollider: true, labels: new string[] { "Collider" });
 
         // spawn instance
         var collPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UnityHelper.GetProjectRelativePath(outMeshFile));
@@ -2209,7 +2209,7 @@ public class LevelImporterWindow : EditorWindow
             dzoConfig.DefaultCameraPosition.transform.position = (center / count) + Vector3.up * 15f;
     }
 
-    void SetModelImportSettings(string path, bool addCollider, bool remapMaterials = false)
+    void SetModelImportSettings(string path, bool addCollider, bool remapMaterials = false, string[] labels = null)
     {
         var assetPath = UnityHelper.GetProjectRelativePath(path);
         ModelImporter importer = (ModelImporter)ModelImporter.GetAtPath(assetPath);
@@ -2219,6 +2219,15 @@ public class LevelImporterWindow : EditorWindow
         importer.bakeAxisConversion = true;
         importer.importNormals = ModelImporterNormals.Calculate;
         importer.addCollider = addCollider;
+
+        if (labels != null)
+        {
+            var asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            if (asset)
+            {
+                AssetDatabase.SetLabels(asset, labels);
+            }
+        }
 
         if (remapMaterials) importer.SearchAndRemapMaterials(ModelImporterMaterialName.BasedOnModelNameAndMaterialName, ModelImporterMaterialSearch.Local);
         importer.SaveAndReimport();
