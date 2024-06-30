@@ -103,7 +103,7 @@ public class RenderHandle
         {
             try
             {
-                AssetInstance = GameObject.Instantiate(prefab); //(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                AssetInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 if (AssetInstance)
                 {
                     _assetInstanceHandle = AssetInstance.GetComponent<IRenderHandlePrefab>();

@@ -77,7 +77,7 @@ public class CollisionRenderHandle
 
     public void Update(GameObject parent, GameObject prefab)
     {
-        if (_mesh || prefab != _prefab || !AssetInstance)
+        if (_mesh || prefab != _prefab || !AssetInstance || PrefabUtility.GetCorrespondingObjectFromSource(AssetInstance) != _prefab)
         {
             _prefab = prefab;
             _mesh = null;
@@ -213,7 +213,7 @@ public class CollisionRenderHandle
         {
             try
             {
-                var assetInstance = AssetInstance = GameObject.Instantiate(_prefab); //(GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var assetInstance = AssetInstance = (GameObject)PrefabUtility.InstantiatePrefab(_prefab);
                 if (assetInstance)
                 {
                     UnityHelper.RecurseHierarchy(assetInstance.transform, (t) =>
