@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 
 public static class CollisionBaker
 {
+    static string _lastSaveFilePath = null;
 
     [MenuItem("Forge/Tools/Collision/Bake Collision")]
     public static async Task<bool> BakeCollision()
@@ -128,6 +129,109 @@ public static class CollisionBaker
         return true;
     }
 
+    [MenuItem("Forge/Tools/Collision/Export Selected Instanced Collision")]
+    public static async Task<bool> ExportSelectedInstancedCollision()
+    {
+        var scene = SceneManager.GetActiveScene();
+        if (scene == null) return false;
+
+        // save glb file
+        var savePath = EditorUtility.SaveFilePanel("", string.IsNullOrEmpty(_lastSaveFilePath) ? "" : Path.GetDirectoryName(_lastSaveFilePath), string.IsNullOrEmpty(_lastSaveFilePath) ? "" : Path.GetFileName(_lastSaveFilePath), "glb");
+        if (string.IsNullOrEmpty(savePath))
+            return false;
+        _lastSaveFilePath = savePath;
+
+        var resourcesFolder = FolderNames.GetMapFolder(scene.name);
+        var binFolder = FolderNames.GetMapBinFolder(scene.name, Constants.GameVersion);
+        var affectedInstancedColliders = new List<CollisionRenderHandle>();
+        GameObject combinedRootGo = null;
+
+        var exportSettings = new ExportSettings
+        {
+            Format = GltfFormat.Binary,
+            ImageDestination = ImageDestination.MainBuffer,
+            FileConflictResolution = FileConflictResolution.Overwrite,
+            ComponentMask = GLTFast.ComponentType.Mesh
+        };
+
+        var gameObjectExportSettings = new GameObjectExportSettings
+        {
+            OnlyActiveInHierarchy = true,
+            DisabledComponents = true,
+        };
+
+        try
+        {
+            EditorUtility.DisplayProgressBar("Exporting Instanced Collision", "Collecting Colliders", 0.25f);
+
+            var selectedGameObjects = Selection.gameObjects;
+
+            // build instanced collision
+            var instancedColliders = new List<IInstancedCollider>();
+            foreach (var selectedGameObject in selectedGameObjects)
+            {
+                instancedColliders.AddRange(selectedGameObject.GetComponentsInChildren<Tie>(includeInactive: false) ?? new Tie[0]);
+                instancedColliders.AddRange(selectedGameObject.GetComponentsInChildren<Shrub>(includeInactive: false) ?? new Shrub[0]);
+                instancedColliders.AddRange(selectedGameObject.GetComponentsInChildren<InstancedMeshCollider>(includeInactive: false) ?? new InstancedMeshCollider[0]);
+            }
+
+            foreach (var instance in instancedColliders)
+            {
+                if (instance.HasInstancedCollider())
+                {
+                    // ensure asset is up to date
+                    if (instance is IAsset asset) asset.UpdateAsset();
+
+                    var instancedCollider = instance.GetInstancedCollider();
+                    if (instancedCollider == null || !instancedCollider.AssetInstance) continue;
+
+                    // move collider to collision bake root temporarily for export
+                    instancedCollider.OnPreBake();
+                    affectedInstancedColliders.Add(instancedCollider);
+                }
+            }
+
+            // export and merge instanced collision
+            EditorUtility.DisplayProgressBar("Exporting Instanced Collision", "Merging Colliders", 0.5f);
+            var export = new GameObjectExport(exportSettings, gameObjectExportSettings);
+
+            // merge
+            combinedRootGo = CombineMeshes(affectedInstancedColliders.Select(x => x.AssetInstance).ToArray());
+
+            // export scene
+            combinedRootGo.transform.rotation = Quaternion.AngleAxis(180f, Vector3.up);
+            export.AddScene(new GameObject[] { combinedRootGo });
+
+            if (File.Exists(_lastSaveFilePath)) File.Delete(_lastSaveFilePath);
+            using (var fs = File.Create(_lastSaveFilePath))
+            {
+                if (!await export.SaveToStreamAndDispose(fs))
+                {
+                    return false;
+                }
+            }
+
+            Debug.Log("Selected Instanced Collision successfully exported!");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+            return false;
+        }
+        finally
+        {
+            // post bake
+            foreach (var instance in affectedInstancedColliders)
+                instance.OnPostBake();
+
+            // remove temporary collision bake root
+            if (combinedRootGo) GameObject.DestroyImmediate(combinedRootGo);
+
+            EditorUtility.ClearProgressBar();
+        }
+
+        return true;
+    }
 
     static GameObject CombineMeshes(GameObject[] gameObjects)
     {
@@ -180,24 +284,21 @@ public static class CollisionBaker
             }
 
             // create a clone of the mesh and bake any vertex colors
-            var meshWithColors = new Mesh()
+            var meshCopy = new Mesh()
             {
                 vertices = meshFilter.sharedMesh.vertices,
                 normals = meshFilter.sharedMesh.normals,
                 uv = meshFilter.sharedMesh.uv,
                 tangents = meshFilter.sharedMesh.tangents,
-                colors = colors,
                 subMeshCount = meshFilter.sharedMesh.subMeshCount,
                 indexFormat = meshFilter.sharedMesh.indexFormat,
-                boneWeights = meshFilter.sharedMesh.boneWeights,
-                bindposes = meshFilter.sharedMesh.bindposes,
                 bounds = meshFilter.sharedMesh.bounds,
             };
 
-            for (int i = 0; i < meshWithColors.subMeshCount; ++i)
+            for (int i = 0; i < meshCopy.subMeshCount; ++i)
             {
                 var triangles = meshFilter.sharedMesh.GetTriangles(i);
-                meshWithColors.SetTriangles(triangles, i);
+                meshCopy.SetTriangles(triangles, i);
             }
 
             for (int i = 0; i < materials.Length; ++i)
@@ -211,7 +312,7 @@ public static class CollisionBaker
 
                 var entry = new MeshFilterSubMesh()
                 {
-                    Mesh = meshWithColors,
+                    Mesh = meshCopy,
                     SubmeshIdx = i,
                     WorldMatrix = reflectionMatrix * meshFilter.transform.localToWorldMatrix
                 };
@@ -251,8 +352,8 @@ public static class CollisionBaker
             //}
 
             // try and convert Universal shader to Standard, so gltf can export correctly
-            var newMat = new Material(Shader.Find("Horizon Forge/Collider"));
-            newMat.SetInteger("_ColId", entry.Key);
+            var newMat = new Material(Shader.Find("Standard"));
+            newMat.SetColor("_Color", CollisionHelper.GetColor(entry.Key));
 
             // Create asset
             newMat.name = materialName;

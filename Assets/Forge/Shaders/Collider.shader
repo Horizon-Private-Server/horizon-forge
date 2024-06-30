@@ -3,6 +3,7 @@ Shader "Horizon Forge/Collider"
     Properties
     {
         [HideInInspector] _ColId("Collision Id", Integer) = 0
+        [HideInInspector] _Color("Color", Color) = (0,0,0,0)
         [HideInInspector] _Faded2("Faded2", Integer) = 0
         [HideInInspector] _Picking("Picking", Integer) = 0
         [HideInInspector] _Selected("Selected", Integer) = 0
@@ -42,6 +43,7 @@ Shader "Horizon Forge/Collider"
             int _Faded2;
             int _Picking;
             int _Selected;
+			float4 _Color;
             float4 _IdColor;
             uniform float4x4 _Reflection2 = float4x4(
                 1,0,0,0,
