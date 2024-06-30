@@ -153,17 +153,21 @@ idx = 1
 mats = bpy.data.materials[:]
 for mat in mats:
     if mat.name.startswith('col_'):
+        parts = mat.name.split('.')
+        lastpart = parts[len(parts)-1]
         expected_name = mat.name[:]
-        if mat.name[-3:].isnumeric():
-            expected_name = mat.name[:-4]
-        mat.name = expected_name + '.' + str(idx).zfill(3)
+        if lastpart.isnumeric():
+            expected_name = mat.name[:-(len(lastpart)+1)]
+        mat.name = expected_name + '.' + str(idx).zfill(5)
         idx += 1
 
 mat_list = [x.material.name for x in root.material_slots]
 remove_slots = []
 for s in root.material_slots:
-    if s.material.name[-3:].isnumeric() and s.material.name.startswith('col_'):
-        expected_name = s.material.name[:-4]
+    parts = s.material.name.split('.')
+    lastpart = parts[len(parts)-1]
+    if lastpart.isnumeric() and s.material.name.startswith('col_'):
+        expected_name = s.material.name[:-(len(lastpart)+1)]
 
         # the last 3 characters are numbers
         # that indicates it might be a duplicate of another material
