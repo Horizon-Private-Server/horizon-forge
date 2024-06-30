@@ -225,6 +225,16 @@ public class TieEditor : Editor
             updateAsset = true;
         }
 
+        // view in project window
+        if (HasOneTarget && GUILayout.Button("Select in Project Window"))
+        {
+            var asset = UnityHelper.GetAssetPrefab(FolderNames.TieFolder, (target as Tie).OClass.ToString());
+            if (asset)
+            {
+                EditorGUIUtility.PingObject(asset);
+            }
+        }
+
         GUILayout.Space(20);
 
         // render materials if only one selected
