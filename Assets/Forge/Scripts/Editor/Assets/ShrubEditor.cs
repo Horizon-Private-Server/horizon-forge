@@ -41,6 +41,8 @@ public class ShrubEditor : Editor
 
     public override void OnInspectorGUI()
     {
+        var updateAsset = false;
+
         if (HasOneTarget)
         {
             serializedObject.Update();
@@ -91,19 +93,23 @@ public class ShrubEditor : Editor
             }
         }
 
-        var changed = serializedObject.hasModifiedProperties;
+        updateAsset = serializedObject.hasModifiedProperties;
         serializedObject.ApplyModifiedProperties();
 
-        // update asset on changes
-        if (changed)
+        // refresh asset
+        GUILayout.Space(20);
+        if (GUILayout.Button("Refresh Asset"))
         {
-            foreach (var target in targets)
+            updateAsset = true;
+        }
+
+        // view in project window
+        if (HasOneTarget && GUILayout.Button("Select in Project Window"))
+        {
+            var asset = UnityHelper.GetAssetPrefab(FolderNames.ShrubFolder, (target as Shrub).OClass.ToString());
+            if (asset)
             {
-                if (target is Shrub shrub)
-                {
-                    shrub.UpdateAsset();
-                    shrub.UpdateMaterials();
-                }
+                EditorGUIUtility.PingObject(asset);
             }
         }
 
@@ -130,6 +136,19 @@ public class ShrubEditor : Editor
                     // Draw the material properties
                     // Works only if the foldout of _materialEditor.DrawHeader () is open
                     matEditor.matEditor.OnInspectorGUI();
+                }
+            }
+        }
+
+        // update asset on changes
+        if (updateAsset)
+        {
+            foreach (var target in targets)
+            {
+                if (target is Shrub shrub)
+                {
+                    shrub.UpdateAsset();
+                    shrub.UpdateMaterials();
                 }
             }
         }

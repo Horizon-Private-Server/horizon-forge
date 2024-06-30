@@ -51,6 +51,8 @@ public class MobyEditor : Editor
 
     public override void OnInspectorGUI()
     {
+        var updateAsset = false;
+
         serializedObject.Update();
 
         // draw oclass
@@ -111,6 +113,26 @@ public class MobyEditor : Editor
             }
         }
 
+        updateAsset = serializedObject.hasModifiedProperties;
+        serializedObject.ApplyModifiedProperties();
+
+        // refresh asset
+        GUILayout.Space(20);
+        if (GUILayout.Button("Refresh Asset"))
+        {
+            updateAsset = true;
+        }
+
+        // view in project window
+        if (HasOneTarget && GUILayout.Button("Select in Project Window"))
+        {
+            var asset = UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, (target as Moby).OClass.ToString());
+            if (asset)
+            {
+                EditorGUIUtility.PingObject(asset);
+            }
+        }
+
         if (TargetsShareOClass)
         { 
             // selection
@@ -144,7 +166,18 @@ public class MobyEditor : Editor
             }
         }
 
-        serializedObject.ApplyModifiedProperties();
+        // update asset
+        if (updateAsset)
+        {
+            foreach (var obj in targets)
+            {
+                if (obj is Moby moby)
+                {
+                    moby.UpdateAsset();
+                    moby.UpdateMaterials();
+                }
+            }
+        }
     }
 
     private void OverlayField(MapConfig mapConfig, Moby moby, PvarOverlayDef def)
