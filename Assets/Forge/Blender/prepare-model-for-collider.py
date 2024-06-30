@@ -43,6 +43,29 @@ uvlayer = me.uv_layers.active
 # Object Mode
 bpy.ops.object.mode_set(mode='OBJECT')
 
+# merge vertices by distance
+all_objects = [x for x in C.scene.objects]
+for obj in all_objects:
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    # go edit mode
+    bpy.ops.object.mode_set(mode='EDIT')
+    # select all faces
+    bpy.ops.mesh.select_all(action='SELECT')
+    # merge
+    bpy.ops.mesh.remove_doubles(threshold = 0.001)
+    # reset normals
+    #bpy.ops.mesh.normals_tools(mode='RESET')
+    # recalculate outside normals 
+    #bpy.ops.mesh.normals_make_consistent(inside=False)
+    # go object mode again
+    bpy.ops.object.editmode_toggle()
+
+# Object Mode
+bpy.ops.object.mode_set(mode='OBJECT')
+
+
 # all_objects = [x for x in C.scene.objects]
 # for obj in all_objects:
 #     bpy.ops.object.select_all(action='DESELECT')
