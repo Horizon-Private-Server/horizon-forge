@@ -93,3 +93,7 @@ crashlytics-build.properties
 !/[Aa]ssets/[Ff]orge.meta
 !/[Aa]ssets/AsmDef.asmdef
 !/[Aa]ssets/AsmDef.asmdef.meta
+!/[Aa]ssets/NuGet.config
+!/[Aa]ssets/NuGet.config.meta
+!/[Aa]ssets/packages.config
+!/[Aa]ssets/packages.config.meta
