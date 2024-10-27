@@ -116,7 +116,7 @@
     "Overlay": [
       {
         "Name": "Owned Mobys",
-        "DataType": "MobyRefArray",
+        "DataType": "MobyRef",
         "Count": 16,
         "Offset": 0
       }
@@ -919,7 +919,12 @@
     "Name": "Bolt Crank",
     "RCVersion": 4,
     "MobyOClass": 6695,
-    "Length": 96,
+    "Length": 128,
+    "States": {
+      "Destroyed": -1,
+      "Uncaptured": 1,
+      "Captured": 5
+    },
     "Default": "0000003F00000000000000000000000000000000000000000000000000000000FFFFFFFF000000000000803F00000000000080400000000014000000000000000000000000000000000000000000000000000000000000000000000000000000",
     "Pointers": "",
     "Overlay": [
@@ -929,29 +934,15 @@
         "Offset": 0
       },
       {
-        "Name": "Camera Cuboid",
-        "DataType": "CuboidRef",
-        "Offset": 32
-      },
-      {
-        "Name": "Crank Camera Adjustment",
+        "Name": "# of Rotations",
         "DataType": "Float",
         "Offset": 40
       },
       {
-        "Name": "Capture Resistance",
-        "DataType": "Float",
-        "Offset": 48
-      },
-      {
         "Name": "Bolt Crank Resets",
         "DataType": "Bool",
+        "Default": true,
         "Offset": 52
-      },
-      {
-        "Name": "Reset Timer (Seconds)",
-        "DataType": "Integer",
-        "Offset": 56
       }
     ]
   },
@@ -2720,7 +2711,7 @@
     "Name": "Base Computer",
     "RCVersion": 3,
     "MobyOClass": 7255,
-    "Length": 48,
+    "Length": 208,
     "Default": "3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000C8426400000003002000000000010000C03F0000000000000000000000000000000000000000080107FF000000000000000101000000000000000000000000000000000000800000000004000F000000000000000000FFFFFFFFFFFFFFFF00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     "Pointers": "0",
     "Overlay": [
@@ -3294,6 +3285,1002 @@
         "Name": "Global Sound Config Id",
         "DataType": "Integer",
         "Offset": 0
+      }
+    ]
+  },
+  {
+    "Name": "Raids Spawner",
+    "RCVersion": 4,
+    "MobyOClass": 16385,
+    "Length": 376,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "Paused": 1,
+      "On": 2,
+      "Complete": 127
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 4,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Path Graph",
+        "DataType": "PathGraphRef",
+        "Offset": 72
+      },
+      {
+        "Name": "Number of Mobs to Spawn",
+        "DataType": "Integer",
+        "Offset": 76,
+        "Min": 0
+      },
+      {
+        "Name": "Spawn Zones",
+        "DataType": "CuboidRef",
+        "Offset": 8,
+        "Count": 4
+      },
+      {
+        "Name": "Habitable Zones",
+        "DataType": "CuboidRef",
+        "Offset": 24,
+        "Count": 4
+      },
+      {
+        "Name": "Aggro Zones",
+        "DataType": "CuboidRef",
+        "Offset": 40,
+        "Count": 4
+      },
+      {
+        "Name": "Roam Zones",
+        "DataType": "CuboidRef",
+        "Offset": 56,
+        "Count": 4
+      },
+      {
+        "Name": "Mob Parameters",
+        "DataType": "Struct",
+        "Offset": 80,
+        "DataSize": 24,
+        "Count": 8,
+        "Fields": [
+          {
+            "Name": "Mob Param Id",
+            "DataType": "Enum",
+            "DataSize": 4,
+            "Offset": 0,
+            "Options": {
+              "None": -1,
+              "Mob 0": 0,
+              "Mob 1": 1,
+              "Mob 2": 2,
+              "Mob 3": 3,
+              "Mob 4": 4,
+              "Mob 5": 5,
+              "Mob 6": 6,
+              "Mob 7": 7
+            }
+          },
+          {
+            "Name": "Probability",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0,
+            "Max": 1
+          },
+          {
+            "Name": "Difficulty Multiplier",
+            "DataType": "Float",
+            "Offset": 8,
+            "Default": 1
+          },
+          {
+            "Name": "Max Can Spawn (0=Unlimited)",
+            "DataType": "Integer",
+            "Offset": 12,
+            "Min": 0
+          },
+          {
+            "Name": "Max Alive At Once (0=MAX)",
+            "DataType": "Integer",
+            "Offset": 16,
+            "Min": 0
+          },
+          {
+            "Name": "Spawn Cooldown (Ticks)",
+            "DataType": "Integer",
+            "Offset": 20,
+            "Min": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Raids Mover",
+    "RCVersion": 4,
+    "MobyOClass": 16386,
+    "Length": 224,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "Complete": 127
+    },
+    "Overlay": [
+      {
+        "Name": "Translation",
+        "DataType": "Label",
+        "Order": 10
+      },
+      {
+        "Name": "Rotation",
+        "DataType": "Label",
+        "Order": 20
+      },
+      {
+        "Name": "Velocity",
+        "DataType": "Vector3",
+        "Order": 14,
+        "Offset": 0
+      },
+      {
+        "Name": "Acceleration",
+        "DataType": "Vector3",
+        "Order": 15,
+        "Offset": 16
+      },
+      {
+        "Name": "Angular Velocity",
+        "DataType": "Vector3",
+        "Order": 24,
+        "Offset": 32
+      },
+      {
+        "Name": "Angular Acceleration",
+        "DataType": "Vector3",
+        "Order": 25,
+        "Offset": 48
+      },
+      {
+        "Name": "Time Offset",
+        "DataType": "Vector3",
+        "Order": 13,
+        "Offset": 64
+      },
+      {
+        "Name": "Angular Time Offset",
+        "DataType": "Vector3",
+        "Order": 23,
+        "Offset": 80
+      },
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Order": 0,
+        "Offset": 100,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Speed",
+        "DataType": "Float",
+        "Order": 12,
+        "Offset": 104
+      },
+      {
+        "Name": "Angular Speed",
+        "DataType": "Float",
+        "Order": 22,
+        "Offset": 108
+      },
+      {
+        "Name": "Motion",
+        "DataType": "Enum",
+        "Order": 11,
+        "Offset": 112,
+        "Options": {
+          "Linear": 0,
+          "Cyclic": 1
+        }
+      },
+      {
+        "Name": "Angular Motion",
+        "DataType": "Enum",
+        "Order": 21,
+        "Offset": 116,
+        "Options": {
+          "Linear": 0,
+          "Cyclic": 1
+        }
+      },
+      {
+        "Name": "Move Along Spline",
+        "DataType": "Label",
+        "Order": 30
+      },
+      {
+        "Name": "Spline",
+        "DataType": "SplineRef",
+        "Order": 30,
+        "Offset": 120
+      },
+      {
+        "Name": "Snap Targets To",
+        "DataType": "Bool",
+        "Order": 31,
+        "Offset": 124
+      },
+      {
+        "Name": "Align Targets",
+        "DataType": "Bool",
+        "Order": 31,
+        "Offset": 125
+      },
+      {
+        "Name": "Speed",
+        "DataType": "float",
+        "Order": 32,
+        "Min": 0,
+        "Offset": 128
+      },
+      {
+        "Name": "Loop",
+        "DataType": "Enum",
+        "Order": 33,
+        "Offset": 132,
+        "DataSize": 4,
+        "Options": {
+          "Stop": 0,
+          "Loop": 1,
+          "Ping Pong": 2
+        }
+      },
+      {
+        "DataType": "Space",
+        "Order": 50
+      },
+      {
+        "Name": "Runtime (sec) (0=INFINITE)",
+        "DataType": "float",
+        "Order": 1,
+        "Min": 0,
+        "Offset": 136
+      },
+      {
+        "Name": "Targets",
+        "DataType": "Label",
+        "Order": 50
+      },
+      {
+        "Name": "Mobys",
+        "DataType": "MobyRef",
+        "Order": 51,
+        "Offset": 140,
+        "Count": 4
+      },
+      {
+        "Name": "Cuboids",
+        "DataType": "CuboidRef",
+        "Order": 52,
+        "Offset": 156,
+        "Count": 4
+      }
+    ]
+  },
+  {
+    "Name": "Raids Controller",
+    "RCVersion": 4,
+    "MobyOClass": 16387,
+    "Length": 280,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "Triggered": 2,
+      "Complete": 127
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 4,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Trigger When",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 104,
+        "Options": {
+          "Any True": 0,
+          "All True": 1
+        }
+      },
+      {
+        "Name": "Iterations (0=INFINITE)",
+        "DataType": "Integer",
+        "DataSize": 2,
+        "Offset": 106,
+        "Min": 0,
+        "Max": 32767
+      },
+      {
+        "Name": "Conditions",
+        "DataType": "Struct",
+        "Offset": 108,
+        "DataSize": 16,
+        "Count": 8,
+        "Fields": [
+          {
+            "Name": "Type",
+            "DataType": "Enum",
+            "DataSize": 4,
+            "Offset": 0,
+            "Options": {
+              "Disabled": 0,
+              "Moby State": 1,
+              "Cuboid": 2,
+              "Player Button Press": 3,
+              "Delay": 4,
+              "Not Yet Triggered": 5,
+              "NPC Target": 6
+            }
+          },
+          {
+            "Name": "Moby",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "1" },
+              { "Field": "Default State", "Op": "==", "Value": "1" }
+            ]
+          },
+          {
+            "Name": "NPC Controller",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "6" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 2,
+            "Offset": 8,
+            "Options": {
+              "==": 0,
+              "!=": 1,
+              "<": 2,
+              "<=": 3,
+              ">": 4,
+              ">=": 5
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "1" }
+            ]
+          },
+          {
+            "Name": "Moby State",
+            "DataType": "MobyRefState",
+            "DataSize": 2,
+            "Ref": "Moby",
+            "Offset": 10,
+            "Min": 0,
+            "Max": 127,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "1" }
+            ]
+          },
+          {
+            "Name": "Trigger By",
+            "DataType": "Mask",
+            "DataSize": 1,
+            "Offset": 14,
+            "Options": {
+              "Any Player": 1,
+              "All Players": 2,
+              "No Players": 4,
+              "Any NPC": 8,
+              "All NPCs": 16,
+              "No NPCs": 32
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "2" }
+            ]
+          },
+          {
+            "Name": "Match",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 15,
+            "Options": {
+              "Any True": 0,
+              "All True": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "2" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 2,
+            "Offset": 12,
+            "Options": {
+              "Inside Of": 0,
+              "Outside Of": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "2", "6" ] }
+            ]
+          },
+          {
+            "Name": "Cuboid",
+            "DataType": "CuboidRef",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "2", "6" ] }
+            ]
+          },
+          {
+            "Name": "Button Mask",
+            "DataType": "PadMask",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "3" }
+            ]
+          },
+          {
+            "Name": "Delay (ms)",
+            "DataType": "Integer",
+            "DataSize": 4,
+            "Offset": 8,
+            "Min": 0,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "4" }
+            ]
+          }
+        ]
+      },
+      {
+        "Name": "Targets",
+        "DataType": "Struct",
+        "Offset": 8,
+        "DataSize": 12,
+        "Count": 8,
+        "Fields": [
+          {
+            "Name": "Type",
+            "DataType": "Enum",
+            "DataSize": 4,
+            "Offset": 0,
+            "Options": {
+              "Disabled": 0,
+              "Moby State Set": 1,
+              "Moby State Add": 5,
+              "Moby Animation Update": 2,
+              "Moby Enabled Update": 3,
+              "Move Cuboid": 4,
+              "NPC Set Target": 6,
+              "NPC Set Target To Triggered": 7,
+              "Player Give Ammo": 8,
+              "Player Give Health": 9,
+              "Player Respawn": 10
+            }
+          },
+          {
+            "Name": "Moby",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "1", "2", "3", "5" ] }
+            ]
+          },
+          {
+            "Name": "Moby State",
+            "DataType": "MobyRefState",
+            "DataSize": 4,
+            "Ref": "Moby",
+            "Offset": 8,
+            "Min": -1,
+            "Max": 127,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "1" }
+            ]
+          },
+          {
+            "Name": "Amount",
+            "DataType": "Integer",
+            "Offset": 8,
+            "Min": -127,
+            "Max": 127,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "5" }
+            ]
+          },
+          {
+            "Name": "Animation",
+            "DataType": "Integer",
+            "Offset": 8,
+            "Min": 0,
+            "Max": 127,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "2" }
+            ]
+          },
+          {
+            "Name": "Enabled",
+            "DataType": "Bool",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "3" }
+            ]
+          },
+          {
+            "Name": "NPC Controller",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "6", "7" ] }
+            ]
+          },
+          {
+            "Name": "Target Moby",
+            "DataType": "MobyRef",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "6" }
+            ]
+          },
+          {
+            "Name": "Cuboid",
+            "DataType": "CuboidRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "4" }
+            ]
+          },
+          {
+            "Name": "Cuboid To",
+            "DataType": "CuboidRef",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "4" }
+            ]
+          },
+          {
+            "Name": "Target Player(s)",
+            "DataType": "Mask",
+            "DataSize": 4,
+            "Offset": 4,
+            "Options": {
+              "Player 0": 1,
+              "Player 1": 2,
+              "Player 2": 4,
+              "Player 3": 8,
+              "Player 4": 16,
+              "Player 5": 32,
+              "Player 6": 64,
+              "Player 7": 128,
+              "Player 8": 256,
+              "Player 9": 512,
+              "Host": 1024
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
+            ]
+          },
+          {
+            "Name": "Triggered Only",
+            "DataType": "Bool",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
+            ]
+          },
+          {
+            "Name": "Living Only",
+            "DataType": "Bool",
+            "Offset": 9,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "8", "9" ] }
+            ]
+          },
+          {
+            "Name": "Amount (0=MAX)",
+            "DataType": "Integer",
+            "DataSize": 2,
+            "Offset": 10,
+            "Min": -32767,
+            "Max": 32767,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "8", "9" ] }
+            ]
+          },
+          {
+            "Name": "Dead Only",
+            "DataType": "Bool",
+            "Offset": 9,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "10" ] }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Raids Gate",
+    "RCVersion": 4,
+    "MobyOClass": 16388,
+    "Length": 20,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 4,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Length",
+        "DataType": "Float",
+        "Offset": 8,
+        "Min": 0,
+        "Default": 10
+      },
+      {
+        "Name": "Height",
+        "DataType": "Float",
+        "Offset": 12,
+        "Min": 0,
+        "Default": 5
+      }
+    ]
+  },
+  {
+    "Name": "Raids Messager",
+    "RCVersion": 4,
+    "MobyOClass": 16389,
+    "Length": 36,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "Draw [0]": 1,
+      "Draw [1]": 2,
+      "Draw [2]": 3,
+      "Draw [3]": 4,
+      "Draw [4]": 5,
+      "Draw [5]": 6,
+      "Draw [6]": 7,
+      "Draw [7]": 8,
+      "Draw [8]": 9,
+      "Draw [9]": 10,
+      "Draw [10]": 11,
+      "Draw [11]": 12,
+      "Draw [12]": 13,
+      "Draw [13]": 14,
+      "Draw [14]": 15,
+      "Draw [15]": 16,
+      "Complete": 127
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 4,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Default Message",
+        "DataType": "Integer",
+        "DataSize": 1,
+        "Offset": 1,
+        "Min": 0
+      },
+      {
+        "Name": "Target Player(s)",
+        "DataType": "Mask",
+        "DataSize": 2,
+        "Offset": 2,
+        "Options": {
+          "Player 0": 1,
+          "Player 1": 2,
+          "Player 2": 4,
+          "Player 3": 8,
+          "Player 4": 16,
+          "Player 5": 32,
+          "Player 6": 64,
+          "Player 7": 128,
+          "Player 8": 256,
+          "Player 9": 512,
+          "Host": 1024
+        }
+      },
+      {
+        "Name": "Display As",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 8,
+        "Options": {
+          "Popup": 0,
+          "Help": 1,
+          "HUD": 2,
+          "3D Billboard": 3
+        }
+      },
+      {
+        "Name": "Alignment",
+        "DataType": "Alignment",
+        "DataSize": 1,
+        "Offset": 9
+      },
+      {
+        "Name": "Color",
+        "DataType": "ColorRGBA",
+        "Offset": 16,
+        "Default": "2164260863",
+        "Min": 0
+      },
+      {
+        "Name": "Scale",
+        "DataType": "Float",
+        "Offset": 20,
+        "Default": 1,
+        "Min": 0
+      },
+      {
+        "Name": "Screen Position",
+        "DataType": "ScreenPosition",
+        "Offset": 24
+      },
+      {
+        "Name": "Messages",
+        "DataType": "MessageContainer",
+        "Offset": 32
+      }
+    ]
+  },
+  {
+    "Name": "Raids NPC Controller",
+    "RCVersion": 4,
+    "MobyOClass": 16390,
+    "Length": 992,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "Idle": 1,
+      "Roam": 2,
+      "Walk To Target": 3,
+      "Look At Target": 4
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 96,
+        "Options": {
+          "Off": 0,
+          "Idle": 1,
+          "Roam": 2,
+          "Walk To Target": 3,
+          "Look At Target": 4
+        }
+      },
+      {
+        "Name": "Puppet Moby",
+        "DataType": "MobyRef",
+        "Offset": 100
+      },
+      {
+        "Name": "Target Moby",
+        "DataType": "MobyRef",
+        "Offset": 104
+      },
+      {
+        "Name": "Attached Moby",
+        "DataType": "MobyRef",
+        "Offset": 156
+      },
+      {
+        "Name": "Attached Cuboid",
+        "DataType": "CuboidRef",
+        "Offset": 108
+      },
+      {
+        "Name": "Path Graph",
+        "DataType": "PathGraphRef",
+        "Offset": 112
+      },
+      {
+        "Name": "Health",
+        "DataType": "Float",
+        "Offset": 116
+      },
+      {
+        "Name": "Interact Range",
+        "DataType": "Float",
+        "Offset": 120
+      },
+      {
+        "Name": "Speed",
+        "DataType": "Float",
+        "Offset": 124
+      },
+      {
+        "Name": "Turn Speed",
+        "DataType": "Float",
+        "Offset": 128
+      },
+      {
+        "Name": "Acceleration",
+        "DataType": "Float",
+        "Offset": 132
+      },
+      {
+        "Name": "Jump Speed",
+        "DataType": "Float",
+        "Offset": 136
+      },
+      {
+        "Name": "Collision Radius",
+        "DataType": "Float",
+        "Offset": 140
+      },
+      {
+        "Name": "Animation Speed",
+        "DataType": "Float",
+        "Offset": 144
+      },
+      {
+        "Name": "Team",
+        "DataType": "Team",
+        "Offset": 148
+      },
+      {
+        "Name": "Blip Type",
+        "DataType": "Integer",
+        "Offset": 152
+      },
+      {
+        "Name": "Bangles",
+        "DataType": "Mask",
+        "DataSize": 4,
+        "Offset": 160,
+        "Options": {
+          "0001": 1,
+          "0002": 2,
+          "0004": 4,
+          "0008": 8,
+          "0010": 16,
+          "0020": 32,
+          "0040": 64,
+          "0080": 128,
+          "0100": 256,
+          "0200": 512,
+          "0400": 1024,
+          "0800": 2048,
+          "1000": 4096,
+          "2000": 8192,
+          "4000": 16384
+        }
+      },
+      {
+        "Name": "Idle Animation",
+        "DataType": "Struct",
+        "Offset": 0,
+        "DataSize": 12,
+        "Fields": [
+          {
+            "Name": "Animation Id",
+            "DataType": "Integer",
+            "Offset": 0
+          },
+          {
+            "Name": "Speed",
+            "DataType": "Float",
+            "Offset": 4
+          },
+          {
+            "Name": "Duration",
+            "DataType": "Float",
+            "Offset": 8
+          }
+        ]
+      },
+      {
+        "Name": "Walk Animation",
+        "DataType": "Struct",
+        "Offset": 12,
+        "DataSize": 12,
+        "Fields": [
+          {
+            "Name": "Animation Id",
+            "DataType": "Integer",
+            "Offset": 0
+          },
+          {
+            "Name": "Speed",
+            "DataType": "Float",
+            "Offset": 4
+          },
+          {
+            "Name": "Duration",
+            "DataType": "Float",
+            "Offset": 8
+          }
+        ]
+      },
+      {
+        "Name": "Jump Animation",
+        "DataType": "Struct",
+        "Offset": 24,
+        "DataSize": 12,
+        "Fields": [
+          {
+            "Name": "Animation Id",
+            "DataType": "Integer",
+            "Offset": 0
+          },
+          {
+            "Name": "Speed",
+            "DataType": "Float",
+            "Offset": 4
+          },
+          {
+            "Name": "Duration",
+            "DataType": "Float",
+            "Offset": 8
+          }
+        ]
+      },
+      {
+        "Name": "Look At Animation",
+        "DataType": "Struct",
+        "Offset": 36,
+        "DataSize": 12,
+        "Fields": [
+          {
+            "Name": "Animation Id",
+            "DataType": "Integer",
+            "Offset": 0
+          },
+          {
+            "Name": "Speed",
+            "DataType": "Float",
+            "Offset": 4
+          },
+          {
+            "Name": "Duration",
+            "DataType": "Float",
+            "Offset": 8
+          }
+        ]
       }
     ]
   }

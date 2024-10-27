@@ -22,6 +22,7 @@ public class MapConfig : MonoBehaviour
     [Header("Deadlocked")]
     [ReadOnly] public DLMapIds DLBaseMap = DLMapIds.SP_Battledome;
     public DLCustomModeIds DLForceCustomMode = DLCustomModeIds.None;
+    public bool DLHideFromMapList;
     public Texture2D DLLoadingScreen;
     public Texture2D DLMinimap;
     public int[] DLMobysIncludedInExport;
@@ -166,6 +167,25 @@ public class MapConfig : MonoBehaviour
             Gizmos.matrix = Matrix4x4.identity;
         }
     }
+
+    #region PathGraphs
+
+    public PathGraph[] GetPathGraphs()
+    {
+        return HierarchicalSorting.Sort(FindObjectsOfType<PathGraph>());
+    }
+
+    public PathGraph GetPathGraphAtIndex(int idx)
+    {
+        return HierarchicalSorting.Sort(FindObjectsOfType<PathGraph>())?.ElementAtOrDefault(idx);
+    }
+
+    public int GetIndexOfPathGraph(PathGraph graph)
+    {
+        return Array.IndexOf(HierarchicalSorting.Sort(FindObjectsOfType<PathGraph>()), graph);
+    }
+
+    #endregion
 
     #region Cuboids
 

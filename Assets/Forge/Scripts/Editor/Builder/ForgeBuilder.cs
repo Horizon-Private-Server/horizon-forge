@@ -349,7 +349,9 @@ public static class ForgeBuilder
                 {
                     writer.Write(mapConfig.MapVersion);
                     writer.Write((int)mapConfig.DLBaseMap);
-                    writer.Write((int)mapConfig.DLForceCustomMode); // forced custom mode id
+                    writer.Write((short)mapConfig.DLForceCustomMode); // forced custom mode id
+                    writer.Write((byte)(mapConfig.DLHideFromMapList ? 1 : 0)); // hide
+                    writer.Write((byte)0); // padding
                     writer.Write((short)(customModeDatas?.Length ?? 0)); // extra data count
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);
@@ -1501,7 +1503,7 @@ public static class ForgeBuilder
             if (moby.PVars != null && moby.PVars.Length > 0)
             {
                 moby.UpdatePVars();
-                File.WriteAllBytes(Path.Combine(mobyDir, "pvar.bin"), moby.PVars);
+                WritePVarData(Path.Combine(mobyDir, "pvar.bin"), moby.PVars);
             }
 
             // create pvar_ptr.bin
@@ -1624,7 +1626,7 @@ public static class ForgeBuilder
             if (camera.PVars != null && camera.PVars.Length > 0)
             {
                 camera.UpdatePVars();
-                File.WriteAllBytes(Path.Combine(cameraDir, "pvar.bin"), camera.PVars);
+                WritePVarData(Path.Combine(cameraDir, "pvar.bin"), camera.PVars);
             }
 
             ++i;
@@ -1665,7 +1667,7 @@ public static class ForgeBuilder
             if (ambientSound.PVars != null && ambientSound.PVars.Length > 0)
             {
                 ambientSound.UpdatePVars();
-                File.WriteAllBytes(Path.Combine(ambientSoundDir, "pvar.bin"), ambientSound.PVars);
+                WritePVarData(Path.Combine(ambientSoundDir, "pvar.bin"), ambientSound.PVars);
             }
 
             ++i;
@@ -1905,6 +1907,20 @@ public static class ForgeBuilder
         CopyToBuildFolders(EditorSceneManager.GetActiveScene());
 
         Debug.Log("DZO build complete");
+    }
+
+    private static void WritePVarData(string outFilePath, byte[] pvars)
+    {
+        if ((pvars.Length % 0x10) > 0)
+        {
+            var bCopy = new byte[pvars.Length + (0x10 - (pvars.Length % 0x10))];
+            Array.Copy(pvars, 0, bCopy, 0, pvars.Length);
+            File.WriteAllBytes(outFilePath, bCopy);
+        }
+        else
+        {
+            File.WriteAllBytes(outFilePath, pvars);
+        }
     }
 
     public class RebuildContext

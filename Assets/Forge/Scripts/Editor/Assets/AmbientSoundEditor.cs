@@ -15,6 +15,8 @@ public class AmbientSoundEditor : Editor
     SerializedProperty m_PVarMobyRefs;
     SerializedProperty m_PVarSplineRefs;
     SerializedProperty m_PVarAreaRefs;
+    SerializedProperty m_PVarPathGraphRefs;
+    SerializedProperty m_PVarStrings;
     UnityHelper.PVarsPropertiesContainer m_PVarPropertiesContainer;
 
     private void OnEnable()
@@ -27,6 +29,8 @@ public class AmbientSoundEditor : Editor
         m_PVarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
         m_PVarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
         m_PVarAreaRefs = serializedObject.FindProperty("PVarAreaRefs");
+        m_PVarPathGraphRefs = serializedObject.FindProperty("PVarPathGraphRefs");
+        m_PVarStrings = serializedObject.FindProperty("PVarStrings");
 
         m_PVarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
@@ -34,7 +38,9 @@ public class AmbientSoundEditor : Editor
             CuboidRefs = m_PVarCuboidRefs,
             AreaRefs = m_PVarAreaRefs,
             MobyRefs = m_PVarMobyRefs,
-            SplineRefs = m_PVarSplineRefs
+            SplineRefs = m_PVarSplineRefs,
+            PathGraphRefs = m_PVarPathGraphRefs,
+            Strings = m_PVarStrings
         };
     }
 
@@ -44,7 +50,7 @@ public class AmbientSoundEditor : Editor
         EditorGUILayout.PropertyField(m_RCVersion);
         EditorGUILayout.PropertyField(m_AmbientSoundType);
         EditorGUILayout.PropertyField(m_Unknown_0C);
-        UnityHelper.PVarsPropertyField(m_PVarPropertiesContainer, (target as AmbientSound).RCVersion, ambientSoundType: (target as AmbientSound).AmbientSoundType);
+        UnityHelper.PVarsPropertyField(m_PVarPropertiesContainer, target as AmbientSound, (target as AmbientSound).RCVersion, ambientSoundType: (target as AmbientSound).AmbientSoundType);
         serializedObject.ApplyModifiedProperties();
     }
 }

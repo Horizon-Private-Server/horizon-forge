@@ -10,6 +10,8 @@ public interface IPVarObject
     Moby[] GetPVarMobyRefs();
     Spline[] GetPVarSplineRefs();
     Area[] GetPVarAreaRefs();
+    PathGraph[] GetPVarPathGraphRefs();
+    string[] GetPVarStrings();
     PvarOverlay GetPVarOverlay();
 
     void SetPVarData(byte[] pvarData);
@@ -17,4 +19,6 @@ public interface IPVarObject
     void SetPVarMobyRefs(Moby[] mobyRefs);
     void SetPVarSplineRefs(Spline[] splineRefs);
     void SetPVarAreaRefs(Area[] areaRefs);
+    void SetPVarPathGraphRefs(PathGraph[] pathGraphRefs);
+    void SetPVarStrings(string[] strings);
 }

@@ -14,6 +14,8 @@ public class RatchetCameraEditor : Editor
     SerializedProperty m_PVarMobyRefs;
     SerializedProperty m_PVarSplineRefs;
     SerializedProperty m_PVarAreaRefs;
+    SerializedProperty m_PVarPathGraphRefs;
+    SerializedProperty m_PVarStrings;
     UnityHelper.PVarsPropertiesContainer m_PVarPropertiesContainer;
 
     private void OnEnable()
@@ -25,6 +27,8 @@ public class RatchetCameraEditor : Editor
         m_PVarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
         m_PVarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
         m_PVarAreaRefs = serializedObject.FindProperty("PVarAreaRefs");
+        m_PVarPathGraphRefs = serializedObject.FindProperty("PVarPathGraphRefs");
+        m_PVarStrings = serializedObject.FindProperty("PVarStrings");
 
         m_PVarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
@@ -32,7 +36,9 @@ public class RatchetCameraEditor : Editor
             CuboidRefs = m_PVarCuboidRefs,
             AreaRefs = m_PVarAreaRefs,
             MobyRefs = m_PVarMobyRefs,
-            SplineRefs = m_PVarSplineRefs
+            SplineRefs = m_PVarSplineRefs,
+            PathGraphRefs = m_PVarPathGraphRefs,
+            Strings = m_PVarStrings
         };
     }
 
@@ -41,7 +47,7 @@ public class RatchetCameraEditor : Editor
         serializedObject.Update();
         EditorGUILayout.PropertyField(m_RCVersion);
         EditorGUILayout.PropertyField(m_CameraType);
-        UnityHelper.PVarsPropertyField(m_PVarPropertiesContainer, (target as RatchetCamera).RCVersion, cameraType: (target as RatchetCamera).CameraType);
+        UnityHelper.PVarsPropertyField(m_PVarPropertiesContainer, target as RatchetCamera, (target as RatchetCamera).RCVersion, cameraType: (target as RatchetCamera).CameraType);
         serializedObject.ApplyModifiedProperties();
     }
 }

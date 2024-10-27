@@ -115,7 +115,8 @@ public enum DLCustomModeIds
     Training,
     HideAndSeek,
     DreadBall,
-    Tag
+    Tag,
+    Raids
 }
 
 public enum DLTeamIds

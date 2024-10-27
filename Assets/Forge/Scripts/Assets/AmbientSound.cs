@@ -21,6 +21,8 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
     [HideInInspector] public Moby[] PVarMobyRefs;
     [HideInInspector] public Spline[] PVarSplineRefs;
     [HideInInspector] public Area[] PVarAreaRefs;
+    [HideInInspector] public PathGraph[] PVarPathGraphRefs;
+    [HideInInspector] public string[] PVarStrings;
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
@@ -28,12 +30,16 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
     public Moby[] GetPVarMobyRefs() => PVarMobyRefs;
     public Spline[] GetPVarSplineRefs() => PVarSplineRefs;
     public Area[] GetPVarAreaRefs() => PVarAreaRefs;
+    public PathGraph[] GetPVarPathGraphRefs() => PVarPathGraphRefs;
+    public string[] GetPVarStrings() => PVarStrings;
     public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, ambientSoundType: AmbientSoundType);
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
     public void SetPVarCuboidRefs(Cuboid[] cuboidRefs) => PVarCuboidRefs = cuboidRefs;
     public void SetPVarMobyRefs(Moby[] mobyRefs) => PVarMobyRefs = mobyRefs;
     public void SetPVarSplineRefs(Spline[] splineRefs) => PVarSplineRefs = splineRefs;
     public void SetPVarAreaRefs(Area[] areaRefs) => PVarAreaRefs = areaRefs;
+    public void SetPVarPathGraphRefs(PathGraph[] pathGraphRefs) => PVarPathGraphRefs = pathGraphRefs;
+    public void SetPVarStrings(string[] strings) => PVarStrings = strings;
 
 
     private bool changed = true;
@@ -169,8 +175,10 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
         if (!mapConfig) return;
 
         var pvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, ambientSoundType: this.AmbientSoundType);
-        if (pvarOverlay != null && pvarOverlay.Overlay.Any())
+        if (pvarOverlay != null)
         {
+            UnityHelper.ValidatePVars(mapConfig, this);
+
             if (useDefault && !string.IsNullOrEmpty(pvarOverlay.Name))
                 this.name = pvarOverlay.Name;
 
@@ -183,6 +191,7 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         if (!mapConfig) return;
 
+        UnityHelper.ValidatePVars(mapConfig, this);
         UnityHelper.UpdatePVars(mapConfig, this, this.RCVersion);
     }
 
