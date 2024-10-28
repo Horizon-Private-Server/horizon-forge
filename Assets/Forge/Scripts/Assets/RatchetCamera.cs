@@ -17,30 +17,18 @@ public class RatchetCamera : RenderSelectionBase, IPVarObject
     [SerializeField, HideInInspector] private int _version = 0;
     [SerializeField, HideInInspector] public byte[] PVars;
     [SerializeField, HideInInspector] public SerializableStringDictionary PVarValues;
-    [HideInInspector] public Cuboid[] PVarCuboidRefs;
-    [HideInInspector] public Moby[] PVarMobyRefs;
-    [HideInInspector] public Spline[] PVarSplineRefs;
-    [HideInInspector] public Area[] PVarAreaRefs;
-    [HideInInspector] public PathGraph[] PVarPathGraphRefs;
+    [SerializeField, HideInInspector] public SerializableMonoBehaviourDictionary PVarReferences;
     [HideInInspector] public string[] PVarStrings;
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
     public SerializableStringDictionary GetPVarValues() => PVarValues;
-    public Cuboid[] GetPVarCuboidRefs() => PVarCuboidRefs;
-    public Moby[] GetPVarMobyRefs() => PVarMobyRefs;
-    public Spline[] GetPVarSplineRefs() => PVarSplineRefs;
-    public Area[] GetPVarAreaRefs() => PVarAreaRefs;
-    public PathGraph[] GetPVarPathGraphRefs() => PVarPathGraphRefs;
+    public SerializableMonoBehaviourDictionary GetPVarReferences() => PVarReferences;
     public string[] GetPVarStrings() => PVarStrings;
     public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, cameraType: CameraType);
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
     public void SetPVarValues(SerializableStringDictionary pvarValues) => PVarValues = pvarValues;
-    public void SetPVarCuboidRefs(Cuboid[] cuboidRefs) => PVarCuboidRefs = cuboidRefs;
-    public void SetPVarMobyRefs(Moby[] mobyRefs) => PVarMobyRefs = mobyRefs;
-    public void SetPVarSplineRefs(Spline[] splineRefs) => PVarSplineRefs = splineRefs;
-    public void SetPVarAreaRefs(Area[] areaRefs) => PVarAreaRefs = areaRefs;
-    public void SetPVarPathGraphRefs(PathGraph[] pathGraphRefs) => PVarPathGraphRefs = pathGraphRefs;
+    public void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs) => PVarReferences = pvarRefs;
     public void SetPVarStrings(string[] strings) => PVarStrings = strings;
 
 
@@ -100,6 +88,7 @@ public class RatchetCamera : RenderSelectionBase, IPVarObject
     private void OnEnable()
     {
         PVarValues.Owner = this;
+        PVarReferences.Owner = this;
     }
 
     private void OnValidate()

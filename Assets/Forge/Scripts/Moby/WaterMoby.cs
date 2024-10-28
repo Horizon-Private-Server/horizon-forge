@@ -44,21 +44,21 @@ public class WaterMoby : MonoBehaviour, IRenderHandlePrefab
     {
         if (m_Moby)
         {
-            var cuboidHide1 = m_Moby.PVarCuboidRefs[0x54 / 4];
-            var cuboidHide2 = m_Moby.PVarCuboidRefs[0x58 / 4];
-            var cuboidShow = m_Moby.PVarCuboidRefs[0x5C / 4];
+            var cuboidHide0 = m_Moby.PVarReferences[".Hide When Camera In Cuboid 0"] as Cuboid;
+            var cuboidHide1 = m_Moby.PVarReferences[".Hide When Camera In Cuboid 1"] as Cuboid;
+            var cuboidShow = m_Moby.PVarReferences[".Show When Camera In Cuboid"] as Cuboid;
 
             if (cuboidShow && cuboidShow.IsInCuboid(camera.transform.position))
             {
                 // show
                 m_Renderer.enabled = true;
             }
-            else if (cuboidHide1 && cuboidHide1.IsInCuboid(camera.transform.position))
+            else if (cuboidHide0 && cuboidHide0.IsInCuboid(camera.transform.position))
             {
                 // hide
                 m_Renderer.enabled = false;
             }
-            else if (cuboidHide2 && cuboidHide2.IsInCuboid(camera.transform.position))
+            else if (cuboidHide1 && cuboidHide1.IsInCuboid(camera.transform.position))
             {
                 // hide
                 m_Renderer.enabled = false;
@@ -81,35 +81,34 @@ public class WaterMoby : MonoBehaviour, IRenderHandlePrefab
     {
         if (!m_Moby) return;
         if (m_Moby.OClass != 0x0b37) return;
-        if (m_Moby.PVars == null || m_Moby.PVars.Length != 112) return;
 
         var levelDir = FolderNames.GetMapBinFolder(SceneManager.GetActiveScene().name, m_Moby.RCVersion);
         var overlayTex = Texture2D.grayTexture;
         var underlayTex = Texture2D.whiteTexture;
 
-        var overlayTexIdx = 98 + BitConverter.ToInt32(m_Moby.PVars, 0x00);
-        var underlayTexIdx = 98 + BitConverter.ToInt32(m_Moby.PVars, 0x04);
-        var overlayColor = UnityHelper.GetColor(BitConverter.ToUInt32(m_Moby.PVars, 0x30));
-        var underlayColor = UnityHelper.GetColor(BitConverter.ToUInt32(m_Moby.PVars, 0x34));
+        var overlayTexIdx = 98 + m_Moby.GetPVarValue<int>(".Overlay FX Texture");
+        var underlayTexIdx = 98 + m_Moby.GetPVarValue<int>(".Underlay FX Texture");
+        var overlayColor = m_Moby.GetPVarValue<Color32>(".Overlay Color");
+        var underlayColor = m_Moby.GetPVarValue<Color32>(".Underlay Color");
 
-        var fogColor = UnityHelper.GetColor(BitConverter.ToUInt32(m_Moby.PVars, 0x3A));
-        var fogNearIntensity = m_Moby.PVars[0x3D] / 100f;
-        var fogFarIntensity = m_Moby.PVars[0x3E] / 100f;
-        var fogNearDistance = BitConverter.ToSingle(m_Moby.PVars, 0x40);
-        var fogFarDistance = BitConverter.ToSingle(m_Moby.PVars, 0x44);
+        var fogColor = m_Moby.GetPVarValue<Color32>(".Fog Color");
+        var fogNearIntensity = m_Moby.GetPVarValue<byte>(".Fog Intensity Near");
+        var fogFarIntensity = m_Moby.GetPVarValue<byte>(".Fog Intensity Far");
+        var fogNearDistance = m_Moby.GetPVarValue<float>(".Fog Near Distance");
+        var fogFarDistance = m_Moby.GetPVarValue<float>(".Fog Far Distance");
 
-        var waveSpeed = BitConverter.ToSingle(m_Moby.PVars, 0x08);
-        var waveHeight = BitConverter.ToSingle(m_Moby.PVars, 0x0C);
-        var waveOverlayFactor = BitConverter.ToSingle(m_Moby.PVars, 0x10);
-        var waveFrequency = BitConverter.ToSingle(m_Moby.PVars, 0x14);
-        var waveDirectionDeg = BitConverter.ToSingle(m_Moby.PVars, 0x18);
-        var waveIntersectFactor = BitConverter.ToSingle(m_Moby.PVars, 0x1C);
-        var waveOverlayIntersectFactor = BitConverter.ToSingle(m_Moby.PVars, 0x20);
-        var overlayTiling = BitConverter.ToSingle(m_Moby.PVars, 0x24);
-        var overlayDirectionDeg = BitConverter.ToSingle(m_Moby.PVars, 0x28);
-        var overlaySpeed = BitConverter.ToSingle(m_Moby.PVars, 0x2C);
-        var overlayAdditive = m_Moby.PVars[0x39];
-        m_Height = BitConverter.ToSingle(m_Moby.PVars, 0x4C);
+        var waveSpeed = m_Moby.GetPVarValue<float>(".Wave Speed");
+        var waveHeight = m_Moby.GetPVarValue<float>(".Wave Crest");
+        var waveOverlayFactor = m_Moby.GetPVarValue<float>(".Wave Surge");
+        var waveFrequency = m_Moby.GetPVarValue<float>(".Wave Ripple Size");
+        var waveDirectionDeg = m_Moby.GetPVarValue<float>(".Wave Direction");
+        var waveIntersectFactor = m_Moby.GetPVarValue<float>(".Wave Direction Variation");
+        var waveOverlayIntersectFactor = m_Moby.GetPVarValue<float>(".Wave Shimmer Intensity");
+        var overlayTiling = m_Moby.GetPVarValue<float>(".Overlay Tiling");
+        var overlayDirectionDeg = m_Moby.GetPVarValue<float>(".Overlay Direction");
+        var overlaySpeed = m_Moby.GetPVarValue<float>(".Overlay Speed");
+        var overlayAdditive = m_Moby.GetPVarValue<bool>(".Overlay Additive");
+        m_Height = m_Moby.GetPVarValue<float>(".Z Position");
 
         if (overlayTexIdx >= 98)
         {
@@ -142,7 +141,7 @@ public class WaterMoby : MonoBehaviour, IRenderHandlePrefab
 
         // overlay
         m_Mpb.SetTexture("_Overlay_Tex", overlayTex);
-        m_Mpb.SetFloat("_Overlay_Additive", overlayAdditive != 0 ? 1 : 0);
+        m_Mpb.SetFloat("_Overlay_Additive", overlayAdditive ? 1 : 0);
         m_Mpb.SetFloat("_Overlay_Tiling", 250f / overlayTiling);
         m_Mpb.SetColor("_Overlay_Color", overlayColor);
         m_Mpb.SetVector("_Overlay_Direction", new Vector2(Mathf.Cos(overlayDirectionDeg * Mathf.Deg2Rad), Mathf.Sin(overlayDirectionDeg * Mathf.Deg2Rad)) * (-overlaySpeed / 16));

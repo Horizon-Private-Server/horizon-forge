@@ -346,12 +346,12 @@
         "Offset": 44
       },
       {
-        "Name": "Underlay Color",
+        "Name": "Overlay Color",
         "DataType": "ColorRGBA",
         "Offset": 48
       },
       {
-        "Name": "Overlay Color",
+        "Name": "Underlay Color",
         "DataType": "ColorRGBA",
         "Offset": 52
       },

@@ -58,12 +58,12 @@ public class SplineVertex : MonoBehaviour
         {
             foreach (var moby in mobys)
             {
-                if (moby.PVarSplineRefs != null && moby.PVarSplineRefs.Contains(spline))
+                if (moby.PVarReferences != null && moby.PVarReferences.ContainsValue(spline))
                 {
                     moby.UpdateAsset();
                 }
 
-                if (moby.PVarAreaRefs != null && moby.PVarAreaRefs.Any(x => x && x.Splines != null && x.Splines.Contains(spline)))
+                if (moby.PVarReferences != null && moby.PVarReferences.Select(x => x.Value as Area).Any(x => x && x.Splines != null && x.Splines.Contains(spline)))
                 {
                     moby.UpdateAsset();
                 }

@@ -49,8 +49,8 @@ public class Spline : MonoBehaviour
 
         if (Selection.activeGameObject.GetComponent<Moby>() is Moby moby)
         {
-            selected = (moby.PVarSplineRefs != null && moby.PVarSplineRefs.Contains(this)) || (moby.PVarAreaRefs != null && moby.PVarAreaRefs.Any(a => a && a.Splines != null && a.Splines.Contains(this)));
-            return (moby.PVarSplineRefs != null && moby.PVarSplineRefs.Any(x => x)) || (moby.PVarAreaRefs != null && moby.PVarAreaRefs.Any(x => x && x.Splines != null && x.Splines.Any(s => s))); // has a spline or area w/ spline
+            selected = (moby.PVarReferences != null && moby.PVarReferences.ContainsValue(this)) || (moby.PVarReferences != null && moby.PVarReferences.Select(x => x.Value as Area).Any(a => a && a.Splines != null && a.Splines.Contains(this)));
+            return (moby.PVarReferences != null && moby.PVarReferences.Any(x => x.Value as Spline)) || (moby.PVarReferences != null && moby.PVarReferences.Select(x => x.Value as Area).Any(x => x && x.Splines != null && x.Splines.Any(s => s))); // has a spline or area w/ spline
         }
 
         return false;

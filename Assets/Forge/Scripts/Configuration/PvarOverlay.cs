@@ -76,6 +76,28 @@ public class PvarOverlay
         return length;
     }
 
+    public object GetPVarValue(string path, SerializableStringDictionary pvarValues, SerializableMonoBehaviourDictionary pvarRefs)
+    {
+        var parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        var defs = Overlay;
+        PvarOverlayDef def = null;
+        for (int i = 0; i < parts.Length; ++i)
+        {
+            var name = parts[i];
+            if (name.EndsWith("]") && name.Contains("["))
+                name = name.Substring(0, name.IndexOf("[") - 1);
+
+            def = defs.FirstOrDefault(x => x.Name == name);
+            if (def == null) break;
+            defs = def.Fields;
+        }
+
+        if (def == null) return null;
+
+        if (def.IsReferenceType()) return pvarRefs[path];
+        return def.FromString(pvarValues[path]);
+    }
+
     [OnDeserialized]
     internal void OnDeserializedMethod(StreamingContext context)
     {
@@ -394,6 +416,19 @@ public class PvarOverlayDef
         }
     }
 
+    public bool IsReferenceType()
+    {
+        switch (DataType?.ToLower())
+        {
+            case "cuboidref":
+            case "arearef":
+            case "splineref":
+            case "pathgraphref":
+            case "mobyref": return true;
+            default: return false;
+        }
+    }
+
     public object FromBytes(byte[] bytes, int index)
     {
         // don't include the ref types
@@ -429,7 +464,7 @@ public class PvarOverlayDef
         }
     }
 
-    public void ToBytes(object value, byte[] bytes, int index)
+    public void ToBytes(object value, byte[] bytes, int index, object args = null)
     {
         // don't include the ref types
         // that are stored in CuboidRefs[] etc
@@ -458,6 +493,12 @@ public class PvarOverlayDef
             case "padmask":
             case "mobyrefstate":
             case "enum": BitConverter.TryWriteBytes(buffer, (long)value); break;
+
+            case "mobyref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Mobys, value)); break;
+            case "cuboidref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Cuboids, value)); break;
+            case "splineref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Splines, value)); break;
+            case "arearef": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Areas, value)); break;
+            case "pathgraphref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).PathGraphs, value)); break;
             default: throw new NotImplementedException();
         }
 
@@ -598,31 +639,23 @@ public class PvarOverlayDisplayRule
     public string Value { get; set; }
     public string[] Values { get; set; }
 
-    public bool IsMatch(PvarOverlay pvarOverlay, IPVarObject pvarObject, PvarOverlayDef def, int defOffsetAdditive = 0)
+    public bool IsMatch(PvarOverlay pvarOverlay, IPVarObject pvarObject, PvarOverlayDef def, string basePath = "")
     {
-        (PvarOverlayDef fieldDef, int fieldDefParentOffset) = PvarOverlayDef.FindFieldFrom(pvarOverlay, def, Field, defOffsetAdditive);
-        
-        if (fieldDef != null)
-        {
-            var dataSize = fieldDef.GetDataSize();
-            var dataBytes = new byte[8];
-            Array.Copy(pvarObject.GetPVarData(), fieldDefParentOffset + fieldDef.Offset, dataBytes, 0, dataSize);
-            object dataValue = null;
+        //(PvarOverlayDef fieldDef, int fieldDefParentOffset) = PvarOverlayDef.FindFieldFrom(pvarOverlay, def, Field, defOffsetAdditive);
 
-            switch (fieldDef.DataType?.ToLower())
-            {
-                default:
-                    {
-                        dataValue = BitConverter.ToInt64(dataBytes);
-                        break;
-                    }
-            }
+        var pvarValues = pvarObject.GetPVarValues();
+        var refPath = $"{basePath}.{Field}";
+        var fieldDef = (def.ParentDef?.Fields ?? pvarOverlay.Overlay)?.FirstOrDefault(x => x.Name == Field);
+
+        if (fieldDef != null && pvarValues.ContainsKey(refPath))
+        {
+            var fieldValue = pvarValues[refPath];
 
             switch (Op?.ToLower())
             {
-                case "==": return dataValue?.ToString() == Value;
-                case "!=": return dataValue?.ToString() != Value;
-                case "in": return Values?.Contains(dataValue?.ToString()) ?? false;
+                case "==": return fieldValue == Value;
+                case "!=": return fieldValue != Value;
+                case "in": return Values?.Contains(fieldValue) ?? false;
             }
         }
 

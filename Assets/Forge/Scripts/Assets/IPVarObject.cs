@@ -7,20 +7,12 @@ public interface IPVarObject
     int GetRCVersion();
     byte[] GetPVarData();
     SerializableStringDictionary GetPVarValues();
-    Cuboid[] GetPVarCuboidRefs();
-    Moby[] GetPVarMobyRefs();
-    Spline[] GetPVarSplineRefs();
-    Area[] GetPVarAreaRefs();
-    PathGraph[] GetPVarPathGraphRefs();
+    SerializableMonoBehaviourDictionary GetPVarReferences();
     string[] GetPVarStrings();
     PvarOverlay GetPVarOverlay();
 
     void SetPVarData(byte[] pvarData);
     void SetPVarValues(SerializableStringDictionary pvarValues);
-    void SetPVarCuboidRefs(Cuboid[] cuboidRefs);
-    void SetPVarMobyRefs(Moby[] mobyRefs);
-    void SetPVarSplineRefs(Spline[] splineRefs);
-    void SetPVarAreaRefs(Area[] areaRefs);
-    void SetPVarPathGraphRefs(PathGraph[] pathGraphRefs);
+    void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs);
     void SetPVarStrings(string[] strings);
 }

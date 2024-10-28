@@ -12,11 +12,7 @@ public class AmbientSoundEditor : Editor
     SerializedProperty m_Unknown_0C;
     SerializedProperty m_PVars;
     SerializedProperty m_PVarValues;
-    SerializedProperty m_PVarCuboidRefs;
-    SerializedProperty m_PVarMobyRefs;
-    SerializedProperty m_PVarSplineRefs;
-    SerializedProperty m_PVarAreaRefs;
-    SerializedProperty m_PVarPathGraphRefs;
+    SerializedProperty m_PVarRefs;
     SerializedProperty m_PVarStrings;
     UnityHelper.PVarsPropertiesContainer m_PVarPropertiesContainer;
 
@@ -27,22 +23,14 @@ public class AmbientSoundEditor : Editor
         m_Unknown_0C = serializedObject.FindProperty("Unknown_0C");
         m_PVars = serializedObject.FindProperty("PVars");
         m_PVarValues = serializedObject.FindProperty("PVarValues");
-        m_PVarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
-        m_PVarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
-        m_PVarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
-        m_PVarAreaRefs = serializedObject.FindProperty("PVarAreaRefs");
-        m_PVarPathGraphRefs = serializedObject.FindProperty("PVarPathGraphRefs");
+        m_PVarRefs = serializedObject.FindProperty("PVarReferences");
         m_PVarStrings = serializedObject.FindProperty("PVarStrings");
 
         m_PVarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = m_PVars,
             PVarValues = m_PVarValues,
-            CuboidRefs = m_PVarCuboidRefs,
-            AreaRefs = m_PVarAreaRefs,
-            MobyRefs = m_PVarMobyRefs,
-            SplineRefs = m_PVarSplineRefs,
-            PathGraphRefs = m_PVarPathGraphRefs,
+            PVarRefs = m_PVarRefs,
             Strings = m_PVarStrings
         };
     }

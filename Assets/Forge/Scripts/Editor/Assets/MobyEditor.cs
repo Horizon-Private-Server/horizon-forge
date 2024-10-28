@@ -14,11 +14,7 @@ public class MobyEditor : Editor
     private SerializedProperty _rcVersionProperty;
     private SerializedProperty _pvarData;
     private SerializedProperty _pvarValues;
-    private SerializedProperty _pvarCuboidRefs;
-    private SerializedProperty _pvarMobyRefs;
-    private SerializedProperty _pvarSplineRefs;
-    private SerializedProperty _pvarAreaRefs;
-    private SerializedProperty _pvarPathGraphRefs;
+    private SerializedProperty _pvarRefs;
     private SerializedProperty _pvarStrings;
     private UnityHelper.PVarsPropertiesContainer _pvarPropertiesContainer;
     private static Moby _clipboardMoby = null;
@@ -33,22 +29,14 @@ public class MobyEditor : Editor
         _rcVersionProperty = serializedObject.FindProperty("RCVersion");
         _pvarData = serializedObject.FindProperty("PVars");
         _pvarValues = serializedObject.FindProperty("PVarValues");
-        _pvarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
-        _pvarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
-        _pvarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
-        _pvarAreaRefs = serializedObject.FindProperty("PVarAreaRefs");
-        _pvarPathGraphRefs = serializedObject.FindProperty("PVarPathGraphRefs");
+        _pvarRefs = serializedObject.FindProperty("PVarReferences");
         _pvarStrings = serializedObject.FindProperty("PVarStrings");
 
         _pvarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = _pvarData,
             PVarValues = _pvarValues,
-            CuboidRefs = _pvarCuboidRefs,
-            AreaRefs = _pvarAreaRefs,
-            MobyRefs = _pvarMobyRefs,
-            SplineRefs = _pvarSplineRefs,
-            PathGraphRefs = _pvarPathGraphRefs,
+            PVarRefs = _pvarRefs,
             Strings = _pvarStrings
         };
 
@@ -118,21 +106,25 @@ public class MobyEditor : Editor
                     {
                         // copy refs
                         Undo.RecordObject(moby, "Paste PVars");
-                        moby.PVarAreaRefs = _clipboardMoby.PVarAreaRefs.ToArray();
-                        moby.PVarCuboidRefs = _clipboardMoby.PVarCuboidRefs.ToArray();
-                        moby.PVarMobyRefs = _clipboardMoby.PVarMobyRefs.ToArray();
-                        moby.PVarSplineRefs = _clipboardMoby.PVarSplineRefs.ToArray();
                         moby.PVars = _clipboardMoby.PVars.ToArray();
+                        moby.PVarReferences = new SerializableMonoBehaviourDictionary();
+                        moby.PVarValues = new SerializableStringDictionary();
+                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: true);
                     }
                     EditorGUI.EndDisabledGroup();
                     if (GUILayout.Button("Reset PVars"))
                     {
                         Undo.RecordObject(moby, "Reset PVars");
-                        moby.PVarMobyRefs = new Moby[moby.PVarMobyRefs.Length];
-                        moby.PVarCuboidRefs = new Cuboid[moby.PVarCuboidRefs.Length];
-                        moby.PVarSplineRefs = new Spline[moby.PVarSplineRefs.Length];
-                        moby.PVarAreaRefs = new Area[moby.PVarAreaRefs.Length];
+                        moby.PVarReferences = new SerializableMonoBehaviourDictionary();
+                        moby.PVarValues = new SerializableStringDictionary();
                         UnityHelper.InitializePVars(mapConfig, moby, useDefault: true);
+                    }
+                    if (GUILayout.Button(new GUIContent("Last Built", "Resets the PVars to the last built.")))
+                    {
+                        Undo.RecordObject(moby, "Reset Last Built PVars");
+                        moby.PVarReferences = new SerializableMonoBehaviourDictionary();
+                        moby.PVarValues = new SerializableStringDictionary();
+                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: false);
                     }
                     GUILayout.EndHorizontal();
                 }
@@ -208,9 +200,9 @@ public class MobyEditor : Editor
 
     private void SelectChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarMobyRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childMoby in moby.PVarMobyRefs)
+            foreach (var childMoby in moby.PVarReferences.Select(x => x.Value as Moby).Where(x => x))
             {
                 if (!childMoby) continue;
                 if (!selected.Contains(childMoby.gameObject))
@@ -229,9 +221,9 @@ public class MobyEditor : Editor
 
     private void SelectMobyChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarMobyRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childMoby in moby.PVarMobyRefs)
+            foreach (var childMoby in moby.PVarReferences.Select(x => x.Value as Moby).Where(x => x))
             {
                 if (!childMoby) continue;
                 if (!selected.Contains(childMoby.gameObject))
@@ -246,9 +238,9 @@ public class MobyEditor : Editor
 
     private void SelectCuboidChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarCuboidRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childCuboid in moby.PVarCuboidRefs)
+            foreach (var childCuboid in moby.PVarReferences.Select(x => x.Value as Cuboid).Where(x => x))
             {
                 if (!childCuboid) continue;
                 if (!selected.Contains(childCuboid.gameObject))
@@ -262,9 +254,9 @@ public class MobyEditor : Editor
 
     private void SelectSplineChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarSplineRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childSpline in moby.PVarSplineRefs)
+            foreach (var childSpline in moby.PVarReferences.Select(x => x.Value as Spline).Where(x => x))
             {
                 if (!childSpline) continue;
                 if (!selected.Contains(childSpline.gameObject))
@@ -278,9 +270,9 @@ public class MobyEditor : Editor
 
     private void SelectAreaChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarAreaRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childArea in moby.PVarAreaRefs)
+            foreach (var childArea in moby.PVarReferences.Select(x => x.Value as Area).Where(x => x))
             {
                 if (!childArea) continue;
                 if (!selected.Contains(childArea.gameObject))

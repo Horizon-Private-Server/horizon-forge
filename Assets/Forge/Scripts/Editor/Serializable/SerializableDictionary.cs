@@ -102,7 +102,7 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IS
             elemprop.FindPropertyRelative("Value").boxedValue = value;
             elemprop.FindPropertyRelative("Key").boxedValue = key;
             elemprop.FindPropertyRelative("index").boxedValue = idx;
-            this[key] = value;
+            //this[key] = value;
         }
         else
         {
@@ -110,8 +110,28 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IS
             if (!EqualityComparer<TValue>.Default.Equals(value, (TValue)elemprop.boxedValue))
             {
                 elemprop.boxedValue = value;
-                this[key] = value;
+                //this[key] = value;
             }
+        }
+    }
+
+    public SerializedProperty GetPropertyKeyValue(SerializedProperty property, TKey key)
+    {
+        var subprop = property.FindPropertyRelative("dictionaryList");
+        var idx = dictionaryList.FindIndex(x => this.Comparer.Equals(x.Key, key));
+        if (idx < 0)
+        {
+            idx = subprop.arraySize;
+            subprop.arraySize = subprop.arraySize + 1;
+
+            var elemprop = subprop.GetArrayElementAtIndex(idx);
+            elemprop.FindPropertyRelative("Key").boxedValue = key;
+            elemprop.FindPropertyRelative("index").boxedValue = idx;
+            return elemprop.FindPropertyRelative("Value");
+        }
+        else
+        {
+            return subprop.GetArrayElementAtIndex(idx).FindPropertyRelative("Value");
         }
     }
 
@@ -172,5 +192,17 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IS
 [Serializable]
 public class SerializableStringDictionary : SerializableDictionary<string, string>
 {
+    public bool ContainsPath(string path)
+    {
+        return this.Any(x => x.Key.StartsWith(path));
+    }
+}
 
+[Serializable]
+public class SerializableMonoBehaviourDictionary : SerializableDictionary<string, MonoBehaviour>
+{
+    public bool ContainsPath(string path)
+    {
+        return this.Any(x => x.Key.StartsWith(path));
+    }
 }

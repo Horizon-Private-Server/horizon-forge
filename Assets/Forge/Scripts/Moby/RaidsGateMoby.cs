@@ -36,10 +36,9 @@ public class RaidsGateMoby : MonoBehaviour, IRenderHandlePrefab
     {
         if (!m_Moby) return;
         if (m_Moby.OClass != 0x4004) return;
-        if (m_Moby.PVars == null || m_Moby.PVars.Length < 16) return;
 
-        m_Length = BitConverter.ToSingle(m_Moby.PVars, 0x08);
-        m_Height = BitConverter.ToSingle(m_Moby.PVars, 0x0C);
+        float.TryParse(m_Moby.PVarValues[".Length"], out m_Length);
+        float.TryParse(m_Moby.PVarValues[".Height"], out m_Height);
 
         m_Moby.transform.localScale = Vector3.one;
         this.transform.localScale = new Vector3(1, m_Height, m_Length);
