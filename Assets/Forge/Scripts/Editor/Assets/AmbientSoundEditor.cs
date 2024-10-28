@@ -11,6 +11,7 @@ public class AmbientSoundEditor : Editor
     SerializedProperty m_AmbientSoundType;
     SerializedProperty m_Unknown_0C;
     SerializedProperty m_PVars;
+    SerializedProperty m_PVarValues;
     SerializedProperty m_PVarCuboidRefs;
     SerializedProperty m_PVarMobyRefs;
     SerializedProperty m_PVarSplineRefs;
@@ -25,6 +26,7 @@ public class AmbientSoundEditor : Editor
         m_AmbientSoundType = serializedObject.FindProperty("AmbientSoundType");
         m_Unknown_0C = serializedObject.FindProperty("Unknown_0C");
         m_PVars = serializedObject.FindProperty("PVars");
+        m_PVarValues = serializedObject.FindProperty("PVarValues");
         m_PVarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
         m_PVarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
         m_PVarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
@@ -35,6 +37,7 @@ public class AmbientSoundEditor : Editor
         m_PVarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = m_PVars,
+            PVarValues = m_PVarValues,
             CuboidRefs = m_PVarCuboidRefs,
             AreaRefs = m_PVarAreaRefs,
             MobyRefs = m_PVarMobyRefs,

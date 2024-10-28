@@ -17,6 +17,7 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
 
     [SerializeField, HideInInspector] private int _version = 0;
     [SerializeField, HideInInspector] public byte[] PVars;
+    [SerializeField, HideInInspector] public SerializableStringDictionary PVarValues;
     [HideInInspector] public Cuboid[] PVarCuboidRefs;
     [HideInInspector] public Moby[] PVarMobyRefs;
     [HideInInspector] public Spline[] PVarSplineRefs;
@@ -26,6 +27,7 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
+    public SerializableStringDictionary GetPVarValues() => PVarValues;
     public Cuboid[] GetPVarCuboidRefs() => PVarCuboidRefs;
     public Moby[] GetPVarMobyRefs() => PVarMobyRefs;
     public Spline[] GetPVarSplineRefs() => PVarSplineRefs;
@@ -34,6 +36,7 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
     public string[] GetPVarStrings() => PVarStrings;
     public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, ambientSoundType: AmbientSoundType);
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
+    public void SetPVarValues(SerializableStringDictionary pvarValues) => PVarValues = pvarValues;
     public void SetPVarCuboidRefs(Cuboid[] cuboidRefs) => PVarCuboidRefs = cuboidRefs;
     public void SetPVarMobyRefs(Moby[] mobyRefs) => PVarMobyRefs = mobyRefs;
     public void SetPVarSplineRefs(Spline[] splineRefs) => PVarSplineRefs = splineRefs;
@@ -93,6 +96,11 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
         if (Selection.activeGameObject == this.gameObject) return true;
 
         return false;
+    }
+
+    private void OnEnable()
+    {
+        PVarValues.Owner = this;
     }
 
     private void OnValidate()

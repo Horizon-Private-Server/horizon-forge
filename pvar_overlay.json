@@ -405,12 +405,12 @@
         "Offset": 80
       },
       {
-        "Name": "Hide When Camera In Cuboid",
+        "Name": "Hide When Camera In Cuboid 0",
         "DataType": "CuboidRef",
         "Offset": 84
       },
       {
-        "Name": "Hide When Camera In Cuboid",
+        "Name": "Hide When Camera In Cuboid 1",
         "DataType": "CuboidRef",
         "Offset": 88
       },
@@ -1113,12 +1113,12 @@
         "Offset": 80
       },
       {
-        "Name": "Hide When Camera In Cuboid",
+        "Name": "Hide When Camera In Cuboid 0",
         "DataType": "CuboidRef",
         "Offset": 84
       },
       {
-        "Name": "Hide When Camera In Cuboid",
+        "Name": "Hide When Camera In Cuboid 1",
         "DataType": "CuboidRef",
         "Offset": 88
       },
@@ -3528,7 +3528,7 @@
         "Offset": 125
       },
       {
-        "Name": "Speed",
+        "Name": "Spline Speed",
         "DataType": "float",
         "Order": 32,
         "Min": 0,
@@ -3658,7 +3658,7 @@
             ]
           },
           {
-            "Name": "Condition",
+            "Name": "State Condition",
             "DataType": "Enum",
             "DataSize": 2,
             "Offset": 8,

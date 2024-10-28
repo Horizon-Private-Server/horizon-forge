@@ -63,6 +63,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     [HideInInspector] public int[] PVarPointers;
     [HideInInspector] public byte[] PVars;
+    public SerializableStringDictionary PVarValues;
     [HideInInspector] public Cuboid[] PVarCuboidRefs;
     [HideInInspector] public Moby[] PVarMobyRefs;
     [HideInInspector] public Spline[] PVarSplineRefs;
@@ -73,6 +74,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
+    public SerializableStringDictionary GetPVarValues() => PVarValues;
     public Cuboid[] GetPVarCuboidRefs() => PVarCuboidRefs;
     public Moby[] GetPVarMobyRefs() => PVarMobyRefs;
     public Spline[] GetPVarSplineRefs() => PVarSplineRefs;
@@ -81,6 +83,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     public string[] GetPVarStrings() => PVarStrings;
     public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: OClass);
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
+    public void SetPVarValues(SerializableStringDictionary pvarValues) => PVarValues = pvarValues;
     public void SetPVarCuboidRefs(Cuboid[] cuboidRefs) => PVarCuboidRefs = cuboidRefs;
     public void SetPVarMobyRefs(Moby[] mobyRefs) => PVarMobyRefs = mobyRefs;
     public void SetPVarSplineRefs(Spline[] splineRefs) => PVarSplineRefs = splineRefs;
@@ -100,6 +103,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     private void OnEnable()
     {
         AssetUpdater.RegisterAsset(this);
+        PVarValues.Owner = this;
         UpdateAsset();
     }
 

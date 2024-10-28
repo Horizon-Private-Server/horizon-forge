@@ -10,6 +10,7 @@ public class RatchetCameraEditor : Editor
     SerializedProperty m_RCVersion;
     SerializedProperty m_CameraType;
     SerializedProperty m_PVars;
+    SerializedProperty m_PVarValues;
     SerializedProperty m_PVarCuboidRefs;
     SerializedProperty m_PVarMobyRefs;
     SerializedProperty m_PVarSplineRefs;
@@ -23,6 +24,7 @@ public class RatchetCameraEditor : Editor
         m_RCVersion = serializedObject.FindProperty("RCVersion");
         m_CameraType = serializedObject.FindProperty("CameraType");
         m_PVars = serializedObject.FindProperty("PVars");
+        m_PVarValues = serializedObject.FindProperty("PVarValues");
         m_PVarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
         m_PVarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
         m_PVarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
@@ -33,6 +35,7 @@ public class RatchetCameraEditor : Editor
         m_PVarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = m_PVars,
+            PVarValues = m_PVarValues,
             CuboidRefs = m_PVarCuboidRefs,
             AreaRefs = m_PVarAreaRefs,
             MobyRefs = m_PVarMobyRefs,

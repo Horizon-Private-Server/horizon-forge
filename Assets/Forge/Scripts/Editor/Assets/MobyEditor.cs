@@ -13,6 +13,7 @@ public class MobyEditor : Editor
     private HashSet<Material> _materialsWithEditors = new HashSet<Material>();
     private SerializedProperty _rcVersionProperty;
     private SerializedProperty _pvarData;
+    private SerializedProperty _pvarValues;
     private SerializedProperty _pvarCuboidRefs;
     private SerializedProperty _pvarMobyRefs;
     private SerializedProperty _pvarSplineRefs;
@@ -31,6 +32,7 @@ public class MobyEditor : Editor
 
         _rcVersionProperty = serializedObject.FindProperty("RCVersion");
         _pvarData = serializedObject.FindProperty("PVars");
+        _pvarValues = serializedObject.FindProperty("PVarValues");
         _pvarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
         _pvarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
         _pvarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
@@ -41,6 +43,7 @@ public class MobyEditor : Editor
         _pvarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = _pvarData,
+            PVarValues = _pvarValues,
             CuboidRefs = _pvarCuboidRefs,
             AreaRefs = _pvarAreaRefs,
             MobyRefs = _pvarMobyRefs,

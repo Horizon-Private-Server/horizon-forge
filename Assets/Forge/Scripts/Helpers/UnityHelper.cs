@@ -245,6 +245,7 @@ public static class UnityHelper
     public class PVarsPropertiesContainer
     {
         public SerializedProperty PVars { get; set; }
+        public SerializedProperty PVarValues { get; set; }
         public SerializedProperty CuboidRefs { get; set; }
         public SerializedProperty MobyRefs { get; set; }
         public SerializedProperty SplineRefs { get; set; }
@@ -269,7 +270,7 @@ public static class UnityHelper
                 {
                     foreach (var def in pvarOverlay.Overlay)
                     {
-                        PVarsPropertyField_OverlayField(pvarOverlay, properties, pvarObject, def);
+                        PVarsPropertyField_OverlayField(pvarOverlay, properties, pvarObject, "", def);
                     }
                 }
                 catch (Exception ex) { Debug.LogError(ex); }
@@ -335,7 +336,7 @@ public static class UnityHelper
 
                 foreach (var def in pvarOverlay.Overlay)
                 {
-                    InitializePVarField(mapConfig, pvarOverlay, pvarObject, def);
+                    InitializePVarField(mapConfig, pvarOverlay, pvarObject, "", def);
                 }
             }
             catch (Exception ex) { Debug.LogError(ex); }
@@ -352,6 +353,10 @@ public static class UnityHelper
         var areas = mapConfig.GetAreas();
         var pathGraphs = mapConfig.GetPathGraphs();
         var pvars = pvarObject.GetPVarData();
+        var pvarValues = pvarObject.GetPVarValues();
+
+        //var pvarsDupe = new byte[pvars.Length];
+        //Array.Copy(pvars, 0, pvarsDupe, 0, pvars.Length);
 
         // update reference types to index
         var pvarOverlay = pvarObject.GetPVarOverlay();
@@ -361,18 +366,27 @@ public static class UnityHelper
             {
                 foreach (var def in pvarOverlay.Overlay)
                 {
-                    UpdatePVar(pvarOverlay, pvarObject, pvars, cuboids, splines, mobys, areas, pathGraphs, def);
+                    UpdatePVar(pvarOverlay, pvarObject, pvars, pvarValues, cuboids, splines, mobys, areas, pathGraphs, "", def);
                 }
             }
             catch (Exception ex) { Debug.LogError(ex); }
         }
+
+        //for (int i = 0; i < pvars.Length; ++i)
+        //{
+        //    if (pvars[i] != pvarsDupe[i])
+        //    {
+        //        Debug.Log($"{(pvarObject as MonoBehaviour).gameObject.name}: 0x{i:X4} {pvars[i]:X2}=>{pvarsDupe[i]:X2}", pvarObject as MonoBehaviour);
+        //    }
+        //}
     }
 
-    private static void UpdatePVar(PvarOverlay pvarOverlay, IPVarObject pvarObject, byte[] pvars, Cuboid[] cuboids, Spline[] splines, Moby[] mobys, Area[] areas, PathGraph[] pathGraphs, PvarOverlayDef def, int defOffsetAdditive = 0)
+    private static void UpdatePVar(PvarOverlay pvarOverlay, IPVarObject pvarObject, byte[] pvars, SerializableStringDictionary pvarValues, Cuboid[] cuboids, Spline[] splines, Moby[] mobys, Area[] areas, PathGraph[] pathGraphs, string basePath, PvarOverlayDef def, int defOffsetAdditive = 0)
     {
         var count = def.Count ?? 1;
         var offset = def.Offset + defOffsetAdditive;
         var dataSize = def.GetDataSize();
+        var path = basePath + $".{def.Name}";
 
         var display = def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, defOffsetAdditive));
         if (!display) return;
@@ -479,20 +493,39 @@ public static class UnityHelper
                     {
                         for (int i = 0; i < count; ++i)
                         {
+                            var iPath = path;
+                            if (count > 1) iPath += $"[{i}]";
+
                             foreach (var structDef in def.Fields)
                             {
-                                UpdatePVar(pvarOverlay, pvarObject, pvars, cuboids, splines, mobys, areas, pathGraphs, structDef, offset + (i * dataSize));
+                                UpdatePVar(pvarOverlay, pvarObject, pvars, pvarValues, cuboids, splines, mobys, areas, pathGraphs, iPath, structDef, offset + (i * dataSize));
                             }
                         }
+                    }
+                    break;
+                }
+            default: // normal datatypes
+                {
+                    for (int i = 0; i < count; ++i)
+                    {
+                        if (def.IsDisplayOnly()) continue;
+
+                        var iPath = path;
+                        if (count > 1) iPath += $"[{i}]";
+                        var iOffset = offset + (dataSize * i);
+                        var strValue = pvarValues[iPath];
+                        var value = def.FromString(strValue);
+                        def.ToBytes(value, pvars, iOffset);
                     }
                     break;
                 }
         }
     }
 
-    private static void InitializePVarField(MapConfig mapConfig, PvarOverlay pvarOverlay, IPVarObject pvarObject, PvarOverlayDef def, int defOffsetAdditive = 0)
+    private static void InitializePVarField(MapConfig mapConfig, PvarOverlay pvarOverlay, IPVarObject pvarObject, string basePath, PvarOverlayDef def, int defOffsetAdditive = 0)
     {
         var pvars = pvarObject.GetPVarData();
+        var pvarValues = pvarObject.GetPVarValues();
         var mobyRefs = pvarObject.GetPVarMobyRefs();
         var cuboidRefs = pvarObject.GetPVarCuboidRefs();
         var areaRefs = pvarObject.GetPVarAreaRefs();
@@ -503,6 +536,7 @@ public static class UnityHelper
         var count = def.Count ?? 1;
         var dataSize = def.GetDataSize();
         var offset = def.Offset + defOffsetAdditive;
+        var path = basePath + $".{def.Name}";
 
         var display = def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, defOffsetAdditive));
         if (!display) return;
@@ -712,10 +746,30 @@ public static class UnityHelper
                     {
                         for (int i = 0; i < count; ++i)
                         {
+                            var iPath = path;
+                            if (count > 1) iPath += $"[{i}]";
+
                             foreach (var structDef in def.Fields)
                             {
-                                InitializePVarField(mapConfig, pvarOverlay, pvarObject, structDef, offset + (i * dataSize));
+                                InitializePVarField(mapConfig, pvarOverlay, pvarObject, iPath, structDef, offset + (i * dataSize));
                             }
+                        }
+                    }
+                    break;
+                }
+            default: // normal datatypes
+                {
+                    for (int i = 0; i < count; ++i)
+                    {
+                        var iPath = path;
+                        if (count > 1) iPath += $"[{i}]";
+                        var iOffset = offset + (dataSize * i);
+                        var strValue = pvarValues[iPath];
+                        var value = def.FromString(strValue);
+                        if (strValue == null)
+                        {
+                            pvarValues[iPath] = def.ToString(def.FromBytes(pvars, offset) ?? def.FromString(null));
+                            UnityEditor.EditorUtility.SetDirty(pvarObject as MonoBehaviour);
                         }
                     }
                     break;
@@ -723,40 +777,46 @@ public static class UnityHelper
         }
     }
 
-    private static void PVarsPropertyField_OverlayField(PvarOverlay pvarOverlay, PVarsPropertiesContainer properties, IPVarObject pvarObject, PvarOverlayDef def, int defOffsetAdditive = 0)
+    private static void PVarsPropertyField_OverlayField(PvarOverlay pvarOverlay, PVarsPropertiesContainer properties, IPVarObject pvarObject, string basePath, PvarOverlayDef def, int defOffsetAdditive = 0)
     {
         var count = def.Count ?? 1;
         var dataSize = def.GetDataSize();
         var baseOffset = def.Offset + defOffsetAdditive;
+        var pvarValuesDict = pvarObject.GetPVarValues();
+        var pvarData = pvarObject.GetPVarData();
         var display = def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, defOffsetAdditive));
+        var path = basePath + $".{def.Name}";
         if (!display) return;
 
         switch (def.DataType?.ToLower())
         {
             case "bool":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = PVarsPropertyField_Buffer[0] != 0;
+                        string strValue = pvarValuesDict[path2];
+                        bool value = (bool)def.FromString(strValue);
+                        if (strValue == null) value = (bool?)def.FromBytes(pvarData, offset) ?? value;
+
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.Toggle(new GUIContent(name, def.Tooltip), value);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            PVarsPropertyField_Buffer[0] = (byte)(value ? 1 : 0);
-                            PVarsPropertyField_WritePVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "byte":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = (int)PVarsPropertyField_Buffer[0];
+                        string strValue = pvarValuesDict[path2];
+                        int value = (byte)def.FromString(strValue);
+                        if (strValue == null) value = (byte?)def.FromBytes(pvarData, offset) ?? value;
+
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
                         if (EditorGUI.EndChangeCheck())
@@ -765,19 +825,20 @@ public static class UnityHelper
                             if (value > def.Max) value = (int)def.Max;
                             if (value > byte.MaxValue) value = byte.MaxValue;
                             if (value < byte.MinValue) value = byte.MinValue;
-                            PVarsPropertyField_Buffer[0] = (byte)value;
-                            PVarsPropertyField_WritePVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "sbyte":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = (int)(sbyte)PVarsPropertyField_Buffer[0];
+                        string strValue = pvarValuesDict[path2];
+                        int value = (sbyte)def.FromString(strValue);
+                        if (strValue == null) value = (sbyte?)def.FromBytes(pvarData, offset) ?? value;
+
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
                         if (EditorGUI.EndChangeCheck())
@@ -786,46 +847,47 @@ public static class UnityHelper
                             if (value > def.Max) value = (int)def.Max;
                             if (value > sbyte.MaxValue) value = sbyte.MaxValue;
                             if (value < sbyte.MinValue) value = sbyte.MinValue;
-                            PVarsPropertyField_Buffer[0] = (byte)(sbyte)value;
-                            PVarsPropertyField_WritePVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "integer":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = BitConverter.ToInt32(PVarsPropertyField_Buffer, 0);
+                        string strValue = pvarValuesDict[path2];
+                        int value = (int)def.FromString(strValue);
+                        if (strValue == null) value = (int?)def.FromBytes(pvarData, offset) ?? value;
+
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
                         if (EditorGUI.EndChangeCheck())
                         {
                             if (value < def.Min) value = (int)def.Min;
                             if (value > def.Max) value = (int)def.Max;
-                            var b = BitConverter.GetBytes(value);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "float":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = BitConverter.ToSingle(PVarsPropertyField_Buffer, 0);
+                        string strValue = pvarValuesDict[path2];
+                        float value = (float)def.FromString(strValue);
+                        if (strValue == null) value = (float?)def.FromBytes(pvarData, offset) ?? value;
+
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.FloatField(new GUIContent(name, def.Tooltip), value);
                         if (EditorGUI.EndChangeCheck())
                         {
                             if (value < def.Min) value = (float)def.Min;
                             if (value > def.Max) value = (float)def.Max;
-                            var b = BitConverter.GetBytes(value);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
@@ -833,192 +895,201 @@ public static class UnityHelper
             case "vector2":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 8);
-                    var value = new Vector2(BitConverter.ToSingle(PVarsPropertyField_Buffer, 0), BitConverter.ToSingle(PVarsPropertyField_Buffer, 4));
+                    string strValue = pvarValuesDict[path];
+                    var value = (Vector2)def.FromString(strValue);
+                    if (strValue == null) value = (Vector2?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector2Field(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
                     {
                         //if (value < def.Min) value = (float)def.Min;
                         //if (value > def.Max) value = (float)def.Max;
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes(value.x), baseOffset, 4);
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes(value.y), baseOffset + 4, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "vector3":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 12);
-                    var value = new Vector3(BitConverter.ToSingle(PVarsPropertyField_Buffer, 0), BitConverter.ToSingle(PVarsPropertyField_Buffer, 4), BitConverter.ToSingle(PVarsPropertyField_Buffer, 8));
+                    string strValue = pvarValuesDict[path];
+                    var value = (Vector3)def.FromString(strValue);
+                    if (strValue == null) value = (Vector3?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector3Field(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
                     {
                         //if (value < def.Min) value = (float)def.Min;
                         //if (value > def.Max) value = (float)def.Max;
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes(value.x), baseOffset, 4);
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes(value.y), baseOffset + 4, 4);
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes(value.z), baseOffset + 8, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "screenposition":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
-                    var value = new Vector2(BitConverter.ToInt16(PVarsPropertyField_Buffer, 0), BitConverter.ToInt16(PVarsPropertyField_Buffer, 2));
+                    string strValue = pvarValuesDict[path];
+                    var value = (Vector2)def.FromString(strValue);
+                    if (strValue == null) value = (Vector2?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector2Field(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        //if (value < def.Min) value = (float)def.Min;
-                        //if (value > def.Max) value = (float)def.Max;
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes((short)Mathf.Clamp(value.x, 0, 512)), baseOffset, 2);
-                        PVarsPropertyField_WritePVarData(properties, BitConverter.GetBytes((short)Mathf.Clamp(value.y, 0, 416)), baseOffset + 2, 2);
+                        value.x = (short)Mathf.Clamp(value.x, 0, 512);
+                        value.y = (short)Mathf.Clamp(value.x, 0, 416);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
-
                     break;
                 }
             case "colorrgb":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 3);
-                    var value = new Color32(PVarsPropertyField_Buffer[0], PVarsPropertyField_Buffer[1], PVarsPropertyField_Buffer[2], 255);
+                    string strValue = pvarValuesDict[path];
+                    var value = (Color32)def.FromString(strValue);
+                    if (strValue == null) value = (Color32?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value, showEyedropper: true, showAlpha: false, hdr: false);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        PVarsPropertyField_Buffer[0] = value.r;
-                        PVarsPropertyField_Buffer[1] = value.g;
-                        PVarsPropertyField_Buffer[2] = value.b;
-                        PVarsPropertyField_WritePVarData(properties, PVarsPropertyField_Buffer, baseOffset, 3);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "colorrgba":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
-                    var value = new Color32(PVarsPropertyField_Buffer[0], PVarsPropertyField_Buffer[1], PVarsPropertyField_Buffer[2], PVarsPropertyField_Buffer[3]);
+                    string strValue = pvarValuesDict[path];
+                    var value = (Color32)def.FromString(strValue);
+                    if (strValue == null) value = (Color32?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        PVarsPropertyField_Buffer[0] = value.r;
-                        PVarsPropertyField_Buffer[1] = value.g;
-                        PVarsPropertyField_Buffer[2] = value.b;
-                        PVarsPropertyField_Buffer[3] = value.a;
-                        PVarsPropertyField_WritePVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "team":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, def.DataSize ?? 1);
-                    var value = (DLTeamIds)PVarsPropertyField_Buffer[0];
+                    string strValue = pvarValuesDict[path];
+                    int value = (int)def.FromString(strValue);
+                    if (strValue == null) value = (byte?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
-                    value = PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Min, def.Max);
+                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLTeamIds)value, def.Min, def.Max);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        var b = BitConverter.GetBytes((int)value);
-                        PVarsPropertyField_WritePVarData(properties, b, baseOffset, def.DataSize ?? 1);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "fxtex":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
-                    var value = (DLFXTextureIds)BitConverter.ToInt32(PVarsPropertyField_Buffer, 0);
+                    string strValue = pvarValuesDict[path];
+                    int value = (int)def.FromString(strValue);
+                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
-                    value = PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Min, def.Max);
+                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLFXTextureIds)value, def.Min, def.Max);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        var b = BitConverter.GetBytes((int)value);
-                        PVarsPropertyField_WritePVarData(properties, b, baseOffset, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "levelfxtex":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
-                    var value = (DLLevelFXTextureIds)BitConverter.ToInt32(PVarsPropertyField_Buffer, 0);
+                    string strValue = pvarValuesDict[path];
+                    int value = (int)def.FromString(strValue);
+                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
-                    value = PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Min, def.Max);
+                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLLevelFXTextureIds)value, def.Min, def.Max);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        var b = BitConverter.GetBytes((int)value);
-                        PVarsPropertyField_WritePVarData(properties, b, baseOffset, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "enum":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = (long)(BitConverter.ToInt64(PVarsPropertyField_Buffer, 0) & (long)(Math.Pow(2, dataSize * 8) - 1));
+                        string strValue = pvarValuesDict[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            var b = BitConverter.GetBytes(value);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "alignment":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = (long)(BitConverter.ToInt64(PVarsPropertyField_Buffer, 0) & (long)(Math.Pow(2, dataSize * 8) - 1));
+                        string strValue = pvarValuesDict[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, ALIGNMENT_OPTIONS, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            var b = BitConverter.GetBytes(value);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "mask":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = (long)(BitConverter.ToInt64(PVarsPropertyField_Buffer, 0) & (long)(Math.Pow(2, dataSize * 8) - 1));
+                        string strValue = pvarValuesDict[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            var b = BitConverter.GetBytes(value);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
                 }
             case "padmask":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                        var value = (long)(BitConverter.ToInt64(PVarsPropertyField_Buffer, 0) & (long)(Math.Pow(2, dataSize * 8) - 1));
+                        string strValue = pvarValuesDict[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, PAD_MASK_OPTIONS, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            var b = BitConverter.GetBytes(value);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                         }
                     });
                     break;
@@ -1026,38 +1097,40 @@ public static class UnityHelper
             case "mobygroupid":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
-                    var value = BitConverter.ToInt32(PVarsPropertyField_Buffer, 0);
+                    string strValue = pvarValuesDict[path];
+                    int value = (int)def.FromString(strValue);
+                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
                     {
                         if (value < def.Min) value = (int)def.Min;
                         if (value > def.Max) value = (int)def.Max;
-                        var b = BitConverter.GetBytes(value);
-                        PVarsPropertyField_WritePVarData(properties, b, baseOffset, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "tiegroupid":
                 {
                     // read value
-                    PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, baseOffset, 4);
-                    var value = BitConverter.ToInt32( PVarsPropertyField_Buffer, 0);
+                    string strValue = pvarValuesDict[path];
+                    int value = (int)def.FromString(strValue);
+                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
                     {
                         if (value < def.Min) value = (int)def.Min;
                         if (value > def.Max) value = (int)def.Max;
-                        var b = BitConverter.GetBytes(value);
-                        PVarsPropertyField_WritePVarData(properties, b, baseOffset, 4);
+                        pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;
                 }
             case "mobyrefstate":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         Dictionary<string, long> stateOptions = null;
 
@@ -1079,36 +1152,35 @@ public static class UnityHelper
                             }
                         }
 
+                        // read value
+                        string strValue = pvarValuesDict[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
                         if (stateOptions != null && stateOptions.Any())
                         {
-                            // read value
-                            PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                            var value = (long)(BitConverter.ToInt64(PVarsPropertyField_Buffer, 0) & (long)(Math.Pow(2, dataSize * 8) - 1));
                             EditorGUI.BeginChangeCheck();
                             value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, stateOptions, dataSize);
                             if (EditorGUI.EndChangeCheck())
                             {
                                 if (value < -1) value = -1;
                                 if (value > 127) value = 127;
-                                var b = BitConverter.GetBytes(value);
-                                PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                                pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                             }
                         }
                         else
                         {
                             // read value
-                            PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, dataSize);
-                            var value = BitConverter.ToInt32(PVarsPropertyField_Buffer, 0);
                             EditorGUI.BeginChangeCheck();
-                            value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
+                            value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), (int)value);
                             if (EditorGUI.EndChangeCheck())
                             {
                                 if (value < def.Min) value = (int)def.Min;
                                 if (value > def.Max) value = (int)def.Max;
                                 if (value < -1) value = -1;
                                 if (value > 127) value = 127;
-                                var b = BitConverter.GetBytes(value);
-                                PVarsPropertyField_WritePVarData(properties, b, offset, dataSize);
+                                pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
                             }
                         }
                     });
@@ -1116,7 +1188,7 @@ public static class UnityHelper
                 }
             case "cuboidref":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         var refIdx = offset / 4;
                         var refObj = properties.CuboidRefs.GetArrayElementAtIndex(refIdx);
@@ -1126,7 +1198,7 @@ public static class UnityHelper
                 }
             case "splineref":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         var refIdx = offset / 4;
                         var refObj = properties.SplineRefs.GetArrayElementAtIndex(refIdx);
@@ -1136,7 +1208,7 @@ public static class UnityHelper
                 }
             case "arearef":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         var refIdx = offset / 4;
                         var refObj = properties.AreaRefs.GetArrayElementAtIndex(refIdx);
@@ -1146,7 +1218,7 @@ public static class UnityHelper
                 }
             case "mobyref":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         var refIdx = offset / 4;
                         var refObj = properties.MobyRefs.GetArrayElementAtIndex(refIdx);
@@ -1156,7 +1228,7 @@ public static class UnityHelper
                 }
             case "pathgraphref":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         var refIdx = offset / 4;
                         var refObj = properties.PathGraphRefs.GetArrayElementAtIndex(refIdx);
@@ -1166,7 +1238,7 @@ public static class UnityHelper
                 }
             case "struct":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         if (def.Fields != null)
                         {
@@ -1174,44 +1246,9 @@ public static class UnityHelper
                             EditorGUI.indentLevel++;
                             foreach (var structDef in def.Fields)
                             {
-                                PVarsPropertyField_OverlayField(pvarOverlay, properties, pvarObject, structDef, defOffsetAdditive: offset);
+                                PVarsPropertyField_OverlayField(pvarOverlay, properties, pvarObject, path2, structDef, defOffsetAdditive: offset);
                             }
                             EditorGUI.indentLevel--;
-                        }
-                    });
-                    break;
-                }
-            case "varstring":
-                {
-                    DrawToggleGroup(properties, def, baseOffset, (offset, name) =>
-                    {
-                        // read string length
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset, 4);
-                        var length = BitConverter.ToInt32(PVarsPropertyField_Buffer, 0);
-                        if (length > PvarOverlay.VARSTRING_MAX_LENGTH)
-                            length = PvarOverlay.VARSTRING_MAX_LENGTH;
-
-                        // read string
-                        PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset + 4, length);
-                        var str = BinaryHelper.RatchetStrToStr(Encoding.UTF8.GetString(PVarsPropertyField_Buffer, 0, length));
-
-                        EditorGUI.BeginChangeCheck();
-                        EditorGUILayout.PrefixLabel(new GUIContent(name, def.Tooltip));
-                        str = EditorGUILayout.TextArea(str);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            str = BinaryHelper.StrToRatchetStr(str) + "\0";
-                            length = str.Length;
-                            var bLen = BitConverter.GetBytes(length);
-                            var bStr = Encoding.UTF8.GetBytes(str);
-
-                            // adjust pvar size
-                            var writeUntil = offset + 4 + length;
-                            if (properties.PVars.arraySize != writeUntil)
-                                properties.PVars.arraySize = writeUntil;
-
-                            PVarsPropertyField_WritePVarData(properties, bLen, offset, 4);
-                            PVarsPropertyField_WritePVarData(properties, bStr, offset + 4, length);
                         }
                     });
                     break;
@@ -1231,8 +1268,6 @@ public static class UnityHelper
 
                         if (EditorGUI.EndChangeCheck())
                         {
-                            var b = BitConverter.GetBytes(messageCount);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, 4);
                             properties.Strings.arraySize = messageCount;
                         }
 
@@ -1266,18 +1301,28 @@ public static class UnityHelper
 
                         if (EditorGUI.EndChangeCheck())
                         {
-                            var b = BitConverter.GetBytes(messageCount);
-                            PVarsPropertyField_WritePVarData(properties, b, offset, 4);
                             properties.Strings.arraySize = messageCount;
                         }
+
+                        // read value
+                        string strValue = pvarValuesDict[path];
+                        var messageData = strValue?.Split('|');
+                        var newMessageData = "";
 
                         EditorGUI.indentLevel++;
                         for (int i = 0; i < messageCount; ++i)
                         {
-                            // read runtime
-                            PVarsPropertyField_ReadPVarData(properties, PVarsPropertyField_Buffer, offset + 4 + (i * 8) + 2, 2);
-                            int runtime = PVarsPropertyField_Buffer[0];
-                            int moveTo = (sbyte)PVarsPropertyField_Buffer[1];
+                            int runtime = 0;
+                            int moveTo = 0;
+                            if (messageData != null && i < messageData.Length)
+                            {
+                                if (messageData[i] != null)
+                                {
+                                    var parts = messageData[i].Split(',');
+                                    int.TryParse(parts[0], out runtime);
+                                    int.TryParse(parts[1], out moveTo);
+                                }
+                            }
 
                             // get string
                             var str = properties.Strings.GetArrayElementAtIndex(i).stringValue;
@@ -1303,15 +1348,21 @@ public static class UnityHelper
                                 // write runtime
                                 runtime = (byte)Math.Clamp(runtime, 0, byte.MaxValue);
                                 moveTo = (byte)Math.Clamp(moveTo, 0, byte.MaxValue);
-                                var bRuntimeMoveTo = new byte[] { (byte)runtime, (byte)moveTo };
-                                PVarsPropertyField_WritePVarData(properties, bRuntimeMoveTo, offset + 4 + (i * 8) + 2, 2);
 
                                 // set str
                                 properties.Strings.GetArrayElementAtIndex(i).stringValue = str;
                             }
                             EditorGUI.indentLevel--;
+
+                            newMessageData += $"{runtime},{moveTo}|";
                         }
                         EditorGUI.indentLevel--;
+
+                        newMessageData = newMessageData?.Trim('|');
+                        if (strValue != newMessageData)
+                        {
+                            pvarValuesDict.SetPropertyKeyValue(properties.PVarValues, path, newMessageData);
+                        }
                     });
                     break;
                 }
@@ -1319,7 +1370,7 @@ public static class UnityHelper
             // RENDER ONLY
             case "label":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         EditorGUILayout.Space(10);
                         EditorGUILayout.PrefixLabel(new GUIContent(name, def.Tooltip));
@@ -1328,7 +1379,7 @@ public static class UnityHelper
                 }
             case "space":
                 {
-                    Draw(properties, def, baseOffset, (offset, name) =>
+                    Draw(properties, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         EditorGUILayout.Space(10);
                     });
@@ -1337,7 +1388,7 @@ public static class UnityHelper
         }
     }
 
-    private static void Draw(PVarsPropertiesContainer properties, PvarOverlayDef def, int offset, Action<int, string> draw)
+    private static void Draw(PVarsPropertiesContainer properties, string path, PvarOverlayDef def, int offset, Action<int, string, string> draw)
     {
         var count = def.Count ?? 1;
         var dataSize = def.GetDataSize();
@@ -1356,9 +1407,14 @@ public static class UnityHelper
             {
                 var defOffset = offset + (i * dataSize);
                 var name = def.Name;
-                if (count > 1) name = $"[{i}]";
+                var path2 = path + $".{def.Name}";
+                if (count > 1)
+                {
+                    name = $"[{i}]";
+                    path2 += name;
+                }
 
-                draw(defOffset, name);
+                draw(defOffset, name, path2);
                 
                 if (count > 1)
                 {

@@ -6,6 +6,7 @@ public interface IPVarObject
 {
     int GetRCVersion();
     byte[] GetPVarData();
+    SerializableStringDictionary GetPVarValues();
     Cuboid[] GetPVarCuboidRefs();
     Moby[] GetPVarMobyRefs();
     Spline[] GetPVarSplineRefs();
@@ -15,6 +16,7 @@ public interface IPVarObject
     PvarOverlay GetPVarOverlay();
 
     void SetPVarData(byte[] pvarData);
+    void SetPVarValues(SerializableStringDictionary pvarValues);
     void SetPVarCuboidRefs(Cuboid[] cuboidRefs);
     void SetPVarMobyRefs(Moby[] mobyRefs);
     void SetPVarSplineRefs(Spline[] splineRefs);
