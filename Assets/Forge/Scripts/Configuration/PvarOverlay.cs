@@ -256,6 +256,30 @@ public class PvarOverlay
                         Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
+            case "raidsdifficulty":
+                {
+                    // default enum to first value in list
+
+                    var count = def.Count ?? 1;
+                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
+                    var value = defaultValue ?? 0;
+                    var valueBytes = BitConverter.GetBytes(value);
+                    for (int i = 0; i < count; ++i)
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
+                    break;
+                }
+            case "raidsdifficultymask":
+                {
+                    // default enum to first value in list
+
+                    var count = def.Count ?? 1;
+                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
+                    var value = defaultValue ?? 0;
+                    var valueBytes = BitConverter.GetBytes(value);
+                    for (int i = 0; i < count; ++i)
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
+                    break;
+                }
             case "float":
                 {
                     // default to 0 clamped to MIN/MAX
@@ -389,6 +413,8 @@ public class PvarOverlayDef
             case "fxtex":
             case "colorrgba":
             case "alignment":
+            case "raidsdifficulty":
+            case "raidsdifficultymask":
             case "screenposition":
             case "mobyrefstate":
             case "integer": return 4;
@@ -456,8 +482,10 @@ public class PvarOverlayDef
             case "colorrgb": return new Color32(buffer[0], buffer[1], buffer[2], 255);
             case "colorrgba": return new Color32(buffer[0], buffer[1], buffer[2], buffer[3]);
             case "alignment":
+            case "raidsdifficulty":
             case "mask":
             case "padmask":
+            case "raidsdifficultymask":
             case "mobyrefstate":
             case "enum": return BitConverter.ToInt64(buffer);
             default: return null;
@@ -489,8 +517,10 @@ public class PvarOverlayDef
             case "colorrgb": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; break;
             case "colorrgba": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; buffer[3] = ((Color32)value).a; break;
             case "alignment":
+            case "raidsdifficulty":
             case "mask":
             case "padmask":
+            case "raidsdifficultymask":
             case "mobyrefstate":
             case "enum": BitConverter.TryWriteBytes(buffer, (long)value); break;
 
@@ -587,8 +617,10 @@ public class PvarOverlayDef
             case "fxtex": return Enum.TryParse<DLFXTextureIds>(v, out var fxtexId) ? fxtexId : DLFXTextureIds.FX_LAME_SHADOW;
             case "levelfxtex": return Enum.TryParse<DLLevelFXTextureIds>(v, out var lvlfxtexId) ? lvlfxtexId : DLLevelFXTextureIds.FX_LEVEL_0;
             case "alignment":
+            case "raidsdifficulty":
             case "mask":
             case "padmask":
+            case "raidsdifficultymask":
             case "mobyrefstate":
             case "enum": return long.TryParse(v, out var enumValue) ? enumValue : 0;
             default: return null;
@@ -647,7 +679,7 @@ public class PvarOverlayDisplayRule
         var refPath = $"{basePath}.{Field}";
         var fieldDef = (def.ParentDef?.Fields ?? pvarOverlay.Overlay)?.FirstOrDefault(x => x.Name == Field);
 
-        if (fieldDef != null && pvarValues.ContainsKey(refPath))
+        if (fieldDef != null && pvarValues != null && pvarValues.ContainsKey(refPath))
         {
             var fieldValue = pvarValues[refPath];
 

@@ -92,9 +92,10 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private void OnEnable()
     {
+        if (PVarValues != null) PVarValues.Owner = this;
+        if (PVarReferences != null) PVarReferences.Owner = this;
+
         AssetUpdater.RegisterAsset(this);
-        PVarValues.Owner = this;
-        PVarReferences.Owner = this;
         UpdateAsset();
     }
 

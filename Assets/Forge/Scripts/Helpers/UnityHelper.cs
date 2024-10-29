@@ -50,6 +50,24 @@ public static class UnityHelper
         { "Bottom Right", 8 },
     };
 
+    private static readonly Dictionary<string, long> RAIDS_STARS_OPTIONS = new Dictionary<string, long>()
+    {
+        { "1 Star", 0 },
+        { "2 Stars", 1 },
+        { "3 Stars", 2 },
+        { "4 Stars", 3 },
+        { "5 Stars", 4 },
+    };
+
+    private static readonly Dictionary<string, long> RAIDS_DIFFICULTY_MASK_OPTIONS = new Dictionary<string, long>()
+    {
+        { "1 Star", 0x01 },
+        { "2 Stars", 0x02 },
+        { "3 Stars", 0x04 },
+        { "4 Stars", 0x08 },
+        { "5 Stars", 0x10 },
+    };
+
     public static void Matrix4x4PropertyField(SerializedProperty property)
     {
         EditorGUI.BeginDisabledGroup(!property.editable);
@@ -109,13 +127,25 @@ public static class UnityHelper
     static BYTEARRAY_PROPERTYFIELD_FORMAT ByteArrayPropertyField_Format = BYTEARRAY_PROPERTYFIELD_FORMAT.HEX;
     static byte[] ByteArrayPropertyField_Buffer = new byte[BYTEARRAY_PROPERTYFIELD_ROW_BYTE_COUNT];
 
-    public static void ByteArrayPropertyField(SerializedProperty property, bool alwaysExpanded = false)
+    public static void ByteArrayPropertyField(SerializedProperty property, bool alwaysExpanded = false, bool showEditLength = false)
     {
         EditorGUI.BeginDisabledGroup(!property.editable);
         if (!alwaysExpanded) property.isExpanded = alwaysExpanded || EditorGUILayout.BeginFoldoutHeaderGroup(property.isExpanded, property.displayName);
         if (alwaysExpanded || property.isExpanded)
         {
             GUILayout.BeginVertical();
+
+            if (showEditLength)
+            {
+                GUILayout.BeginHorizontal();
+
+                int size = property.arraySize;
+                size = EditorGUILayout.IntField(new GUIContent("Byte Count", ""), size);
+                if (size != property.arraySize)
+                    property.arraySize = size;
+
+                GUILayout.EndHorizontal();
+            }
 
             // draw grouping / format options
             GUILayout.BeginHorizontal();
@@ -284,14 +314,16 @@ public static class UnityHelper
 
                 // show byte editor
                 if (pvarOverlay.ShowRawEditor)
+                {
                     ByteArrayPropertyField(properties.PVars, alwaysExpanded: true);
+                }
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
             EditorGUI.EndDisabledGroup();
         }
         else if (showRawEditorIfNoOverlay)
         {
-            ByteArrayPropertyField(properties.PVars, alwaysExpanded: alwaysExpanded);
+            ByteArrayPropertyField(properties.PVars, alwaysExpanded: alwaysExpanded, showEditLength: true);
         }
     }
 
@@ -543,7 +575,7 @@ public static class UnityHelper
                         if (count > 1) iPath += $"[{i}]";
                         var iOffset = offset + (dataSize * i);
 
-                        if (def.IsReferenceType() && !pvarRefs.ContainsKey(iPath))
+                        if (def.IsReferenceType() && pvarRefs != null && !pvarRefs.ContainsKey(iPath))
                         {
                             MonoBehaviour refValue = null;
                             switch (def.DataType?.ToLower())
@@ -559,7 +591,7 @@ public static class UnityHelper
                             pvarRefs[iPath] = refValue;
                             UnityEditor.EditorUtility.SetDirty(pvarObject as MonoBehaviour);
                         }
-                        else if (!def.IsReferenceType() && !pvarValues.ContainsKey(iPath))
+                        else if (!def.IsReferenceType() && pvarValues != null && !pvarValues.ContainsKey(iPath))
                         {
                             pvarValues[iPath] = def.ToString(def.FromBytes(pvars, iOffset) ?? def.FromString(null));
                             UnityEditor.EditorUtility.SetDirty(pvarObject as MonoBehaviour);
@@ -850,6 +882,25 @@ public static class UnityHelper
                     });
                     break;
                 }
+            case "raidsdifficulty":
+                {
+                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
+                    {
+                        // read value
+                        string strValue = pvarValues[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
+                        EditorGUI.BeginChangeCheck();
+                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, RAIDS_STARS_OPTIONS, dataSize);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
+                        }
+                    });
+                    break;
+                }
             case "mask":
                 {
                     Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
@@ -862,6 +913,25 @@ public static class UnityHelper
 
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
+                        }
+                    });
+                    break;
+                }
+            case "raidsdifficultymask":
+                {
+                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
+                    {
+                        // read value
+                        string strValue = pvarValues[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
+                        EditorGUI.BeginChangeCheck();
+                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, RAIDS_DIFFICULTY_MASK_OPTIONS, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));

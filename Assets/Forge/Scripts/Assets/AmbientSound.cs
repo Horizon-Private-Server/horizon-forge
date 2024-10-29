@@ -88,8 +88,8 @@ public class AmbientSound : RenderSelectionBase, IPVarObject
 
     private void OnEnable()
     {
-        PVarValues.Owner = this;
-        PVarReferences.Owner = this;
+        if (PVarValues != null) PVarValues.Owner = this;
+        if (PVarReferences != null) PVarReferences.Owner = this;
     }
 
     private void OnValidate()

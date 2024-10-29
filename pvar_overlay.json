@@ -3292,7 +3292,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 376,
+    "Length": 408,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3304,11 +3304,17 @@
       {
         "Name": "Default State",
         "DataType": "Enum",
+        "DataSize": 1,
         "Offset": 4,
         "Options": {
           "Off": 0,
           "On": 1
         }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 5
       },
       {
         "Name": "Path Graph",
@@ -3349,7 +3355,7 @@
         "Name": "Mob Parameters",
         "DataType": "Struct",
         "Offset": 80,
-        "DataSize": 24,
+        "DataSize": 28,
         "Count": 8,
         "Fields": [
           {
@@ -3399,6 +3405,13 @@
             "DataType": "Integer",
             "Offset": 20,
             "Min": 0
+          },
+          {
+            "Name": "Stars",
+            "DataType": "RaidsDifficultyMask",
+            "DataSize": 1,
+            "Default": 63,
+            "Offset": 24
           }
         ]
       }
@@ -3467,10 +3480,18 @@
         "DataType": "Enum",
         "Order": 0,
         "Offset": 100,
+        "DataSize": 1,
         "Options": {
           "Off": 0,
           "On": 1
         }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Order": 0,
+        "Offset": 101,
+        "DataSize": 1
       },
       {
         "Name": "Speed",
@@ -3595,10 +3616,17 @@
         "Name": "Default State",
         "DataType": "Enum",
         "Offset": 4,
+        "DataSize": 1,
         "Options": {
           "Off": 0,
           "On": 1
         }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 5,
+        "DataSize": 1
       },
       {
         "Name": "Trigger When",
@@ -3637,7 +3665,8 @@
               "Player Button Press": 3,
               "Delay": 4,
               "Not Yet Triggered": 5,
-              "NPC Target": 6
+              "NPC Target": 6,
+              "Difficulty": 7
             }
           },
           {
@@ -3645,8 +3674,7 @@
             "DataType": "MobyRef",
             "Offset": 4,
             "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "1" },
-              { "Field": "Default State", "Op": "==", "Value": "1" }
+              { "Field": "Type", "Op": "==", "Value": "1" }
             ]
           },
           {
@@ -3754,6 +3782,14 @@
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "4" }
             ]
+          },
+          {
+            "Name": "Stars",
+            "DataType": "RaidsDifficultyMask",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "7" }
+            ]
           }
         ]
       },
@@ -3767,7 +3803,7 @@
           {
             "Name": "Type",
             "DataType": "Enum",
-            "DataSize": 4,
+            "DataSize": 1,
             "Offset": 0,
             "Options": {
               "Disabled": 0,
@@ -3782,6 +3818,13 @@
               "Player Give Health": 9,
               "Player Respawn": 10
             }
+          },
+          {
+            "Name": "Difficulty",
+            "Offset": 1,
+            "DataSize": 1,
+            "DataType": "RaidsDifficultyMask",
+            "Default": 63
           },
           {
             "Name": "Moby",
@@ -3990,24 +4033,31 @@
       {
         "Name": "Default State",
         "DataType": "Enum",
-        "Offset": 4,
+        "Offset": 1,
+        "DataSize": 1,
         "Options": {
           "Off": 0,
           "On": 1
         }
       },
       {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 2,
+        "DataSize": 1
+      },
+      {
         "Name": "Default Message",
         "DataType": "Integer",
         "DataSize": 1,
-        "Offset": 1,
+        "Offset": 3,
         "Min": 0
       },
       {
         "Name": "Target Player(s)",
         "DataType": "Mask",
         "DataSize": 2,
-        "Offset": 2,
+        "Offset": 6,
         "Options": {
           "Player 0": 1,
           "Player 1": 2,
@@ -4026,7 +4076,7 @@
         "Name": "Display As",
         "DataType": "Enum",
         "DataSize": 1,
-        "Offset": 8,
+        "Offset": 4,
         "Options": {
           "Popup": 0,
           "Help": 1,
@@ -4038,7 +4088,7 @@
         "Name": "Alignment",
         "DataType": "Alignment",
         "DataSize": 1,
-        "Offset": 9
+        "Offset": 5
       },
       {
         "Name": "Color",
@@ -4057,7 +4107,7 @@
       {
         "Name": "Screen Position",
         "DataType": "ScreenPosition",
-        "Offset": 24
+        "Offset": 8
       },
       {
         "Name": "Messages",
@@ -4070,7 +4120,7 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 992,
+    "Length": 996,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -4084,6 +4134,7 @@
         "Name": "Default State",
         "DataType": "Enum",
         "Offset": 96,
+        "DataSize": 1,
         "Options": {
           "Off": 0,
           "Idle": 1,
@@ -4091,6 +4142,11 @@
           "Walk To Target": 3,
           "Look At Target": 4
         }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 97
       },
       {
         "Name": "Puppet Moby",
