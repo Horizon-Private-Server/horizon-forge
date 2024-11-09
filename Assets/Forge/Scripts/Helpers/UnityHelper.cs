@@ -444,6 +444,7 @@ public static class UnityHelper
                         totalSize += str.Length + 1;
 
                     // write strings
+                    Array.Copy(BitConverter.GetBytes(strings.Length), 0, pvars, offset, 4);
                     var defOffset = offset + 4;
                     var strOffset = offset + 4 + (strings.Length * 8);
                     for (int i = 0; i < strings.Length; ++i)
@@ -764,7 +765,7 @@ public static class UnityHelper
                     if (EditorGUI.EndChangeCheck())
                     {
                         value.x = (short)Mathf.Clamp(value.x, 0, 512);
-                        value.y = (short)Mathf.Clamp(value.x, 0, 416);
+                        value.y = (short)Mathf.Clamp(value.y, 0, 416);
                         pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
                     break;

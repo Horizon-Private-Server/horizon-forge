@@ -300,7 +300,7 @@ public class PvarOverlay
                     var defaultValue = bool.TryParse(def.Default, out var defVal) ? defVal : (bool?)null;
                     var valueBytes = new byte[] { (defaultValue??false) ? (byte)1 : (byte)0 };
                     for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, def.Offset + (i * dataSize), dataSize);
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
             case "integer":
@@ -312,7 +312,7 @@ public class PvarOverlay
                     var value = (int)Mathf.Clamp(defaultValue ?? 0, def.Min ?? int.MinValue, def.Max ?? int.MaxValue);
                     var valueBytes = BitConverter.GetBytes(value);
                     for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, def.Offset + (i * dataSize), dataSize);
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
             case "mobyrefstate":
@@ -324,7 +324,7 @@ public class PvarOverlay
                     var value = (int)Mathf.Clamp(defaultValue ?? 0, def.Min ?? int.MinValue, def.Max ?? int.MaxValue);
                     var valueBytes = BitConverter.GetBytes(value);
                     for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, def.Offset + (i * dataSize), dataSize);
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
             case "byte":

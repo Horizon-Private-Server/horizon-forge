@@ -14,6 +14,8 @@ public class RaidsModeData : CustomModeData
     public static readonly int GATE_OCLASS = 0x4004;
     public static readonly int MESSAGER_OCLASS = 0x4005;
     public static readonly int NPC_OCLASS = 0x4006;
+    public static readonly int CHECKPOINT_MANAGER_OCLASS = 0x4007;
+    public static readonly int CHECKPOINT_OCLASS = 0x4008;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled;
@@ -126,6 +128,33 @@ public class RaidsModeData : CustomModeData
         moby.RCVersion = RCVER.DL;
         moby.UpdateDistance = 255;
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("NPC Controller");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Checkpoint Manager Moby", priority = 10)]
+    public static void CreateCheckpointManagerMoby()
+    {
+        var go = new GameObject("Checkpoint Manager");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = CHECKPOINT_MANAGER_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        //moby.PrefabOverride = UnityHelper.GetRaidsPrefab("NPC Controller");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Checkpoint Moby", priority = 10)]
+    public static void CreateCheckpointMoby()
+    {
+        var go = new GameObject("Checkpoint");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = CHECKPOINT_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Checkpoint");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

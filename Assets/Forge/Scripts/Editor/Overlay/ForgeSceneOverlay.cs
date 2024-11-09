@@ -60,6 +60,14 @@ public class ForgeSceneOverlay : Overlay
             root.Add(hideFogToggle);
         }
 
+        {
+            var disableScenePickingToggle = new Toggle("Disable Scene Picking (speedup)");
+            disableScenePickingToggle.AddToClassList("fill-space");
+            disableScenePickingToggle.RegisterValueChangedCallback<bool>(e => { UpdateDisableScenePicking(e.newValue); });
+            disableScenePickingToggle.SetValueWithoutNotify(AssetGizmosDrawer.Disabled);
+            root.Add(disableScenePickingToggle);
+        }
+
         return root;
     }
 
@@ -113,6 +121,11 @@ public class ForgeSceneOverlay : Overlay
     private void UpdateShowMobyLines(bool show)
     {
         Moby.DrawPVarMobyLines = show;
+    }
+
+    private void UpdateDisableScenePicking(bool disable)
+    {
+        AssetGizmosDrawer.Disabled = disable;
     }
 
 }

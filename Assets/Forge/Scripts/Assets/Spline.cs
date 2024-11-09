@@ -7,6 +7,9 @@ using UnityEngine;
 
 public class Spline : MonoBehaviour
 {
+    public static bool DrawSplineGizmos = false;
+    public static List<Spline> SelectedSplines = new List<Spline>();
+
     public List<SplineVertex> Vertices;
 
     private void Start()
@@ -24,43 +27,48 @@ public class Spline : MonoBehaviour
         Vertices = GetComponentsInChildren<SplineVertex>().ToList();
     }
 
-    public bool ShouldDrawGizmos(out bool selected)
+    public static void UpdateDrawGizmos()
     {
-        selected = false;
-        if (!Selection.activeGameObject) return false;
+        DrawSplineGizmos = false;
+        SelectedSplines.Clear();
+        if (!Selection.activeGameObject) return;
 
         if (Selection.activeGameObject.GetComponent<Spline>() is Spline spline)
         {
-            selected = spline == this;
-            return true;
+            SelectedSplines.Add(spline);
+            DrawSplineGizmos = true;
+            return;
         }
 
         if (Selection.activeGameObject.GetComponent<SplineVertex>() is SplineVertex splineVertex)
         {
-            selected = this.Vertices.Contains(splineVertex);
-            return true;
+            SelectedSplines.Add(splineVertex.GetComponentInParent<Spline>());
+            DrawSplineGizmos = true;
+            return;
         }
 
         if (Selection.activeGameObject.GetComponent<Area>() is Area area && area.Splines != null)
         {
-            selected = area.Splines.Contains(this);
-            return area.Splines.Any(x => x); // area has a spline
+            SelectedSplines.AddRange(area.Splines);
+            DrawSplineGizmos = area.Splines.Any(x => x); // area has a spline
+            return;
         }
 
         if (Selection.activeGameObject.GetComponent<Moby>() is Moby moby)
         {
-            selected = (moby.PVarReferences != null && moby.PVarReferences.ContainsValue(this)) || (moby.PVarReferences != null && moby.PVarReferences.Select(x => x.Value as Area).Any(a => a && a.Splines != null && a.Splines.Contains(this)));
-            return (moby.PVarReferences != null && moby.PVarReferences.Any(x => x.Value as Spline)) || (moby.PVarReferences != null && moby.PVarReferences.Select(x => x.Value as Area).Any(x => x && x.Splines != null && x.Splines.Any(s => s))); // has a spline or area w/ spline
+            var mobySplines = moby.PVarReferences.Select(x => x.Value as Spline).Where(x => x);
+            var mobyAreas = moby.PVarReferences.Select(x => x.Value as Area).Where(x => x);
+            SelectedSplines.AddRange(mobySplines);
+            DrawSplineGizmos = mobySplines.Any() || mobyAreas.Any(x => x.Splines.Any());
+            return;
         }
-
-        return false;
     }
 
     private void OnDrawGizmos()
     {
-        if (ShouldDrawGizmos(out var selected))
+        if (DrawSplineGizmos)
         {
-            Gizmos.color = selected ? Color.red : Color.white;
+            Gizmos.color = SelectedSplines.Contains(this) ? Color.red : Color.white;
             DrawGizmos();
         }
     }

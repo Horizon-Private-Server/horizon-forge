@@ -10,6 +10,8 @@ using UnityEngine.SceneManagement;
 
 public static class AssetGizmosDrawer
 {
+    public static bool Disabled = false;
+
     static Dictionary<Mesh, Mesh> _meshFlipCache = new Dictionary<Mesh, Mesh>();
     static Material mat;
 
@@ -31,6 +33,8 @@ public static class AssetGizmosDrawer
     [DrawGizmo(GizmoType.NotInSelectionHierarchy | GizmoType.Pickable | GizmoType.Selected | GizmoType.NonSelected)]
     static void DrawMeshGizmos(RenderSelectionBase selectionBase, GizmoType gizmoType)
     {
+        if (Disabled) return;
+
         var selected = false; // gizmoType.HasFlag(GizmoType.Selected) | gizmoType.HasFlag(GizmoType.InSelectionHierarchy);
         Gizmos.color = new Color(0, 0, 1, selected ? 0.25f : 0f);
 

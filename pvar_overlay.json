@@ -3603,7 +3603,7 @@
     "Name": "Raids Controller",
     "RCVersion": 4,
     "MobyOClass": 16387,
-    "Length": 280,
+    "Length": 284,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3666,7 +3666,8 @@
               "Delay": 4,
               "Not Yet Triggered": 5,
               "NPC Target": 6,
-              "Difficulty": 7
+              "Difficulty Stars": 7,
+              "Checkpoint": 8
             }
           },
           {
@@ -3787,8 +3788,30 @@
             "Name": "Stars",
             "DataType": "RaidsDifficultyMask",
             "Offset": 8,
+            "Default": 63,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "7" }
+            ]
+          },
+          {
+            "Name": "Checkpoint Moby",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "8" }
+            ]
+          },
+          {
+            "Name": "Checkpoint State",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 8,
+            "Options": {
+              "Is Not Current Checkpoint": 0,
+              "Is Current Checkpoint": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "8" ] }
             ]
           }
         ]
@@ -3812,15 +3835,17 @@
               "Moby Animation Update": 2,
               "Moby Enabled Update": 3,
               "Move Cuboid": 4,
+              "Set Checkpoint": 12,
               "NPC Set Target": 6,
               "NPC Set Target To Triggered": 7,
               "Player Give Ammo": 8,
               "Player Give Health": 9,
-              "Player Respawn": 10
+              "Player Respawn": 10,
+              "Set Raid Completed": 11
             }
           },
           {
-            "Name": "Difficulty",
+            "Name": "Stars",
             "Offset": 1,
             "DataSize": 1,
             "DataType": "RaidsDifficultyMask",
@@ -3961,6 +3986,14 @@
             "Offset": 9,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "10" ] }
+            ]
+          },
+          {
+            "Name": "Checkpoint Moby",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "12" ] }
             ]
           }
         ]
@@ -4112,7 +4145,7 @@
       {
         "Name": "Messages",
         "DataType": "MessageContainer",
-        "Offset": 32
+        "Offset": 28
       }
     ]
   },
@@ -4120,7 +4153,7 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 996,
+    "Length": 992,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -4337,6 +4370,55 @@
             "Offset": 8
           }
         ]
+      }
+    ]
+  },
+  {
+    "Name": "Raids Checkpoint Manager",
+    "RCVersion": 4,
+    "MobyOClass": 16391,
+    "Length": 136,
+    "Overlay": [
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 0
+      },
+      {
+        "Name": "Default Checkpoint Moby",
+        "Tooltip": "First checkpoint moby when the planet first loads.",
+        "DataType": "MobyRef",
+        "Offset": 4
+      }
+    ]
+  },
+  {
+    "Name": "Raids Checkpoint",
+    "RCVersion": 4,
+    "MobyOClass": 16392,
+    "Length": 12,
+    "States": {
+      "Destroyed": -1,
+      "Not Active": 0,
+      "Active": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 0
+      },
+      {
+        "Name": "On Activate Controller Moby",
+        "Tooltip": "Controller to activate when this checkpoint is reached.",
+        "DataType": "MobyRef",
+        "Offset": 4
+      },
+      {
+        "Name": "On Deactivate Controller Moby",
+        "Tooltip": "Controller to activate when a new checkpoint is reached after this one.",
+        "DataType": "MobyRef",
+        "Offset": 8
       }
     ]
   }

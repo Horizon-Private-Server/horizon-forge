@@ -8,6 +8,7 @@ using UnityEngine;
 public class SplineVertex : MonoBehaviour
 {
     private Matrix4x4 _lastTRS = Matrix4x4.identity;
+    private Spline _parentSpline = null;
 
     private void OnValidate()
     {
@@ -29,11 +30,14 @@ public class SplineVertex : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        var spline = GetComponentInParent<Spline>();
-        if (!spline) return;
+        if (!_parentSpline || _parentSpline.Vertices == null || !_parentSpline.Vertices.Contains(this))
+            _parentSpline = GetComponentInParent<Spline>();
 
-        if (spline.ShouldDrawGizmos(out var selected))
+        if (!_parentSpline) return;
+
+        if (Spline.DrawSplineGizmos)
         {
+            var selected = Spline.SelectedSplines.Contains(_parentSpline);
             Gizmos.color = selected ? Color.red : Color.white;
             DrawGizmos();
 
