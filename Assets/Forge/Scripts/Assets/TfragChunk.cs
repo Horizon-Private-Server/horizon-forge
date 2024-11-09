@@ -101,6 +101,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
                 mpb.SetInteger("_Faded2", hidden ? 1 : 0);
                 mpb.SetInteger("_Picking", picking ? 1 : 0);
                 mpb.SetInteger("_Selected", selected ? 1 : 0);
+                mpb.SetColor("_Color", new Color(2, 2, 2, 0.5f));
                 mpb.SetInteger("_VertexColors", 1);
                 renderer.SetPropertyBlock(mpb);
             }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -39,8 +40,11 @@ public class SNDModeData : CustomModeData
         var mpConfigMoby = mapConfig.GetMobys(RCVER.DL).FirstOrDefault(x => x.OClass == 0x106a);
         if (mpConfigMoby)
         {
-            CopyTransform(mpConfigMoby.PVarMobyRefs[384 / 4] ? mpConfigMoby.PVarMobyRefs[384 / 4].transform : null, sndData.BombSite1);
-            CopyTransform(mpConfigMoby.PVarMobyRefs[388 / 4] ? mpConfigMoby.PVarMobyRefs[388 / 4].transform : null, sndData.BombSite2);
+            var mobyRef1 = mpConfigMoby.PVarReferences[".Blue Home Node"] as Moby;
+            var mobyRef2 = mpConfigMoby.PVarReferences[".Red Home Node"] as Moby;
+
+            CopyTransform(mobyRef1 ? mobyRef1.transform : null, sndData.BombSite1);
+            CopyTransform(mobyRef2 ? mobyRef2.transform : null, sndData.BombSite2);
         }
 
         var cuboids = mapConfig.GetCuboids();

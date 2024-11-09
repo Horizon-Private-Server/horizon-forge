@@ -8,6 +8,7 @@ using UnityEngine;
 public class SplineVertex : MonoBehaviour
 {
     private Matrix4x4 _lastTRS = Matrix4x4.identity;
+    private Spline _parentSpline = null;
 
     private void OnValidate()
     {
@@ -29,11 +30,14 @@ public class SplineVertex : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        var spline = GetComponentInParent<Spline>();
-        if (!spline) return;
+        if (!_parentSpline || _parentSpline.Vertices == null || !_parentSpline.Vertices.Contains(this))
+            _parentSpline = GetComponentInParent<Spline>();
 
-        if (spline.ShouldDrawGizmos(out var selected))
+        if (!_parentSpline) return;
+
+        if (Spline.DrawSplineGizmos)
         {
+            var selected = Spline.SelectedSplines.Contains(_parentSpline);
             Gizmos.color = selected ? Color.red : Color.white;
             DrawGizmos();
 
@@ -58,12 +62,12 @@ public class SplineVertex : MonoBehaviour
         {
             foreach (var moby in mobys)
             {
-                if (moby.PVarSplineRefs != null && moby.PVarSplineRefs.Contains(spline))
+                if (moby.PVarReferences != null && moby.PVarReferences.ContainsValue(spline))
                 {
                     moby.UpdateAsset();
                 }
 
-                if (moby.PVarAreaRefs != null && moby.PVarAreaRefs.Any(x => x && x.Splines != null && x.Splines.Contains(spline)))
+                if (moby.PVarReferences != null && moby.PVarReferences.Select(x => x.Value as Area).Any(x => x && x.Splines != null && x.Splines.Contains(spline)))
                 {
                     moby.UpdateAsset();
                 }

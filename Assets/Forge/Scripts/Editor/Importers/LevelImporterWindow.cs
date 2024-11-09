@@ -1616,11 +1616,13 @@ public class LevelImporterWindow : EditorWindow
     Tie ImportTieInstance(string tieDir, GameObject tieRootGo, string tieClass, int racVersion)
     {
         // read
+        var colorFilePath = Path.Combine(tieDir, "colors.bin");
         var groupFilePath = Path.Combine(tieDir, "group.bin");
         var group = -1;
+        byte[] colors = null;
 
         if (File.Exists(groupFilePath)) group = BitConverter.ToInt32(File.ReadAllBytes(groupFilePath));
-        var colors = File.ReadAllBytes(Path.Combine(tieDir, "colors.bin"));
+        if (File.Exists(colorFilePath)) colors = File.ReadAllBytes(colorFilePath);
         var tie = File.ReadAllBytes(Path.Combine(tieDir, "tie.bin"));
 
         // create instance
@@ -1638,7 +1640,7 @@ public class LevelImporterWindow : EditorWindow
                 tieComponent.ColorData = colors;
                 tieComponent.GroupId = group;
 
-                if (colors.Length > 3)
+                if (colors != null && colors.Length > 3)
                 {
                     tieComponent.ColorDataValue = new Color(colors[0] / 128f, colors[1] / 128f, colors[2] / 128f, 1);
                 }

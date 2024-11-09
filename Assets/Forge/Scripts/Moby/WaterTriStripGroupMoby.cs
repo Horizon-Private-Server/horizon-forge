@@ -35,17 +35,15 @@ public class WaterTriStripGroupMoby : MonoBehaviour, IRenderHandlePrefab
     {
         if (!m_Moby) return;
         if (m_Moby.OClass != 0x24ed) return;
-        if (m_Moby.PVars == null || m_Moby.PVars.Length != 624) return;
 
-        var emission = m_Moby.PVars[516];
-        var overlayTexIdx = 98 + BitConverter.ToInt32(m_Moby.PVars, 528);
         var overlayTex = Texture2D.grayTexture;
-        var underlayColor = UnityHelper.GetColor(BitConverter.ToUInt32(m_Moby.PVars, 532));
-        var overlayColor = UnityHelper.GetColor(BitConverter.ToUInt32(m_Moby.PVars, 536));
-        var invert = BitConverter.ToInt32(m_Moby.PVars, 540) != 0;
-        var overlaySpeed = BitConverter.ToSingle(m_Moby.PVars, 544);
-        var overlayDirX = BitConverter.ToSingle(m_Moby.PVars, 548);
-        var overlayDirY = BitConverter.ToSingle(m_Moby.PVars, 552);
+        var emission = m_Moby.GetPVarValue<byte>(".Emission");
+        var overlayTexIdx = 98 + m_Moby.GetPVarValue<int>(".Overlay FX Texture");
+        var underlayColor = m_Moby.GetPVarValue<Color32>(".Underlay Color");
+        var overlayColor = m_Moby.GetPVarValue<Color32>(".Overlay Color");
+        var invert = m_Moby.GetPVarValue<bool>(".Invert Overlay Color");
+        var overlaySpeed = m_Moby.GetPVarValue<float>(".Overlay Speed");
+        var overlayDir = m_Moby.GetPVarValue<Vector2>(".Overlay Direction");
 
         var levelDir = FolderNames.GetMapBinFolder(SceneManager.GetActiveScene().name, m_Moby.RCVersion);
         var overlayFxFile = Path.Combine(levelDir, FolderNames.AssetsFolder, "fx", $"tex.{overlayTexIdx:0000}.png");
@@ -67,7 +65,7 @@ public class WaterTriStripGroupMoby : MonoBehaviour, IRenderHandlePrefab
         m_Mpb.SetFloat("_Overlay_Cross_Speed", overlaySpeed / 100f);
         m_Mpb.SetColor("_Overlay_Color", overlayColor);
         m_Mpb.SetColor("_Underlay_Color", underlayColor);
-        m_Mpb.SetVector("_Overlay_Direction", new Vector2(overlayDirX, overlayDirY) * 1);
+        m_Mpb.SetVector("_Overlay_Direction", overlayDir * 1);
         m_Renderer.SetPropertyBlock(m_Mpb);
     }
 
@@ -76,7 +74,7 @@ public class WaterTriStripGroupMoby : MonoBehaviour, IRenderHandlePrefab
         if (!m_Moby) return;
         if (m_Moby.OClass != 0x24ed) return;
 
-        var area = m_Moby.PVarAreaRefs[512/4];
+        var area = m_Moby.PVarReferences[".Area"] as Area;
         if (!area) return;
 
         var mesh = new Mesh();

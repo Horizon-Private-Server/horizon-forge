@@ -124,7 +124,7 @@ public class Shrub : RenderSelectionBase, IAsset, IInstancedCollider
 
     private void OnRenderHandleRender(Renderer renderer, MaterialPropertyBlock mpb)
     {
-        mpb.SetColor("_Color", Tint);
+        mpb.SetColor("_Color", Tint.ScaleRGB(2));
     }
 
     #region Occlusion Bake

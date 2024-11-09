@@ -16,23 +16,20 @@ public class RatchetCamera : RenderSelectionBase, IPVarObject
 
     [SerializeField, HideInInspector] private int _version = 0;
     [SerializeField, HideInInspector] public byte[] PVars;
-    [HideInInspector] public Cuboid[] PVarCuboidRefs;
-    [HideInInspector] public Moby[] PVarMobyRefs;
-    [HideInInspector] public Spline[] PVarSplineRefs;
-    [HideInInspector] public Area[] PVarAreaRefs;
+    [SerializeField, HideInInspector] public SerializableStringDictionary PVarValues;
+    [SerializeField, HideInInspector] public SerializableMonoBehaviourDictionary PVarReferences;
+    [HideInInspector] public string[] PVarStrings;
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
-    public Cuboid[] GetPVarCuboidRefs() => PVarCuboidRefs;
-    public Moby[] GetPVarMobyRefs() => PVarMobyRefs;
-    public Spline[] GetPVarSplineRefs() => PVarSplineRefs;
-    public Area[] GetPVarAreaRefs() => PVarAreaRefs;
+    public SerializableStringDictionary GetPVarValues() => PVarValues;
+    public SerializableMonoBehaviourDictionary GetPVarReferences() => PVarReferences;
+    public string[] GetPVarStrings() => PVarStrings;
     public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, cameraType: CameraType);
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
-    public void SetPVarCuboidRefs(Cuboid[] cuboidRefs) => PVarCuboidRefs = cuboidRefs;
-    public void SetPVarMobyRefs(Moby[] mobyRefs) => PVarMobyRefs = mobyRefs;
-    public void SetPVarSplineRefs(Spline[] splineRefs) => PVarSplineRefs = splineRefs;
-    public void SetPVarAreaRefs(Area[] areaRefs) => PVarAreaRefs = areaRefs;
+    public void SetPVarValues(SerializableStringDictionary pvarValues) => PVarValues = pvarValues;
+    public void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs) => PVarReferences = pvarRefs;
+    public void SetPVarStrings(string[] strings) => PVarStrings = strings;
 
 
     private bool changed = true;
@@ -86,6 +83,12 @@ public class RatchetCamera : RenderSelectionBase, IPVarObject
         if (Selection.activeGameObject == this.gameObject) return true;
 
         return false;
+    }
+
+    private void OnEnable()
+    {
+        if (PVarValues != null) PVarValues.Owner = this;
+        if (PVarReferences != null) PVarReferences.Owner = this;
     }
 
     private void OnValidate()
@@ -168,8 +171,10 @@ public class RatchetCamera : RenderSelectionBase, IPVarObject
         if (!mapConfig) return;
 
         var pvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, cameraType: this.CameraType);
-        if (pvarOverlay != null && pvarOverlay.Overlay.Any())
+        if (pvarOverlay != null)
         {
+            UnityHelper.ValidatePVars(mapConfig, this);
+
             if (useDefault && !string.IsNullOrEmpty(pvarOverlay.Name))
                 this.name = pvarOverlay.Name;
 
@@ -182,6 +187,7 @@ public class RatchetCamera : RenderSelectionBase, IPVarObject
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         if (!mapConfig) return;
 
+        UnityHelper.ValidatePVars(mapConfig, this);
         UnityHelper.UpdatePVars(mapConfig, this, this.RCVersion);
     }
 

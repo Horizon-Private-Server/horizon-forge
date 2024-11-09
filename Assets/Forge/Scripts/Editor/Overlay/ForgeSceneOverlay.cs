@@ -44,6 +44,30 @@ public class ForgeSceneOverlay : Overlay
             root.Add(hideFogToggle);
         }
 
+        {
+            var hideFogToggle = new Toggle("Show Moby Lines");
+            hideFogToggle.AddToClassList("fill-space");
+            hideFogToggle.RegisterValueChangedCallback<bool>(e => { UpdateShowMobyLines(e.newValue); });
+            hideFogToggle.SetValueWithoutNotify(Moby.DrawPVarMobyLines);
+            root.Add(hideFogToggle);
+        }
+
+        {
+            var hideFogToggle = new Toggle("Show Moby/Tie Group Lines");
+            hideFogToggle.AddToClassList("fill-space");
+            hideFogToggle.RegisterValueChangedCallback<bool>(e => { UpdateShowMobyTieGroupIdLines(e.newValue); });
+            hideFogToggle.SetValueWithoutNotify(Moby.DrawPVarMobyTieGroupIdLines);
+            root.Add(hideFogToggle);
+        }
+
+        {
+            var disableScenePickingToggle = new Toggle("Disable Scene Picking (speedup)");
+            disableScenePickingToggle.AddToClassList("fill-space");
+            disableScenePickingToggle.RegisterValueChangedCallback<bool>(e => { UpdateDisableScenePicking(e.newValue); });
+            disableScenePickingToggle.SetValueWithoutNotify(AssetGizmosDrawer.Disabled);
+            root.Add(disableScenePickingToggle);
+        }
+
         return root;
     }
 
@@ -88,6 +112,20 @@ public class ForgeSceneOverlay : Overlay
         if (mapConfig)
             mapConfig.UpdateShaderGlobals();
     }
+    
+    private void UpdateShowMobyTieGroupIdLines(bool show)
+    {
+        Moby.DrawPVarMobyTieGroupIdLines = show;
+    }
 
+    private void UpdateShowMobyLines(bool show)
+    {
+        Moby.DrawPVarMobyLines = show;
+    }
+
+    private void UpdateDisableScenePicking(bool disable)
+    {
+        AssetGizmosDrawer.Disabled = disable;
+    }
 
 }

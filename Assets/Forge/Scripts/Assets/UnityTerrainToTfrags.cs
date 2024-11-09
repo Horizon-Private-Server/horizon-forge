@@ -170,7 +170,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
 
                 newMesh.SetVertices(vertices);
                 newMesh.SetUVs(0, uvs);
-                newMesh.SetColors(colors.Select(x => x.DoubleRGB()).ToArray());
+                newMesh.SetColors(colors);
                 newMesh.SetNormals(normals);
                 newMesh.subMeshCount = quads.Count;
                 for (int f = 0; f < quads.Count; ++f)

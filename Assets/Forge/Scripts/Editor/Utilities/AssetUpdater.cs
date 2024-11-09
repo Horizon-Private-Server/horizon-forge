@@ -61,6 +61,8 @@ public class AssetUpdater : Editor
     {
         var newlySelectedAssets = Selection.gameObjects?.Select(x => x.GetComponent<IAsset>())?.Where(x => x != null)?.ToList();
 
+        Spline.UpdateDrawGizmos();
+
         if (lastSelectedAssets != null)
         {
             foreach (var asset in lastSelectedAssets)

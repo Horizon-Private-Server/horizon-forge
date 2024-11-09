@@ -11,10 +11,9 @@ public class AmbientSoundEditor : Editor
     SerializedProperty m_AmbientSoundType;
     SerializedProperty m_Unknown_0C;
     SerializedProperty m_PVars;
-    SerializedProperty m_PVarCuboidRefs;
-    SerializedProperty m_PVarMobyRefs;
-    SerializedProperty m_PVarSplineRefs;
-    SerializedProperty m_PVarAreaRefs;
+    SerializedProperty m_PVarValues;
+    SerializedProperty m_PVarRefs;
+    SerializedProperty m_PVarStrings;
     UnityHelper.PVarsPropertiesContainer m_PVarPropertiesContainer;
 
     private void OnEnable()
@@ -23,18 +22,16 @@ public class AmbientSoundEditor : Editor
         m_AmbientSoundType = serializedObject.FindProperty("AmbientSoundType");
         m_Unknown_0C = serializedObject.FindProperty("Unknown_0C");
         m_PVars = serializedObject.FindProperty("PVars");
-        m_PVarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
-        m_PVarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
-        m_PVarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
-        m_PVarAreaRefs = serializedObject.FindProperty("PVarAreaRefs");
+        m_PVarValues = serializedObject.FindProperty("PVarValues");
+        m_PVarRefs = serializedObject.FindProperty("PVarReferences");
+        m_PVarStrings = serializedObject.FindProperty("PVarStrings");
 
         m_PVarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = m_PVars,
-            CuboidRefs = m_PVarCuboidRefs,
-            AreaRefs = m_PVarAreaRefs,
-            MobyRefs = m_PVarMobyRefs,
-            SplineRefs = m_PVarSplineRefs
+            PVarValues = m_PVarValues,
+            PVarRefs = m_PVarRefs,
+            Strings = m_PVarStrings
         };
     }
 
@@ -44,7 +41,7 @@ public class AmbientSoundEditor : Editor
         EditorGUILayout.PropertyField(m_RCVersion);
         EditorGUILayout.PropertyField(m_AmbientSoundType);
         EditorGUILayout.PropertyField(m_Unknown_0C);
-        UnityHelper.PVarsPropertyField(m_PVarPropertiesContainer, (target as AmbientSound).RCVersion, ambientSoundType: (target as AmbientSound).AmbientSoundType);
+        UnityHelper.PVarsPropertyField(m_PVarPropertiesContainer, target as AmbientSound, (target as AmbientSound).RCVersion, ambientSoundType: (target as AmbientSound).AmbientSoundType);
         serializedObject.ApplyModifiedProperties();
     }
 }

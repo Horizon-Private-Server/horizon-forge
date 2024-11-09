@@ -14,9 +14,4 @@ public class OcclusionOctant : MonoBehaviour
             Gizmos.DrawWireCube(octant + Vector3.one * 2f, Vector3.one * 0.5f);
     }
 
-    private void OnDrawGizmos()
-    {
-
-    }
-
 }

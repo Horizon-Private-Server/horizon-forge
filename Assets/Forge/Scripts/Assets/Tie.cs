@@ -157,7 +157,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
 
     private void OnRenderHandleRender(Renderer renderer, MaterialPropertyBlock mpb)
     {
-        mpb.SetColor("_Color", GetBaseVertexColor());
+        mpb.SetColor("_Color", GetBaseVertexColor().ScaleRGB(2));
     }
 
     #region Binary

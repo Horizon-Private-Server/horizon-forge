@@ -49,7 +49,7 @@ public class MobyAsset : MonoBehaviour
             DestroyImmediate(this.gameObject);
             return;
         }
-        else if (racVersion == RCVER.UYA && racVersion != RCVER.DL)
+        else if (racVersion != RCVER.UYA && racVersion != RCVER.DL)
         {
             Debug.LogError($"Moby {this.gameObject.name} belongs to an unsupported game rc{racVersion}");
             DestroyImmediate(this.gameObject);
