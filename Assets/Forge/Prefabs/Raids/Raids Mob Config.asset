@@ -71,19 +71,19 @@ MonoBehaviour:
       OClass: 9215
       SourceMapId: 4
       SourceMissionId: -1
-    Xp: 5
-    Bolts: 50
-    Damage: 4
+    Xp: 10
+    Bolts: 100
+    Damage: 7
     DamageMax: 0
     DamageScale: 1
-    Speed: 2
-    SpeedMax: 5
+    Speed: 3
+    SpeedMax: 6
     SpeedScale: 0.5
-    Health: 15
+    Health: 20
     HealthMax: 0
     HealthScale: 1
     AttackRadius: 5
-    HitRadius: 1.75
-    CollRadius: 0.5
+    HitRadius: 2
+    CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2

@@ -180,6 +180,12 @@ public class MapRender : MonoBehaviour
         offset = new Vector2(offsetX, offsetY);
     }
 
+    private void InvertRadarTransformation_UYA(Vector2 offset, Vector2 scale, out Vector3 center, out Vector3 size)
+    {
+        center = new Vector3(0.5f * scale.x + 0.5f * offset.x, 0, (0.4999870287f * scale.y) + (0.49918663997f * offset.y));
+        size = new Vector3(-1f * scale.x + 1f * offset.x, -(1.0000500597f * scale.y) + (0.99890269115f * offset.y));
+    }
+
     #region Versioning
 
     public void InitializeVersion()
