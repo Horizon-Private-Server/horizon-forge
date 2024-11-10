@@ -233,7 +233,7 @@ public static class ForgeBuilder
                 // PAL only needs to be rebuilt with new PAL code segment
                 if (region == GameRegion.PAL)
                 {
-                    RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    await RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                 }
                 else
                 {
@@ -250,7 +250,7 @@ public static class ForgeBuilder
                     RebuildCameras(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildAmbientSounds(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildAreas(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    await RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildWorldLighting(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                 }
 
@@ -1769,7 +1769,7 @@ public static class ForgeBuilder
 
     }
 
-    public static void RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder)
+    public static async Task RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder, bool buildCodeGen = true)
     {
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var mapRender = GameObject.FindObjectOfType<MapRender>();
@@ -1799,6 +1799,19 @@ public static class ForgeBuilder
             using (var writer = new BinaryWriter(fs))
             {
                 mapRender.Write(writer, ctx.RacVersion == RCVER.DL ? (int)mapConfig.DLBaseMap : (int)mapConfig.UYABaseMap, ctx.RacVersion, ctx.Region);
+            }
+        }
+
+        // check for code generator
+        if (buildCodeGen)
+        {
+            var codeManager = GameObject.FindObjectOfType<CodeManager>();
+            if (codeManager && codeManager.Enabled)
+            {
+                if (codeManager.Generate())
+                {
+                    await codeManager.Build(ctx.MapSceneName, ctx.RacVersion);
+                }
             }
         }
     }

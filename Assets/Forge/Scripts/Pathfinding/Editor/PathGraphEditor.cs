@@ -28,36 +28,7 @@ public class PathGraphEditor : Editor
 
         if (GUILayout.Button("Export PathGraphs As C"))
         {
-            ExportGraphsAsC();
+            EditorGUIUtility.systemCopyBuffer = PathGraph.ExportGraphsAsC();
         }
-    }
-
-    private void ExportGraphsAsC()
-    {
-        int i = 0;
-        var mapConfig = FindObjectOfType<MapConfig>();
-        if (!mapConfig) return;
-
-        var graphs = mapConfig.GetPathGraphs();
-
-        var sb = new StringBuilder();
-        var sbPathGraphDefs = new StringBuilder();
-
-        sb.AppendLine("#include <libdl/math3d.h>");
-        sb.AppendLine("#include \"pathfind.h\"");
-        sb.AppendLine();
-
-        sbPathGraphDefs.AppendLine("struct PathGraph Paths[] = {");
-        foreach (var graph in graphs)
-        {
-            graph.ExportAsC($"MOB{i}", out var dataDefs, out var pathGraphDefs);
-            sb.AppendLine(dataDefs);
-            sbPathGraphDefs.AppendLine(pathGraphDefs);
-            ++i;
-        }
-        sb.AppendLine($"const int PathsCount = {i};");
-        sbPathGraphDefs.AppendLine("};");
-
-        EditorGUIUtility.systemCopyBuffer = sb.ToString() + sbPathGraphDefs.ToString();
     }
 }

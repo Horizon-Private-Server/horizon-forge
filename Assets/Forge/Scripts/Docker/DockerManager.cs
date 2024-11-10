@@ -1,6 +1,4 @@
-﻿using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +6,12 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
+#if DOCKER
+
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+
+[ExecuteInEditMode]
 public class DockerManager : MonoBehaviour
 {
     public static DockerManager Singleton { get; private set; }
@@ -15,7 +19,19 @@ public class DockerManager : MonoBehaviour
 
     private IContainer container;
 
-    private void Awake()
+    public static DockerManager GetOrCreate()
+    {
+        if (Singleton) return Singleton;
+
+        Singleton = FindObjectOfType<DockerManager>();
+        if (Singleton) return Singleton;
+
+        var go = new GameObject("Docker Manager");
+        go.hideFlags = HideFlags.HideAndDontSave;
+        return Singleton = go.AddComponent<DockerManager>();
+    }
+
+    private void Update()
     {
         // destroy duplicate
         if (Singleton && Singleton != this)
@@ -27,12 +43,23 @@ public class DockerManager : MonoBehaviour
         Singleton = this;
     }
 
+    private void OnDestroy()
+    {
+        if (container != null)
+        {
+            var c = container;
+            _ = c.StopAsync().ContinueWith((_) => c.DisposeAsync());
+            container = null;
+        }
+    }
+
     public TestcontainersStates? GetStatus()
     {
         return container?.State;
     }
 
     public bool ContainerReady() => container != null && container.State == TestcontainersStates.Running;
+    public bool ContainerStarting() => container != null && (container.State == TestcontainersStates.Undefined || container.State == TestcontainersStates.Restarting);
 
     public async Task<ExecResult> ExecuteAsync(params string[] commands)
     {
@@ -41,17 +68,18 @@ public class DockerManager : MonoBehaviour
           .ConfigureAwait(true);
     }
 
-    public void Run()
+    public async Task Run()
     {
         if (container != null)
         {
-            _ = container.StopAsync();
+            await container.StopAsync();
+            await container.DisposeAsync();
             container = null;
         }
 
         ContainerBuilder builder = new ContainerBuilder()
               // use particular version always 
-              .WithImage("ps2dev/ps2dev:v1.2.0")
+              .WithImage("dnawrkshp/ps2dev-libdl:latest")
               // name it nicely
               .WithName("FORGE_PS2DEV")
               .WithBindMount(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, FolderNames.BinaryFolder)), "/levels")
@@ -64,7 +92,9 @@ public class DockerManager : MonoBehaviour
 
         //builder = builder.WithPortBinding(5432, 5432);
         container = builder.Build();
-        _ = container.StartAsync().ConfigureAwait(true);
+        await container.StartAsync().ConfigureAwait(true);
     }
 
 }
+
+#endif

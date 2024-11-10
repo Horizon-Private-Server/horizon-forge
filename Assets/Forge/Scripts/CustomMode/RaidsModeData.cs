@@ -3,10 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-public class RaidsModeData : CustomModeData
+public class RaidsModeData : CustomModeData, ICodeGen
 {
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int MOVER_OCLASS = 0x4002;
@@ -18,9 +19,10 @@ public class RaidsModeData : CustomModeData
     public static readonly int CHECKPOINT_OCLASS = 0x4008;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
-    public override bool IsEnabled => Enabled;
+    public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
 
     public bool Enabled = true;
+    public int MapBaseComplexity = 5000;
     public int Cost1Star = 0;
     public int Cost2Star = 0;
     public int Cost3Star = 0;
@@ -28,6 +30,148 @@ public class RaidsModeData : CustomModeData
     public int Cost5Star = 0;
     public string Author;
     [Multiline] public string Description;
+
+    public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
+    {
+        new RaidsMobSpawnParam() { Name = "Zombie", Bangles = RaidsMobBangle.BANGLE_0001 | RaidsMobBangle.BANGLE_0020 }
+    };
+
+    private void OnValidate()
+    {
+        if (Author != null && Author.Length > 32) Author = Author.Substring(0, 32);
+        if (Description != null && Description.Length > 256) Description = Description.Substring(0, 256);
+    }
+
+    public void Configure(string buildFolder, CodeGenState state)
+    {
+        var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
+        var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
+
+        // copy raids base code
+        CodeManager.CopySourceFilesIntoWorkingDirectory(FolderNames.GetCodeGenFolder(RCVER.DL, "raids"), buildFolder);
+
+        // build config.c and path.c
+        File.WriteAllText(Path.Combine(srcFolder, "config.c"), GetConfigContents());
+        File.WriteAllText(Path.Combine(srcFolder, "path.c"), GetPathContents());
+
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
+
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/map.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gate.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/checkpoint.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mover.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
+
+        state.LDFlags.Add("-DMOB_ZOMBIE");
+        state.LDFlags.Add("-DMOB_SWARMER");
+        state.LDFlags.Add("-DGATE");
+
+        state.Includes.Add("#include \"game.h\"");
+        state.Includes.Add("#include \"maputils.h\"");
+        state.Includes.Add("#include \"game.h\"");
+        state.Includes.Add("#include \"gate.h\"");
+        state.Includes.Add("#include \"npc.h\"");
+        state.Includes.Add("#include \"messager.h\"");
+        state.Includes.Add("#include \"spawner.h\"");
+        state.Includes.Add("#include \"checkpoint.h\"");
+        state.Includes.Add("#include \"controller.h\"");
+        state.Includes.Add("#include \"mover.h\"");
+        state.Includes.Add("#include \"mob.h\"");
+        state.Includes.Add("#include \"shared.h\"");
+        state.Includes.Add("#include \"pathfind.h\"");
+
+        state.Declarations.Add("void configInit(void);");
+        state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,\r\n};");
+
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
+
+        state.InitBody.Add($"mobInit();");
+        state.InitBody.Add($"configInit();");
+        state.InitBody.Add($"spawnerInit();");
+        state.InitBody.Add($"moverInit();");
+        state.InitBody.Add($"controllerInit();");
+        state.InitBody.Add($"gateInit();");
+        state.InitBody.Add($"npcInit();");
+        state.InitBody.Add($"messagerInit();");
+        state.InitBody.Add($"checkpointInit();");
+
+        state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
+        state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
+        state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
+        state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
+
+        state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
+        state.InitBody.Add($"HOOK_JAL(0x0051f648, &onBeforeUpdateHeroes2);");
+
+        state.InitBody.Add("respawnAllPlayers();");
+
+        state.MainBodyReady.Add("spawnerStart();");
+        state.MainBodyReady.Add("moverStart();");
+        state.MainBodyReady.Add("controllerStart();");
+        state.MainBodyReady.Add("gateStart();");
+        state.MainBodyReady.Add("npcStart();");
+        state.MainBodyReady.Add("checkpointStart();");
+
+        state.MainBody.Add("mobTick();");
+        state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
+        state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
+    }
+
+    string GetConfigContents()
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("#include <libdl/utils.h>");
+        sb.AppendLine("#include \"game.h\"");
+        sb.AppendLine("#include \"mob.h\"");
+        sb.AppendLine("");
+
+        sb.AppendLine("extern struct RaidsMapConfig MapConfig;");
+        sb.AppendLine("");
+
+        sb.AppendLine("struct MobSpawnParams mobSpawnParams[] = {");
+        foreach (var mob in Mobs)
+            sb.AppendLine(mob.GetDef());
+        sb.AppendLine("};");
+        sb.AppendLine("");
+
+        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n}\r\n");
+
+        return sb.ToString();
+    }
+
+    string GetPathContents()
+    {
+        return PathGraph.ExportGraphsAsC();
+    }
+
+    public override void Write(BinaryWriter writer)
+    {
+        writer.Write(Cost1Star);
+        writer.Write(Cost2Star);
+        writer.Write(Cost3Star);
+        writer.Write(Cost4Star);
+        writer.Write(Cost5Star);
+        writer.WriteString(BinaryHelper.StrToRatchetStr(Author), 31);
+        writer.Write((byte)0);
+        writer.WriteString(BinaryHelper.StrToRatchetStr(Description), 255);
+        writer.Write((byte)0);
+    }
+
+
+    #region Menu Items
 
     [MenuItem("GameObject/Forge/Raids/Create Raids Data", priority = 10)]
     public static void CreateRaidsData()
@@ -185,22 +329,167 @@ public class RaidsModeData : CustomModeData
         Selection.activeGameObject = go;
     }
 
-    private void OnValidate()
+    #endregion
+
+}
+
+public enum RaidsMob
+{
+    Zombie,
+    Swarmer
+}
+
+public enum RaidsMobBangle
+{
+    BANGLE_0001 = 0x0001,
+    BANGLE_0002 = 0x0002,
+    BANGLE_0004 = 0x0004,
+    BANGLE_0008 = 0x0008,
+    BANGLE_0010 = 0x0010,
+    BANGLE_0020 = 0x0020,
+    BANGLE_0040 = 0x0040,
+    BANGLE_0080 = 0x0080,
+    BANGLE_0100 = 0x0100,
+    BANGLE_0200 = 0x0200,
+    BANGLE_0400 = 0x0400,
+    BANGLE_0800 = 0x0800,
+    BANGLE_1000 = 0x1000,
+    BANGLE_2000 = 0x2000,
+    BANGLE_4000 = 0x4000,
+}
+
+[Serializable]
+public class RaidsMobSpawnParam
+{
+    public string Name;
+    public RaidsMob Mob;
+    [EnumFlag] public RaidsMobBangle Bangles;
+
+    [Header("General")]
+    public float SizeMultiplier = 1;
+
+    [Header("Stats")]
+    public float XpMultiplier = 1;
+    public float BoltsMultiplier = 1;
+
+    [Header("Damage")]
+    public float DamageMultiplier = 1;
+    [Tooltip("Adjusts the rate at which the mob's damage will scale with respect to the difficulty. A larger value will result in stronger mobs in higher difficulties.")] public float DamageDifficultyRateMultiplier = 1;
+
+    [Header("Speed")]
+    public float SpeedMultiplier = 1;
+    [Tooltip("Adjusts the rate at which the mob's speed will scale with respect to the difficulty. A larger value will result in faster mobs in higher difficulties.")] public float SpeedDifficultyRateMultiplier = 1;
+
+    [Header("Health")]
+    public float HealthMultiplier = 1;
+    [Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
+
+    [Header("Interaction")]
+    [Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
+    [Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
+    [Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
+    [Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 5;
+
+    public string GetDef()
     {
-        if (Author != null && Author.Length > 32) Author = Author.Substring(0, 32);
-        if (Description != null && Description.Length > 256) Description = Description.Substring(0, 256);
+        var sb = new StringBuilder();
+
+        var mobPrefix = this.Mob.ToString().ToLower();
+        var defaults = mobDefaults.GetValueOrDefault(this.Mob) ?? new RaidsMobDefaultSpawnParams();
+
+        sb.AppendLine("  {");
+        sb.AppendLine($"    .MobCreate = &{mobPrefix}Create,");
+        sb.AppendLine($"    .RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
+        sb.AppendLine($"    .Scale = {SizeMultiplier},");
+        sb.AppendLine($"    .Name = \"{Name?.Replace("\"", "")}\",");
+        sb.AppendLine($"    .Config = {{");
+        sb.AppendLine($"      .Xp = {(int)(defaults.Xp * XpMultiplier)},");
+        sb.AppendLine($"      .Bolts = {(int)(defaults.Bolts * BoltsMultiplier)},");
+        sb.AppendLine($"      .Bangles = 0x{(int)Bangles:X4},");
+        sb.AppendLine($"      .Damage = {defaults.Damage * DamageMultiplier},");
+        sb.AppendLine($"      .MaxDamage = {defaults.DamageMax},");
+        sb.AppendLine($"      .DamageScale = {defaults.DamageScale * DamageDifficultyRateMultiplier},");
+        sb.AppendLine($"      .Speed = {defaults.Speed * SpeedMultiplier},");
+        sb.AppendLine($"      .MaxSpeed = {defaults.SpeedMax},");
+        sb.AppendLine($"      .SpeedScale = {defaults.SpeedScale * SpeedDifficultyRateMultiplier},");
+        sb.AppendLine($"      .Health = {defaults.Health * HealthMultiplier},");
+        sb.AppendLine($"      .MaxHealth = {defaults.HealthMax},");
+        sb.AppendLine($"      .HealthScale = {defaults.HealthScale * HealthDifficultyRateMultiplier},");
+        sb.AppendLine($"      .AttackRadius = {defaults.AttackRadius * SizeMultiplier},");
+        sb.AppendLine($"      .HitRadius = {defaults.HitRadius * SizeMultiplier},");
+        sb.AppendLine($"      .CollRadius = {defaults.CollRadius * SizeMultiplier},");
+        sb.AppendLine($"      .AutoAggroMaxRange = {ForceAggroRange},");
+        sb.AppendLine($"      .VisionRange = {VisionRange},");
+        sb.AppendLine($"      .PeripheryRangeTheta = {PeripheralVisionDegrees * 0.5f * Mathf.Deg2Rad},");
+        sb.AppendLine($"      .OutOfSightDeAggroTickCount = {(int)(OutOfSightDeAggroTime * 60)},");
+        sb.AppendLine($"      .ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
+        sb.AppendLine($"      .AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
+        sb.AppendLine($"    }}");
+        sb.AppendLine("  },");
+
+        return sb.ToString();
     }
 
-    public override void Write(BinaryWriter writer)
+    private const int BASE_XP = 5;
+    private const int BASE_BOLTS = 50;
+    private const int BASE_DAMAGE = 10;
+    private const int BASE_SPEED = 3;
+    private const int BASE_HEALTH = 30;
+    private static readonly Dictionary<RaidsMob, RaidsMobDefaultSpawnParams> mobDefaults = new()
     {
-        writer.Write(Cost1Star);
-        writer.Write(Cost2Star);
-        writer.Write(Cost3Star);
-        writer.Write(Cost4Star);
-        writer.Write(Cost5Star);
-        writer.WriteString(BinaryHelper.StrToRatchetStr(Author), 31);
-        writer.Write((byte)0);
-        writer.WriteString(BinaryHelper.StrToRatchetStr(Description), 255);
-        writer.Write((byte)0);
+        {
+            RaidsMob.Zombie,
+            new RaidsMobDefaultSpawnParams()
+            {
+                Xp = BASE_XP * 3,
+                Bolts = BASE_BOLTS * 3,
+                
+                Damage = BASE_DAMAGE * 1.0f,
+                DamageMax = 0,
+                DamageScale = 1.0f,
+
+                Speed = BASE_SPEED * 1.0f,
+                SpeedMax = BASE_SPEED * 2.5f,
+                SpeedScale = 0.5f,
+
+                Health = BASE_HEALTH * 0.5f,
+                HealthMax = 0,
+                HealthScale = 1.0f,
+
+                AttackRadius = 5f,
+                HitRadius = 0.5f,
+                CollRadius = 1.0f,
+
+                ReactionDelaySeconds = 0.25f,
+                AttackCooldownSeconds = 2.0f,
+            }
+        }
+    };
+
+
+    class RaidsMobDefaultSpawnParams
+    {
+        public int Xp { get; set; } = BASE_XP;
+        public int Bolts { get; set; } = BASE_BOLTS;
+
+        public float Damage { get; set; } = BASE_DAMAGE;
+        public float DamageMax { get; set; } = 0;
+        public float DamageScale { get; set; } = 1;
+
+        public float Speed { get; set; } = BASE_SPEED;
+        public float SpeedMax { get; set; } = BASE_SPEED * 5;
+        public float SpeedScale { get; set; } = 1;
+
+        public float Health { get; set; } = BASE_HEALTH;
+        public float HealthMax { get; set; } = 0;
+        public float HealthScale { get; set; } = 1;
+
+        public float AttackRadius { get; set; } = 5;
+        public float HitRadius { get; set; } = 0.5f;
+        public float CollRadius { get; set; } = 0.5f;
+
+        public float ReactionDelaySeconds { get; set; } = 0.25f;
+        public float AttackCooldownSeconds { get; set; } = 2;
     }
+
 }

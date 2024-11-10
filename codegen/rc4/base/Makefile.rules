@@ -1,0 +1,5 @@
+
+copy:
+	mkdir -p $(CURDIR)/$(BIN_PATH)
+	# cp $(CURDIR)/$(EE_ELF) $(CURDIR)/$(BIN_PATH)$(EE_ELF)
+	cp $(CURDIR)/$(EE_BIN) $(CURDIR)/$(BIN_PATH)$(EE_BIN)

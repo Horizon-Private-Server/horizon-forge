@@ -1035,6 +1035,7 @@ public class LevelImporterWindow : EditorWindow
             map.UYABaseMap = Enum.Parse<UYAMapIds>(UYABaseMaps[importBaseLevelIdx]);
 
         var occBakeSettings = mapGameObject.AddComponent<OcclusionBakeSettings>();
+        var codeManager = mapGameObject.AddComponent<CodeManager>();
 
         RenderSettings.skybox = null;
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;

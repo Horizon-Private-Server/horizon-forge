@@ -26,6 +26,8 @@ public static class FolderNames
     public static readonly string BinaryMissionsFolder = "missions";
     public static readonly string BuildFolder = "build";
     public static readonly string CodeBuildFolder = "src";
+    public static readonly string CodeBuildSrcFolder = "src";
+    public static readonly string CodeBuildIncludeFolder = "include";
     public static readonly string[] BuildFolders = new[] { "", "", "", "uya", "dl" };
     public static readonly string BinaryGameplayMobyFolder = $"{BinaryGameplayFolder}/moby";
     public static readonly string BinaryGameplaySplineFolder = $"{BinaryGameplayFolder}/spline";
@@ -99,9 +101,9 @@ public static class FolderNames
         return $"{BinaryFolder}/{map}/rc{racVersion}";
     }
 
-    public static string GetMapCodeBuildFolder(string map)
+    public static string GetMapCodeBuildFolder(string map, int racVersion)
     {
-        return $"{BinaryFolder}/{map}/{CodeBuildFolder}";
+        return $"{GetMapBinFolder(map, racVersion)}/{CodeBuildFolder}";
     }
 
     public static string GetMapBuildFolder(string map)
@@ -153,6 +155,11 @@ public static class FolderNames
         }
 
         return path;
+    }
+
+    public static string GetCodeGenFolder(int racVersion, string subfolder)
+    {
+        return $"codegen/rc{racVersion}/{subfolder}";
     }
 
     public static string GetAssetFolderNameFromOClass(int oclass)

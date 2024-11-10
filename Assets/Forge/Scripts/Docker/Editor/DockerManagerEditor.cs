@@ -7,6 +7,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+#if DOCKER
+
 [CustomEditor(typeof(DockerManager))]
 public class DockerManagerEditor : Editor
 {
@@ -41,3 +43,5 @@ public class DockerManagerEditor : Editor
     }
 
 }
+
+#endif
