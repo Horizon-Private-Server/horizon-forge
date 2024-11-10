@@ -146,8 +146,12 @@ void npcPostUpdate(Moby* moby)
   if (pvars->Mob.MobVars.Respawn && gameAmIHost()) {
     vector_copy(moby->Position, pvars->Parameters.SpawnPosition);
     vector_copy(pvars->Mob.MobVars.MoveVars.NextPosition, pvars->Parameters.SpawnPosition);
+    vector_copy(pvars->Mob.MobVars.MoveVars.LastPosition, pvars->Parameters.SpawnPosition);
+    vector_write(pvars->Mob.MobVars.MoveVars.Velocity, 0);
     pvars->Mob.MobVars.Respawn = 0;
     pvars->Mob.MobVars.Dirty = 1;
+    pvars->Mob.MobVars.MoveVars.IsStuck = 0;
+    pvars->Mob.MobVars.MoveVars.StuckCounter = 0;
   }
 
   // adjust animSpeed by speed and by animation

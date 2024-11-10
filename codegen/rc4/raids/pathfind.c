@@ -417,7 +417,8 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   moveVars->PathHasReachedEnd = 0;
   moveVars->PathStartEndNodes[0] = closestNodeIdxToTarget;
   moveVars->PathStartEndNodes[1] = closestNodeIdxToMob;
-  
+  moveVars->WasStuckTicks = moveVars->IsStuck ? (TPS * 4) : 0;
+   
   // count path length
   for (i = 0; i < path->MaxPathNodeCount; ++i) {
     if (PATH_EDGE_IS_EMPTY(moveVars->CurrentPath[i]))
@@ -455,7 +456,7 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   //if (i > 0 && (pathSegmentCanBeSkipped(moby, 0, 1, alpha) || isOnSameSegment)) {
   int canBeSkipped = pathCanStartNodeBeSkipped(path, moby, moveVars);
   //DPRINTF("len:%d onSame:%d canSkip:%d lastEdgeIdx:%d newEdgeIdx:%d\n", i, isOnSameSegment, canBeSkipped, lastEdgeIdx, moveVars->CurrentPath[0]);
-  if (i > 0 && (isOnSameSegment || canBeSkipped)) {
+  if (i > 0 && !moveVars->IsStuck && (isOnSameSegment || canBeSkipped)) {
     moveVars->PathHasReachedStart = 1;
   }
 
@@ -466,7 +467,7 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
 
 #if DEBUGPATH
   DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
-  DPRINTF("\tFROM NODE %d (skip:%d,%d,%d)\n", closestNodeIdxToMob, moveVars->PathHasReachedStart, canBeSkipped, isOnSameSegment);
+  DPRINTF("\tFROM NODE %d (skip:%d,%d,%d,%d)\n", closestNodeIdxToMob, moveVars->PathHasReachedStart, canBeSkipped, isOnSameSegment, moveVars->IsStuck);
   DPRINTF("\tTO NODE %d\n", closestNodeIdxToTarget);
   DPRINTF("\tNODES: ");
   
@@ -526,6 +527,12 @@ int pathGetTargetNodeIdx(struct PathGraph* path, Moby* moby, struct MobMoveVars*
 {
   if (!moby || !moveVars || !path)
     return -1;
+
+  if (!moveVars->PathEdgeCount) {
+    if (!moveVars->PathHasReachedStart) return moveVars->PathStartEndNodes[1];
+    if (!moveVars->PathHasReachedEnd) return moveVars->PathStartEndNodes[0];
+    return -1;
+  }
 
   int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
   if (PATH_EDGE_IS_EMPTY(edgeIdx))
@@ -596,6 +603,8 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   if (!moby || !path || !moveVars)
     return 0;
 
+  int isStuck = (moveVars->IsStuck && moveVars->StuckCounter > 1) || moveVars->WasStuckTicks;
+
   /*
   // disable pathfinding
   if (moveVars->Target)
@@ -630,13 +639,13 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   vector_copy(output, moveVars->TargetPosition);
 
   // no path
-  if (!moveVars->PathEdgeCount) {
+  if (!moveVars->PathEdgeCount && (!isStuck || moveVars->PathHasReachedStart)) {
     vector_copy(moveVars->LastTargetPos, output);
     return newPath;
   }
 
   // check if we can just go straight to the target
-  if (!moveVars->PathCheckNearAndSeeTargetTicks && !moveVars->PathHasReachedEnd) {
+  if (!isStuck && moveVars->PathEdgeCount > 0 && !moveVars->PathCheckNearAndSeeTargetTicks && !moveVars->PathHasReachedEnd) {
   
     int lockOntoPlayer = 0;
 
@@ -697,6 +706,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
       } else {
         moveVars->PathEdgeCurrent++;
         moveVars->PathEdgeAlpha = 0;
+        moveVars->WasStuckTicks = 0;
         //DPRINTF("hit target nodeIdx %d, new edgeIdx %d\n", targetNodeIdx, moveVars->PathEdgeCurrent);
       }
     }
@@ -704,7 +714,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   
   // skip end if its backwards along path
   // and we can see the target
-  if (!moveVars->PathCheckSkipEndTicks && moveVars->PathEdgeCurrent == (moveVars->PathEdgeCount-1)) {
+  if (!isStuck && moveVars->PathEdgeCount > 0 && !moveVars->PathCheckSkipEndTicks && moveVars->PathEdgeCurrent == (moveVars->PathEdgeCount-1)) {
     u8* lastEdge = pathGetCurrentEdge(path, moby, moveVars);
     if (lastEdge && pathCanBeSkippedForTarget(path, moby, moveVars)) {
       VECTOR targetToStart, targetToNext;

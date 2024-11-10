@@ -161,6 +161,7 @@ struct MobMoveVars {
   char MoveStep;
   char LastMoveStep;
   char PathGraphIdx;
+  u8 WasStuckTicks;
   u8 StuckCheckTicks;
   u8 StuckJumpCount;
   u8 MoveSkipTicks;
