@@ -204,7 +204,7 @@ public class ISOImporterWindow : EditorWindow
                 var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
                 if (Directory.Exists(missionsPath))
                 {
-                    result = PackerHelper.UnpackMissions(missionsPath, racVersion);
+                    result = PackerHelper.UnpackMissions(missionsPath);
                     if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                     {
                         Debug.LogError($"Error unpacking missions {level}: {result}");

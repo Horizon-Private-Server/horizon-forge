@@ -7,7 +7,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-public class RaidsModeData : CustomModeData, ICodeGen
+public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int MOVER_OCLASS = 0x4002;
@@ -22,7 +22,7 @@ public class RaidsModeData : CustomModeData, ICodeGen
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
 
     public bool Enabled = true;
-    public int MapBaseComplexity = 5000;
+    [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
     public int Cost1Star = 0;
     public int Cost2Star = 0;
     public int Cost3Star = 0;
@@ -128,6 +128,24 @@ public class RaidsModeData : CustomModeData, ICodeGen
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
+    }
+
+    public void Configure(BuildState state)
+    {
+        state.MobyOClasses.Add(8309); // node base (for capture sound)
+        state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
+        state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
+
+        // add mob oclasses
+        var mobConfig = RaidsMobsScriptableObject.Load();
+        foreach (var mob in this.Mobs)
+        {
+            var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
+            var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
+            if (variant == null) continue;
+
+            state.MobyOClasses.Add(variant.OClass);
+        }
     }
 
     string GetConfigContents()
@@ -337,7 +355,8 @@ public class RaidsModeData : CustomModeData, ICodeGen
 public enum RaidsMob
 {
     Zombie,
-    Swarmer
+    Swarmer,
+    Swamper
 }
 
 public enum RaidsMobBangle
@@ -364,6 +383,7 @@ public class RaidsMobSpawnParam
 {
     public string Name;
     public RaidsMob Mob;
+    public int Variant;
     [EnumFlag] public RaidsMobBangle Bangles;
 
     [Header("General")]
@@ -396,13 +416,16 @@ public class RaidsMobSpawnParam
         var sb = new StringBuilder();
 
         var mobPrefix = this.Mob.ToString().ToLower();
-        var defaults = mobDefaults.GetValueOrDefault(this.Mob) ?? new RaidsMobDefaultSpawnParams();
+        var mobConfig = RaidsMobsScriptableObject.Load();
+        var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new RaidsMobsScriptableObject.RaidsMobsConfig();
 
         sb.AppendLine("  {");
         sb.AppendLine($"    .MobCreate = &{mobPrefix}Create,");
+        sb.AppendLine($"    .MobVTable = &{mobPrefix.ToTitleCase()}VTable,");
         sb.AppendLine($"    .RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
         sb.AppendLine($"    .Scale = {SizeMultiplier},");
-        sb.AppendLine($"    .Name = \"{Name?.Replace("\"", "")}\",");
+        sb.AppendLine($"    .OClass = {defaults.Variants[this.Variant].OClass},");
+        //sb.AppendLine($"    .Name = \"{Name?.Replace("\"", "")}\",");
         sb.AppendLine($"    .Config = {{");
         sb.AppendLine($"      .Xp = {(int)(defaults.Xp * XpMultiplier)},");
         sb.AppendLine($"      .Bolts = {(int)(defaults.Bolts * BoltsMultiplier)},");
@@ -429,68 +452,6 @@ public class RaidsMobSpawnParam
         sb.AppendLine("  },");
 
         return sb.ToString();
-    }
-
-    private const int BASE_XP = 5;
-    private const int BASE_BOLTS = 50;
-    private const int BASE_DAMAGE = 10;
-    private const int BASE_SPEED = 3;
-    private const int BASE_HEALTH = 30;
-    private static readonly Dictionary<RaidsMob, RaidsMobDefaultSpawnParams> mobDefaults = new()
-    {
-        {
-            RaidsMob.Zombie,
-            new RaidsMobDefaultSpawnParams()
-            {
-                Xp = BASE_XP * 3,
-                Bolts = BASE_BOLTS * 3,
-                
-                Damage = BASE_DAMAGE * 1.0f,
-                DamageMax = 0,
-                DamageScale = 1.0f,
-
-                Speed = BASE_SPEED * 1.0f,
-                SpeedMax = BASE_SPEED * 2.5f,
-                SpeedScale = 0.5f,
-
-                Health = BASE_HEALTH * 0.5f,
-                HealthMax = 0,
-                HealthScale = 1.0f,
-
-                AttackRadius = 5f,
-                HitRadius = 0.5f,
-                CollRadius = 1.0f,
-
-                ReactionDelaySeconds = 0.25f,
-                AttackCooldownSeconds = 2.0f,
-            }
-        }
-    };
-
-
-    class RaidsMobDefaultSpawnParams
-    {
-        public int Xp { get; set; } = BASE_XP;
-        public int Bolts { get; set; } = BASE_BOLTS;
-
-        public float Damage { get; set; } = BASE_DAMAGE;
-        public float DamageMax { get; set; } = 0;
-        public float DamageScale { get; set; } = 1;
-
-        public float Speed { get; set; } = BASE_SPEED;
-        public float SpeedMax { get; set; } = BASE_SPEED * 5;
-        public float SpeedScale { get; set; } = 1;
-
-        public float Health { get; set; } = BASE_HEALTH;
-        public float HealthMax { get; set; } = 0;
-        public float HealthScale { get; set; } = 1;
-
-        public float AttackRadius { get; set; } = 5;
-        public float HitRadius { get; set; } = 0.5f;
-        public float CollRadius { get; set; } = 0.5f;
-
-        public float ReactionDelaySeconds { get; set; } = 0.25f;
-        public float AttackCooldownSeconds { get; set; } = 2;
     }
 
 }

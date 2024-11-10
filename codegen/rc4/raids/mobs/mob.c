@@ -45,6 +45,10 @@ void mobForceIntoMapBounds(Moby* moby);
 #include "swarmer.c"
 #endif
 
+#if MOB_SWAMPER
+#include "swamper.c"
+#endif
+
 #if MOB_REAPER
 #include "reaper.c"
 #endif
@@ -1005,6 +1009,7 @@ void mobPostDrawDebug(Moby* moby)
   int i = 0;
   char buf[32];
   int animJointCount = 0;
+  MATRIX jointMtx;
 
   // get anim joint count
   void* pclass = moby->PClass;
@@ -1079,60 +1084,7 @@ void mobPreUpdate(Moby* moby)
 //--------------------------------------------------------------------------
 void mobOnSpawned(Moby* moby)
 {
-  if (!moby || !moby->PVar)
-    return;
-  
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  switch (moby->OClass)
-  {
-#if MOB_ZOMBIE
-    case ZOMBIE_MOBY_OCLASS:
-    {
-      pvars->VTable = &ZombieVTable;
-      break;
-    }
-#endif
-#if MOB_EXECUTIONER
-    case EXECUTIONER_MOBY_OCLASS:
-    {
-      pvars->VTable = &ExecutionerVTable;
-      break;
-    }
-#endif
-#if MOB_TREMOR
-    case TREMOR_MOBY_OCLASS:
-    {
-      pvars->VTable = &TremorVTable;
-      break;
-    }
-#endif
-#if MOB_SWARMER
-    case SWARMER_MOBY_OCLASS:
-    {
-      pvars->VTable = &SwarmerVTable;
-      break;
-    }
-#endif
-#if MOB_REACTOR
-    case REACTOR_MOBY_OCLASS:
-    {
-      pvars->VTable = &ReactorVTable;
-      break;
-    }
-#endif
-#if MOB_REAPER
-    case REAPER_MOBY_OCLASS:
-    {
-      pvars->VTable = &ReaperVTable;
-      break;
-    }
-#endif
-    default:
-    {
-      DPRINTF("unhandled mob spawned oclass:%04X\n", moby->OClass);
-      break;
-    }
-  }
+
 }
 
 //--------------------------------------------------------------------------

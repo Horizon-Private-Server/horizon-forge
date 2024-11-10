@@ -135,6 +135,16 @@ public static class PackerHelper
         return RunPacker(null, true, out _) == PACKER_STATUS_CODES.COMMAND_LINE_PARSER_FAILED;
     }
 
+    public static string GetAssetOClassFolderName(int oClass)
+    {
+        return $"{oClass:00000}_{oClass:X4}";
+    }
+
+    public static int GetOClassFromAssetFolderName(string oClassStr)
+    {
+        return int.Parse(oClassStr.Split('_')[0]);
+    }
+
     public static PACKER_STATUS_CODES RunPacker(string[] args, bool silent, out string output)
     {
         output = null;
@@ -259,7 +269,12 @@ public static class PackerHelper
         return RunPacker(out _, "unpack-assets", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString());
     }
 
-    public static PACKER_STATUS_CODES UnpackMissions(string inFolder, int racVersion)
+    public static PACKER_STATUS_CODES UnpackMission(string inFolder, int missionId)
+    {
+        return RunPacker(out _, "unpack-missions", "-i", inFolder, "-m", missionId.ToString());
+    }
+
+    public static PACKER_STATUS_CODES UnpackMissions(string inFolder)
     {
         return RunPacker(out _, "unpack-missions", "-i", inFolder);
     }
@@ -287,6 +302,16 @@ public static class PackerHelper
     public static PACKER_STATUS_CODES UnpackGameplay(string inFolder, string outFolder, int levelId, int racVersion)
     {
         return RunPacker(out _, "unpack-gameplay", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString(), "-l", levelId.ToString());
+    }
+
+    public static PACKER_STATUS_CODES UnpackMobyModel(string inFile, string outFolder, int racVersion)
+    {
+        return RunPacker(out _, "unpack-moby-model", "-i", inFile, "-o", outFolder, "-v", racVersion.ToString());
+    }
+
+    public static PACKER_STATUS_CODES PackMobyModel(string inFolder, string outFolder, int racVersion)
+    {
+        return RunPacker(out _, "pack-moby-model", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString());
     }
 
     public static bool UnpackCollision(string collisionBinFile, string outColladaFile)

@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bccec18de83d814197e61e752811b3c, type: 3}
+  m_Name: Raids Mob Config
+  m_EditorClassIdentifier: 
+  Mobs:
+  - Mob: 0
+    Variants:
+    - Name: Normal
+      OClass: 8438
+      SourceMapId: 2
+      SourceMissionId: -1
+    Xp: 15
+    Bolts: 150
+    Damage: 10
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 3
+    SpeedMax: 7.5
+    SpeedScale: 0.5
+    Health: 20
+    HealthMax: 0
+    HealthScale: 1
+    AttackRadius: 5
+    HitRadius: 0.5
+    CollRadius: 1
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2
+  - Mob: 1
+    Variants:
+    - Name: Blue
+      OClass: 9877
+      SourceMapId: 6
+      SourceMissionId: 1
+    - Name: Orange
+      OClass: 8273
+      SourceMapId: 1
+      SourceMissionId: 14
+    - Name: Desert
+      OClass: 9952
+      SourceMapId: 1
+      SourceMissionId: 14
+    Xp: 5
+    Bolts: 50
+    Damage: 4
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 2
+    SpeedMax: 5
+    SpeedScale: 0.5
+    Health: 15
+    HealthMax: 0
+    HealthScale: 1
+    AttackRadius: 5
+    HitRadius: 1.75
+    CollRadius: 0.5
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2
+  - Mob: 2
+    Variants:
+    - Name: Normal
+      OClass: 9215
+      SourceMapId: 4
+      SourceMissionId: -1
+    Xp: 5
+    Bolts: 50
+    Damage: 4
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 2
+    SpeedMax: 5
+    SpeedScale: 0.5
+    Health: 15
+    HealthMax: 0
+    HealthScale: 1
+    AttackRadius: 5
+    HitRadius: 1.75
+    CollRadius: 0.5
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2

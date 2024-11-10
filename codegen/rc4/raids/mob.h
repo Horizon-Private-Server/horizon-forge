@@ -12,6 +12,7 @@
 //#include "reactor.h"
 //#include "tremor.h"
 #include "swarmer.h"
+#include "swamper.h"
 //#include "reaper.h"
 #include "game.h"
 
@@ -126,9 +127,10 @@ struct MobSpawnedConfig {
 
 struct MobSpawnParams {
   MapOnMobCreate_func MobCreate;
+  struct MobVTable* MobVTable;
   int RenderCost;
   float Scale;
-	char Name[32];
+  int OClass;
 	struct MobConfig Config;
 };
 

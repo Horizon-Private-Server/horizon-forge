@@ -270,6 +270,7 @@ public class BuildWindow : EditorWindow
 
             try
             {
+                var state = new BuildState(scene.name, racVersion, region);
                 var ctx = new ForgeBuilder.RebuildContext()
                 {
                     MapSceneName = scene.name,
@@ -279,6 +280,19 @@ public class BuildWindow : EditorWindow
 
                 // run generators
                 UnityHelper.RunGeneratorsPreBake(BakeType.BUILD);
+
+                // build list of mobys to export
+                // start with default list of mobys
+                // then add the mobys in the scene that aren't already in the list
+                var mobysToExport = ctx.RacVersion == RCVER.DL ? mapConfig.DLMobysIncludedInExport.ToList() : mapConfig.UYAMobysIncludedInExport.ToList();
+                var mobys = mapConfig.GetMobys(ctx.RacVersion);
+                foreach (var moby in mobys)
+                    if (!mobysToExport.Contains(moby.OClass))
+                        mobysToExport.Add(moby.OClass);
+                state.MobyOClasses.AddRange(mobysToExport);
+
+                // pass to build hook
+                IBuildHook.Run(state);
 
                 // PAL is always built after NTSC
                 // PAL only needs to be rebuilt with new PAL code segment
@@ -296,7 +310,7 @@ public class BuildWindow : EditorWindow
                     if (toggleRebuildTies.value) ForgeBuilder.RebuildTieInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildShrubs.value) await ForgeBuilder.RebuildShrubs(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildShrubs.value) ForgeBuilder.RebuildShrubInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobys(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobys(ctx, resourcesFolder, binFolder, state.MobyOClasses); if (ctx.Cancel) return false;
                     if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobyInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildCuboids(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildSplines(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;

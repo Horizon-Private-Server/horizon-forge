@@ -215,6 +215,7 @@ public static class ForgeBuilder
 
             try
             {
+                var state = new BuildState(scene.name, racVersion, region);
                 var ctx = new RebuildContext()
                 {
                     MapSceneName = scene.name,
@@ -224,6 +225,19 @@ public static class ForgeBuilder
 
                 // run generators
                 UnityHelper.RunGeneratorsPreBake(BakeType.BUILD);
+
+                // build list of mobys to export
+                // start with default list of mobys
+                // then add the mobys in the scene that aren't already in the list
+                var mobysToExport = ctx.RacVersion == RCVER.DL ? mapConfig.DLMobysIncludedInExport.ToList() : mapConfig.UYAMobysIncludedInExport.ToList();
+                var mobys = mapConfig.GetMobys(ctx.RacVersion);
+                foreach (var moby in mobys)
+                    if (!mobysToExport.Contains(moby.OClass))
+                        mobysToExport.Add(moby.OClass);
+                state.MobyOClasses.AddRange(mobysToExport);
+
+                // pass to build hook
+                IBuildHook.Run(state);
 
                 //RebuildSky(ctx, resourcesFolder, binFolder); if (cancel) return;
                 //await RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
@@ -243,7 +257,7 @@ public static class ForgeBuilder
                     RebuildTieInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     await RebuildShrubs(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildShrubInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    RebuildMobys(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    RebuildMobys(ctx, resourcesFolder, binFolder, state.MobyOClasses); if (ctx.Cancel) return false;
                     RebuildMobyInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildCuboids(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildSplines(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
@@ -1066,20 +1080,11 @@ public static class ForgeBuilder
         }
     }
 
-    public static void RebuildMobys(RebuildContext ctx, string resourcesFolder, string binFolder)
+    public static void RebuildMobys(RebuildContext ctx, string resourcesFolder, string binFolder, List<int> mobysToExport)
     {
         var mobyAssetsFolder = Path.Combine(binFolder, FolderNames.BinaryMobyFolder);
         var mobyResourcesFolder = Path.Combine(resourcesFolder, FolderNames.GetMapMobyFolder(ctx.RacVersion));
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
-
-        // build list of mobys to export
-        // start with default list of mobys
-        // then add the mobys in the scene that aren't already in the list
-        var mobysToExport = ctx.RacVersion == RCVER.DL ? mapConfig.DLMobysIncludedInExport.ToList() : mapConfig.UYAMobysIncludedInExport.ToList();
-        var mobys = mapConfig.GetMobys(ctx.RacVersion);
-        foreach (var moby in mobys)
-            if (!mobysToExport.Contains(moby.OClass))
-                mobysToExport.Add(moby.OClass);
 
         var mobyClasses = mobysToExport.Distinct().OrderBy(x => x).ToArray();
 

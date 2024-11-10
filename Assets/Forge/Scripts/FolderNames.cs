@@ -24,6 +24,7 @@ public static class FolderNames
     public static readonly string BinaryCodeFolder = "code";
     public static readonly string BinaryGameplayFolder = "gameplay";
     public static readonly string BinaryMissionsFolder = "missions";
+    public static readonly string BinaryMobyAnimationsFolder = "animations";
     public static readonly string BuildFolder = "build";
     public static readonly string CodeBuildFolder = "src";
     public static readonly string CodeBuildSrcFolder = "src";

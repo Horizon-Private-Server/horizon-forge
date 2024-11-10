@@ -29,9 +29,9 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
+#include "mob.h"
 #include "game.h"
 #include "maputils.h"
-#include "game.h"
 
 extern char LocalPlayerStrBuffer[2][64];
 extern struct RaidsMapConfig MapConfig;
@@ -222,14 +222,13 @@ int mobyIsMob(Moby* moby)
 {
   if (!moby) return 0;
 
-  return moby->OClass == ZOMBIE_MOBY_OCLASS
-    || moby->OClass == EXECUTIONER_MOBY_OCLASS
-    || moby->OClass == TREMOR_MOBY_OCLASS
-    || moby->OClass == SWARMER_MOBY_OCLASS
-    || moby->OClass == REACTOR_MOBY_OCLASS
-    || moby->OClass == REAPER_MOBY_OCLASS
-    || moby->OClass == NPC_MOBY_OCLASS
-    ;
+  int i;
+  for (i = 0; i < MapConfig.MobSpawnParamsCount; ++i) {
+    if (MapConfig.MobSpawnParams[i].OClass == moby->OClass)
+      return 1;
+  }
+
+  return moby->OClass == NPC_MOBY_OCLASS;
 }
 
 //--------------------------------------------------------------------------

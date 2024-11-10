@@ -126,13 +126,6 @@
 #define MOB_COMPLEXITY_LOD_FACTOR             (500)
 #define MOB_MAX_FLINCH_PROBABILITY            (0.25)
 
-#define SWARMER_RENDER_COST                   (40)
-#define ZOMBIE_RENDER_COST                    (85)
-#define TREMOR_RENDER_COST                    (150)
-#define REAPER_RENDER_COST                    (150)
-#define REACTOR_RENDER_COST                   (300)
-#define EXECUTIONER_RENDER_COST               (300)
-
 #define GAME_DEFAULT_AMMO_DROP_CHANCE         (0.1)
 #define GAME_DEFAULT_LOOT_DROP_CHANCE         (0.005)
 
