@@ -431,11 +431,30 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
     isOnSameSegment = lastEdgeIdx == moveVars->CurrentPath[0];
   }
 
+  // if the target is close, the new path can sometimes cause the mob to circle back to the last node it just reached/left
+  // if the new edge is required
+  // in that case we check to see if we're already walking along the segment
+  // and if we are, skip the required flag
+  if (!isOnSameSegment) {
+    VECTOR segmentTangent, mobyToStartNode, mobyToEndNode;
+    struct PathGraph* pathGraph = pathGetMobyPathGraph(moby, moveVars);
+    int edgeIdx = moveVars->CurrentPath[0];
+    u8 * edge = pathGraph->Edges[edgeIdx];
+    vector_subtract(segmentTangent, pathGraph->Nodes[edge[1]], pathGraph->Nodes[edge[0]]);
+    vector_subtract(mobyToStartNode, moby->Position, pathGraph->Nodes[edge[0]]);
+    vector_subtract(mobyToEndNode, moby->Position, pathGraph->Nodes[edge[1]]);
+    float dot = vector_innerproduct(segmentTangent, mobyToStartNode);
+    if (dot > 0 && fabsf(acosf(dot)) < (15 * MATH_DEG2RAD) && vector_innerproduct_unscaled(mobyToEndNode, mobyToStartNode) < 0) {
+      isOnSameSegment = 1;
+    }
+  }
+
   // skip start if its backwards along path
   // and the segment can be skipped
   // or if we're already on this segment from the last path
   //if (i > 0 && (pathSegmentCanBeSkipped(moby, 0, 1, alpha) || isOnSameSegment)) {
   int canBeSkipped = pathCanStartNodeBeSkipped(path, moby, moveVars);
+  //DPRINTF("len:%d onSame:%d canSkip:%d lastEdgeIdx:%d newEdgeIdx:%d\n", i, isOnSameSegment, canBeSkipped, lastEdgeIdx, moveVars->CurrentPath[0]);
   if (i > 0 && (isOnSameSegment || canBeSkipped)) {
     moveVars->PathHasReachedStart = 1;
   }
@@ -446,15 +465,16 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   //}
 
 #if DEBUGPATH
-  DPRINTF("NEW PATH GENERATED: (%d)\n", gameGetTime());
+  DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
   DPRINTF("\tFROM NODE %d (skip:%d,%d,%d)\n", closestNodeIdxToMob, moveVars->PathHasReachedStart, canBeSkipped, isOnSameSegment);
   DPRINTF("\tTO NODE %d\n", closestNodeIdxToTarget);
   DPRINTF("\tNODES: ");
   
   // count path length
+  struct PathGraph* pathGraph = pathGetMobyPathGraph(moby, moveVars);
   for (i = 0; i < moveVars->PathEdgeCount; ++i) {
     int edgeIdx = moveVars->CurrentPath[i];
-    u8 * edge = MOB_PATHFINDING_EDGES[edgeIdx];
+    u8 * edge = pathGraph->Edges[edgeIdx];
     DPRINTF("%d->%d, ", edge[0], edge[1]);
   }
   DPRINTF("\n");
