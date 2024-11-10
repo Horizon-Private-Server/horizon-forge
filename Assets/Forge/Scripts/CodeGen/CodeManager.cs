@@ -39,6 +39,7 @@ public class CodeManager : MonoBehaviour
 
         return res.ExitCode == 0;
 #else
+        Debug.LogError("Custom code rebuild detected but docker is not installed & activated. Please configure the Code Manager inside your Map GameObject.", this.gameObject);
         return false;
 #endif
     }

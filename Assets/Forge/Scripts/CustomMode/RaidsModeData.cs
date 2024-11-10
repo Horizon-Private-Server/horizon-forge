@@ -69,9 +69,10 @@ public class RaidsModeData : CustomModeData, ICodeGen
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
-        state.LDFlags.Add("-DMOB_ZOMBIE");
-        state.LDFlags.Add("-DMOB_SWARMER");
         state.LDFlags.Add("-DGATE");
+        var mobTypes = Mobs.Select(x => x.Mob).Distinct();
+        foreach (var mobType in mobTypes)
+            state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
 
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");
