@@ -154,8 +154,6 @@ void swamperPostUpdate(Moby* moby)
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (swamperIsAttacking(moby)) {
     animSpeed = baseSpeed * 1.5;
-  } else if (moby->AnimSeqId == SWAMPER_ANIM_WALK) {
-    animSpeed = baseSpeed * 0.5;
   }
 
   if (pvars->MobVars.Action == SWAMPER_ACTION_DIE) {
@@ -575,6 +573,8 @@ void swamperDoAction(Moby* moby)
       if (target) {
         walkAnim = SWAMPER_ANIM_RUN;
         dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
+      } else {
+        speed *= 0.5;
       }
 
       if (!isInAirFromFlinching) {
