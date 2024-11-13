@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -16,6 +17,10 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
 
     [HideInInspector, SerializeField] private Vector3[] _octants;
     [HideInInspector, SerializeField] private int _occlusionId;
+
+    [SerializeField] private List<TfragManipulator> _manipulators;
+    private MaterialPropertyBlock _mpb;
+    private Renderer[] _renderers;
 
     public Vector3[] Octants { get => _octants; set => _octants = value; }
     public int OcclusionId { get => _occlusionId; set => _occlusionId = value; }
@@ -42,6 +47,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
 
     private void OnDrawGizmosSelected()
     {
+        UpdateManipulators();
         if (!RenderOctants) return;
         if (Selection.activeGameObject != this.gameObject) return;
 
@@ -54,6 +60,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
                 Gizmos.DrawWireCube(octant + Vector3.one * 2f, Vector3.one * 0.5f);
             }
         }
+
     }
 
     public void OnPreBake(Color32 uidColor)
@@ -107,4 +114,85 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
             }
         }
     }
+
+    public void GetData(List<Material> materials, out byte[] header, out byte[] data)
+    {
+        header = HeaderBytes?.ToArray();
+        data = DataBytes?.ToArray();
+
+        // add to materials list
+        var renderer = GetComponent<MeshRenderer>();
+        if (renderer)
+        {
+            var texIdxs = new int[renderer.sharedMaterials.Length];
+            for (int m = 0; m < renderer.sharedMaterials.Length; ++m)
+            {
+                var mat = renderer.sharedMaterials[m];
+                var idx = materials.IndexOf(mat);
+                if (idx < 0)
+                {
+                    idx = materials.Count;
+                    materials.Add(mat);
+                }
+
+                texIdxs[m] = idx;
+            }
+
+            TfragHelper.SetChunkTextureIndices(header, data, texIdxs);
+        }
+
+        // apply transformation
+        TfragHelper.TransformChunk(header, data, transform.localToWorldMatrix.SwizzleXZY());
+
+        // collapse
+        ValidateManipulators();
+        if (_manipulators != null)
+        {
+            foreach (var manipulator in _manipulators.Where(x => x && x.IsEnabled))
+            {
+                manipulator.Apply(ref header, ref data);
+            }
+        }
+    }
+
+    #region Manipulators
+
+    public void UpdateManipulators()
+    {
+        if (_mpb == null) _mpb = new MaterialPropertyBlock();
+        if (_renderers == null) _renderers = GetComponentsInChildren<MeshRenderer>();
+
+        var manipulators = _manipulators?.Where(x => x && x.IsEnabled);
+        if (_renderers != null)
+        {
+            foreach (var renderer in _renderers)
+            {
+                renderer.GetPropertyBlock(_mpb);
+                TfragManipulator.ApplyMaterial(_mpb, manipulators);
+                renderer.SetPropertyBlock(_mpb);
+            }
+        }
+    }
+
+    public void RegisterManipulator(TfragManipulator manipulator)
+    {
+        if (_manipulators == null) _manipulators = new List<TfragManipulator>();
+        if (!_manipulators.Contains(manipulator)) _manipulators.Add(manipulator);
+    }
+
+    public void UnregisterManipulator(TfragManipulator manipulator)
+    {
+        if (_manipulators == null) _manipulators = new List<TfragManipulator>();
+        _manipulators.Remove(manipulator);
+    }
+
+    public void ValidateManipulators()
+    {
+        if (_manipulators == null) _manipulators = new List<TfragManipulator>();
+
+        _manipulators.RemoveAll(x => !x || !x.IsEnabled || x.Tfrags == null || !x.Tfrags.Contains(this));
+    }
+
+    #endregion
+
 }

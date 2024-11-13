@@ -668,33 +668,8 @@ public static class ForgeBuilder
                 for (int i = 0; i < chunks.Length; ++i)
                 {
                     var chunk = chunks[i];
-                    var defCopy = chunk.HeaderBytes.ToArray();
-                    var dataCopy = chunk.DataBytes.ToArray();
+                    chunk.GetData(materials, out var defCopy, out var dataCopy);
                     int dataOff = (int)fs.Position;
-
-                    // add to materials list
-                    var renderer = chunk.GetComponent<MeshRenderer>();
-                    if (renderer)
-                    {
-                        var texIdxs = new int[renderer.sharedMaterials.Length];
-                        for (int m = 0; m < renderer.sharedMaterials.Length; ++m)
-                        {
-                            var mat = renderer.sharedMaterials[m];
-                            var idx = materials.IndexOf(mat);
-                            if (idx < 0)
-                            {
-                                idx = materials.Count;
-                                materials.Add(mat);
-                            }
-
-                            texIdxs[m] = idx;
-                        }
-
-                        TfragHelper.SetChunkTextureIndices(defCopy, dataCopy, texIdxs);
-                    }
-
-                    // apply transformation
-                    TfragHelper.TransformChunk(defCopy, dataCopy, chunk.transform.localToWorldMatrix.SwizzleXZY());
 
                     // write header
                     fs.Position = packetStart + (0x40 * i);

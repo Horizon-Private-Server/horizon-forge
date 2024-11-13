@@ -92,6 +92,9 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private void OnEnable()
     {
+        if (PVarValues == null) PVarValues = new SerializableStringDictionary();
+        if (PVarReferences == null) PVarReferences = new SerializableMonoBehaviourDictionary();
+
         if (PVarValues != null) PVarValues.Owner = this;
         if (PVarReferences != null) PVarReferences.Owner = this;
 

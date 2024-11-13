@@ -62,9 +62,6 @@ public static class TfragHelper
         var bSphereRadius = defReader.ReadSingle() / 1024f;
         var bSpherePost = bSpherePosition;
 
-        var preCenterPositions = new List<Vector3>();
-        var postCenterPositions = new List<Vector3>();
-
         defReader.BaseStream.Position = 0x2C;
         var vCount = (int)defReader.ReadByte();
         defReader.ReadByte();
@@ -81,7 +78,8 @@ public static class TfragHelper
 
         // read og position
         dataReader.BaseStream.Position = pOffset;
-        var ogPosition = ReadVector3_32(dataReader);
+        var originalBasePosition = ReadVector3_32(dataReader);
+        var transformedBasePosition = transformationMatrix.MultiplyPoint(originalBasePosition);
 
         // write bsphere
         defWriter.BaseStream.Position = 0;
@@ -114,22 +112,11 @@ public static class TfragHelper
             // STROW
             if (word == 0x30000000)
             {
-                // there are multiple STROWs with different data
-                // hack: check if read vector3_32 is within bsphere
-                // will probably fail when bsphere includes 0,0,0
-                // as integer values will likely be read as a vector near 0,0,0
                 var strowPosition = ReadVector3_32(dataReader);
-                if (ogPosition == strowPosition) 
-                //var dist = Vector3.Distance(strowPosition, bSpherePosition);
-                //if (dist < bSphereRadius)
+                if (originalBasePosition == strowPosition) 
                 {
-                    var transformed = transformationMatrix.MultiplyPoint(strowPosition);
-
-                    preCenterPositions.Add(strowPosition);
-                    postCenterPositions.Add(transformed);
-
                     dataWriter.BaseStream.Position = w + 4;
-                    WriteVector3_32(dataWriter, transformed);
+                    WriteVector3_32(dataWriter, transformedBasePosition);
                 }
             }
         }
@@ -164,8 +151,182 @@ public static class TfragHelper
                         dataReader.BaseStream.Position = dataWriter.BaseStream.Position = w + 4 + (di * 6);
 
                         var displacement = ReadVector3_16_1024(dataReader);
-                        var realPos = preCenterPositions[lod] + displacement;
-                        WriteVector3_16_1024(dataWriter, transformationMatrix.MultiplyPoint(realPos) - postCenterPositions[lod]);
+                        var realPos = originalBasePosition + displacement;
+                        WriteVector3_16_1024(dataWriter, transformationMatrix.MultiplyPoint(realPos) - transformedBasePosition);
+
+                        if (!match)
+                        {
+                            match = true;
+                            ++lod;
+                        }
+                    }
+                }
+
+                // skip
+                w += size - 4;
+            }
+        }
+    }
+
+    public static void Collapse(byte[] def, byte[] data, Matrix4x4 inverseTransformationCuboid, Vector3 collapseTo, float falloffRadius = 1, float falloff = 0)
+    {
+        Func<Vector3, bool> isInCuboid = (p) => {
+            var tp = inverseTransformationCuboid.MultiplyPoint(p);
+            if (tp.x < -0.5f || tp.x > 0.5f) return false;
+            if (tp.y < -0.5f || tp.y > 0.5f) return false;
+            if (tp.z < -0.5f || tp.z > 0.5f) return false;
+
+            return true;
+        };
+
+        Func<Vector3, float> getFalloffFactor = (p) => {
+            var tp = inverseTransformationCuboid.MultiplyPoint(p);
+            return Mathf.Pow(Mathf.Clamp01(1 - tp.magnitude) * falloffRadius, falloff);
+        };
+
+        var defReadStream = new MemoryStream(def.ToArray());
+        var dataReadStream = new MemoryStream(data.ToArray());
+        var dataWriteStream = new MemoryStream(data, true);
+
+        var defReader = new BinaryReader(defReadStream);
+        var dataReader = new BinaryReader(dataReadStream);
+        var dataWriter = new BinaryWriter(dataWriteStream);
+
+        defReader.BaseStream.Position = 0x1E;
+        var colorOffset = (int)defReader.ReadInt16();
+
+        defReader.BaseStream.Position = 0x30;
+        var pOffset = (int)defReader.ReadInt16();
+
+        // read og position
+        dataReader.BaseStream.Position = pOffset;
+        var ogPosition = ReadVector3_32(dataReader);
+
+        // find and transform displacements
+        int lod = 0;
+        bool match = false;
+        for (int w = 0; w < colorOffset; w += 4)
+        {
+            dataReader.BaseStream.Position = w;
+            var word = dataReader.ReadInt32();
+
+            // UNPACK
+            if (((word >> 24) & 0b01100000) == 0b01100000)
+            {
+                var vn = (word >> 26) & 0b11;
+                var vl = (word >> 24) & 0b11;
+                var num = (word >> 16) & 0b11111111;
+                if (num == 0)
+                    num = 256;
+                var gsize = ((32 >> vl) * (vn + 1)) / 8;
+                var size = num * gsize;
+                if (size % 4 != 0)
+                    size += 4 - (size % 4);
+
+                size = (1 + (size / 4)) * 4;
+
+                if (gsize == 6)
+                {
+                    for (int di = 0; di < num; ++di)
+                    {
+                        dataReader.BaseStream.Position = dataWriter.BaseStream.Position = w + 4 + (di * 6);
+
+                        var displacement = ReadVector3_16_1024(dataReader);
+                        var realPos = ogPosition + displacement;
+                        if (isInCuboid(realPos.SwizzleXZY()))
+                        {
+                            var t = getFalloffFactor(realPos.SwizzleXZY());
+                            var target = Vector3.Lerp(realPos, collapseTo.SwizzleXZY(), t);
+
+                            WriteVector3_16_1024(dataWriter, target - ogPosition);
+                        }
+
+                        if (!match)
+                        {
+                            match = true;
+                            ++lod;
+                        }
+                    }
+                }
+
+                // skip
+                w += size - 4;
+            }
+        }
+    }
+
+    public static void Displace(byte[] def, byte[] data, Matrix4x4 inverseTransformationCuboid, Vector3 displaceAmount, float falloffRadius = 1, float falloff = 0)
+    {
+        Func<Vector3, bool> isInCuboid = (p) => {
+            var tp = inverseTransformationCuboid.MultiplyPoint(p);
+            if (tp.x < -0.5f || tp.x > 0.5f) return false;
+            if (tp.y < -0.5f || tp.y > 0.5f) return false;
+            if (tp.z < -0.5f || tp.z > 0.5f) return false;
+
+            return true;
+        };
+
+        Func<Vector3, float> getFalloffFactor = (p) => {
+            var tp = inverseTransformationCuboid.MultiplyPoint(p);
+            return Mathf.Pow(Mathf.Clamp01(1 - tp.magnitude) * falloffRadius, falloff);
+        };
+
+        var defReadStream = new MemoryStream(def.ToArray());
+        var dataReadStream = new MemoryStream(data.ToArray());
+        var dataWriteStream = new MemoryStream(data, true);
+
+        var defReader = new BinaryReader(defReadStream);
+        var dataReader = new BinaryReader(dataReadStream);
+        var dataWriter = new BinaryWriter(dataWriteStream);
+
+        defReader.BaseStream.Position = 0x1E;
+        var colorOffset = (int)defReader.ReadInt16();
+
+        defReader.BaseStream.Position = 0x30;
+        var pOffset = (int)defReader.ReadInt16();
+
+        // read og position
+        dataReader.BaseStream.Position = pOffset;
+        var ogPosition = ReadVector3_32(dataReader);
+
+        // find and transform displacements
+        int lod = 0;
+        bool match = false;
+        for (int w = 0; w < colorOffset; w += 4)
+        {
+            dataReader.BaseStream.Position = w;
+            var word = dataReader.ReadInt32();
+
+            // UNPACK
+            if (((word >> 24) & 0b01100000) == 0b01100000)
+            {
+                var vn = (word >> 26) & 0b11;
+                var vl = (word >> 24) & 0b11;
+                var num = (word >> 16) & 0b11111111;
+                if (num == 0)
+                    num = 256;
+                var gsize = ((32 >> vl) * (vn + 1)) / 8;
+                var size = num * gsize;
+                if (size % 4 != 0)
+                    size += 4 - (size % 4);
+
+                size = (1 + (size / 4)) * 4;
+
+                if (gsize == 6)
+                {
+                    for (int di = 0; di < num; ++di)
+                    {
+                        dataReader.BaseStream.Position = dataWriter.BaseStream.Position = w + 4 + (di * 6);
+
+                        var displacement = ReadVector3_16_1024(dataReader);
+                        var realPos = ogPosition + displacement;
+                        if (isInCuboid(realPos.SwizzleXZY()))
+                        {
+                            var t = getFalloffFactor(realPos.SwizzleXZY());
+                            var target = Vector3.Lerp(realPos, realPos + displaceAmount.SwizzleXZY(), t);
+
+                            WriteVector3_16_1024(dataWriter, target - ogPosition);
+                        }
 
                         if (!match)
                         {
