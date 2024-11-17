@@ -359,6 +359,7 @@ public enum RaidsMob
     Swamper
 }
 
+[Flags]
 public enum RaidsMobBangle
 {
     BANGLE_0001 = 0x0001,
@@ -384,7 +385,7 @@ public class RaidsMobSpawnParam
     public string Name;
     public RaidsMob Mob;
     public int Variant;
-    [EnumFlag] public RaidsMobBangle Bangles;
+    public RaidsMobBangle Bangles;
 
     [Header("General")]
     public float SizeMultiplier = 1;
