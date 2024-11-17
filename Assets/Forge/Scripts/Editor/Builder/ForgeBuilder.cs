@@ -452,17 +452,13 @@ public static class ForgeBuilder
                 byte[] bytes = bg.EncodeToPNG();
                 System.IO.File.WriteAllBytes(tempPngPath, bytes);
 
-                var result = PackerHelper.ConvertPngToLoadingScreen(tempPngPath, buildPath);
+                var outBgFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.bg");
+                var result = PackerHelper.ConvertPngToLoadingScreen(tempPngPath, outBgFile);
                 if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                 {
                     Debug.LogError($"Failed to pack loading screen. {result}");
                     return;
                 }
-
-                var outPif2File = Path.Combine(buildPath, $"converted.bg");
-                var outBgFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.bg");
-                if (File.Exists(outBgFile)) File.Delete(outBgFile);
-                if (File.Exists(outPif2File)) File.Move(outPif2File, outBgFile);
             }
         }
     }

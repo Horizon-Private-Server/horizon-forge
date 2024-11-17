@@ -231,7 +231,7 @@ public static class PackerHelper
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        return RunPacker(out _, "extract-minimap", "-i", isoPath, "-l", (levelId % 20).ToString(), "-t", "MP", "-v", racVersion.ToString(), "-o", outPath, "--double-alpha");
+        return RunPacker(out _, "extract-minimap", "-i", isoPath, "-l", (levelId % 20).ToString(), "-t", levelId > 40 ? "MP" : "SP", "-v", racVersion.ToString(), "-o", outPath, "--double-alpha");
     }
 
     public static PACKER_STATUS_CODES ExtractTransitionBackground(string isoPath, string outPath, int levelId, int racVersion)
@@ -461,6 +461,16 @@ public static class PackerHelper
         return PACKER_STATUS_CODES.SUCCESS; // not supported
     }
 
+    public static PACKER_STATUS_CODES ConvertPif4bppToPng(string inFile, string outFile, bool outSwizzle = true)
+    {
+        return RunPacker(out _, "texture", "-i", inFile, "-m", "PIF_4BPP_TO_PNG", "-o", outFile, outSwizzle ? "--out-swizzle" : "");
+    }
+
+    public static PACKER_STATUS_CODES ConvertPif8bppToPng(string inFile, string outFile, bool outSwizzle = true)
+    {
+        return RunPacker(out _, "texture", "-i", inFile, "-m", "PIF_8BPP_TO_PNG", "-o", outFile, outSwizzle ? "--out-swizzle" : "");
+    }
+
     public static PACKER_STATUS_CODES ConvertAssetTextures(string rootFolder, bool mipmaps = true, bool outSwizzle = true)
     {
         return RunPacker(out _, "texture", "-i", rootFolder, "-m", "PNG_FOLDER_TO_ASSET_TEXTURE", "-o", rootFolder, "-r", mipmaps ? "--mipmaps" : "", outSwizzle ? "--out-swizzle" : "");
@@ -476,9 +486,14 @@ public static class PackerHelper
         return RunPacker(out _, "texture", "-i", inFile, "-m", "PNG_TO_PIF_8BPP", "-o", outFolder, half_alpha ? "--half-alpha" : "", outSwizzle ? "--out-swizzle" : "");
     }
 
-    public static PACKER_STATUS_CODES ConvertPngToLoadingScreen(string inFile, string outFolder)
+    public static PACKER_STATUS_CODES ConvertPngToLoadingScreen(string inFile, string outFile)
     {
-        return RunPacker(out _, "convert-bg", "-i", inFile, "-o", outFolder);
+        return RunPacker(out _, "convert-bg", "-i", inFile, "-o", outFile, "-m", "PNG_TO_BG");
+    }
+
+    public static PACKER_STATUS_CODES ConvertLoadingScreenToPng(string inFile, string outFile)
+    {
+        return RunPacker(out _, "convert-bg", "-i", inFile, "-o", outFile, "-m", "BG_TO_PNG");
     }
 
     public static PACKER_STATUS_CODES ConvertCollision(string inBinFile, string outBinFile, int fromGameVersion, int toGameVersion)
