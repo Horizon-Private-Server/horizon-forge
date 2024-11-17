@@ -792,10 +792,24 @@ public class LevelImporterWindow : EditorWindow
                 // include matching .sound file (sound.bnk)
                 var worldWadPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".world");
                 var soundWadPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".sound");
+                var mapPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".map");
+                var bgPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".bg");
 
-                chunkId = 0;
+                // import base map minimap
                 PackerHelper.ExtractMinimap(GetSelectedIsoPath(), destMinimapPath, GetLevelId(), ImportSourceRacVersion());
                 if (ImportSourceIsDL()) PackerHelper.ExtractTransitionBackground(GetSelectedIsoPath(), destLoadingScreenPath, GetLevelId(), ImportSourceRacVersion());
+
+                // try and import selected wad's minimap
+                if (ImportSourceIsDL())
+                    PackerHelper.ConvertPif4bppToPng(mapPath, destMinimapPath, outSwizzle: true);
+                else
+                    PackerHelper.ConvertPif8bppToPng(mapPath, destMinimapPath, outSwizzle: false);
+
+                // try and import selected wad's bg
+                if (ImportSourceIsDL())
+                    PackerHelper.ConvertLoadingScreenToPng(bgPath, destLoadingScreenPath);
+
+                chunkId = 0;
                 ExtractWadFromISO(GetSelectedIsoPath(), GetLevelId(), destMapWadFile);
                 File.Copy(wadPath, destMapWadFile, true);
                 if (File.Exists(worldWadPath)) File.Copy(worldWadPath, Path.Combine(Path.GetDirectoryName(destMapWadFile), $"level{GetLevelId()}.2.wad"), true);
