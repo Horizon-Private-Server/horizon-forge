@@ -449,6 +449,9 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
         var cuboids = mapConfig.GetCuboids();
 
+        UnityHelper.ValidatePVars(mapConfig, this);
+        UnityHelper.UpdatePVars(mapConfig, this, this.RCVersion);
+
         // handle special moby class pvars
         switch ((RCVersion, OClass))
         {
@@ -459,9 +462,6 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                 UpdateMPConfigPVars_DL(cuboids);
                 break;
         }
-
-        UnityHelper.ValidatePVars(mapConfig, this);
-        UnityHelper.UpdatePVars(mapConfig, this, this.RCVersion);
     }
 
     private void UpdateMPConfigPVars_DL(Cuboid[] cuboids)
