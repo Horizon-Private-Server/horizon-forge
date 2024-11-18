@@ -1988,7 +1988,7 @@
     "Name": "Siege Node",
     "RCVersion": 3,
     "MobyOClass": 6727,
-    "Length": 96,
+    "Length": 112,
     "Default": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000FFFFFFFF0000000000000000FFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     "Pointers": "",
     "Overlay": [
@@ -2524,7 +2524,6 @@
     "MobyOClass": 6905,
     "Length": 16,
     "Default": "00000000000000000000000000000000",
-    "Pointers": "0",
     "Overlay": [
       {
         "Name": "Auto-rotate 90 deg (Unconfirmed)",
@@ -2554,7 +2553,6 @@
     "MobyOClass": 6906,
     "Length": 16,
     "Default": "00000000000000000000000000000000",
-    "Pointers": "0",
     "Overlay": [
       {
         "Name": "Auto-rotate 90 deg (Unconfirmed)",
@@ -2584,7 +2582,6 @@
     "MobyOClass": 6907,
     "Length": 16,
     "Default": "00000000000000000000000000000000",
-    "Pointers": "0",
     "Overlay": [
       {
         "Name": "Auto-rotate 90 deg (Unconfirmed)",

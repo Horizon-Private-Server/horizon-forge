@@ -12,6 +12,7 @@ using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public static class ForgeBuilder
 {
@@ -1432,12 +1433,30 @@ public static class ForgeBuilder
     {
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var mobyInstancesFolder = Path.Combine(binFolder, FolderNames.BinaryGameplayMobyFolder);
+        var gameplayFolder = Path.Combine(binFolder, FolderNames.BinaryGameplayFolder);
         var occlusionFolder = Path.Combine(binFolder, FolderNames.GetWorldInstanceOcclusionFolder(ctx.RacVersion));
         var mobyOcclusionFile = Path.Combine(occlusionFolder, "moby.bin");
 
         // build list of mobys in scene
         var mobys = mapConfig.GetMobys(ctx.RacVersion);
         var mobysCount = mobys.Count();
+
+        // reset 88.bin (moby index ptrs)
+        if (ctx.RacVersion == RCVER.UYA)
+        {
+            using (var ms = new MemoryStream())
+            {
+                using (var writer = new BinaryWriter(ms))
+                {
+                    writer.Write(-1);
+                    writer.Write(-1);
+                    writer.Write(0);
+                    writer.Write(0);
+
+                    File.WriteAllBytes(Path.Combine(gameplayFolder, "88.bin"), ms.ToArray());
+                }
+            }
+        }
 
         // clear moby instance dir
         if (Directory.Exists(mobyInstancesFolder)) Directory.Delete(mobyInstancesFolder, true);
