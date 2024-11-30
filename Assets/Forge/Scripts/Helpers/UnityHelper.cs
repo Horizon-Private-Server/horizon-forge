@@ -1492,6 +1492,26 @@ public static class UnityHelper
         return null;
     }
 
+    public static bool HierarchyIsDifferent(Transform a, Transform b)
+    {
+        if (!a || !b) return false;
+
+        var prefabChildCount = a.transform.childCount;
+        var instanceChildCount = b.transform.childCount;
+        if (prefabChildCount != instanceChildCount) return true;
+
+        for (int i = 0; i < prefabChildCount; ++i)
+        {
+            var aT = a.transform.GetChild(i);
+            var bT = b.transform.GetChild(i);
+
+            if (aT.name != bT.name) return true;
+            if (HierarchyIsDifferent(aT, bT)) return true;
+        }
+
+        return false;
+    }
+
     public static string GetPath(Transform root, Transform t)
     {
         if (root == t)

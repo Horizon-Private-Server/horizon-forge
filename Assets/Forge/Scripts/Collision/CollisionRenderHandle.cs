@@ -79,7 +79,14 @@ public class CollisionRenderHandle
 
     public void Update(GameObject parent, GameObject prefab)
     {
-        if (_mesh || prefab != _prefab || !AssetInstance || PrefabUtility.GetCorrespondingObjectFromOriginalSource(AssetInstance) != _prefab)
+        if (_mesh || !_prefab || prefab != _prefab || !AssetInstance || PrefabUtility.GetCorrespondingObjectFromOriginalSource(AssetInstance) != _prefab)
+        {
+            _prefab = prefab;
+            _mesh = null;
+            _regenerate = true;
+        }
+
+        if (!_regenerate && prefab && _prefab && AssetInstance && UnityHelper.HierarchyIsDifferent(prefab.transform, AssetInstance.transform))
         {
             _prefab = prefab;
             _mesh = null;
@@ -454,6 +461,13 @@ public class CollisionRenderHandle
 
     public void OnPreBake()
     {
+        // refresh collider instance
+        if (AssetInstance)
+        {
+            var parent = (AssetInstance.transform.parent) ? AssetInstance.transform.parent.gameObject : null;
+            CreateColliderAsset(parent);
+        }
+
         _instancedMaterialsNameBackup = null;
         if (_instancedMaterials != null)
         {
