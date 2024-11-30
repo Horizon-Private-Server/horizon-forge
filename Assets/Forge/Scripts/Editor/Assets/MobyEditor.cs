@@ -109,7 +109,7 @@ public class MobyEditor : Editor
                         moby.PVars = _clipboardMoby.PVars.ToArray();
                         moby.PVarReferences = new SerializableMonoBehaviourDictionary();
                         moby.PVarValues = new SerializableStringDictionary();
-                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: true);
+                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: false);
                     }
                     EditorGUI.EndDisabledGroup();
                     if (GUILayout.Button("Reset PVars"))
