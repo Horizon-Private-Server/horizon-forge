@@ -615,9 +615,8 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private GameObject GetDLFlagBasePrefab()
     {
-        if (PVars == null || PVars.Length < 1) return null;
-
-        switch (PVars[0]) // team
+        var teamId = GetPVarValue<int>(".Team");
+        switch (teamId) // team
         {
             case 0: _tintColor = Color.blue; break;
             case 1: _tintColor = Color.red; break;
@@ -631,13 +630,12 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private GameObject GetDLGadgetPickupPrefab()
     {
-        if (PVars == null || PVars.Length < 1) return null;
-
         renderHandle.Rotation = Quaternion.Euler(0, 0, 90);
         renderHandle.Offset = Vector3.up * 0.5f;
         renderHandle.Scale = Vector3.one * 2f;
 
-        switch (PVars[0])
+        var gadgetId = GetPVarValue<long>(".Gadget");
+        switch (gadgetId)
         {
             case 0: return UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "9210", this.RCVersion, includeGlobal: true);
             case 2: return UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "4244", this.RCVersion, includeGlobal: true);
