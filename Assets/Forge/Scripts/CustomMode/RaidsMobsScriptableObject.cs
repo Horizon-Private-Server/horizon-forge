@@ -53,18 +53,29 @@ public class RaidsMobsScriptableObject : ScriptableObject
     {
         public string Name;
         public int OClass;
-        public DLMapIds SourceMapId;
-        public int SourceMissionId;
+        public List<RaidsMobDependency> Dependencies;
 
         public RaidsMobVariant() { }
         public RaidsMobVariant(string name, int oClass, DLMapIds sourceMapId, int sourceMissionId)
         {
+            Name = name;
             OClass = oClass;
-            SourceMapId = sourceMapId;
-            SourceMissionId = sourceMissionId;
+            Dependencies.Add(new RaidsMobDependency()
+            {
+                OClass = oClass,
+                SourceMapId = sourceMapId,
+                SourceMissionId = sourceMissionId
+            });
         }
     }
 
+    [Serializable]
+    public class RaidsMobDependency
+    {
+        public int OClass;
+        public DLMapIds SourceMapId;
+        public int SourceMissionId;
+    }
 
     public static RaidsMobsScriptableObject Load()
     {

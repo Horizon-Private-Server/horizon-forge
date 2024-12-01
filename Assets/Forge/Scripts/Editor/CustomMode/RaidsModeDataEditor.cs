@@ -48,7 +48,12 @@ public class RaidsModeDataEditor : Editor
             if (GUILayout.Button("Extract and Install"))
             {
                 foreach (var variant in missingVariants)
-                    ExtractAndInstallMoby(mobyDir, variant.SourceMapId, variant.SourceMissionId, variant.OClass);
+                {
+                    foreach (var dependency in variant.Dependencies)
+                    {
+                        ExtractAndInstallMoby(mobyDir, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass);
+                    }
+                }
             }
         }
 
@@ -60,7 +65,10 @@ public class RaidsModeDataEditor : Editor
                 var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
                 if (variant == null) continue;
 
-                ExtractAndInstallMoby(mobyDir, variant.SourceMapId, variant.SourceMissionId, variant.OClass);
+                foreach (var dependency in variant.Dependencies)
+                {
+                    ExtractAndInstallMoby(mobyDir, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass);
+                }
             }
         }
 

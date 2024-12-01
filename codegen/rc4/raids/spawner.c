@@ -61,8 +61,14 @@ int spawnerGetRandomSpawnPoint(Moby* moby, int mobParamsIdx, VECTOR outPos, floa
   VECTOR pos = {0,0,3,0};
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
 
+  // try and get random spawn cuboid
+  // if none exist, return position/yaw of the spawner itself
   int selSpawnIdx = selectRandomIndex(SPAWNER_MAX_SPAWN_CUBOIDS, moby, spawnerIsValidCuboidSpawnIdx);
-  if (selSpawnIdx < 0) return 0;
+  if (selSpawnIdx < 0) {
+    vector_copy(outPos, moby->Position);
+    *outYaw = moby->Rotation[2];
+    return 1;
+  }
 
   int cuboidIdx = pvars->SpawnCuboidIds[selSpawnIdx];
   if (cuboidIdx < 0) return 0;

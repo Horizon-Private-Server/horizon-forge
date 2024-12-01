@@ -3357,20 +3357,9 @@
         "Fields": [
           {
             "Name": "Mob Param Id",
-            "DataType": "Enum",
+            "DataType": "RaidsMobId",
             "DataSize": 4,
-            "Offset": 0,
-            "Options": {
-              "None": -1,
-              "Mob 0": 0,
-              "Mob 1": 1,
-              "Mob 2": 2,
-              "Mob 3": 3,
-              "Mob 4": 4,
-              "Mob 5": 5,
-              "Mob 6": 6,
-              "Mob 7": 7
-            }
+            "Offset": 0
           },
           {
             "Name": "Probability",

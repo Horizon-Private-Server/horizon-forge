@@ -428,7 +428,7 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH || 1
+#if DEBUGPATH
 void zombieRenderPath(Moby* moby)
 {
   int x,y;

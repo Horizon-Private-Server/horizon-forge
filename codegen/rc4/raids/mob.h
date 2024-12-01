@@ -8,6 +8,7 @@
 #include <libdl/player.h>
 #include <libdl/sound.h>
 #include "zombie.h"
+#include "stalkerturret.h"
 //#include "executioner.h"
 //#include "reactor.h"
 //#include "tremor.h"

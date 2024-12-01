@@ -29,6 +29,10 @@
 
 void mobForceIntoMapBounds(Moby* moby);
 
+#if MOB_STALKERTURRET
+#include "stalkerturret.c"
+#endif
+
 #if MOB_ZOMBIE
 #include "zombie.c"
 #endif
@@ -1055,13 +1059,13 @@ void mobUpdateTargetOutOfSight(Moby* moby)
       } else {
         pvars->MobVars.TimeTargetOutOfSightTicks = 0;
       }
-      
+
       pvars->MobVars.TargetOutOfSightCheckTicks = 15;
     } else {
       pvars->MobVars.TimeTargetOutOfSightTicks += (pvars->MobVars.TimeTargetOutOfSightTicks > 0) ? 1 : 0;
     }
   } else {
-      pvars->MobVars.TimeTargetOutOfSightTicks = 0;
+    pvars->MobVars.TimeTargetOutOfSightTicks = 0;
   }
 }
 

@@ -145,6 +145,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             if (variant == null) continue;
 
             state.MobyOClasses.Add(variant.OClass);
+            if (variant.Dependencies != null)
+                state.MobyOClasses.AddRange(variant.Dependencies.Select(x => x.OClass));
         }
     }
 
@@ -356,7 +358,8 @@ public enum RaidsMob
 {
     Zombie,
     Swarmer,
-    Swamper
+    Swamper,
+    StalkerTurret
 }
 
 [Flags]

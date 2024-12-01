@@ -603,6 +603,7 @@ public static class UnityHelper
         }
     }
 
+    private static RaidsModeData _raidsModeData = null;
     private static void PVarsPropertyField_OverlayField(PvarOverlay pvarOverlay, PVarsPropertiesContainer properties, IPVarObject pvarObject, string basePath, PvarOverlayDef def, int defOffsetAdditive = 0)
     {
         var count = def.Count ?? 1;
@@ -933,6 +934,31 @@ public static class UnityHelper
 
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, RAIDS_DIFFICULTY_MASK_OPTIONS, dataSize);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
+                        }
+                    });
+                    break;
+                }
+            case "raidsmobid":
+                {
+                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
+                    {
+                        // read value
+                        string strValue = pvarValues[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
+                        if (!_raidsModeData)
+                            _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
+
+                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
+                        mobIds.Add("None", -1);
+
+                        EditorGUI.BeginChangeCheck();
+                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, mobIds, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));

@@ -166,7 +166,6 @@ void messagerFrameUpdate(void)
 
     messagerDrawQueueCallbacks[messagerDrawQueueCount] = NULL;
   }
-
 }
 
 //--------------------------------------------------------------------------
