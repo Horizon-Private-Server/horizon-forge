@@ -417,3 +417,10 @@ void respawnAllPlayers(void)
     }
   }
 }
+
+//--------------------------------------------------------------------------
+void * mobyGetClassPtr(int oClass)
+{
+  int mClass = *(u8*)(0x0024a110 + oClass);
+  return *(u32*)(0x002495c0 + mClass*4);
+}

@@ -16,8 +16,9 @@
 
 #define STALKERTURRET_MAX_WALKABLE_SLOPE             (40 * MATH_DEG2RAD)
 #define STALKERTURRET_BASE_STEP_HEIGHT								(2)
-#define STALKERTURRET_TURN_RADIANS_PER_SEC           (180 * MATH_DEG2RAD)
+#define STALKERTURRET_TURN_RADIANS_PER_SEC           (15 * MATH_DEG2RAD)
 #define STALKERTURRET_TURN_AIR_RADIANS_PER_SEC       (45 * MATH_DEG2RAD)
+#define STALKERTURRET_TURN_PREDICT_FACTOR_PER_STAR   (3.0)
 #define STALKERTURRET_MOVE_ACCELERATION              (25)
 #define STALKERTURRET_MOVE_AIR_ACCELERATION          (5)
 
@@ -34,8 +35,15 @@
 #define STALKERTURRET_FLINCH_PROBABILITY_PWR_FACTOR  (0.1)
 
 #define STALKERTURRET_PRIMARY_COLOR                  (0x00464443)
-#define STALKERTURRET_GLOW_COLOR                     (0x80202020)
+#define STALKERTURRET_GLOW_COLOR                     (0x80C0C0C0)
 #define STALKERTURRET_LOD_COLOR                      (0x00808080)
+
+#define STALKERTURRET_MAX_GATLING_SPEED              (10.0)
+#define STALKERTURRET_GATLING_ACCELERATION           (2.0)
+#define STALKERTURRET_SHOOT_AT_GATLING_SPEED         (8.0)
+#define STALKERTURRET_SHOT_ALTERNATE_DELAY           (10)
+
+#define STALKERTURRET_TARGET_CACHE_COUNT             (10)
 
 enum StalkerturretAnimId
 {
@@ -77,8 +85,22 @@ enum StalkerturretSubskeletonJoints
   STALKERTURRET_SUBSKELETON_JOINT_0 = 0,
 };
 
+struct StalkerturretTargetCache {
+  Moby* Moby;
+  char CanSee;
+  u8 TicksSinceLastCheck;
+};
+
 typedef struct StalkerturretMobVars {
   Moby* TurretMoby;
+  Moby* BaseMoby;
+  float GatlingRotation;
+  float GatlingSpeed;
+  struct StalkerturretTargetCache TargetCache[STALKERTURRET_TARGET_CACHE_COUNT];
+  int TargetCacheThisFrame;
+  char GatlingActive;
+  char GatlingDelay1;
+  char GatlingDelay2;
 } StalkerturretMobVars_t;
 
 extern struct MobVTable StalkerturretVTable;

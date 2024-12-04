@@ -801,20 +801,10 @@ int controllerHandleEvent(Moby* moby, GuberEvent* event)
 	return 0;
 }
 
-int aaa = 0;
-
 //--------------------------------------------------------------------------
 void controllerStart(void)
 {
   controllerInitialized = 1;
-
-  if (padGetButtonDown(0, PAD_LEFT) > 0) {
-    aaa--;
-    DPRINTF("%d\n", aaa);
-  } else if (padGetButtonDown(0, PAD_RIGHT) > 0) {
-    aaa++;
-    DPRINTF("%d\n", aaa);
-  }
 }
 
 //--------------------------------------------------------------------------

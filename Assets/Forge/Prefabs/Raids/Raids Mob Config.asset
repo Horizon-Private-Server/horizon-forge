@@ -100,7 +100,7 @@ MonoBehaviour:
   - Mob: 3
     Variants:
     - Name: Normal
-      OClass: 8304
+      OClass: 8250
       Dependencies:
       - OClass: 8304
         SourceMapId: 1
@@ -113,12 +113,12 @@ MonoBehaviour:
     Damage: 25
     DamageMax: 0
     DamageScale: 1
-    Speed: 3
-    SpeedMax: 15
-    SpeedScale: 1
-    Health: 100
+    Speed: 1
+    SpeedMax: 10
+    SpeedScale: 0.5
+    Health: 200
     HealthMax: 0
-    HealthScale: 1.5
+    HealthScale: 1.2
     AttackRadius: 50
     HitRadius: 0.5
     CollRadius: 1

@@ -833,6 +833,10 @@ void mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float p
   if (player) {
     vector_scale(pos, player->Velocity, predictFactor);
     vector_add(pos, pos, player->PlayerPosition);
+  } else if (mobyIsMob(target)) {
+	  struct MobPVar* pvars = (struct MobPVar*)target->PVar;
+    vector_scale(pos, pvars->MobVars.MoveVars.Velocity, predictFactor);
+    vector_add(pos, pos, target->Position);
   } else {
     vector_copy(pos, target->Position);
   }
@@ -1040,6 +1044,23 @@ void mobPostDrawDebug(Moby* moby)
 #endif
 }
 #endif
+
+//--------------------------------------------------------------------------
+int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby)
+{
+	VECTOR t, t2;
+  VECTOR up = {0,0,1,0};
+  
+  // increment out of sight ticker
+  if (canSeeMoby) {
+    vector_add(t, moby->Position, up);
+    vector_add(t2, canSeeMoby->Position, up);
+    
+    return !CollLine_Fix(t, t2, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL) || CollLine_Fix_GetHitMoby() == canSeeMoby;
+  }
+  
+  return 0;
+}
 
 //--------------------------------------------------------------------------
 void mobUpdateTargetOutOfSight(Moby* moby)

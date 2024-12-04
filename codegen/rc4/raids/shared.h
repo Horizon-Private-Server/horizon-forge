@@ -52,6 +52,7 @@ void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSp
 void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId);
 void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
 void mobPreUpdate(Moby* moby);
+int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby);
 int mobIsProjectileComing(Moby* moby);
 
 void mobInit(void);

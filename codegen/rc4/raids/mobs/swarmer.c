@@ -281,7 +281,9 @@ void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
     // auto aggro
     if (!pvars->MobVars.MoveVars.Target) {
-      Player* target = (Player*)guberGetObjectByUID(e->SourceUID);
+      Guber * guber = guberGetObjectByUID(e->SourceUID);
+      Moby* moby = guber ? guber->VTable->GetMoby(guber) : NULL;
+      Player* target = mobyGetPlayer(moby);
       if (target) {
         Moby* targetMoby = playerGetTargetMoby(target);
         if (targetMoby) {

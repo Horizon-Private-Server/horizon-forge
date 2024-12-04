@@ -37,6 +37,7 @@ void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
 
 int isInDrawDist(Moby* moby);
 
+void * mobyGetClassPtr(int oClass);
 int mobyIsMob(Moby* moby);
 int mobyIsNpc(Moby* moby);
 Moby* mobyGetFromIdxOrNull(int mobyIdx);
