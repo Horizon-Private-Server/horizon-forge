@@ -352,24 +352,31 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
 
     // determine if we should shoot directly towards target
     vector_subtract(dir, target->Position, moby->Position);
+    vector_normalize(dir, dir);
     VECTOR planarForward;
     vector_projectonplane(planarForward, dir, moby->M2_03);
-    if (vector_innerproduct(planarForward, moby->M0_03) > 0.99) {
+    if (acosf(vector_innerproduct(planarForward, moby->M0_03)) < STALKERTURRET_SHOT_LOCK_ON_WITHIN_RAD) {
       vector_add(to, to, target->Position);
       vector_subtract(vel, to, from);
       vector_normalize(vel, vel);
+    } else {
+      vector_subtract(dir, dir, planarForward);
+      vector_projectonplane(vel, vel, moby->M2_03);
+      vector_add(vel, vel, dir);
     }
   }
+
+  // move shot from forward
   vector_scale(offset, &m[0], 0.5);
   vector_add(from, from, offset);
-  vector_scale(vel, vel, 1.0); // speed
+  //vector_scale(vel, vel, 1.0); // speed
 
   // fire shot
   Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4.0, pvars->MobVars.Config.Damage, from, vel, turretVars->TurretMoby, 1, 0x222124, 0, 0);
   if (shotMoby) {
     ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0);
     ((void (*)(Moby*, int))0x0045d788)(shotMoby, 1);
-    ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 0x801);
+    ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 0x001);
     ((void (*)(Moby*, int))0x0045d798)(shotMoby, 0x3C);
     shotMoby->PParent = moby;
   }
@@ -617,8 +624,11 @@ void stalkerturretDoAction(Moby* moby)
       if (turretMoby) {
 
         // face target
-        if (target)
-          mobTurnTowardsPredictive(turretMoby, target, turnSpeed, MapConfig.State->DifficultyStars * STALKERTURRET_TURN_PREDICT_FACTOR_PER_STAR);
+        if (target) {
+          float dist = vector_distance(target->Position, moby->Position);
+          float predictFactor = MapConfig.State->DifficultyStars * STALKERTURRET_TURN_PREDICT_FACTOR_PER_STAR * lerpf(1, 7, clamp(dist / 30, 0, 1));
+          mobTurnTowardsPredictive(turretMoby, target, turnSpeed, predictFactor);
+        }
 
         // shoot
         stalkerturretSpinTurretGatling(turretMoby, 3, turretVars->GatlingRotation);
