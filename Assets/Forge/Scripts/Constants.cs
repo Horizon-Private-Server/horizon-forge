@@ -309,7 +309,7 @@ public enum GameRegion
 
 public static class Constants
 {
-    public static readonly string ForgeVersion = "v2.1.1";
+    public static readonly string ForgeVersion = "v2.1.2";
 
     public static readonly string RepoUrl = "https://github.com/Horizon-Private-Server/horizon-forge";
     public static readonly string WikiUrl = $"{RepoUrl}/wiki";
