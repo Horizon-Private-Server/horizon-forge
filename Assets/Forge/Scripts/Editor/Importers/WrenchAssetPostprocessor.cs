@@ -11,7 +11,7 @@ public class WrenchAssetPostprocessor : AssetPostprocessor
     void OnPostprocessModel(GameObject g)
     {
         var labels = AssetDatabase.GetLabels(assetImporter);
-        if (labels.Contains("wrench"))
+        if (labels.Contains("Wrench") || labels.Contains("wrench"))
         {
             // add lod group if applicable
             var renderers = g.GetComponentsInChildren<Renderer>();

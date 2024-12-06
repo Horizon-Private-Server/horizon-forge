@@ -82,8 +82,13 @@ public class LevelImporterWindow : EditorWindow
     int importShrubs = 1;
     int importMobys = 1;
     int importMisc = 1;
+    int importWorldConfig = 1;
+    int importMinimap = 1;
+    int importLoadingScreen = 1;
     string mapName = "New Map";
     string wadPath = "";
+
+    bool ImportMergeRequireUnpack => importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0 || importMobys > 0 || importMisc > 0 || importWorldConfig > 0;
 
     [MenuItem("Forge/Tools/Importers/Open Level Importer")]
     public static void CreateNewWindow()
@@ -419,6 +424,35 @@ public class LevelImporterWindow : EditorWindow
             container.Add(field);
         });
 
+        // 
+        root.BuildRow("World Lighting", (container) =>
+        {
+            var field = new DropdownField();
+            field.choices = AssetLimitedImportOptions;
+            field.index = importWorldConfig;
+            field.RegisterValueChangedCallback((e) => importWorldConfig = AssetLimitedImportOptions.IndexOf(e.newValue));
+            container.Add(field);
+        });
+
+        //
+        root.BuildRow("Minimap (If Applicable)", (container) =>
+        {
+            var field = new DropdownField();
+            field.choices = AssetImportOptions;
+            field.index = importMinimap;
+            field.RegisterValueChangedCallback((e) => importMinimap = AssetImportOptions.IndexOf(e.newValue));
+            container.Add(field);
+        });
+
+        //
+        root.BuildRow("Loading Screen (If Applicable)", (container) =>
+        {
+            var field = new DropdownField();
+            field.choices = AssetImportOptions;
+            field.index = importLoadingScreen;
+            field.RegisterValueChangedCallback((e) => importLoadingScreen = AssetImportOptions.IndexOf(e.newValue));
+            container.Add(field);
+        });
     }
 
     void OnImportSourceChanged(ChangeEvent<string> e)
@@ -758,10 +792,24 @@ public class LevelImporterWindow : EditorWindow
                 // include matching .sound file (sound.bnk)
                 var worldWadPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".world");
                 var soundWadPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".sound");
+                var mapPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".map");
+                var bgPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".bg");
 
-                chunkId = 0;
+                // import base map minimap
                 PackerHelper.ExtractMinimap(GetSelectedIsoPath(), destMinimapPath, GetLevelId(), ImportSourceRacVersion());
                 if (ImportSourceIsDL()) PackerHelper.ExtractTransitionBackground(GetSelectedIsoPath(), destLoadingScreenPath, GetLevelId(), ImportSourceRacVersion());
+
+                // try and import selected wad's minimap
+                if (ImportSourceIsDL())
+                    PackerHelper.ConvertPif4bppToPng(mapPath, destMinimapPath, outSwizzle: true);
+                else
+                    PackerHelper.ConvertPif8bppToPng(mapPath, destMinimapPath, outSwizzle: false);
+
+                // try and import selected wad's bg
+                if (ImportSourceIsDL())
+                    PackerHelper.ConvertLoadingScreenToPng(bgPath, destLoadingScreenPath);
+
+                chunkId = 0;
                 ExtractWadFromISO(GetSelectedIsoPath(), GetLevelId(), destMapWadFile);
                 File.Copy(wadPath, destMapWadFile, true);
                 if (File.Exists(worldWadPath)) File.Copy(worldWadPath, Path.Combine(Path.GetDirectoryName(destMapWadFile), $"level{GetLevelId()}.2.wad"), true);
@@ -890,6 +938,9 @@ public class LevelImporterWindow : EditorWindow
         var assetImports = new List<PackerImporterWindow.PackerAssetImport>();
         var reimportOcclusion = (importTfrags == 1) || (importTies > 0) || (importMobys > 0);
         var postActions = new List<Action>();
+        var destMapHUDFolder = Path.Combine(destMapFolder, FolderNames.HUDFolder);
+        var destMinimapPath = Path.Combine(destMapHUDFolder, $"minimap-rc{ImportSourceRacVersion()}-{GetSelectedLevelName()}.png");
+        var destLoadingScreenPath = Path.Combine(destMapHUDFolder, $"loadingscreen-rc{ImportSourceRacVersion()}-{GetSelectedLevelName()}.png");
 
         var rootGo = new GameObject(GetInputLevelName());
         rootGo.transform.SetAsFirstSibling();
@@ -935,7 +986,7 @@ public class LevelImporterWindow : EditorWindow
             }
 
             // unpack level wad
-            if (!DecompressAndUnpackLevelWad(destMapWadFile, chunkId, ImportSourceRacVersion())) return;
+            if (ImportMergeRequireUnpack && !DecompressAndUnpackLevelWad(destMapWadFile, chunkId, ImportSourceRacVersion())) return;
 
             // move assets over
             if (importSky == 1)
@@ -972,7 +1023,40 @@ public class LevelImporterWindow : EditorWindow
             if (importMisc == 1 && ImportSourceIsDL()) ImportAreas(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importTfrags == 1) ImportTfrags(destMapBinFolder, destMapFolder, assetImports, rootGo);
             if (reimportOcclusion) ImportOcclusion(destMapBinFolder, destMapFolder, assetImports, rootGo);
-            //ImportWorldConfig(destMapBinFolder, destMapFolder, assetImports);
+            if (importWorldConfig == 1) ImportWorldConfig(destMapBinFolder, destMapFolder, assetImports, rootGo);
+
+            if (ImportSourceIsIso())
+            {
+                if (importMinimap == 1)
+                {
+                    PackerHelper.ExtractMinimap(GetSelectedIsoPath(), destMinimapPath, GetLevelId(), ImportSourceRacVersion());
+                }
+
+                if (importLoadingScreen == 1)
+                {
+                    PackerHelper.ExtractTransitionBackground(GetSelectedIsoPath(), destLoadingScreenPath, GetLevelId(), ImportSourceRacVersion());
+                }
+            }
+            else
+            {
+                // import level 
+                var mapPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".map");
+                var bgPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".bg");
+
+                if (importMinimap == 1)
+                {
+                    if (ImportSourceRacVersion() == RCVER.DL)
+                        PackerHelper.ConvertPif4bppToPng(mapPath, destMinimapPath, outSwizzle: true);
+                    else
+                        PackerHelper.ConvertPif8bppToPng(mapPath, destMinimapPath, outSwizzle: false);
+                }
+
+                if (importLoadingScreen == 1)
+                {
+                    if (ImportSourceRacVersion() == RCVER.DL)
+                        PackerHelper.ConvertLoadingScreenToPng(bgPath, destLoadingScreenPath);
+                }
+            }
 
             // postprocess hill moby cuboids
             if (importMisc == 1) FindAndSetHillCuboidTypes(destMapBinFolder, destMapFolder, assetImports, rootGo);
@@ -1035,6 +1119,7 @@ public class LevelImporterWindow : EditorWindow
             map.UYABaseMap = Enum.Parse<UYAMapIds>(UYABaseMaps[importBaseLevelIdx]);
 
         var occBakeSettings = mapGameObject.AddComponent<OcclusionBakeSettings>();
+        var codeManager = mapGameObject.AddComponent<CodeManager>();
 
         RenderSettings.skybox = null;
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
@@ -1616,11 +1701,13 @@ public class LevelImporterWindow : EditorWindow
     Tie ImportTieInstance(string tieDir, GameObject tieRootGo, string tieClass, int racVersion)
     {
         // read
+        var colorFilePath = Path.Combine(tieDir, "colors.bin");
         var groupFilePath = Path.Combine(tieDir, "group.bin");
         var group = -1;
+        byte[] colors = null;
 
         if (File.Exists(groupFilePath)) group = BitConverter.ToInt32(File.ReadAllBytes(groupFilePath));
-        var colors = File.ReadAllBytes(Path.Combine(tieDir, "colors.bin"));
+        if (File.Exists(colorFilePath)) colors = File.ReadAllBytes(colorFilePath);
         var tie = File.ReadAllBytes(Path.Combine(tieDir, "tie.bin"));
 
         // create instance
@@ -1638,7 +1725,7 @@ public class LevelImporterWindow : EditorWindow
                 tieComponent.ColorData = colors;
                 tieComponent.GroupId = group;
 
-                if (colors.Length > 3)
+                if (colors != null && colors.Length > 3)
                 {
                     tieComponent.ColorDataValue = new Color(colors[0] / 128f, colors[1] / 128f, colors[2] / 128f, 1);
                 }

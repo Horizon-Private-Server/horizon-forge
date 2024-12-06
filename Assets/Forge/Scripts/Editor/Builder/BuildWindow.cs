@@ -36,13 +36,13 @@ public class BuildWindow : EditorWindow
     };
 
     // rebuild
+    Toggle toggleRebuildCode;
     Toggle toggleRebuildCollision;
     Toggle toggleRebuildTfrags;
     Toggle toggleRebuildTies;
     Toggle toggleRebuildShrubs;
     Toggle toggleRebuildMobys;
     Toggle toggleRebuildCuboidsSplinesAreas;
-    //Toggle toggleRebuildCode;
     Toggle toggleRebuildLighting;
     Toggle toggleRebuildDZO;
 
@@ -100,17 +100,17 @@ public class BuildWindow : EditorWindow
         root.BuildLabel("Rebuild");
         root.BuildPadding();
 
-        //toggleRebuildCode = toggleRebuildCode ?? new Toggle("Code") { value = true };
-        toggleRebuildCollision = toggleRebuildCollision ?? new Toggle("Collision") { value = true };
-        toggleRebuildCuboidsSplinesAreas = toggleRebuildCuboidsSplinesAreas ?? new Toggle("Cuboids/Splines/Areas/Cameras/Ambient Sounds") { value = true };
-        toggleRebuildDZO = toggleRebuildDZO ?? new Toggle("DZO") { value = true };
-        toggleRebuildMobys = toggleRebuildMobys ?? new Toggle("Mobys") { value = true };
-        toggleRebuildShrubs = toggleRebuildShrubs ?? new Toggle("Shrubs") { value = true };
-        toggleRebuildTfrags = toggleRebuildTfrags ?? new Toggle("Tfrags") { value = true };
-        toggleRebuildTies = toggleRebuildTies ?? new Toggle("Ties") { value = true };
-        toggleRebuildLighting = toggleRebuildLighting ?? new Toggle("World Lighting") { value = true };
+        CreateGUI_Toggle(ref toggleRebuildCode, "Custom Code", true);
+        CreateGUI_Toggle(ref toggleRebuildCollision, "Collision", true);
+        CreateGUI_Toggle(ref toggleRebuildCuboidsSplinesAreas, "Cuboids/Splines/Areas/Cameras/Ambient Sounds", true);
+        CreateGUI_Toggle(ref toggleRebuildDZO, "DZO", true);
+        CreateGUI_Toggle(ref toggleRebuildMobys, "Mobys", true);
+        CreateGUI_Toggle(ref toggleRebuildShrubs, "Shrubs", true);
+        CreateGUI_Toggle(ref toggleRebuildTfrags, "Tfrags", true);
+        CreateGUI_Toggle(ref toggleRebuildTies, "Ties", true);
+        CreateGUI_Toggle(ref toggleRebuildLighting, "World Lighting", true);
 
-        //root.Add(toggleRebuildCode);
+        root.Add(toggleRebuildCode);
         root.Add(toggleRebuildCollision);
         root.Add(toggleRebuildCuboidsSplinesAreas);
         root.Add(toggleRebuildDZO);
@@ -126,12 +126,12 @@ public class BuildWindow : EditorWindow
         root.BuildLabel("Pack");
         root.BuildPadding();
 
-        togglePackAssets = togglePackLevel ?? new Toggle("Assets") { value = true };
-        togglePackWorldInstances = togglePackLevel ?? new Toggle("World Instances") { value = true };
-        togglePackOcclusion = togglePackLevel ?? new Toggle("Occlusion") { value = true };
-        togglePackLevel = togglePackLevel ?? new Toggle("Level WAD") { value = true };
-        togglePackGameplay = togglePackGameplay ?? new Toggle("Gameplay WAD") { value = true };
-        togglePackSound = togglePackSound ?? new Toggle("Sound WAD") { value = true };
+        CreateGUI_Toggle(ref togglePackAssets, "Assets", true);
+        CreateGUI_Toggle(ref togglePackWorldInstances, "World Instances", true);
+        CreateGUI_Toggle(ref togglePackOcclusion, "Occlusion", true);
+        CreateGUI_Toggle(ref togglePackLevel, "Level WAD", true);
+        CreateGUI_Toggle(ref togglePackGameplay, "Gameplay WAD", true);
+        CreateGUI_Toggle(ref togglePackSound, "Sound WAD", true);
 
         root.Add(togglePackAssets);
         root.Add(togglePackWorldInstances);
@@ -147,10 +147,10 @@ public class BuildWindow : EditorWindow
         flagsGames.RegisterValueChangedCallback((_) => ValidateControls());
         root.Add(flagsGames);
 
-        togglePatch = togglePatch ?? new Toggle("Patch ISO(s)") { value = true };
+        CreateGUI_Toggle(ref togglePatch, "Patch ISO(s)", true);
         root.Add(togglePatch);
 
-        toggleCopy = toggleCopy ?? new Toggle("Copy to Build Folder(s)") { value = true };
+        CreateGUI_Toggle(ref toggleCopy, "Copy to Build Folder(s)", true);
         root.Add(toggleCopy);
 
         VisualElement buttonContainer = new VisualElement();
@@ -169,6 +169,15 @@ public class BuildWindow : EditorWindow
         patchButton.style.flexGrow = 1;
         patchButton.style.maxHeight = 30;
         buttonContainer.Add(patchButton);
+    }
+
+    void CreateGUI_Toggle(ref Toggle toggle, string name, bool defaultValue)
+    {
+        if (toggle != null) return;
+
+        var key = $"FORGE_BUILDER_{name}";
+        toggle = new Toggle(name) { value = SessionState.GetBool(key, defaultValue) };
+        toggle.RegisterValueChangedCallback((e) => SessionState.SetBool(key, e.newValue));
     }
 
     void ValidateControls()
@@ -261,6 +270,7 @@ public class BuildWindow : EditorWindow
 
             try
             {
+                var state = new BuildState(scene.name, racVersion, region);
                 var ctx = new ForgeBuilder.RebuildContext()
                 {
                     MapSceneName = scene.name,
@@ -271,13 +281,26 @@ public class BuildWindow : EditorWindow
                 // run generators
                 UnityHelper.RunGeneratorsPreBake(BakeType.BUILD);
 
+                // build list of mobys to export
+                // start with default list of mobys
+                // then add the mobys in the scene that aren't already in the list
+                var mobysToExport = ctx.RacVersion == RCVER.DL ? mapConfig.DLMobysIncludedInExport.ToList() : mapConfig.UYAMobysIncludedInExport.ToList();
+                var mobys = mapConfig.GetMobys(ctx.RacVersion);
+                foreach (var moby in mobys)
+                    if (!mobysToExport.Contains(moby.OClass))
+                        mobysToExport.Add(moby.OClass);
+                state.MobyOClasses.AddRange(mobysToExport);
+
+                // pass to build hook
+                IBuildHook.Run(state);
+
                 // PAL is always built after NTSC
                 // PAL only needs to be rebuilt with new PAL code segment
                 // unless we didn't build the NTSC version previously, then rebuild
                 if (region == GameRegion.PAL && buildBothRC3Regions)
                 {
                     // we need to rebuild code if PAL otherwise we 
-                    ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, toggleRebuildCode.value); if (ctx.Cancel) return false;
                 }
                 else
                 {
@@ -287,7 +310,7 @@ public class BuildWindow : EditorWindow
                     if (toggleRebuildTies.value) ForgeBuilder.RebuildTieInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildShrubs.value) await ForgeBuilder.RebuildShrubs(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildShrubs.value) ForgeBuilder.RebuildShrubInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobys(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobys(ctx, resourcesFolder, binFolder, state.MobyOClasses); if (ctx.Cancel) return false;
                     if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobyInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildCuboids(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildSplines(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
@@ -299,7 +322,7 @@ public class BuildWindow : EditorWindow
                     // always rebuild code
                     // to account for NTSC/PAL using different code segments
                     // we must always keep the build folder's code up-to-date
-                    ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, toggleRebuildCode.value); if (ctx.Cancel) return false;
                 }
 
                 EditorUtility.ClearProgressBar();

@@ -204,7 +204,7 @@ public class ISOImporterWindow : EditorWindow
                 var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
                 if (Directory.Exists(missionsPath))
                 {
-                    result = PackerHelper.UnpackMissions(missionsPath, racVersion);
+                    result = PackerHelper.UnpackMissions(missionsPath);
                     if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                     {
                         Debug.LogError($"Error unpacking missions {level}: {result}");
@@ -278,7 +278,8 @@ public class ISOImporterWindow : EditorWindow
                 if (CancelProgressBar(ref cancel, $"Gathering {isoLabelStr} Level Assets ({assetImports.Count} total assets to import)", level.ToString(), i / (float)levelsToImport.Length))
                     return false;
 
-                if (importMobys)
+                // only can import UYA/DL mobys
+                if (importMobys && (racVersion == RCVER.UYA || racVersion == RCVER.DL))
                 {
                     var mobyAssetDir = Path.Combine(assetsFolder, FolderNames.MobyFolder);
                     var mobyGlobalDir = FolderNames.GetGlobalAssetFolder(FolderNames.MobyFolder, racVersion);

@@ -48,7 +48,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
     public Renderer[] GetRenderers() => renderHandle?.AssetInstance?.GetComponentsInChildren<Renderer>();
     public GameObject GetAssetInstance() => renderHandle?.AssetInstance;
     public CollisionRenderHandle GetInstancedCollider() => collisionRenderHandle;
-    public bool HasInstancedCollider() => InstancedCollider && Reflection.isIdentity;
+    public bool HasInstancedCollider() => this.isActiveAndEnabled && InstancedCollider && Reflection.isIdentity;
     public bool HasNonUniformVertexColors() => ColorData != null && ColorData.Length > 3 && ColorData.Skip(3).Any(x => x != 0xff);
     public Color GetBaseVertexColor() => (ColorData != null && ColorData.Length > 2) ? new Color(ColorData[0] / 128f, ColorData[1] / 128f, ColorData[2] / 128f, 1f) : ColorDataValue;
 

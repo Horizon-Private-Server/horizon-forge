@@ -25,13 +25,13 @@ public static class WrenchHelper
 
     public static bool IsInstalled()
     {
-        var exePath = Path.Combine("tools", "wrench", "wrenchbuild.exe");
+        var exePath = Path.Combine("tools", "Wrench", "wrenchbuild.exe");
         return File.Exists(exePath);
     }
 
     public static int RunWrench(out string output, params string[] args)
     {
-        var exePath = Path.Combine("tools", "wrench", "wrenchbuild.exe");
+        var exePath = Path.Combine("tools", "Wrench", "wrenchbuild.exe");
         return RunWrench(exePath, out output, args);
     }
 
@@ -135,7 +135,7 @@ public static class WrenchHelper
 
         // add label
         var newTags = new string[2 + (tags?.Length ?? 0)];
-        newTags[0] = "wrench";
+        newTags[0] = "Wrench";
         newTags[1] = type;
         if (tags != null) Array.Copy(tags, 0, newTags, 2, tags.Length);
         AssetDatabase.SetLabels(asset, newTags);

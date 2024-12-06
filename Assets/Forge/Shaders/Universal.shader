@@ -116,9 +116,21 @@ Shader "Horizon Forge/Universal"
             float2 _MapRenderCameraZRange;
             float2 _MapRenderClip;
 
+            // WORLD LIGHTS
             float3 _WorldLightRays[32];
             float3 _WorldLightColors[32];
+
+            // SELECTION
             float4 _FORGE_SELECTION_COLOR;
+
+            // COLLAPSE
+            float4x4 _ManipulatorArray[32];
+            float4 _ManipulatorValues[32];
+            float _ManipulatorFalloffRadius[32];
+            float _ManipulatorFalloffs[32];
+            int _ManipulatorTypes[32];
+            int _ManipulatorArrayCount;
+
 
             v2f vert (appdata v)
             {
@@ -138,6 +150,38 @@ Shader "Horizon Forge/Universal"
                 o.wpos = vo.xyz;
                 o.normal = normalize(vn).xyz;
                 o.color = v.color;
+
+                if (_ManipulatorArrayCount > 0)
+                {
+                    for (int i = 0; i < _ManipulatorArrayCount; ++i)
+                    {
+                        float3 manCenter = float3(mul(_ManipulatorArray[i], float4(0,0,0,1)).xyz);
+                        float3 tpos = mul(_ManipulatorArray[i], float4(o.wpos.xyz, 1));
+                        if ((tpos.x >= -0.5 && tpos.x <= 0.5) && (tpos.y >= -0.5 && tpos.y <= 0.5) && (tpos.z >= -0.5 && tpos.z <= 0.5))
+                        {
+                            float3 wpos = float3(o.wpos);
+                            switch ((int)_ManipulatorTypes[i])
+                            {
+                                case 0: // shift
+                                {
+                                    wpos += _ManipulatorValues[i];
+                                    break;
+                                }
+                                case 1: // collapse
+                                {
+                                    wpos = _ManipulatorValues[i];
+                                    break;
+                                }
+                            }
+                            
+                            float dist = length(tpos);
+                            float t = pow(saturate(1-dist) * _ManipulatorFalloffRadius[i], _ManipulatorFalloffs[i]);
+                            o.wpos = lerp(o.wpos, wpos, t);
+                            o.pos = UnityWorldToClipPos(o.wpos);
+                            break;
+                        }
+                    }
+                }
 
                 return o;
             }

@@ -97,7 +97,7 @@ public static class OcclusionBaker
             var existingOctants = octants.ToDictionary(x => x, x => false);
             var colorInc = new Color32();
             var allOctantsInNeighborhood = new Vector3?[(int)Mathf.Pow((bakeSettings.FeatherOctantRadius * 2 + 1), 3)];
-            Vector3[] renderPoints = new Vector3[8];
+            Vector3[] renderPoints = new Vector3[9];
 
             // 
             var parsedIdsCount = Mathf.CeilToInt(maxOcclusionId / 32f) * 32;
@@ -136,7 +136,7 @@ public static class OcclusionBaker
                     if (!existingOctants.ContainsKey(allOctantsInNeighborhood[i].Value))
                         allOctantsInNeighborhood[i] = null;
 
-                // all four corners
+                // all four corners + center
                 renderPoints[0] = center + (Vector3.up * 2 + Vector3.forward * 2 + Vector3.right * 2);
                 renderPoints[1] = center + (Vector3.up * 2 + Vector3.forward * 2 + -Vector3.right * 2);
                 renderPoints[2] = center + (Vector3.up * 2 + -Vector3.forward * 2 + Vector3.right * 2);
@@ -145,6 +145,7 @@ public static class OcclusionBaker
                 renderPoints[5] = center + (-Vector3.up * 2 + Vector3.forward * 2 + -Vector3.right * 2);
                 renderPoints[6] = center + (-Vector3.up * 2 + -Vector3.forward * 2 + Vector3.right * 2);
                 renderPoints[7] = center + (-Vector3.up * 2 + -Vector3.forward * 2 + -Vector3.right * 2);
+                renderPoints[8] = center;
 
                 for (int i = 0; i < renderPoints.Length; ++i)
                 {

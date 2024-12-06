@@ -32,7 +32,7 @@ public class Shrub : RenderSelectionBase, IAsset, IInstancedCollider
     public Renderer[] GetRenderers() => renderHandle?.AssetInstance?.GetComponentsInChildren<Renderer>();
     public GameObject GetAssetInstance() => renderHandle?.AssetInstance;
     public CollisionRenderHandle GetInstancedCollider() => collisionRenderHandle;
-    public bool HasInstancedCollider() => InstancedCollider && Reflection.isIdentity;
+    public bool HasInstancedCollider() => this.isActiveAndEnabled && InstancedCollider && Reflection.isIdentity;
 
     private RenderHandle renderHandle = null;
     private CollisionRenderHandle collisionRenderHandle = new CollisionRenderHandle(null);

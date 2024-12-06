@@ -13,10 +13,9 @@ public class MobyEditor : Editor
     private HashSet<Material> _materialsWithEditors = new HashSet<Material>();
     private SerializedProperty _rcVersionProperty;
     private SerializedProperty _pvarData;
-    private SerializedProperty _pvarCuboidRefs;
-    private SerializedProperty _pvarMobyRefs;
-    private SerializedProperty _pvarSplineRefs;
-    private SerializedProperty _pvarAreaRefs;
+    private SerializedProperty _pvarValues;
+    private SerializedProperty _pvarRefs;
+    private SerializedProperty _pvarStrings;
     private UnityHelper.PVarsPropertiesContainer _pvarPropertiesContainer;
     private static Moby _clipboardMoby = null;
 
@@ -29,18 +28,16 @@ public class MobyEditor : Editor
 
         _rcVersionProperty = serializedObject.FindProperty("RCVersion");
         _pvarData = serializedObject.FindProperty("PVars");
-        _pvarCuboidRefs = serializedObject.FindProperty("PVarCuboidRefs");
-        _pvarMobyRefs = serializedObject.FindProperty("PVarMobyRefs");
-        _pvarSplineRefs = serializedObject.FindProperty("PVarSplineRefs");
-        _pvarAreaRefs = serializedObject.FindProperty("PVarAreaRefs");
+        _pvarValues = serializedObject.FindProperty("PVarValues");
+        _pvarRefs = serializedObject.FindProperty("PVarReferences");
+        _pvarStrings = serializedObject.FindProperty("PVarStrings");
 
         _pvarPropertiesContainer = new UnityHelper.PVarsPropertiesContainer()
         {
             PVars = _pvarData,
-            CuboidRefs = _pvarCuboidRefs,
-            AreaRefs = _pvarAreaRefs,
-            MobyRefs = _pvarMobyRefs,
-            SplineRefs = _pvarSplineRefs
+            PVarValues = _pvarValues,
+            PVarRefs = _pvarRefs,
+            Strings = _pvarStrings
         };
 
         _materialEditors.Clear();
@@ -94,7 +91,7 @@ public class MobyEditor : Editor
             if (mapConfig)
             {
                 GUILayout.Space(20);
-                UnityHelper.PVarsPropertyField(_pvarPropertiesContainer, moby.RCVersion, mobyClass: moby.OClass);
+                UnityHelper.PVarsPropertyField(_pvarPropertiesContainer, target as Moby, moby.RCVersion, mobyClass: moby.OClass);
 
                 if (_pvarData.isExpanded)
                 {
@@ -109,13 +106,26 @@ public class MobyEditor : Editor
                     {
                         // copy refs
                         Undo.RecordObject(moby, "Paste PVars");
-                        moby.PVarAreaRefs = _clipboardMoby.PVarAreaRefs.ToArray();
-                        moby.PVarCuboidRefs = _clipboardMoby.PVarCuboidRefs.ToArray();
-                        moby.PVarMobyRefs = _clipboardMoby.PVarMobyRefs.ToArray();
-                        moby.PVarSplineRefs = _clipboardMoby.PVarSplineRefs.ToArray();
                         moby.PVars = _clipboardMoby.PVars.ToArray();
+                        moby.PVarReferences = new SerializableMonoBehaviourDictionary();
+                        moby.PVarValues = new SerializableStringDictionary();
+                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: false);
                     }
                     EditorGUI.EndDisabledGroup();
+                    if (GUILayout.Button("Reset PVars"))
+                    {
+                        Undo.RecordObject(moby, "Reset PVars");
+                        moby.PVarReferences = new SerializableMonoBehaviourDictionary();
+                        moby.PVarValues = new SerializableStringDictionary();
+                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: true);
+                    }
+                    if (GUILayout.Button(new GUIContent("Last Built", "Resets the PVars to the last built.")))
+                    {
+                        Undo.RecordObject(moby, "Reset Last Built PVars");
+                        moby.PVarReferences = new SerializableMonoBehaviourDictionary();
+                        moby.PVarValues = new SerializableStringDictionary();
+                        UnityHelper.InitializePVars(mapConfig, moby, useDefault: false);
+                    }
                     GUILayout.EndHorizontal();
                 }
             }
@@ -188,252 +198,11 @@ public class MobyEditor : Editor
         }
     }
 
-    private void OverlayField(MapConfig mapConfig, Moby moby, PvarOverlayDef def)
-    {
-        switch (def.DataType?.ToLower())
-        {
-            case "bool":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 1);
-                    var value = _buffer[0] != 0;
-                    value = EditorGUILayout.Toggle(new GUIContent(def.Name, def.Tooltip), value);
-                    _buffer[0] = (byte)(value ? 1 : 0);
-                    WritePVarData(_buffer, def.Offset, 1);
-                    break;
-                }
-            case "byte":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 1);
-                    var value = (int)_buffer[0];
-                    value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (value < def.Min) value = (int)def.Min;
-                    if (value > def.Max) value = (int)def.Max;
-                    if (value > byte.MaxValue) value = byte.MaxValue;
-                    if (value < byte.MinValue) value = byte.MinValue;
-                    _buffer[0] = (byte)value;
-                    WritePVarData(_buffer, def.Offset, 1);
-                    break;
-                }
-            case "sbyte":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 1);
-                    var value = (int)(sbyte)_buffer[0];
-                    value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (value < def.Min) value = (int)def.Min;
-                    if (value > def.Max) value = (int)def.Max;
-                    if (value > sbyte.MaxValue) value = sbyte.MaxValue;
-                    if (value < sbyte.MinValue) value = sbyte.MinValue;
-                    _buffer[0] = (byte)(sbyte)value;
-                    WritePVarData(_buffer, def.Offset, 1);
-                    break;
-                }
-            case "integer":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = BitConverter.ToInt32(_buffer, 0);
-                    value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (value < def.Min) value = (int)def.Min;
-                    if (value > def.Max) value = (int)def.Max;
-                    var b = BitConverter.GetBytes(value);
-                    WritePVarData(b, def.Offset, 4);
-                    break;
-                }
-            case "float":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = BitConverter.ToSingle(_buffer, 0);
-                    value = EditorGUILayout.FloatField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (value < def.Min) value = (float)def.Min;
-                    if (value > def.Max) value = (float)def.Max;
-                    var b = BitConverter.GetBytes(value);
-                    WritePVarData(b, def.Offset, 4);
-                    break;
-                }
-            case "vector2":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 8);
-                    var value = new Vector2(BitConverter.ToSingle(_buffer, 0), BitConverter.ToSingle(_buffer, 4));
-                    value = EditorGUILayout.Vector2Field(new GUIContent(def.Name, def.Tooltip), value);
-                    //if (value < def.Min) value = (float)def.Min;
-                    //if (value > def.Max) value = (float)def.Max;
-                    WritePVarData(BitConverter.GetBytes(value.x), def.Offset, 4);
-                    WritePVarData(BitConverter.GetBytes(value.y), def.Offset + 4, 4);
-                    break;
-                }
-            case "colorrgb":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 3);
-                    var value = new Color32(_buffer[0], _buffer[1], _buffer[2], 255);
-                    value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value, showEyedropper: true, showAlpha: false, hdr: false);
-                    _buffer[0] = value.r;
-                    _buffer[1] = value.g;
-                    _buffer[2] = value.b;
-                    WritePVarData(_buffer, def.Offset, 3);
-                    break;
-                }
-            case "colorrgba":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = new Color32(_buffer[0], _buffer[1], _buffer[2], _buffer[3]);
-                    value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value);
-                    _buffer[0] = value.r;
-                    _buffer[1] = value.g;
-                    _buffer[2] = value.b;
-                    _buffer[3] = value.a;
-                    WritePVarData(_buffer, def.Offset, 4);
-                    break;
-                }
-            case "team":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, def.DataSize ?? 1);
-                    var value = (DLTeamIds)_buffer[0];
-                    value = EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Min, def.Max);
-                    var b = BitConverter.GetBytes((int)value);
-                    WritePVarData(b, def.Offset, def.DataSize ?? 1);
-                    break;
-                }
-            case "fxtex":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = (DLFXTextureIds)BitConverter.ToInt32(_buffer, 0);
-                    value = EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Min, def.Max);
-                    var b = BitConverter.GetBytes((int)value);
-                    WritePVarData(b, def.Offset, 4);
-                    break;
-                }
-            case "levelfxtex":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = (DLLevelFXTextureIds)BitConverter.ToInt32(_buffer, 0);
-                    value = EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Min, def.Max);
-                    var b = BitConverter.GetBytes((int)value);
-                    WritePVarData(b, def.Offset, 4);
-                    break;
-                }
-            case "enum":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, def.DataSize ?? 4);
-                    var value = (int)(BitConverter.ToInt64(_buffer, 0) & (long)(Math.Pow(2, (def.DataSize ?? 4) * 8) - 1));
-                    value = EnumPopup(new GUIContent(def.Name, def.Tooltip), value, def.Options);
-                    var b = BitConverter.GetBytes(value);
-                    WritePVarData(b, def.Offset, def.DataSize ?? 4);
-                    break;
-                }
-            case "mobygroupid":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = BitConverter.ToInt32(_buffer, 0);
-                    value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (value < def.Min) value = (int)def.Min;
-                    if (value > def.Max) value = (int)def.Max;
-                    var b = BitConverter.GetBytes(value);
-                    WritePVarData(b, def.Offset, 4);
-                    break;
-                }
-            case "tiegroupid":
-                {
-                    // read value
-                    ReadPVarData(_buffer, def.Offset, 4);
-                    var value = BitConverter.ToInt32(_buffer, 0);
-                    value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (value < def.Min) value = (int)def.Min;
-                    if (value > def.Max) value = (int)def.Max;
-                    var b = BitConverter.GetBytes(value);
-                    WritePVarData(b, def.Offset, 4);
-                    break;
-                }
-            case "cuboidref":
-                {
-                    var refIdx = def.Offset / 4;
-                    var refObj = _pvarCuboidRefs.GetArrayElementAtIndex(refIdx);
-                    EditorGUILayout.ObjectField(refObj, typeof(Cuboid), new GUIContent(def.Name, def.Tooltip));
-                    break;
-                }
-            case "splineref":
-                {
-                    var refIdx = def.Offset / 4;
-                    var refObj = _pvarSplineRefs.GetArrayElementAtIndex(refIdx);
-                    EditorGUILayout.ObjectField(refObj, typeof(Spline), new GUIContent(def.Name, def.Tooltip));
-                    break;
-                }
-            case "arearef":
-                {
-                    var refIdx = def.Offset / 4;
-                    var refObj = _pvarAreaRefs.GetArrayElementAtIndex(refIdx);
-                    EditorGUILayout.ObjectField(refObj, typeof(Area), new GUIContent(def.Name, def.Tooltip));
-                    break;
-                }
-            case "mobyref":
-                {
-                    var refIdx = def.Offset / 4;
-                    var refObj = _pvarMobyRefs.GetArrayElementAtIndex(refIdx);
-                    EditorGUILayout.ObjectField(refObj, typeof(Moby), new GUIContent(def.Name, def.Tooltip));
-                    break;
-                }
-            case "mobyrefarray":
-                {
-                    for (int i = 0; i < def.Count; ++i)
-                    {
-                        var refIdx = (def.Offset / 4) + i;
-                        var refObj = _pvarMobyRefs.GetArrayElementAtIndex(refIdx);
-                        EditorGUILayout.ObjectField(refObj, typeof(Moby), new GUIContent(def.Name + $" #{i+1}", def.Tooltip));
-                    }
-                    break;
-                }
-        }
-    }
-
-    private T EnumPopup<T>(GUIContent label, T value, float? min, float? max) where T : struct, IConvertible
-    {
-        var options = ((T[])Enum.GetValues(typeof(T))).Where(x => !((int)(object)x < min) && !((int)(object)x > max)).ToArray();
-        var names = options.Select(x => Enum.GetName(typeof(T), x)).ToArray();
-
-        return options.ElementAtOrDefault(EditorGUILayout.Popup(label, Array.IndexOf(options, value), names));
-    }
-
-    private int EnumPopup(GUIContent label, int value, Dictionary<string, int> options)
-    {
-        var names = options.Select(x => x.Key).ToArray();
-        var selectedKey = options.FirstOrDefault(x => x.Value == value).Key;
-        var idx = Array.IndexOf(names, selectedKey);
-
-        idx = EditorGUILayout.Popup(label, idx, names);
-
-        selectedKey = names.ElementAtOrDefault(idx);
-        if (selectedKey == null) return value;
-        return options.GetValueOrDefault(selectedKey);
-    }
-
-    private void ReadPVarData(byte[] dst, int srcOffset, int length)
-    {
-        for (int i = 0; i < length; ++i)
-            dst[i] = (byte)_pvarData.GetArrayElementAtIndex(i + srcOffset).intValue;
-    }
-
-    private void WritePVarData(byte[] src, int dstOffset, int length)
-    {
-        for (int i = 0; i < length; ++i)
-            _pvarData.GetArrayElementAtIndex(i + dstOffset).intValue = src[i];
-    }
-
     private void SelectChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarMobyRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childMoby in moby.PVarMobyRefs)
+            foreach (var childMoby in moby.PVarReferences.Select(x => x.Value as Moby).Where(x => x))
             {
                 if (!childMoby) continue;
                 if (!selected.Contains(childMoby.gameObject))
@@ -452,9 +221,9 @@ public class MobyEditor : Editor
 
     private void SelectMobyChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarMobyRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childMoby in moby.PVarMobyRefs)
+            foreach (var childMoby in moby.PVarReferences.Select(x => x.Value as Moby).Where(x => x))
             {
                 if (!childMoby) continue;
                 if (!selected.Contains(childMoby.gameObject))
@@ -469,9 +238,9 @@ public class MobyEditor : Editor
 
     private void SelectCuboidChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarCuboidRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childCuboid in moby.PVarCuboidRefs)
+            foreach (var childCuboid in moby.PVarReferences.Select(x => x.Value as Cuboid).Where(x => x))
             {
                 if (!childCuboid) continue;
                 if (!selected.Contains(childCuboid.gameObject))
@@ -485,9 +254,9 @@ public class MobyEditor : Editor
 
     private void SelectSplineChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarSplineRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childSpline in moby.PVarSplineRefs)
+            foreach (var childSpline in moby.PVarReferences.Select(x => x.Value as Spline).Where(x => x))
             {
                 if (!childSpline) continue;
                 if (!selected.Contains(childSpline.gameObject))
@@ -501,9 +270,9 @@ public class MobyEditor : Editor
 
     private void SelectAreaChildren(Moby moby, ref UnityEngine.Object[] selected)
     {
-        if (moby.PVarAreaRefs != null)
+        if (moby.PVarReferences != null)
         {
-            foreach (var childArea in moby.PVarAreaRefs)
+            foreach (var childArea in moby.PVarReferences.Select(x => x.Value as Area).Where(x => x))
             {
                 if (!childArea) continue;
                 if (!selected.Contains(childArea.gameObject))

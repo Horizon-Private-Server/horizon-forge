@@ -12,6 +12,7 @@ using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public static class ForgeBuilder
 {
@@ -215,6 +216,7 @@ public static class ForgeBuilder
 
             try
             {
+                var state = new BuildState(scene.name, racVersion, region);
                 var ctx = new RebuildContext()
                 {
                     MapSceneName = scene.name,
@@ -225,6 +227,19 @@ public static class ForgeBuilder
                 // run generators
                 UnityHelper.RunGeneratorsPreBake(BakeType.BUILD);
 
+                // build list of mobys to export
+                // start with default list of mobys
+                // then add the mobys in the scene that aren't already in the list
+                var mobysToExport = ctx.RacVersion == RCVER.DL ? mapConfig.DLMobysIncludedInExport.ToList() : mapConfig.UYAMobysIncludedInExport.ToList();
+                var mobys = mapConfig.GetMobys(ctx.RacVersion);
+                foreach (var moby in mobys)
+                    if (!mobysToExport.Contains(moby.OClass))
+                        mobysToExport.Add(moby.OClass);
+                state.MobyOClasses.AddRange(mobysToExport);
+
+                // pass to build hook
+                IBuildHook.Run(state);
+
                 //RebuildSky(ctx, resourcesFolder, binFolder); if (cancel) return;
                 //await RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                 //return false;
@@ -233,7 +248,7 @@ public static class ForgeBuilder
                 // PAL only needs to be rebuilt with new PAL code segment
                 if (region == GameRegion.PAL)
                 {
-                    RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    await RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                 }
                 else
                 {
@@ -243,14 +258,14 @@ public static class ForgeBuilder
                     RebuildTieInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     await RebuildShrubs(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildShrubInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    RebuildMobys(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    RebuildMobys(ctx, resourcesFolder, binFolder, state.MobyOClasses); if (ctx.Cancel) return false;
                     RebuildMobyInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildCuboids(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildSplines(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildCameras(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildAmbientSounds(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildAreas(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    await RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildWorldLighting(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                 }
 
@@ -349,7 +364,9 @@ public static class ForgeBuilder
                 {
                     writer.Write(mapConfig.MapVersion);
                     writer.Write((int)mapConfig.DLBaseMap);
-                    writer.Write((int)mapConfig.DLForceCustomMode); // forced custom mode id
+                    writer.Write((short)mapConfig.DLForceCustomMode); // forced custom mode id
+                    writer.Write((byte)(mapConfig.DLHideFromMapList ? 1 : 0)); // hide
+                    writer.Write((byte)0); // padding
                     writer.Write((short)(customModeDatas?.Length ?? 0)); // extra data count
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);
@@ -436,17 +453,13 @@ public static class ForgeBuilder
                 byte[] bytes = bg.EncodeToPNG();
                 System.IO.File.WriteAllBytes(tempPngPath, bytes);
 
-                var result = PackerHelper.ConvertPngToLoadingScreen(tempPngPath, buildPath);
+                var outBgFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.bg");
+                var result = PackerHelper.ConvertPngToLoadingScreen(tempPngPath, outBgFile);
                 if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                 {
                     Debug.LogError($"Failed to pack loading screen. {result}");
                     return;
                 }
-
-                var outPif2File = Path.Combine(buildPath, $"converted.bg");
-                var outBgFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.bg");
-                if (File.Exists(outBgFile)) File.Delete(outBgFile);
-                if (File.Exists(outPif2File)) File.Move(outPif2File, outBgFile);
             }
         }
     }
@@ -652,33 +665,8 @@ public static class ForgeBuilder
                 for (int i = 0; i < chunks.Length; ++i)
                 {
                     var chunk = chunks[i];
-                    var defCopy = chunk.HeaderBytes.ToArray();
-                    var dataCopy = chunk.DataBytes.ToArray();
+                    chunk.GetData(materials, out var defCopy, out var dataCopy);
                     int dataOff = (int)fs.Position;
-
-                    // add to materials list
-                    var renderer = chunk.GetComponent<MeshRenderer>();
-                    if (renderer)
-                    {
-                        var texIdxs = new int[renderer.sharedMaterials.Length];
-                        for (int m = 0; m < renderer.sharedMaterials.Length; ++m)
-                        {
-                            var mat = renderer.sharedMaterials[m];
-                            var idx = materials.IndexOf(mat);
-                            if (idx < 0)
-                            {
-                                idx = materials.Count;
-                                materials.Add(mat);
-                            }
-
-                            texIdxs[m] = idx;
-                        }
-
-                        TfragHelper.SetChunkTextureIndices(defCopy, dataCopy, texIdxs);
-                    }
-
-                    // apply transformation
-                    TfragHelper.TransformChunk(defCopy, dataCopy, chunk.transform.localToWorldMatrix.SwizzleXZY());
 
                     // write header
                     fs.Position = packetStart + (0x40 * i);
@@ -1064,20 +1052,11 @@ public static class ForgeBuilder
         }
     }
 
-    public static void RebuildMobys(RebuildContext ctx, string resourcesFolder, string binFolder)
+    public static void RebuildMobys(RebuildContext ctx, string resourcesFolder, string binFolder, List<int> mobysToExport)
     {
         var mobyAssetsFolder = Path.Combine(binFolder, FolderNames.BinaryMobyFolder);
         var mobyResourcesFolder = Path.Combine(resourcesFolder, FolderNames.GetMapMobyFolder(ctx.RacVersion));
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
-
-        // build list of mobys to export
-        // start with default list of mobys
-        // then add the mobys in the scene that aren't already in the list
-        var mobysToExport = ctx.RacVersion == RCVER.DL ? mapConfig.DLMobysIncludedInExport.ToList() : mapConfig.UYAMobysIncludedInExport.ToList();
-        var mobys = mapConfig.GetMobys(ctx.RacVersion);
-        foreach (var moby in mobys)
-            if (!mobysToExport.Contains(moby.OClass))
-                mobysToExport.Add(moby.OClass);
 
         var mobyClasses = mobysToExport.Distinct().OrderBy(x => x).ToArray();
 
@@ -1454,12 +1433,30 @@ public static class ForgeBuilder
     {
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var mobyInstancesFolder = Path.Combine(binFolder, FolderNames.BinaryGameplayMobyFolder);
+        var gameplayFolder = Path.Combine(binFolder, FolderNames.BinaryGameplayFolder);
         var occlusionFolder = Path.Combine(binFolder, FolderNames.GetWorldInstanceOcclusionFolder(ctx.RacVersion));
         var mobyOcclusionFile = Path.Combine(occlusionFolder, "moby.bin");
 
         // build list of mobys in scene
         var mobys = mapConfig.GetMobys(ctx.RacVersion);
         var mobysCount = mobys.Count();
+
+        // reset 88.bin (moby index ptrs)
+        if (ctx.RacVersion == RCVER.UYA)
+        {
+            using (var ms = new MemoryStream())
+            {
+                using (var writer = new BinaryWriter(ms))
+                {
+                    writer.Write(-1);
+                    writer.Write(-1);
+                    writer.Write(0);
+                    writer.Write(0);
+
+                    File.WriteAllBytes(Path.Combine(gameplayFolder, "88.bin"), ms.ToArray());
+                }
+            }
+        }
 
         // clear moby instance dir
         if (Directory.Exists(mobyInstancesFolder)) Directory.Delete(mobyInstancesFolder, true);
@@ -1501,7 +1498,7 @@ public static class ForgeBuilder
             if (moby.PVars != null && moby.PVars.Length > 0)
             {
                 moby.UpdatePVars();
-                File.WriteAllBytes(Path.Combine(mobyDir, "pvar.bin"), moby.PVars);
+                WritePVarData(Path.Combine(mobyDir, "pvar.bin"), moby.PVars);
             }
 
             // create pvar_ptr.bin
@@ -1624,7 +1621,7 @@ public static class ForgeBuilder
             if (camera.PVars != null && camera.PVars.Length > 0)
             {
                 camera.UpdatePVars();
-                File.WriteAllBytes(Path.Combine(cameraDir, "pvar.bin"), camera.PVars);
+                WritePVarData(Path.Combine(cameraDir, "pvar.bin"), camera.PVars);
             }
 
             ++i;
@@ -1665,7 +1662,7 @@ public static class ForgeBuilder
             if (ambientSound.PVars != null && ambientSound.PVars.Length > 0)
             {
                 ambientSound.UpdatePVars();
-                File.WriteAllBytes(Path.Combine(ambientSoundDir, "pvar.bin"), ambientSound.PVars);
+                WritePVarData(Path.Combine(ambientSoundDir, "pvar.bin"), ambientSound.PVars);
             }
 
             ++i;
@@ -1767,7 +1764,7 @@ public static class ForgeBuilder
 
     }
 
-    public static void RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder)
+    public static async Task RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder, bool buildCodeGen = true)
     {
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var mapRender = GameObject.FindObjectOfType<MapRender>();
@@ -1797,6 +1794,19 @@ public static class ForgeBuilder
             using (var writer = new BinaryWriter(fs))
             {
                 mapRender.Write(writer, ctx.RacVersion == RCVER.DL ? (int)mapConfig.DLBaseMap : (int)mapConfig.UYABaseMap, ctx.RacVersion, ctx.Region);
+            }
+        }
+
+        // check for code generator
+        if (buildCodeGen)
+        {
+            var codeManager = GameObject.FindObjectOfType<CodeManager>();
+            if (codeManager && codeManager.Enabled)
+            {
+                if (codeManager.Generate())
+                {
+                    await codeManager.Build(ctx.MapSceneName, ctx.RacVersion);
+                }
             }
         }
     }
@@ -1905,6 +1915,20 @@ public static class ForgeBuilder
         CopyToBuildFolders(EditorSceneManager.GetActiveScene());
 
         Debug.Log("DZO build complete");
+    }
+
+    private static void WritePVarData(string outFilePath, byte[] pvars)
+    {
+        if ((pvars.Length % 0x10) > 0)
+        {
+            var bCopy = new byte[pvars.Length + (0x10 - (pvars.Length % 0x10))];
+            Array.Copy(pvars, 0, bCopy, 0, pvars.Length);
+            File.WriteAllBytes(outFilePath, bCopy);
+        }
+        else
+        {
+            File.WriteAllBytes(outFilePath, pvars);
+        }
     }
 
     public class RebuildContext

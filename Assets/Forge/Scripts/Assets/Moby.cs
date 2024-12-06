@@ -14,6 +14,8 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     private static readonly Color splineLinkColor = new Color(0.5f, 0.25f, 1f);
     private static readonly Color areaLinkColor = new Color(0.25f, 0.5f, 1f);
     private static readonly Color groupLinkColor = new Color(0.25f, 1f, 0.5f);
+    public static bool DrawPVarMobyTieGroupIdLines = false;
+    public static bool DrawPVarMobyLines = false;
 
     [HideInInspector, SerializeField]
     public int RCVersion = 0;
@@ -61,23 +63,23 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     [HideInInspector] public int[] PVarPointers;
     [HideInInspector] public byte[] PVars;
-    [HideInInspector] public Cuboid[] PVarCuboidRefs;
-    [HideInInspector] public Moby[] PVarMobyRefs;
-    [HideInInspector] public Spline[] PVarSplineRefs;
-    [HideInInspector] public Area[] PVarAreaRefs;
+    [HideInInspector] public SerializableStringDictionary PVarValues;
+    [HideInInspector] public SerializableMonoBehaviourDictionary PVarReferences;
+    [HideInInspector] public string[] PVarStrings;
+    [HideInInspector] public GameObject PrefabOverride;
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
-    public Cuboid[] GetPVarCuboidRefs() => PVarCuboidRefs;
-    public Moby[] GetPVarMobyRefs() => PVarMobyRefs;
-    public Spline[] GetPVarSplineRefs() => PVarSplineRefs;
-    public Area[] GetPVarAreaRefs() => PVarAreaRefs;
+    public SerializableStringDictionary GetPVarValues() => PVarValues;
+    public SerializableMonoBehaviourDictionary GetPVarReferences() => PVarReferences;
+    public string[] GetPVarStrings() => PVarStrings;
     public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: OClass);
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
-    public void SetPVarCuboidRefs(Cuboid[] cuboidRefs) => PVarCuboidRefs = cuboidRefs;
-    public void SetPVarMobyRefs(Moby[] mobyRefs) => PVarMobyRefs = mobyRefs;
-    public void SetPVarSplineRefs(Spline[] splineRefs) => PVarSplineRefs = splineRefs;
-    public void SetPVarAreaRefs(Area[] areaRefs) => PVarAreaRefs = areaRefs;
+    public void SetPVarValues(SerializableStringDictionary pvarValues) => PVarValues = pvarValues;
+    public void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs) => PVarReferences = pvarRefs;
+    public void SetPVarStrings(string[] strings) => PVarStrings = strings;
+    public object GetPVarValue(string path) => GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences);
+    public T GetPVarValue<T>(string path) => (T?)GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences) ?? default(T);
 
     public GameObject GameObject => this ? this.gameObject : null;
     public bool IsHidden => renderHandle?.IsHidden ?? false;
@@ -90,6 +92,12 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private void OnEnable()
     {
+        if (PVarValues == null) PVarValues = new SerializableStringDictionary();
+        if (PVarReferences == null) PVarReferences = new SerializableMonoBehaviourDictionary();
+
+        if (PVarValues != null) PVarValues.Owner = this;
+        if (PVarReferences != null) PVarReferences.Owner = this;
+
         AssetUpdater.RegisterAsset(this);
         UpdateAsset();
     }
@@ -113,45 +121,43 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         if (Selection.gameObjects == null) return;
         if (!Selection.gameObjects.Contains(this.gameObject)) return;
 
-        DrawMobyRefs(new HashSet<Moby>());
-
-        if (PVarCuboidRefs != null)
+        if (DrawPVarMobyLines)
         {
-            foreach (var cuboid in PVarCuboidRefs)
+
+            DrawMobyRefs(new HashSet<Moby>());
+
+            if (PVarReferences != null)
             {
-                if (!cuboid) continue;
-
-                UnityHelper.DrawLine(transform.position, cuboid.transform.position, cuboidLinkColor, 5);
-            }
-        }
-
-        if (PVarSplineRefs != null)
-        {
-            foreach (var spline in PVarSplineRefs)
-            {
-                if (!spline) continue;
-
-                // spline.DrawGizmos();
-            }
-        }
-
-        if (PVarAreaRefs != null)
-        {
-            foreach (var area in PVarAreaRefs)
-            {
-                if (!area) continue;
-
-                // area.DrawGizmos();
-                foreach (var cuboid in area.Cuboids)
+                foreach (var cuboid in PVarReferences.Select(x => x.Value as Cuboid).Where(x => x))
                 {
                     if (!cuboid) continue;
 
-                    UnityHelper.DrawLine(transform.position, cuboid.transform.position, areaLinkColor, 5);
+                    UnityHelper.DrawLine(transform.position, cuboid.transform.position, cuboidLinkColor, 5);
+                }
+
+                foreach (var spline in PVarReferences.Select(x => x.Value as Spline).Where(x => x))
+                {
+                    if (!spline) continue;
+
+                    // spline.DrawGizmos();
+                }
+
+                foreach (var area in PVarReferences.Select(x => x.Value as Area).Where(x => x))
+                {
+                    if (!area) continue;
+
+                    // area.DrawGizmos();
+                    foreach (var cuboid in area.Cuboids)
+                    {
+                        if (!cuboid) continue;
+
+                        UnityHelper.DrawLine(transform.position, cuboid.transform.position, areaLinkColor, 5);
+                    }
                 }
             }
         }
-
-        if (PVars != null)
+        
+        if (PVars != null && DrawPVarMobyTieGroupIdLines)
         {
             var mapConfig = FindObjectOfType<MapConfig>();
             var pvarOverlay = PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: this.OClass);
@@ -165,8 +171,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                 {
                     foreach (var mobyGroupId in pvarOverlay.Overlay.Where(x => x.DataType?.ToLower() == "mobygroupid"))
                     {
-                        var groupId = BitConverter.ToInt32(PVars, mobyGroupId.Offset);
-                        if (groupId >= 0)
+                        if (int.TryParse(this.PVarValues["." + mobyGroupId.Name], out var groupId) && groupId >= 0)
                         {
                             foreach (var moby in mobys.Where(x => x && x != this && x.GroupId == groupId))
                             {
@@ -181,8 +186,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                 {
                     foreach (var tieGroupId in pvarOverlay.Overlay.Where(x => x.DataType?.ToLower() == "tiegroupid"))
                     {
-                        var groupId = BitConverter.ToInt32(PVars, tieGroupId.Offset);
-                        if (groupId >= 0)
+                        if (int.TryParse(this.PVarValues["." + tieGroupId.Name], out var groupId) && groupId >= 0)
                         {
                             foreach (var tie in ties.Where(x => x && x.GroupId == groupId))
                             {
@@ -197,9 +201,9 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private void DrawMobyRefs(HashSet<Moby> visited)
     {
-        if (PVarMobyRefs != null)
+        if (PVarReferences != null)
         {
-            foreach (var moby in PVarMobyRefs)
+            foreach (var moby in PVarReferences.Select(x => x.Value as Moby).Where(x => x))
             {
                 if (!moby) continue;
                 if (visited.Contains(moby)) continue;
@@ -426,8 +430,10 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         if (!mapConfig) return;
 
         var pvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: this.OClass);
-        if (pvarOverlay != null && pvarOverlay.Overlay.Any())
+        if (pvarOverlay != null)
         {
+            UnityHelper.ValidatePVars(mapConfig, this);
+
             if (useDefault && !string.IsNullOrEmpty(pvarOverlay.Name))
                 this.name = pvarOverlay.Name;
 
@@ -443,6 +449,9 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
         var cuboids = mapConfig.GetCuboids();
 
+        UnityHelper.ValidatePVars(mapConfig, this);
+        UnityHelper.UpdatePVars(mapConfig, this, this.RCVersion);
+
         // handle special moby class pvars
         switch ((RCVersion, OClass))
         {
@@ -453,8 +462,6 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                 UpdateMPConfigPVars_DL(cuboids);
                 break;
         }
-
-        UnityHelper.UpdatePVars(mapConfig, this, this.RCVersion);
     }
 
     private void UpdateMPConfigPVars_DL(Cuboid[] cuboids)
@@ -576,6 +583,8 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     {
         GameObject prefab = null;
 
+        if (PrefabOverride) return PrefabOverride;
+
         switch ((RCVersion, OClass))
         {
             case (0, 0):
@@ -606,9 +615,8 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private GameObject GetDLFlagBasePrefab()
     {
-        if (PVars == null || PVars.Length < 1) return null;
-
-        switch (PVars[0]) // team
+        var teamId = GetPVarValue<int>(".Team");
+        switch (teamId) // team
         {
             case 0: _tintColor = Color.blue; break;
             case 1: _tintColor = Color.red; break;
@@ -622,13 +630,12 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     private GameObject GetDLGadgetPickupPrefab()
     {
-        if (PVars == null || PVars.Length < 1) return null;
-
         renderHandle.Rotation = Quaternion.Euler(0, 0, 90);
         renderHandle.Offset = Vector3.up * 0.5f;
         renderHandle.Scale = Vector3.one * 2f;
 
-        switch (PVars[0])
+        var gadgetId = GetPVarValue<long>(".Gadget");
+        switch (gadgetId)
         {
             case 0: return UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "9210", this.RCVersion, includeGlobal: true);
             case 2: return UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "4244", this.RCVersion, includeGlobal: true);
