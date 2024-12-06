@@ -98,3 +98,6 @@ crashlytics-build.properties
 !/[Aa]ssets/NuGet.config.meta
 !/[Aa]ssets/packages.config
 !/[Aa]ssets/packages.config.meta
+
+# don't sync project settings
+/ProjectSettings/ProjectSettings.asset
