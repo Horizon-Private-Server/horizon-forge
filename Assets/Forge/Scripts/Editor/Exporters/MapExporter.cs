@@ -85,9 +85,27 @@ public static class MapExporter
                 gameObjectsToCleanup.Add(minimapGo);
             }
 
+            var fogT = mapConfig.FogFarIntensity - mapConfig.FogNearIntensity;
+            var fogRange = (mapConfig.FogFarDistance - mapConfig.FogNearDistance) / (mapConfig.FogFarIntensity - mapConfig.FogNearIntensity);
+            var fogNear = (mapConfig.FogNearDistance * (1 - fogT)) - (fogRange * mapConfig.FogNearIntensity);
+            var fogFar = fogNear + fogRange;
+            var metadata = new DzoMapMetadata()
+            {
+                SkymeshName = sky ? objectPathPrefix + sky.gameObject.name : null,
+                MinimapMeshName = minimapGo ? objectPathPrefix + minimapGo.name : null,
+                BackgroundColor = mapConfig.BackgroundColor,
+                FogColor = dzoConfig.FogOverride ? dzoConfig.FogOverrideColor : mapConfig.FogColor,
+                FogNearDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideNearDistance : fogNear,
+                FogFarDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideFarDistance : fogFar,
+                PostColorFilter = dzoConfig.PostColorFilter,
+                PostExposure = dzoConfig.PostExposure,
+                DefaultCameraPosition = dzoConfig.DefaultCameraPosition ? dzoConfig.DefaultCameraPosition.position : Vector3.zero,
+                DefaultCameraEuler = dzoConfig.DefaultCameraPosition ? dzoConfig.DefaultCameraPosition.eulerAngles : Vector3.zero,
+            };
+
             // merge static geometry into one object
             var staticGameObjects = ties.Select(x => x.GetAssetInstance()).Union(shrubs.Select(x => x.GetAssetInstance())).Union(tfrags.Select(x => x.gameObject)).Union(extraGeometry).Where(x => x).Distinct().ToArray();
-            var combinedCopy = CombineMeshes(staticGameObjects, dzoConfig);
+            var combinedCopy = CombineMeshes(staticGameObjects, dzoConfig, metadata);
             if (combinedCopy) gameObjectsToCleanup.Add(combinedCopy);
 
             RenameIndexedUnique("light", lights, renameHistory);
@@ -122,10 +140,6 @@ public static class MapExporter
             // save metadata
             if (!string.IsNullOrEmpty(outMetadataFilePath))
             {
-                var fogT = mapConfig.FogFarIntensity - mapConfig.FogNearIntensity;
-                var fogRange = (mapConfig.FogFarDistance - mapConfig.FogNearDistance) / (mapConfig.FogFarIntensity - mapConfig.FogNearIntensity);
-                var fogNear = (mapConfig.FogNearDistance * (1 - fogT)) - (fogRange * mapConfig.FogNearIntensity);
-                var fogFar = fogNear + fogRange;
                 var shellData = new List<DzoMapMetadata.SkymeshShellMetadata>();
                 var lightData = new List<DzoMapMetadata.LightMetadata>(); 
 
@@ -161,22 +175,11 @@ public static class MapExporter
                     });
                 }
 
-                var metadata = new DzoMapMetadata()
-                {
-                    TieShrubTfragCombinedName = combinedCopy ? objectPathPrefix + combinedCopy.name : null,
-                    SkymeshName = sky ? objectPathPrefix + sky.gameObject.name : null,
-                    SkymeshShells = shellData.ToArray(),
-                    MinimapMeshName = minimapGo ? objectPathPrefix + minimapGo.name : null,
-                    Lights = lightData.ToArray(),
-                    BackgroundColor = mapConfig.BackgroundColor,
-                    FogColor = dzoConfig.FogOverride ? dzoConfig.FogOverrideColor : mapConfig.FogColor,
-                    FogNearDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideNearDistance : fogNear,
-                    FogFarDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideFarDistance : fogFar,
-                    PostColorFilter = dzoConfig.PostColorFilter,
-                    PostExposure = dzoConfig.PostExposure,
-                    DefaultCameraPosition = dzoConfig.DefaultCameraPosition ? dzoConfig.DefaultCameraPosition.position : Vector3.zero,
-                    DefaultCameraEuler = dzoConfig.DefaultCameraPosition ? dzoConfig.DefaultCameraPosition.eulerAngles : Vector3.zero,
-                };
+                metadata.TieShrubTfragCombinedName = combinedCopy ? objectPathPrefix + combinedCopy.name : null;
+                metadata.SkymeshShells = shellData.ToArray();
+                metadata.Lights = lightData.ToArray();
+                if (metadata.Meshes != null)
+                    metadata.Meshes.ForEach(x => x.Name = metadata.TieShrubTfragCombinedName + "/" + x.Name);
 
                 File.WriteAllText(outMetadataFilePath, JsonUtility.ToJson(metadata, true));
             }
@@ -220,7 +223,7 @@ public static class MapExporter
         obj.name = prefix;
     }
 
-    static GameObject CombineMeshes(GameObject[] gameObjects, DzoConfig dzoConfig)
+    static GameObject CombineMeshes(GameObject[] gameObjects, DzoConfig dzoConfig, DzoMapMetadata metadata)
     {
         var collisionLayer = LayerMask.NameToLayer("COLLISION");
         var universalShader = Shader.Find("Horizon Forge/Universal");
@@ -337,6 +340,11 @@ public static class MapExporter
             Mesh combinedMesh = new Mesh { indexFormat = format };
             combinedMesh.CombineMeshes(combine);
 
+            // Create asset
+            materialName += "_" + combinedMesh.GetInstanceID();
+            string goName = (entry.Key.shader == universalShader ? "dzo." : "misc.") + ((materialToMeshFilterList.Count > 1) ? "CombinedMeshes_" + materialName : "CombinedMeshes");
+            var meshMetadata = new DzoMapMetadata.StaticMeshMetadata() { Name = goName };
+
             //if (generateSecondaryUVs)
             //{
             //    Unwrapping.GenerateSecondaryUVSet(combinedMesh);
@@ -375,17 +383,24 @@ public static class MapExporter
                 newMat = new Material(entry.Key);
             }
 
-            // Create asset
-            materialName += "_" + combinedMesh.GetInstanceID();
+            // store emission
+            if (entry.Key.IsKeywordEnabled("_EMISSION") || entry.Key.GetInteger("_Emission") > 0)
+            {
+                float intensity = entry.Key.GetColor("_EmissionColor").maxColorComponent;
+                newMat.EnableKeyword("_EMISSION");
+                newMat.SetColor("_EmissionColor", entry.Key.GetColor("_EmissionColor") / intensity);
+
+                meshMetadata.EmissiveIntensity = intensity;
+            }
 
             // Create game object
-            string goName = (materialToMeshFilterList.Count > 1) ? "CombinedMeshes_" + materialName : "CombinedMeshes";
             GameObject combinedObject = new GameObject(goName);
             var filter = combinedObject.AddComponent<MeshFilter>();
             filter.sharedMesh = combinedMesh;
             var renderer = combinedObject.AddComponent<MeshRenderer>();
             renderer.sharedMaterial = newMat;
             combinedObjects.Add(combinedObject);
+            metadata.Meshes.Add(meshMetadata);
         }
 
         // If there was more than one material, and thus multiple GOs created, parent them and work with result

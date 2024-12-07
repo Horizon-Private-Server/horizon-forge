@@ -49,7 +49,7 @@ public static class ForgeBuilder
     [MenuItem("Forge/Builder/Build DZO Files")]
     public static void CommandBuildDZOFiles()
     {
-        BuildDZOFiles(EditorSceneManager.GetActiveScene());
+        _ = BuildDZOFiles(EditorSceneManager.GetActiveScene());
     }
 
     static bool RebuildLevelProgress(RebuildContext ctx, string info, float progress)
@@ -1889,7 +1889,7 @@ public static class ForgeBuilder
         }
     }
 
-    public static async void BuildDZOFiles(UnityEngine.SceneManagement.Scene scene)
+    public static async Task BuildDZOFiles(UnityEngine.SceneManagement.Scene scene)
     {
         // dzo is DL (rc4) only
         var binFolder = FolderNames.GetMapBinFolder(scene.name, 4);

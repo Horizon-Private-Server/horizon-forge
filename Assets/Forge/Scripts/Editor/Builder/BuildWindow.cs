@@ -233,7 +233,7 @@ public class BuildWindow : EditorWindow
         var buildBothRC3Regions = buildTargets.HasFlag(ForgeBuildTargets.UYA_NTSC) && buildTargets.HasFlag(ForgeBuildTargets.RAC3_PAL);
 
         // build dzo first
-        if (toggleRebuildDZO.value) ForgeBuilder.BuildDZOFiles(scene);
+        if (toggleRebuildDZO.value && buildTargets.HasFlag(ForgeBuildTargets.DL_NTSC)) await ForgeBuilder.BuildDZOFiles(scene);
 
         // rebuild
         foreach (ForgeBuildTargets buildTarget in Enum.GetValues(typeof(ForgeBuildTargets)))
