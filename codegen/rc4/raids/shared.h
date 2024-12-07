@@ -25,6 +25,7 @@ struct MobStateUpdateEventArgs;
 
 void mapOnMobUpdate(Moby* moby);
 void mapOnMobKilled(Moby* moby, int killedByPlayerId, int weaponId);
+void mapOnMobSpawned(Moby* moby);
 struct Guber* mapGetGuber(Moby* moby);
 void mapHandleEvent(Moby* moby, GuberEvent* event);
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);

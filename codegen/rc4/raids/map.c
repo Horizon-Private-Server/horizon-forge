@@ -46,6 +46,17 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, int weaponId)
 }
 
 //--------------------------------------------------------------------------
+void mapOnMobSpawned(Moby* moby)
+{
+  if (!moby || !moby->PVar) return;
+
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
+    spawnerOnChildMobSpawned(moby->PParent, moby, pvars->MobVars.Userdata);
+  }
+}
+
+//--------------------------------------------------------------------------
 struct Guber* mapGetGuber(Moby* moby)
 {
   if (mobyIsMob(moby)) return (Guber*)moby->GuberMoby;

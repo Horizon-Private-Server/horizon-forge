@@ -34,11 +34,14 @@ public class RaidsModeDataEditor : Editor
                 continue;
             }
 
-            var mobyAssetPath = Path.Combine(mobyDir, $"{variant.OClass}", "core.bin");
-            if (!File.Exists(mobyAssetPath))
+            foreach (var dependency in variant.Dependencies)
             {
-                missingVariants.Add(variant);
-                continue;
+                var mobyAssetPath = Path.Combine(mobyDir, $"{dependency.OClass}", "core.bin");
+                if (!File.Exists(mobyAssetPath))
+                {
+                    missingVariants.Add(variant);
+                    continue;
+                }
             }
         }
 

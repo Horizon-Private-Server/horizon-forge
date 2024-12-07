@@ -55,7 +55,7 @@ public static class AssetUtilities
         // collect
         foreach (var go in Selection.gameObjects)
         {
-            var meshRenderers = go.GetComponentsInChildren<MeshRenderer>();
+            var meshRenderers = go.GetComponentsInChildren<MeshRenderer>(includeInactive: true);
 
             foreach (var mr in meshRenderers)
             {

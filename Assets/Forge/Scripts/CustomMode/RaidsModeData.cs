@@ -17,6 +17,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int NPC_OCLASS = 0x4006;
     public static readonly int CHECKPOINT_MANAGER_OCLASS = 0x4007;
     public static readonly int CHECKPOINT_OCLASS = 0x4008;
+    public static readonly int LASERBEAM_OCLASS = 0x4009;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -65,6 +66,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mover.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
@@ -111,6 +113,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
         state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
+        state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
         state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
 
         state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
@@ -135,6 +138,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(8309); // node base (for capture sound)
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
+        state.MobyOClasses.Add(LASERBEAM_OCLASS);
 
         // add mob oclasses
         var mobConfig = RaidsMobsScriptableObject.Load();
@@ -359,7 +363,8 @@ public enum RaidsMob
     Zombie,
     Swarmer,
     Swamper,
-    StalkerTurret
+    StalkerTurret,
+    Leviathan
 }
 
 [Flags]

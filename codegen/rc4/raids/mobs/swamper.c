@@ -40,7 +40,7 @@ int swamperIsIdling(struct MobPVar* pvars);
 int swamperCanAttack(struct MobPVar* pvars);
 int swamperGetSideFlipLeftOrRight(struct MobPVar* pvars);
 int swamperIsFlinching(Moby* moby);
-float swamperGetDodgeProbability(Moby* moby);
+int swamperIsDying(Moby* moby);
 
 struct MobVTable SwamperVTable = {
   .PreUpdate = &swamperPreUpdate,
@@ -154,6 +154,8 @@ void swamperPostUpdate(Moby* moby)
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (swamperIsAttacking(moby)) {
     animSpeed = baseSpeed * 1.5;
+  } else if (swamperIsDying(moby)) {
+    animSpeed = baseSpeed;
   }
 
   if (pvars->MobVars.Action == SWAMPER_ACTION_DIE) {
@@ -822,11 +824,8 @@ int swamperIsFlinching(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-float swamperGetDodgeProbability(Moby* moby)
+int swamperIsDying(Moby* moby)
 {
-  //int roundNo = 0;
-  //if (MapConfig.State) roundNo = MapConfig.State->RoundNumber;
-
-  float factor = clamp(powf(25.0 / 100.0, 2), 0, 1);
-  return lerpf(0.03, 0.25, factor);
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	return pvars->MobVars.Action == SWAMPER_ACTION_DIE;
 }

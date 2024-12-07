@@ -86,7 +86,7 @@ public static class MapExporter
             }
 
             // merge static geometry into one object
-            var staticGameObjects = ties.Select(x => x.GetAssetInstance()).Union(shrubs.Select(x => x.GetAssetInstance())).Union(tfrags.Select(x => x.gameObject)).Where(x => x).Distinct().ToArray();
+            var staticGameObjects = ties.Select(x => x.GetAssetInstance()).Union(shrubs.Select(x => x.GetAssetInstance())).Union(tfrags.Select(x => x.gameObject)).Union(extraGeometry).Where(x => x).Distinct().ToArray();
             var combinedCopy = CombineMeshes(staticGameObjects, dzoConfig);
             if (combinedCopy) gameObjectsToCleanup.Add(combinedCopy);
 
@@ -96,7 +96,7 @@ public static class MapExporter
             // export scene
             var gameObjectsToExport = new List<GameObject>();
             if (combinedCopy) gameObjectsToExport.Add(combinedCopy);
-            gameObjectsToExport.AddRange(extraGeometry);
+            //gameObjectsToExport.AddRange(extraGeometry);
             if (minimapGo) gameObjectsToExport.Add(minimapGo);
             gameObjectsToExport.AddRange(convertToShrubs.Where(x => x.DZOExportWithShrubs).Select(x => x.gameObject));
             foreach (var light in lights) gameObjectsToExport.Add(light.gameObject);
@@ -223,6 +223,7 @@ public static class MapExporter
     static GameObject CombineMeshes(GameObject[] gameObjects, DzoConfig dzoConfig)
     {
         var collisionLayer = LayerMask.NameToLayer("COLLISION");
+        var universalShader = Shader.Find("Horizon Forge/Universal");
 
         // Locals
         Dictionary<Material, List<MeshFilterSubMesh>> materialToMeshFilterList = new Dictionary<Material, List<MeshFilterSubMesh>>();
@@ -342,28 +343,36 @@ public static class MapExporter
             //}
 
             // try and convert Universal shader to Standard, so gltf can export correctly
-            var newMat = new Material(Shader.Find("Standard"));
-            newMat.SetTexture("_MainTex", entry.Key.GetTexture("_MainTex"));
-            newMat.SetColor("_Color", entry.Key.GetColor("_Color"));
-            newMat.SetFloat("_Cutoff", entry.Key.GetFloat("_AlphaClip"));
-            newMat.SetFloat("_Mode", 0);
-            newMat.SetFloat("_Glossiness", entry.Key.GetFloat("_Smoothness"));
+            Material newMat = null;
+            if (entry.Key.shader == universalShader)
+            {
+                newMat = new Material(Shader.Find("Standard"));
+                newMat.SetTexture("_MainTex", entry.Key.GetTexture("_MainTex"));
+                newMat.SetColor("_Color", entry.Key.GetColor("_Color"));
+                newMat.SetFloat("_Cutoff", entry.Key.GetFloat("_AlphaClip"));
+                newMat.SetFloat("_Mode", 0);
+                newMat.SetFloat("_Glossiness", entry.Key.GetFloat("_Smoothness"));
 
-            if (entry.Key.GetInteger("_Transparent") > 0)
-            {
-                newMat.SetOverrideTag("RenderType", "Transparent");
-                newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                newMat.SetInt("_SrcBlendAlpha", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                newMat.SetInt("_DstBlendAlpha", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                newMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                newMat.SetFloat("_Mode", 3);
+                if (entry.Key.GetInteger("_Transparent") > 0)
+                {
+                    newMat.SetOverrideTag("RenderType", "Transparent");
+                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    newMat.SetInt("_SrcBlendAlpha", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    newMat.SetInt("_DstBlendAlpha", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    newMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    newMat.SetFloat("_Mode", 3);
+                }
+                else if (entry.Key.GetFloat("_AlphaClip") > 0)
+                {
+                    newMat.SetOverrideTag("RenderType", "TransparentCutout");
+                    newMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+                    newMat.SetFloat("_Mode", 1);
+                }
             }
-            else if (entry.Key.GetFloat("_AlphaClip") > 0)
+            else
             {
-                newMat.SetOverrideTag("RenderType", "TransparentCutout");
-                newMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
-                newMat.SetFloat("_Mode", 1);
+                newMat = new Material(entry.Key);
             }
 
             // Create asset

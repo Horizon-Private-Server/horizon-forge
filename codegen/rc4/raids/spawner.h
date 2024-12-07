@@ -65,6 +65,7 @@ struct SpawnerPVar
 void spawnerBroadcastNewState(Moby* moby, enum SpawnerState state);
 void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata);
 void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, int weaponId);
+void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata);
 int spawnerOnChildConsiderTarget(Moby* moby, Moby* childMoby, u32 userdata, Moby* target);
 int spawnerOnChildConsiderRoamTarget(Moby* moby, Moby* childMoby, u32 userdata, VECTOR targetPosition);
 struct Guber* spawnerGetGuber(Moby* moby);

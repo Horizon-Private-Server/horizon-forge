@@ -29,6 +29,10 @@
 
 void mobForceIntoMapBounds(Moby* moby);
 
+#if MOB_LEVIATHAN
+#include "leviathan.c"
+#endif
+
 #if MOB_STALKERTURRET
 #include "stalkerturret.c"
 #endif

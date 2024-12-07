@@ -14,6 +14,7 @@
 //#include "tremor.h"
 #include "swarmer.h"
 #include "swamper.h"
+#include "leviathan.h"
 //#include "reaper.h"
 #include "game.h"
 

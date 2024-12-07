@@ -40,6 +40,7 @@ int swarmerIsIdling(struct MobPVar* pvars);
 int swarmerCanAttack(struct MobPVar* pvars);
 int swarmerGetSideFlipLeftOrRight(struct MobPVar* pvars);
 int swarmerIsFlinching(Moby* moby);
+int swarmerIsDying(Moby* moby);
 float swarmerGetDodgeProbability(Moby* moby);
 
 struct MobVTable SwarmerVTable = {
@@ -155,6 +156,8 @@ void swarmerPostUpdate(Moby* moby)
     }
   } else if (swarmerIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
     animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+  } else if (swarmerIsDying(moby)) {
+    animSpeed = 0.9;
   }
 
   if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND) {
@@ -866,6 +869,13 @@ int swarmerIsFlinching(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	return (moby->AnimSeqId == SWARMER_ANIM_FLINCH_SPIN_AND_STAND || moby->AnimSeqId == SWARMER_ANIM_FLINCH_SPIN_AND_STAND2) && !pvars->MobVars.AnimationLooped;
+}
+
+//--------------------------------------------------------------------------
+int swarmerIsDying(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	return pvars->MobVars.Action == SWARMER_ACTION_DIE;
 }
 
 //--------------------------------------------------------------------------

@@ -312,6 +312,12 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
 }
 
 //--------------------------------------------------------------------------
+void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata)
+{
+  DLOG(moby, "MOB%d: spawned %08X\n", userdata, (u32)childMoby);
+}
+
+//--------------------------------------------------------------------------
 void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, int weaponId)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;

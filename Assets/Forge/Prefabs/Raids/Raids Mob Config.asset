@@ -124,3 +124,27 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 0
+  - Mob: 4
+    Variants:
+    - Name: Normal
+      OClass: 8388
+      Dependencies:
+      - OClass: 8388
+        SourceMapId: 4
+        SourceMissionId: -1
+    Xp: 5
+    Bolts: 50
+    Damage: 10
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 7
+    SpeedMax: 15
+    SpeedScale: 1
+    Health: 30
+    HealthMax: 0
+    HealthScale: 1
+    AttackRadius: 5
+    HitRadius: 0.5
+    CollRadius: 2
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2

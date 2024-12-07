@@ -53,7 +53,7 @@ public class RaidsMobsScriptableObject : ScriptableObject
     {
         public string Name;
         public int OClass;
-        public List<RaidsMobDependency> Dependencies;
+        public List<RaidsMobDependency> Dependencies = new List<RaidsMobDependency>();
 
         public RaidsMobVariant() { }
         public RaidsMobVariant(string name, int oClass, DLMapIds sourceMapId, int sourceMissionId)

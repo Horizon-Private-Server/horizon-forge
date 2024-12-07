@@ -39,6 +39,7 @@ int stalkerturretIsResettingRotation(struct MobPVar* pvars);
 int stalkerturretIsIdling(struct MobPVar* pvars);
 int stalkerturretCanAttack(struct MobPVar* pvars);
 int stalkerturretCanShoot(struct MobPVar* pvars);
+int stalkerturretIsDying(Moby* moby);
 
 struct MobVTable StalkerturretVTable = {
   .PreUpdate = &stalkerturretPreUpdate,
@@ -568,7 +569,7 @@ void stalkerturretDoAction(Moby* moby)
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float freezeFactor = pvars->MobVars.FreezeEffectActiveTicks > 0 ? MOB_POSTFX_FREEZE_FACTOR : 1;
+  float freezeFactor = (!stalkerturretIsDying(moby) && pvars->MobVars.FreezeEffectActiveTicks > 0) ? MOB_POSTFX_FREEZE_FACTOR : 1;
   float turnSpeed = speed * freezeFactor * STALKERTURRET_TURN_RADIANS_PER_SEC;
 
   if (MapConfig.State)
@@ -805,4 +806,11 @@ int stalkerturretCanShoot(struct MobPVar* pvars)
 {
   StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
 	return turretVars->GatlingSpeed >= STALKERTURRET_SHOOT_AT_GATLING_SPEED;
+}
+
+//--------------------------------------------------------------------------
+int stalkerturretIsDying(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	return pvars->MobVars.Action == STALKERTURRET_ACTION_DIE;
 }

@@ -38,6 +38,7 @@ int zombieIsRoaming(struct MobPVar* pvars);
 int zombieIsIdling(struct MobPVar* pvars);
 int zombieCanAttack(struct MobPVar* pvars);
 int zombieIsFlinching(Moby* moby);
+int zombieIsDying(Moby* moby);
 
 struct MobVTable ZombieVTable = {
   .PreUpdate = &zombiePreUpdate,
@@ -147,6 +148,8 @@ void zombiePostUpdate(Moby* moby)
     }
   } else if (zombieIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
     animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+  } else if (zombieIsDying(moby)) {
+    animSpeed = 0.9;
   }
 
 	if ((moby->DrawDist == 0 && pvars->MobVars.Action == ZOMBIE_ACTION_WALK)) {
@@ -809,4 +812,11 @@ int zombieIsFlinching(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	return (moby->AnimSeqId == ZOMBIE_ANIM_FLINCH || moby->AnimSeqId == ZOMBIE_ANIM_BIG_FLINCH) && !pvars->MobVars.AnimationLooped;
+}
+
+//--------------------------------------------------------------------------
+int zombieIsDying(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	return pvars->MobVars.Action == ZOMBIE_ACTION_DIE;
 }
