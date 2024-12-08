@@ -14,13 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Mobs:
   - Mob: 0
+    BlipType: 4
+    BlipTeam: 1
     Variants:
     - Name: Normal
       OClass: 8438
+      Bangles: 33
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
+    Behaviors: []
     Xp: 15
     Bolts: 150
     Damage: 10
@@ -38,25 +42,31 @@ MonoBehaviour:
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 1
+    BlipType: 4
+    BlipTeam: 1
     Variants:
     - Name: Blue
       OClass: 9877
+      Bangles: 0
       Dependencies:
       - OClass: 9877
         SourceMapId: 6
         SourceMissionId: 1
     - Name: Orange
       OClass: 8273
+      Bangles: 0
       Dependencies:
       - OClass: 8273
         SourceMapId: 1
         SourceMissionId: 14
     - Name: Desert
       OClass: 9952
+      Bangles: 0
       Dependencies:
       - OClass: 9952
         SourceMapId: 1
         SourceMissionId: 14
+    Behaviors: []
     Xp: 5
     Bolts: 50
     Damage: 4
@@ -74,13 +84,17 @@ MonoBehaviour:
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 2
+    BlipType: 4
+    BlipTeam: 1
     Variants:
     - Name: Normal
       OClass: 9215
+      Bangles: 1
       Dependencies:
       - OClass: 9215
         SourceMapId: 4
         SourceMissionId: -1
+    Behaviors: []
     Xp: 10
     Bolts: 100
     Damage: 7
@@ -98,9 +112,12 @@ MonoBehaviour:
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 3
+    BlipType: 3
+    BlipTeam: 1
     Variants:
     - Name: Normal
       OClass: 8250
+      Bangles: 0
       Dependencies:
       - OClass: 8304
         SourceMapId: 1
@@ -108,6 +125,7 @@ MonoBehaviour:
       - OClass: 8248
         SourceMapId: 46
         SourceMissionId: -1
+    Behaviors: []
     Xp: 50
     Bolts: 500
     Damage: 25
@@ -125,22 +143,29 @@ MonoBehaviour:
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 0
   - Mob: 4
+    BlipType: 3
+    BlipTeam: 1
     Variants:
     - Name: Normal
       OClass: 8388
+      Bangles: 8191
       Dependencies:
       - OClass: 8388
         SourceMapId: 4
         SourceMissionId: -1
-    Xp: 5
-    Bolts: 50
+    Behaviors:
+    - Normal
+    - Aggressive (Chase)
+    - Evasive (Ranged)
+    Xp: 40
+    Bolts: 250
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 7
-    SpeedMax: 15
-    SpeedScale: 1
-    Health: 30
+    Speed: 5
+    SpeedMax: 20
+    SpeedScale: 0.1
+    Health: 50
     HealthMax: 0
     HealthScale: 1
     AttackRadius: 5

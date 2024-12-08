@@ -134,6 +134,9 @@ struct MobSpawnParams {
   float Scale;
   int OClass;
 	struct MobConfig Config;
+  char BlipType;
+  char BlipTeam;
+  char TeamPalette;
 };
 
 struct Knockback {
@@ -165,6 +168,7 @@ struct MobMoveVars {
   char MoveStep;
   char LastMoveStep;
   char PathGraphIdx;
+  char ForceUseTargetPosition;
   u8 WasStuckTicks;
   u8 StuckCheckTicks;
   u8 StuckJumpCount;
@@ -226,6 +230,7 @@ struct MobVars {
 	char DynamicRandom;
   char BlipType;
   char BlipTeam;
+  char Behavior;
 };
 
 // warning: multiple differing types with the same name, only one recovered
@@ -357,6 +362,7 @@ struct MobCreateArgs
   int SpawnFromUID;
   float DifficultyMult;
   struct MobConfig *Config;
+  char Behavior;
 };
 
 struct MobUnreliableBaseMsgArgs

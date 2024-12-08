@@ -19,6 +19,12 @@ void gateSetCollision(int collActive);
 int mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby);
 
 //--------------------------------------------------------------------------
+int pathUseTargetMoby(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
+{
+  return moveVars->Target && !moveVars->ForceUseTargetPosition;
+}
+
+//--------------------------------------------------------------------------
 struct PathGraph* pathGetMobyPathGraph(Moby* moby, struct MobMoveVars* moveVars)
 {
   if (!moby || !moveVars)
@@ -176,7 +182,7 @@ int pathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby, struct MobMove
 
     if (path->EdgesRequired[edge] > 0 || path->EdgesJumpSpeed[edge] > 0) {
 #if DEBUGPATH
-      DPRINTF("CANNOT SKIP PATH WITH JUMP %d=>%d\n", path->Edges[edge][0], path->Edges[edge][1]);
+      DPRINTF("CANNOT SKIP PATH WITH REQUIRED/JUMP %d=>%d\n", path->Edges[edge][0], path->Edges[edge][1]);
 #endif
       return 0;
     }
@@ -369,7 +375,7 @@ int pathShouldFindNewPath(struct PathGraph* path, Moby* moby, struct MobMoveVars
   }
 
   int closestNodeIdxToTarget = 0;
-  if (moveVars->Target) {
+  if (pathUseTargetMoby(path, moby, moveVars)) {
     closestNodeIdxToTarget = pathTargetCacheGetClosestNodeIdx(path, moveVars->Target);
   } else {
     closestNodeIdxToTarget = pathGetClosestNodeIdx(path, moveVars->TargetPosition);
@@ -392,7 +398,7 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
 
   // target closest node should be calculated and cached per frame in pathTick
   int closestNodeIdxToTarget = 0;
-  if (moveVars->Target) {
+  if (pathUseTargetMoby(path, moby, moveVars)) {
     closestNodeIdxToTarget = pathTargetCacheGetClosestNodeIdx(path, moveVars->Target);
   } else {
     closestNodeIdxToTarget = pathGetClosestNodeIdx(path, moveVars->TargetPosition);
@@ -465,7 +471,7 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   //  pvars->MobVars.Dirty = 1;
   //}
 
-#if DEBUGPATH
+#if DEBUGPATH && DEBUG
   DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
   DPRINTF("\tFROM NODE %d (skip:%d,%d,%d,%d)\n", closestNodeIdxToMob, moveVars->PathHasReachedStart, canBeSkipped, isOnSameSegment, moveVars->IsStuck);
   DPRINTF("\tTO NODE %d\n", closestNodeIdxToTarget);
@@ -632,7 +638,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   }
 
   // set default output
-  if (moveVars->Target) {
+  if (pathUseTargetMoby(path, moby, moveVars)) {
     vector_copy(moveVars->TargetPosition, moveVars->Target->Position);
   }
   

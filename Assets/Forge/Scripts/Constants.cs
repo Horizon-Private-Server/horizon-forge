@@ -130,7 +130,32 @@ public enum DLTeamIds
     Pink,
     Aqua,
     Olive,
-    Maroon
+    Maroon,
+    White
+}
+
+public enum DLBlipTypes
+{
+    Player,
+    PlayerJuggernaut,
+    Flag,
+    CircleMedium,
+    CircleSmallDark,
+    CircleMedium2,
+    CircleBig,
+    Hill,
+    CircleMediumLight,
+    Hovership,
+    Landstalker,
+    PlayerTurret,
+    Hoverbike,
+    Puma,
+    CircleMedium3,
+    VehiclePad,
+    NodeBaseNoFlash,
+    Star,
+    Hill2,
+    NodeBase,
 }
 
 public enum DLFXTextureIds

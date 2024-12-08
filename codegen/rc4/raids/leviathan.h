@@ -3,14 +3,16 @@
 
 #include "game.h"
 
-#define LEVIATHAN_RENDER_COST                    (85)
+#define LEVIATHAN_RENDER_COST                    (200)
 
 #define LEVIATHAN_BASE_REACTION_TICKS						(0.25 * TPS)
 #define LEVIATHAN_BASE_ATTACK_COOLDOWN_TICKS			(2 * TPS)
 #define LEVIATHAN_BASE_EXPLODE_RADIUS						(5)
 #define LEVIATHAN_MELEE_HIT_RADIUS								(0.5)
 #define LEVIATHAN_EXPLODE_HIT_RADIUS							(5)
-#define LEVIATHAN_MELEE_ATTACK_RADIUS						(5)
+#define LEVIATHAN_CHASE_TARGET_RADIUS						 (20.0)
+#define LEVIATHAN_EVADE_MAX_OUT_OF_SIGHT_TICKS	 (TPS)
+#define LEVIATHAN_EVADE_COOLDOWN_TICKS	         (5 * TPS)
 
 #define LEVIATHAN_TARGET_KEEP_CURRENT_FACTOR     (3)
 
@@ -20,6 +22,7 @@
 #define LEVIATHAN_TURN_AIR_RADIANS_PER_SEC       (45 * MATH_DEG2RAD)
 #define LEVIATHAN_MOVE_ACCELERATION              (25)
 #define LEVIATHAN_MOVE_AIR_ACCELERATION          (5)
+#define LEVIATHAN_MOVE_STRAFE_MULT               (0.5)
 
 #define LEVIATHAN_ANIM_ATTACK_TICKS							(30)
 #define LEVIATHAN_FLINCH_COOLDOWN_TICKS					(60 * 7)
@@ -35,6 +38,9 @@
 
 #define LEVIATHAN_LASER_EXHAUSTED_ANIM_LOOP      (1)
 #define LEVIATHAN_LASER_FIRE_FOR_TICKS           (10 * TPS)
+#define LEVIATHAN_LASER_MAX_ANGLE                (80 * MATH_DEG2RAD)
+#define LEVIATHAN_LASER_COOLDOWN_TICKS_MIN       (2 * TPS)
+#define LEVIATHAN_LASER_COOLDOWN_TICKS_MAX       (20 * TPS)
 
 #define LEVIATHAN_PRIMARY_COLOR                  (0x00464443)
 #define LEVIATHAN_GLOW_COLOR                     (0x80202020)
@@ -105,9 +111,19 @@ enum LeviathanSubskeletonJoints
   LEVIATHAN_SUBSKELETON_JOINT_BODY = 3,
 };
 
+enum LeviathanBehaviorId
+{
+	LEVIATHAN_BEHAVIOR_NORMAL,
+	LEVIATHAN_BEHAVIOR_AGGRESSIVE,
+	LEVIATHAN_BEHAVIOR_EVASIVE,
+};
+
 typedef struct LeviathanMobVars {
   VECTOR LaserbeamDirection;
   Moby* LaserbeamMoby;
+  u32 AttackLaserCooldownTicks;
+  u32 EvadeCooldownTicks;
+  char Evade;
 } LeviathanMobVars_t;
 
 extern struct MobVTable LeviathanVTable;

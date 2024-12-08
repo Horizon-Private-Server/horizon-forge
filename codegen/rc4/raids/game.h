@@ -209,7 +209,6 @@ struct RaidsMobStats
 	int MobsDrawGameTime;
   int TotalSpawning;
   int TotalAlive;
-  int TotalSpawnedThisRound;
   int TotalSpawned;
   int NumSpawnedThisRound[MAX_MOB_SPAWN_PARAMS];
   u8 NumAlive[MAX_MOB_SPAWN_PARAMS];

@@ -32,9 +32,12 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public string Author;
     [Multiline] public string Description;
 
+    [Header("Debug")]
+    public bool DebugPath;
+
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
     {
-        new RaidsMobSpawnParam() { Name = "Zombie", Bangles = RaidsMobBangle.BANGLE_0001 | RaidsMobBangle.BANGLE_0020 }
+        new RaidsMobSpawnParam() { Name = "Zombie" }
     };
 
     private void OnValidate()
@@ -75,6 +78,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var mobTypes = Mobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
+
+        if (DebugPath)
+            state.LDFlags.Add("-DDEBUGPATH");
 
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");
@@ -393,7 +399,8 @@ public class RaidsMobSpawnParam
     public string Name;
     public RaidsMob Mob;
     public int Variant;
-    public RaidsMobBangle Bangles;
+    [Tooltip("For Mobs with team textures only.")]
+    public DLTeamIds TexturePalette = DLTeamIds.Blue;
 
     [Header("General")]
     public float SizeMultiplier = 1;
@@ -427,18 +434,22 @@ public class RaidsMobSpawnParam
         var mobPrefix = this.Mob.ToString().ToLower();
         var mobConfig = RaidsMobsScriptableObject.Load();
         var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new RaidsMobsScriptableObject.RaidsMobsConfig();
+        var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
 
         sb.AppendLine("  {");
         sb.AppendLine($"    .MobCreate = &{mobPrefix}Create,");
         sb.AppendLine($"    .MobVTable = &{mobPrefix.ToTitleCase()}VTable,");
         sb.AppendLine($"    .RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
         sb.AppendLine($"    .Scale = {SizeMultiplier},");
-        sb.AppendLine($"    .OClass = {defaults.Variants[this.Variant].OClass},");
+        sb.AppendLine($"    .OClass = {variant.OClass},");
+        sb.AppendLine($"    .BlipType = {(int)defaults.BlipType},");
+        sb.AppendLine($"    .BlipTeam = {(int)defaults.BlipTeam},");
+        sb.AppendLine($"    .TeamPalette = {(int)TexturePalette},");
         //sb.AppendLine($"    .Name = \"{Name?.Replace("\"", "")}\",");
         sb.AppendLine($"    .Config = {{");
         sb.AppendLine($"      .Xp = {(int)(defaults.Xp * XpMultiplier)},");
         sb.AppendLine($"      .Bolts = {(int)(defaults.Bolts * BoltsMultiplier)},");
-        sb.AppendLine($"      .Bangles = 0x{(int)Bangles:X4},");
+        sb.AppendLine($"      .Bangles = 0x{(int)variant.Bangles:X4},");
         sb.AppendLine($"      .Damage = {defaults.Damage * DamageMultiplier},");
         sb.AppendLine($"      .MaxDamage = {defaults.DamageMax},");
         sb.AppendLine($"      .DamageScale = {defaults.DamageScale * DamageDifficultyRateMultiplier},");

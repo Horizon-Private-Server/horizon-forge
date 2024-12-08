@@ -668,7 +668,8 @@ void mobMove(Moby* moby)
     isMovingDown = targetVelocity[2] <= 0.0001;
 
     // check ledge
-    vector_fromyaw(ledgePos, moby->Rotation[2]);
+    vector_normalize(ledgePos, lastVelocity);
+    //vector_fromyaw(ledgePos, moby->Rotation[2]);
     vector_add(ledgePos, moby->Position, ledgePos);
     vector_copy(groundCheckFrom, ledgePos);
     groundCheckFrom[2] = maxf(moby->Position[2], ledgePos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
@@ -809,7 +810,7 @@ void mobMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed)
+float mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed)
 {
   VECTOR delta;
   
@@ -822,10 +823,12 @@ void mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed)
 
   float radians = turnSpeed * MATH_DT;
   moby->Rotation[2] = clampAngle(moby->Rotation[2] + clamp(yawDelta, -radians, radians));
+
+  return clampAngle(moby->Rotation[2] - targetYaw);
 }
 
 //--------------------------------------------------------------------------
-void mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float predictFactor)
+float mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float predictFactor)
 {
   VECTOR pos;
   
@@ -845,25 +848,32 @@ void mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float p
     vector_copy(pos, target->Position);
   }
 
-  mobTurnTowards(moby, pos, turnSpeed);
+  return mobTurnTowards(moby, pos, turnSpeed);
 }
 
 //--------------------------------------------------------------------------
-void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration)
+void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float yaw, float speed, float acceleration)
 {
   VECTOR targetVelocity;
   VECTOR hVelocity;
   VECTOR fromToTarget;
   VECTOR next, nextToTarget;
   VECTOR temp;
+  VECTOR targetPosition;
   float targetSpeed = speed * MATH_DT;
 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   if (!pvars)
     return;
 
+  if (pathUseTargetMoby(pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars), moby, &pvars->MobVars.MoveVars)) {
+    vector_copy(targetPosition, pvars->MobVars.MoveVars.Target->Position);
+  } else {
+    vector_copy(targetPosition, pvars->MobVars.MoveVars.TargetPosition);
+  }
+
   // target velocity from rotation
-  vector_fromyaw(targetVelocity, moby->Rotation[2]);
+  vector_fromyaw(targetVelocity, yaw);
 
   // acclerate velocity towards target velocity
   //vector_normalize(targetVelocity, targetVelocity);
@@ -872,12 +882,14 @@ void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to,
   vector_projectonhorizontal(temp, temp);
   vector_scale(temp, temp, acceleration * MATH_DT);
   vector_add(velocity, velocity, temp);
+
+
   
   // stop when at target
-  if (pvars->MobVars.MoveVars.Target && targetSpeed > 0) {
-    vector_subtract(fromToTarget, pvars->MobVars.MoveVars.Target->Position, from);
+  if (targetSpeed > 0) {
+    vector_subtract(fromToTarget, targetPosition, from);
     vector_add(next, from, velocity);
-    vector_subtract(nextToTarget, pvars->MobVars.MoveVars.Target->Position, next);
+    vector_subtract(nextToTarget, targetPosition, next);
     float distNextToTarget = vector_length(nextToTarget);
     
     float min = pvars->MobVars.Config.CollRadius + PLAYER_COLL_RADIUS;
@@ -901,6 +913,12 @@ void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to,
     vector_projectonvertical(velocity, velocity);
     return;
   }
+}
+
+//--------------------------------------------------------------------------
+void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration)
+{
+  mobGetVelocityToTargetWithDirection(moby, velocity, from, to, moby->Rotation[2], speed, acceleration);
 }
 
 //--------------------------------------------------------------------------

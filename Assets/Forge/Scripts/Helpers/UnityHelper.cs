@@ -604,6 +604,7 @@ public static class UnityHelper
     }
 
     private static RaidsModeData _raidsModeData = null;
+    private static RaidsMobsScriptableObject _raidsMobConfig = null;
     private static void PVarsPropertyField_OverlayField(PvarOverlay pvarOverlay, PVarsPropertiesContainer properties, IPVarObject pvarObject, string basePath, PvarOverlayDef def, int defOffsetAdditive = 0)
     {
         var count = def.Count ?? 1;
@@ -959,6 +960,52 @@ public static class UnityHelper
 
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, mobIds, dataSize);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
+                        }
+                    });
+                    break;
+                }
+            case "raidsmobbehavior":
+                {
+                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
+                    {
+                        // read value
+                        string strValue = pvarValues[path2];
+                        var value = (long)def.FromString(strValue);
+                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
+
+                        if (!_raidsModeData)
+                            _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
+
+                        if (!_raidsMobConfig)
+                            _raidsMobConfig = RaidsMobsScriptableObject.Load();
+
+                        // find reference field
+                        // check if raidsmobid
+                        // grab mob id
+                        var refPath = basePath + $".{def.Ref}";
+                        RaidsMob? mobId = null;
+                        if (pvarValues.ContainsKey(refPath))
+                        {
+                            var refValue = pvarValues[refPath];
+                            if (int.TryParse(refValue, out int idx))
+                                mobId = _raidsModeData?.Mobs?.ElementAtOrDefault(idx)?.Mob;
+                        }
+
+                        var mob = _raidsMobConfig?.Mobs?.FirstOrDefault(x => x.Mob == mobId);
+                        if (mob == null)
+                            return;
+
+                        if (mob?.Behaviors == null || !mob.Behaviors.Any())
+                            return;
+
+                        var behaviors = mob.Behaviors.ToDictionary(x => x, x => (long)mob.Behaviors.IndexOf(x));
+
+                        EditorGUI.BeginChangeCheck();
+                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, behaviors, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));

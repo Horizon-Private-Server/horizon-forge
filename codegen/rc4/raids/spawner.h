@@ -36,6 +36,7 @@ struct SpawnerMobParams
   int MaxCanAliveAtOnce;
   int CooldownTicks;
   char StarsMask;
+  char MobBehavior;
 };
 
 struct SpawnerRuntimeState

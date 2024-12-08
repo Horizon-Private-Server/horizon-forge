@@ -23,7 +23,10 @@ public class RaidsMobsScriptableObject : ScriptableObject
     public class RaidsMobsConfig
     {
         [ReadOnly] public RaidsMob Mob;
+        public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
+        public DLTeamIds BlipTeam = DLTeamIds.Red;
         public List<RaidsMobVariant> Variants;
+        public List<string> Behaviors;
 
         public int Xp = BASE_XP;
         public int Bolts = BASE_BOLTS;
@@ -53,6 +56,7 @@ public class RaidsMobsScriptableObject : ScriptableObject
     {
         public string Name;
         public int OClass;
+        public RaidsMobBangle Bangles;
         public List<RaidsMobDependency> Dependencies = new List<RaidsMobDependency>();
 
         public RaidsMobVariant() { }

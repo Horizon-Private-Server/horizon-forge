@@ -60,6 +60,7 @@ extern struct PathGraph Paths[];
 extern const int PathsCount;
 
 void pathTick(struct PathGraph* path);
+int pathUseTargetMoby(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
 int pathShouldJump(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
 float pathGetJumpSpeed(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
 int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct MobMoveVars* moveVars);

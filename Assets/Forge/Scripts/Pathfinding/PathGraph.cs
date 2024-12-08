@@ -419,7 +419,7 @@ public class PathGraph : MonoBehaviour
         dataDefs += $"u8 {edgesRequiredVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.Required ? (int)(edge.RequiredUntil * 255) : 0)},\n";
+            dataDefs += $"\t{(edge.Required ? (int)(Mathf.Clamp(edge.RequiredUntil * 255 + 1, 0, 255)) : 0)},\n";
         }
         dataDefs += "};\n\n";
 

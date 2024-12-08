@@ -93,6 +93,7 @@ int stalkerturretCreate(struct MobCreateArgs* args)
 		guberEventWrite(guberEvent, &parentUid, 4);
 		guberEventWrite(guberEvent, &args->Userdata, 4);
 		guberEventWrite(guberEvent, &random, 1);
+		guberEventWrite(guberEvent, &args->Behavior, 1);
 		guberEventWrite(guberEvent, &spawnArgs, sizeof(struct MobSpawnEventArgs));
 	}
 	else
@@ -179,6 +180,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   VECTOR turretOffset = {0,0,0.75,0}; 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  struct MobSpawnParams* params = &MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx];
 
   // set scale
   float scale = pvars->MobVars.Config.Scale;
@@ -187,12 +189,10 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   // colors by mob type
 	moby->GlowRGBA = STALKERTURRET_GLOW_COLOR;
 	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
-  moby->ModeBits2 |= (0x80 + (8 * TEAM_RED)) << 8;
+  moby->ModeBits2 |= (0x80 + (8 * params->TeamPalette)) << 8;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
-  pvars->MobVars.BlipType = 4;
-  pvars->MobVars.BlipTeam = TEAM_RED;
   
   turretVars->GatlingDelay1 = STALKERTURRET_SHOT_ALTERNATE_DELAY;
   turretVars->GatlingDelay2 = STALKERTURRET_SHOT_ALTERNATE_DELAY;
@@ -226,7 +226,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
     baseMoby->PUpdate = NULL;
     baseMoby->DrawDist = moby->DrawDist;
     baseMoby->UpdateDist = moby->UpdateDist;
-    baseMoby->ModeBits2 |= (0x80 + (8 * TEAM_RED)) << 8;
+    baseMoby->ModeBits2 |= (0x80 + (8 * (params->TeamPalette ? TEAM_RED : TEAM_BLUE))) << 8;
     DPRINTF("base %08X\n", (u32)baseMoby);
   }
   

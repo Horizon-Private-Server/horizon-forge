@@ -98,6 +98,7 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
 
   struct MobCreateArgs args = {
     .SpawnParamsIdx = mobParams->MobParamIdx,
+    .Behavior = mobParams->MobBehavior,
     .Parent = moby,
     .Userdata = mobParamsIdx,
     .DifficultyMult = mobParams->DifficultyMultiplier,
@@ -166,7 +167,7 @@ int spawnerCanSpawn(Moby* moby)
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
 
   if (MapConfig.State) {
-    int totalAlive = MapConfig.State->MobStats.TotalAlive + MapConfig.State->MobStats.TotalSpawning;
+    int totalAlive = MapConfig.State->MobStats.TotalAlive; // + MapConfig.State->MobStats.TotalSpawning;
     if (totalAlive >= MAX_MOBS_ALIVE_REAL) return 0;
   }
 
@@ -314,7 +315,8 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
 //--------------------------------------------------------------------------
 void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata)
 {
-  DLOG(moby, "MOB%d: spawned %08X\n", userdata, (u32)childMoby);
+  struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+  DLOG(moby, "MOB%d: spawned %08X (%d/%d)\n", userdata, (u32)childMoby, pvars->State.NumSpawned[userdata], pvars->State.NumTotalSpawned + pvars->State.NumTotalKilled);
 }
 
 //--------------------------------------------------------------------------

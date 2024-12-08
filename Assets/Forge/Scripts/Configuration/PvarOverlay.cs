@@ -292,6 +292,18 @@ public class PvarOverlay
                         Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
+            case "raidsmobbehavior":
+                {
+                    // default enum to first value in list
+
+                    var count = def.Count ?? 1;
+                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
+                    var value = defaultValue ?? 0;
+                    var valueBytes = BitConverter.GetBytes(value);
+                    for (int i = 0; i < count; ++i)
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
+                    break;
+                }
             case "float":
                 {
                     // default to 0 clamped to MIN/MAX
@@ -428,6 +440,7 @@ public class PvarOverlayDef
             case "raidsdifficulty":
             case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "screenposition":
             case "mobyrefstate":
             case "integer": return 4;
@@ -498,6 +511,7 @@ public class PvarOverlayDef
             case "raidsdifficulty":
             case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "mask":
             case "padmask":
             case "mobyrefstate":
@@ -534,6 +548,7 @@ public class PvarOverlayDef
             case "raidsdifficulty":
             case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "mask":
             case "padmask":
             case "mobyrefstate":
@@ -635,6 +650,7 @@ public class PvarOverlayDef
             case "raidsdifficulty":
             case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "mask":
             case "padmask":
             case "mobyrefstate":

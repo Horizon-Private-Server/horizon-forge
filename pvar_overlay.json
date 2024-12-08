@@ -3362,6 +3362,14 @@
             "Offset": 0
           },
           {
+            "Name": "Mob Behavior",
+            "DataType": "RaidsMobBehavior",
+            "DataSize": 1,
+            "Default": 0,
+            "Offset": 25,
+            "Ref": "Mob Param Id"
+          },
+          {
             "Name": "Probability",
             "DataType": "Float",
             "Offset": 4,
