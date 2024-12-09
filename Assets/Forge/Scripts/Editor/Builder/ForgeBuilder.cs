@@ -1773,6 +1773,9 @@ public static class ForgeBuilder
         if (!mapRender) return;
         if (!mapConfig) return;
 
+        if (RebuildLevelProgress(ctx, $"Rebuilding Code", 0.5f))
+            return;
+
         // copy code
         var codeFolder = Path.Combine(resourcesFolder, FolderNames.GetMapCodeFolder(ctx.RacVersion, ctx.Region));
         var files = Directory.EnumerateFiles(codeFolder, "code.*.*");

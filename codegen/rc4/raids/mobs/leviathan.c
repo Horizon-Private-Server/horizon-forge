@@ -41,6 +41,7 @@ int leviathanIsIdling(struct MobPVar* pvars);
 int leviathanCanAttack(struct MobPVar* pvars);
 int leviathanIsFlinching(Moby* moby);
 int leviathanIsDying(Moby* moby);
+int leviathanShouldStrafe(Moby* moby);
 
 struct MobVTable LeviathanVTable = {
   .PreUpdate = &leviathanPreUpdate,
@@ -478,6 +479,9 @@ int leviathanGetPreferredAction(Moby* moby, int * delayTicks)
       }
     }
 
+    if (leviathanShouldStrafe(moby))
+      return LEVIATHAN_ACTION_STRAFE;
+
     return LEVIATHAN_ACTION_WALK;
 	}
 
@@ -541,6 +545,7 @@ int leviathanDoActionMove(Moby* moby)
 	Moby* target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
   int behavior = pvars->MobVars.Behavior;
+  int strafe = pvars->MobVars.Action == LEVIATHAN_ACTION_STRAFE;
   float speed = pvars->MobVars.Config.Speed;
   float turnSpeed = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_TURN_RADIANS_PER_SEC : LEVIATHAN_TURN_AIR_RADIANS_PER_SEC;
   float acceleration = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_MOVE_ACCELERATION : LEVIATHAN_MOVE_AIR_ACCELERATION;
@@ -555,33 +560,9 @@ int leviathanDoActionMove(Moby* moby)
     dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
   }
 
-  // evade if normal and target is in sight but out of chase range
-  // or if evasive
-  int evade = 0;
-  if (behavior == LEVIATHAN_BEHAVIOR_NORMAL) {
-    if (pvars->MobVars.TimeTargetOutOfSightTicks < LEVIATHAN_EVADE_MAX_OUT_OF_SIGHT_TICKS && sqrDistToTarget < (LEVIATHAN_CHASE_TARGET_RADIUS*LEVIATHAN_CHASE_TARGET_RADIUS)) {
-      evade = 1;
-    }
-  } else if (behavior == LEVIATHAN_BEHAVIOR_EVASIVE) {
-    evade = pvars->MobVars.TimeTargetOutOfSightTicks < LEVIATHAN_EVADE_MAX_OUT_OF_SIGHT_TICKS;
-  }
-
-  if (pvars->MobVars.MoveVars.IsStuck) {
-    evade = 0;
-    leviathanVars->EvadeCooldownTicks = 0;
-  }
-
-  // cache evade
-  if (evade != leviathanVars->Evade && leviathanVars->EvadeCooldownTicks == 0) {
-    leviathanVars->Evade = evade;
-    leviathanVars->EvadeCooldownTicks = LEVIATHAN_EVADE_COOLDOWN_TICKS;
-  } else {
-    evade = leviathanVars->Evade;
-  }
-
-  pvars->MobVars.MoveVars.ForceUseTargetPosition = evade;
+  pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
   float strafeDir = ((pvars->MobVars.Random + (pvars->MobVars.ActionId/2)) % 2) ? 1 : -1;
-  if (evade) {
+  if (strafe) {
     VECTOR strafeVec, strafeFwd;
     vector_scale(strafeVec, moby->M1_03, 5 * strafeDir);
     if (dir != 0 && sqrDistToTarget < (LEVIATHAN_CHASE_TARGET_RADIUS*LEVIATHAN_CHASE_TARGET_RADIUS)) {
@@ -598,7 +579,7 @@ int leviathanDoActionMove(Moby* moby)
   if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
     pvars->MobVars.Dirty = 1; // new path, sync with other clients
 
-  if (evade) {
+  if (strafe) {
     VECTOR dt;
     vector_subtract(dt, t, moby->Position);
     float yaw = atan2f(dt[1], dt[0]);
@@ -757,6 +738,7 @@ void leviathanDoAction(Moby* moby)
       break;
     }
     case LEVIATHAN_ACTION_WALK:
+    case LEVIATHAN_ACTION_STRAFE:
 		{
       int walkAnimId = LEVIATHAN_ANIM_WALK;
       if (!isInAirFromFlinching && target) {
@@ -1097,4 +1079,35 @@ int leviathanIsDying(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	return pvars->MobVars.Action == LEVIATHAN_ACTION_DIE;
+}
+
+//--------------------------------------------------------------------------
+int leviathanShouldStrafe(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	Moby* target = pvars->MobVars.MoveVars.Target;
+  int behavior = pvars->MobVars.Behavior;
+
+  if (!target) return 0;
+
+  // get distance to target
+  VECTOR dt;
+  vector_subtract(dt, target->Position, moby->Position);
+  float sqrDistToTarget = vector_sqrmag(dt);
+
+  int strafe = 0;
+  if (behavior == LEVIATHAN_BEHAVIOR_NORMAL) {
+    if (pvars->MobVars.TimeTargetOutOfSightTicks < LEVIATHAN_EVADE_MAX_OUT_OF_SIGHT_TICKS && sqrDistToTarget < (LEVIATHAN_CHASE_TARGET_RADIUS*LEVIATHAN_CHASE_TARGET_RADIUS)) {
+      strafe = 1;
+    }
+  } else if (behavior == LEVIATHAN_BEHAVIOR_EVASIVE) {
+    strafe = pvars->MobVars.TimeTargetOutOfSightTicks < LEVIATHAN_EVADE_MAX_OUT_OF_SIGHT_TICKS;
+  }
+
+  // if stuck, return to walk state
+  if (pvars->MobVars.MoveVars.IsStuck) {
+    strafe = 0;
+  }
+
+  return strafe;
 }
