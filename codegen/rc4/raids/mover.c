@@ -253,7 +253,9 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
 
   vector_copy(target->Position, position);
   vector_copy(target->Rotation, rotation);
-  mobyUpdateTransform(target);
+  if ((target->ModeBits & MOBY_MODE_BIT_NO_POST_UPDATE) == 0) {
+    mobyUpdateTransform(target);
+  }
 }
 
 //--------------------------------------------------------------------------

@@ -18,6 +18,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int CHECKPOINT_MANAGER_OCLASS = 0x4007;
     public static readonly int CHECKPOINT_OCLASS = 0x4008;
     public static readonly int LASERBEAM_OCLASS = 0x4009;
+    public static readonly int LASER_OCLASS = 0x400A;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -70,6 +71,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laser.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
@@ -90,6 +92,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"messager.h\"");
         state.Includes.Add("#include \"spawner.h\"");
         state.Includes.Add("#include \"checkpoint.h\"");
+        state.Includes.Add("#include \"laser.h\"");
         state.Includes.Add("#include \"controller.h\"");
         state.Includes.Add("#include \"mover.h\"");
         state.Includes.Add("#include \"mob.h\"");
@@ -115,6 +118,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"npcInit();");
         state.InitBody.Add($"messagerInit();");
         state.InitBody.Add($"checkpointInit();");
+        state.InitBody.Add($"laserInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
@@ -133,6 +137,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBodyReady.Add("gateStart();");
         state.MainBodyReady.Add("npcStart();");
         state.MainBodyReady.Add("checkpointStart();");
+        state.MainBodyReady.Add("laserStart();");
 
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
@@ -330,6 +335,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.UpdateDistance = 255;
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Checkpoint");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Laser (Tripwire) Moby", priority = 10)]
+    public static void CreateLaserMoby()
+    {
+        var go = new GameObject("Laser (Tripwire)");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = LASER_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Laser");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

@@ -123,7 +123,6 @@ void leviathanPreUpdate(Moby* moby)
   decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
   decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
   decTimerU32(&leviathanVars->AttackLaserCooldownTicks);
-  decTimerU32(&leviathanVars->EvadeCooldownTicks);
 
   mobPreUpdate(moby);
 }
@@ -851,7 +850,7 @@ void leviathanDoAction(Moby* moby)
           // update laserbeam
           if (laserbeamMoby) {
             laserbeamMoby->State = LASERBEAM_STATE_ACTIVATED;
-            laserbeamSet(laserbeamMoby, &mtxTailHead[12], leviathanVars->LaserbeamDirection, 50, 0.3, pvars->MobVars.Config.Damage, 0x1, 0x80208040, 0x3020FF20, 0x00ff00, 0x45, 0x0E);
+            laserbeamSet(laserbeamMoby, &mtxTailHead[12], leviathanVars->LaserbeamDirection, 50, 0.3, pvars->MobVars.Config.Damage, 0x1, 0x80208040, 0x3020FF20, 0x00ff00, 0x00ff00, 0x45, 0x0E);
           }
 
           // stop after n seconds

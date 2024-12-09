@@ -22,7 +22,7 @@ void laserbeamPostDraw(Moby* moby)
   VECTOR up = {0,0,1,0};
   float speed = 5;
   float rot = MATH_PI / 2;
-  float t = speed * (gameGetTime() / (float)TIME_SECOND);
+  float t = -speed * (gameGetTime() / (float)TIME_SECOND);
   int hit = 0;
 
   float u0 = 0, u1 = 1;
@@ -63,19 +63,22 @@ void laserbeamPostDraw(Moby* moby)
   vector_normalize(camRight, camRight);
 
   // draw impact particles
-  if (pvars->ColorParticle) {
+  if (pvars->ColorParticleEnd && hit) {
     VECTOR partVelEmpty = {0,0,0,0};
     VECTOR partVel = {randRange(-1,1),randRange(-1,1),0,0};
     vector_scale(partVel, partVel, MATH_DT * 3);
-    laserbeamSpawnParticle(fireTo, partVel, randRangeInt(5, 15), pvars->ColorParticle, randRangeInt(2, 5), 0x7f, 0x7f, 1.0 * randRange(0.4, 0.6), 0.01, 0.00444444, 1);
-    char* p1 = (char*)laserbeamSpawnParticle(fireTo, partVel, randRangeInt(5, 15), pvars->ColorParticle, randRangeInt(2, 5) * -2, 0x30, 0x30, 3.0 * randRange(0.4, 0.6), 0.02, 0.00444444, 0);
+    laserbeamSpawnParticle(fireTo, partVel, randRangeInt(5, 15), pvars->ColorParticleEnd, randRangeInt(2, 5), 0x7f, 0x7f, 1.0 * randRange(0.4, 0.6), 0.01, 0.00444444, 1);
+    char* p1 = (char*)laserbeamSpawnParticle(fireTo, partVel, randRangeInt(5, 15), pvars->ColorParticleEnd, randRangeInt(2, 5) * -2, 0x30, 0x30, 3.0 * randRange(0.4, 0.6), 0.02, 0.00444444, 0);
     if (p1) {
       p1[2] = 0x1C;
     }
+  }
 
-    VECTOR partVel2 = {randRange(-1,1),randRange(-1,1),0,0};
-    vector_scale(partVel2, partVel2, MATH_DT * 3);
-    p1 = (char*)laserbeamSpawnParticle(fireFrom, partVelEmpty, randRangeInt(5, 15), pvars->ColorParticle, randRangeInt(2, 5) * -2, 0x30, 0x30, 3.0 * randRange(0.4, 0.6), 0.02, 0.0, 0);
+  if (pvars->ColorParticleStart) {
+    VECTOR partVelEmpty = {0,0,0,0};
+    VECTOR partVel = {randRange(-1,1),randRange(-1,1),0,0};
+    vector_scale(partVel, partVel, MATH_DT * 3);
+    char* p1 = (char*)laserbeamSpawnParticle(fireFrom, partVelEmpty, randRangeInt(5, 15), pvars->ColorParticleStart, randRangeInt(2, 5) * -2, 0x30, 0x30, 3.0 * randRange(0.4, 0.6), 0.02, 0.0, 0);
     if (p1) {
       p1[2] = 0x1C;
     }
@@ -102,14 +105,16 @@ void laserbeamPostDraw(Moby* moby)
       quad.VertexColors[0] = quad.VertexColors[1] = color;
       quad.VertexColors[2] = quad.VertexColors[3] = color;
 
-      float fadeStart = clamp((1 - pt1) * (distance / fadeFrom), 0, 1);
-      if (fadeStart < 1) {
-        quad.VertexColors[0] = quad.VertexColors[1] = colorLerp(color, color & 0xffffff, 1 - fadeStart);
-      }
+      if (hit) {
+        float fadeStart = clamp((1 - pt1) * (distance / fadeFrom), 0, 1);
+        if (fadeStart < 1) {
+          quad.VertexColors[0] = quad.VertexColors[1] = colorLerp(color, color & 0xffffff, 1 - fadeStart);
+        }
 
-      float fadeEnd = clamp((1 - pt2) * (distance / fadeFrom), 0, 1);
-      if (fadeEnd < 1) {
-        quad.VertexColors[2] = quad.VertexColors[3] = colorLerp(color, color & 0xffffff, 1 - fadeEnd);
+        float fadeEnd = clamp((1 - pt2) * (distance / fadeFrom), 0, 1);
+        if (fadeEnd < 1) {
+          quad.VertexColors[2] = quad.VertexColors[3] = colorLerp(color, color & 0xffffff, 1 - fadeEnd);
+        }
       }
 
       // rotate and offset uvs
@@ -155,6 +160,8 @@ void laserbeamPostDraw(Moby* moby)
     };
     mobyCollDamageDirect(hitMoby, &in);
   }
+
+  moby->SubState = hit;
 }
 
 //--------------------------------------------------------------------------
@@ -163,13 +170,19 @@ void laserbeamUpdate(Moby* moby)
   if (!moby || !moby->PVar)
     return;
 
+  // self-destruct if parent is destroyed
+  if (moby->PParent && mobyIsDestroyed(moby->PParent)) {
+    mobyDestroy(moby);
+    return;
+  }
+
   if (moby->State == LASERBEAM_STATE_ACTIVATED) {
     gfxRegisterDrawFunction((void**)0x0022251C, &laserbeamPostDraw, moby);
   }
 }
 
 //--------------------------------------------------------------------------
-void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength, float width, float damage, u32 damageFlags, u32 colorBeam, u32 colorGlow, u32 colorParticle, int beamTexId, int glowTexId)
+void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength, float width, float damage, u32 damageFlags, u32 colorBeam, u32 colorGlow, u32 colorParticleStart, u32 colorParticleEnd, int beamTexId, int glowTexId)
 {
   if (!moby || !moby->PVar) return;
 
@@ -184,7 +197,8 @@ void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength
   pvars->DamageFlags = damageFlags;
   pvars->ColorBeam = colorBeam;
   pvars->ColorGlow = colorGlow;
-  pvars->ColorParticle = colorParticle;
+  pvars->ColorParticleStart = colorParticleStart;
+  pvars->ColorParticleEnd = colorParticleEnd;
   pvars->BeamTexId = beamTexId;
   pvars->GlowTexId = glowTexId;
 }

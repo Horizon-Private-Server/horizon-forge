@@ -127,8 +127,8 @@ public enum DLTeamIds
     Orange,
     Yellow,
     Purple,
-    Pink,
     Aqua,
+    Pink,
     Olive,
     Maroon,
     White

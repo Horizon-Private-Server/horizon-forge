@@ -4415,5 +4415,91 @@
         "Offset": 8
       }
     ]
+  },
+  {
+    "Name": "Raids Laser",
+    "RCVersion": 4,
+    "MobyOClass": 16394,
+    "Length": 36,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "On (Hit Moby)": 2
+    },
+    "Overlay": [
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Color",
+        "DataType": "Team",
+        "Offset": 2,
+        "Default": "3"
+      },
+      {
+        "Name": "Beam Texture",
+        "DataType": "FXTex",
+        "Default": 69,
+        "Offset": 4
+      },
+      {
+        "Name": "Glow Texture",
+        "DataType": "FXTex",
+        "Default": 14,
+        "Offset": 8
+      },
+      {
+        "Name": "Length",
+        "DataType": "Float",
+        "Default": 5,
+        "Offset": 12
+      },
+      {
+        "Name": "Width",
+        "DataType": "Float",
+        "Default": 0.2,
+        "Offset": 16
+      },
+      {
+        "Name": "Damage Type",
+        "DataType": "Mask",
+        "Offset": 3,
+        "Options": {
+          "Mobs": 1,
+          "Players": 2
+        }
+      },
+      {
+        "Name": "Damage",
+        "DataType": "Float",
+        "Default": 0,
+        "Offset": 20
+      },
+      {
+        "Name": "Damage Max",
+        "DataType": "Float",
+        "Default": 0,
+        "Offset": 24
+      },
+      {
+        "Name": "Damage Scale",
+        "DataType": "Float",
+        "Default": 1,
+        "Offset": 28
+      }
+    ]
   }
 ]

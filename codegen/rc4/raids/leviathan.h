@@ -123,8 +123,6 @@ typedef struct LeviathanMobVars {
   VECTOR LaserbeamDirection;
   Moby* LaserbeamMoby;
   u32 AttackLaserCooldownTicks;
-  u32 EvadeCooldownTicks;
-  char Evade;
 } LeviathanMobVars_t;
 
 extern struct MobVTable LeviathanVTable;

@@ -24,12 +24,13 @@ struct LaserbeamPVar
   u32 DamageFlags;
   u32 ColorBeam;
   u32 ColorGlow;
-  u32 ColorParticle;
+  u32 ColorParticleStart;
+  u32 ColorParticleEnd;
   int BeamTexId;
   int GlowTexId;
 };
 
-void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength, float width, float damage, u32 damageFlags, u32 colorBeam, u32 colorGlow, u32 colorParticle, int beamTexId, int glowTexId);
+void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength, float width, float damage, u32 damageFlags, u32 colorBeam, u32 colorGlow, u32 colorParticleStart, u32 colorParticleEnd, int beamTexId, int glowTexId);
 void laserbeamDestroy(Moby* moby);
 Moby* laserbeamCreate(Moby* parent);
 

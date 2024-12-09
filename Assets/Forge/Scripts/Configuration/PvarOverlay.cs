@@ -383,6 +383,20 @@ public class PvarOverlay
 
                     break;
                 }
+            default:
+                {
+                    // try to parse default as a number
+                    var count = def.Count ?? 1;
+                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
+                    if (defaultValue.HasValue)
+                    {
+                        var value = (long)Mathf.Clamp(defaultValue ?? 0, def.Min ?? long.MinValue, def.Max ?? long.MaxValue);
+                        var valueBytes = BitConverter.GetBytes(value);
+                        for (int i = 0; i < count; ++i)
+                            Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
+                    }
+                    break;
+                }
         }
     }
 }
