@@ -37,6 +37,8 @@ public class PvarOverlay
     {
         int length = Length;
         var pvarData = pvarObject.GetPVarData();
+        var pvarValues = pvarObject.GetPVarValues();
+        var pvarRefs = pvarObject.GetPVarReferences();
         var strings = pvarObject.GetPVarStrings();
         if (pvarData == null) return length;
         if (Overlay == null) return length;
@@ -70,10 +72,100 @@ public class PvarOverlay
                             length += 4 - (length % 4); // align to 4
                         break;
                     }
+                case "mobyrefpvarvalue":
+                    {
+                        // find respective mobyrefpvar
+                        var refPath = $".{def.Ref}";
+                        if (pvarValues.ContainsKey(refPath))
+                        {
+                            var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                            var pvarPath = parts?.ElementAtOrDefault(1);
+                            int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: oClass);
+                            if (mobyRefPvarOverlay != null)
+                            {
+                                var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                                if (pvarMetadata != null)
+                                {
+                                    length += pvarMetadata.Size;
+                                }
+                            }
+                        }
+                        break;
+                    }
             }
         }
 
         return length;
+    }
+    
+    public string[] GetPVarPaths(IPVarObject pvarObject)
+    {
+        var paths = new List<string>();
+        foreach (var def in this.Overlay)
+        {
+            GetPVarPaths(pvarObject, paths, null, def);
+        }
+        return paths.ToArray();
+    }
+
+    private void GetPVarPaths(IPVarObject pvarObject, List<string> paths, string path, PvarOverlayDef def)
+    {
+        var count = def.Count ?? 1;
+        for (int i = 0; i < count; ++i)
+        {
+            var defPath = path + "." + def.Name;
+            if (def.Count.HasValue)
+                defPath += $"[{i}]";
+
+            paths.Add(defPath);
+            if (def.Fields != null)
+            {
+                foreach (var childDef in def.Fields)
+                {
+                    GetPVarPaths(pvarObject, paths, defPath, childDef);
+                }
+            }
+        }
+    }
+
+    public string FindPVarAtOffset(int targetOffset)
+    {
+        return FindPVarAtOffset(this.Overlay, null, 0, targetOffset);
+    }
+
+    private string FindPVarAtOffset(List<PvarOverlayDef> defs, string path, int baseOffset, int targetOffset)
+    {
+        foreach (var def in defs)
+        {
+            var offset = baseOffset + def.Offset;
+            var size = def.GetDataSize();
+            var count = def.Count ?? 1;
+            var defPath = path + "." + def.Name;
+
+            // target is inside this pvar
+            if (targetOffset >= offset && targetOffset < (offset + size*count))
+            {
+                // get idx
+                for (int i = 0; i < count; ++i)
+                {
+                    var idxOffset = offset + (i * size);
+                    if (targetOffset >= idxOffset && targetOffset < (idxOffset + size))
+                    {
+                        defPath += $"[{i}]";
+                        offset = idxOffset;
+                        break;
+                    }
+                }
+
+                if (def.Fields != null && def.Fields.Any())
+                    return FindPVarAtOffset(def.Fields, defPath, offset, targetOffset);
+                else
+                    return defPath;
+            }
+        }
+
+        return null;
     }
 
     public object GetPVarValue(string path, SerializableStringDictionary pvarValues, SerializableMonoBehaviourDictionary pvarRefs)
@@ -85,7 +177,7 @@ public class PvarOverlay
         {
             var name = parts[i];
             if (name.EndsWith("]") && name.Contains("["))
-                name = name.Substring(0, name.IndexOf("[") - 1);
+                name = name.Substring(0, name.IndexOf("["));
 
             def = defs.FirstOrDefault(x => x.Name == name);
             if (def == null) break;
@@ -96,6 +188,44 @@ public class PvarOverlay
 
         if (def.IsReferenceType()) return pvarRefs[path];
         return def.FromString(pvarValues[path]);
+    }
+
+    public PvarOverlayDefMetadata GetPVarMetadata(string path)
+    {
+        if (path == null) return null;
+
+        var parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        var defs = Overlay;
+        var offset = 0;
+        PvarOverlayDef def = null;
+        for (int i = 0; i < parts.Length; ++i)
+        {
+            int? idx = null;
+            var name = parts[i];
+            if (name.EndsWith("]") && name.Contains("["))
+            {
+                idx = int.TryParse(name.Substring(name.IndexOf("[") + 1, name.IndexOf("]") - name.IndexOf("[") - 1), out var parsedIdx) ? parsedIdx : null;
+                name = name.Substring(0, name.IndexOf("["));
+            }
+
+            def = defs.FirstOrDefault(x => x.Name == name);
+            if (def == null) break;
+            defs = def.Fields;
+
+            if (idx.HasValue)
+                offset += def.Offset + (idx.Value * def.GetDataSize());
+            else
+                offset += def.Offset;
+        }
+
+        if (def == null) return null;
+
+        return new PvarOverlayDefMetadata()
+        {
+            Offset = offset,
+            Size = def.GetDataSize(),
+            Field = def,
+        };
     }
 
     [OnDeserialized]
@@ -351,6 +481,17 @@ public class PvarOverlay
                         Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
+            case "mobyrefpvar":
+                {
+                    // default to 0
+                    var count = def.Count ?? 1;
+                    for (int i = 0; i < count; ++i)
+                    {
+                        for (int j = 0; j < dataSize; ++j)
+                            defaultBytes[j] = 0;
+                    }
+                    break;
+                }
             case "byte":
             case "sbyte":
                 {
@@ -463,6 +604,9 @@ public class PvarOverlayDef
             case "vector3": return 12;
 
             case "struct": return Fields?.Max(x => x.Offset + x.GetDataSize()) ?? 0;
+                
+            case "mobyrefpvar": return 8;
+            case "mobyrefpvarvalue": return 0;
 
             case "varstringcontainer": return 4;
             case "messagecontainer": return 4;
@@ -495,7 +639,7 @@ public class PvarOverlayDef
         }
     }
 
-    public object FromBytes(byte[] bytes, int index)
+    public object FromBytes(PvarOverlay pvarOverlay, byte[] bytes, int index)
     {
         // don't include the ref types
         // that are stored in CuboidRefs[] etc
@@ -530,11 +674,20 @@ public class PvarOverlayDef
             case "padmask":
             case "mobyrefstate":
             case "enum": return BitConverter.ToInt64(buffer);
+            case "mobyrefpvar":
+                {
+                    var offset = BitConverter.ToInt16(buffer, 0);
+                    var size = BitConverter.ToInt16(buffer, 2);
+                    if (size <= 0) return null; // size is empty so no pvar selected
+
+                    // find path at offset
+                    return pvarOverlay.FindPVarAtOffset(offset);
+                }
             default: return null;
         }
     }
 
-    public void ToBytes(object value, byte[] bytes, int index, object args = null)
+    public void ToBytes(PvarOverlay pvarOverlay, object value, byte[] bytes, int index, object args = null)
     {
         // don't include the ref types
         // that are stored in CuboidRefs[] etc
@@ -567,6 +720,29 @@ public class PvarOverlayDef
             case "padmask":
             case "mobyrefstate":
             case "enum": BitConverter.TryWriteBytes(buffer, (long)value); break;
+
+            case "mobyrefpvar":
+                {
+                    var parts = (value as string)?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                    var pvarPath = parts?.ElementAtOrDefault(1);
+                    int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                    var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                    if (mobyRefPvarOverlay != null)
+                    {
+                        var metadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                        if (metadata != null)
+                        {
+                            BitConverter.TryWriteBytes(buffer, (short)metadata.Offset);
+                            BitConverter.TryWriteBytes(buffer.AsSpan(2), (short)metadata.Size);
+
+                            // todo
+                            // add support for child mobyrefs
+                            if (metadata.Field.DataType?.ToLower() == "mobyref")
+                                buffer[4] = 1;
+                        }
+                    }
+                    break;
+                }
 
             case "mobyref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Mobys, value)); break;
             case "cuboidref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Cuboids, value)); break;
@@ -669,6 +845,7 @@ public class PvarOverlayDef
             case "padmask":
             case "mobyrefstate":
             case "enum": return long.TryParse(v, out var enumValue) ? enumValue : 0;
+            case "mobyrefpvar": return value;
             default: return null;
         }
     }
@@ -739,4 +916,11 @@ public class PvarOverlayDisplayRule
 
         return false;
     }
+}
+
+public class PvarOverlayDefMetadata
+{
+    public int Offset { get; set; }
+    public int Size { get; set; }
+    public PvarOverlayDef Field { get; set; }
 }

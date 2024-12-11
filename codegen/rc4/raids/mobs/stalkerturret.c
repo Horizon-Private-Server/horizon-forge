@@ -186,22 +186,16 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   float scale = pvars->MobVars.Config.Scale;
   moby->Scale = 0.1 * scale;
 
-  // colors by mob type
-	moby->GlowRGBA = STALKERTURRET_GLOW_COLOR;
-	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
-  moby->ModeBits2 |= (0x80 + (8 * params->TeamPalette)) << 8;
-
   // targeting
 	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
   
   turretVars->GatlingDelay1 = STALKERTURRET_SHOT_ALTERNATE_DELAY;
   turretVars->GatlingDelay2 = STALKERTURRET_SHOT_ALTERNATE_DELAY;
+  turretVars->Team = params->TeamPalette;
   
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  Moby* temp = mobySpawn(0x2038, 0);
 
   // create turret moby
   void* mobyClass = mobyGetClassPtr(0x2038);
@@ -210,12 +204,16 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   moby->CollData = *(int*)((u32)mobyClass + 0x10);
   moby->MClass = *(u8*)(0x0024a110 + 0x2038);
   moby->AnimSeq = *(void**)((u32)mobyClass + 0x48);
+  moby->AnimSeqId = 0;
   moby->AnimSpeed = 1;
-  moby->JointCache = temp->JointCache;
   moby->JointCnt = *(char*)((u32)mobyClass + 0x08);
   moby->ModeBits &= 0xFFF0;
-  DPRINTF("stalker turret %08X\n", (u32)moby);
-  mobyDestroy(temp);
+  ((void* (*)(Moby*))0x004fb910)(moby); // init joint cache
+
+  // colors by mob type
+	moby->GlowRGBA = STALKERTURRET_GLOW_COLOR;
+	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
+  moby->ModeBits2 |= (0x80 + (8 * params->TeamPalette)) << 8;
 
   // configure turret base moby
   Moby* baseMoby = turretVars->BaseMoby = mobySpawn(8304, 0);
@@ -227,7 +225,6 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
     baseMoby->DrawDist = moby->DrawDist;
     baseMoby->UpdateDist = moby->UpdateDist;
     baseMoby->ModeBits2 |= (0x80 + (8 * (params->TeamPalette ? TEAM_RED : TEAM_BLUE))) << 8;
-    DPRINTF("base %08X\n", (u32)baseMoby);
   }
   
   // move turret above base
@@ -236,6 +233,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
   vector_copy(pvars->MobVars.MoveVars.TargetPosition, moby->Position);
+  mobyAnimTransition(moby, 0, 0, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -373,17 +371,17 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
   //vector_scale(vel, vel, 1.0); // speed
 
   // fire shot
-  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4.0, pvars->MobVars.Config.Damage, from, vel, turretVars->TurretMoby, 1, 0x222124, 0, 0);
+  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4.0, pvars->MobVars.Config.Damage, from, vel, turretVars->TurretMoby, 1, 0x222124, -1, 0);
   if (shotMoby) {
-    ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0);
-    ((void (*)(Moby*, int))0x0045d788)(shotMoby, 1);
-    ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 0x001);
-    ((void (*)(Moby*, int))0x0045d798)(shotMoby, 0x3C);
+    ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0); // shot type
+    ((void (*)(Moby*, int))0x0045d788)(shotMoby, turretVars->Team); // shot color
+    ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 1); // hit flag
+    ((void (*)(Moby*, int))0x0045d798)(shotMoby, (int)(pvars->MobVars.Config.VisionRange * 2)); // shot life (ticks)
     shotMoby->PParent = moby;
   }
 
   // spawn flare
-  ((void (*)(float, float, float, Moby*, int, int, int))0x0042c178)(0.75, 0.75, 1.0, turretVars->TurretMoby, 0, 0, 4);
+  ((void (*)(float, float, float, Moby*, int, int, int))0x0042c178)(0.75, 0.75, 1.0, turretVars->TurretMoby, 0, 0, jointId);
   
   // play sound
   mobyPlaySound(1, 0, turretVars->TurretMoby);
@@ -456,12 +454,12 @@ Moby* stalkerturretGetNextTarget(Moby* moby)
       
       // determine angle from mob forward to player
       float theta = acosf(vector_innerproduct(forward, delta));
-			if (dist < 300) {
+      int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
+			if (dist < 300 || inAggroZone) {
 
-        // skip if not in sight or aggro zone, unless already targeted
-        if (!isCurrentTarget) {
+        // skip if not in sight, unless already targeted
+        if (!isCurrentTarget && !inAggroZone) {
           if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
-          if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && !spawnerOnChildConsiderTarget(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby)) continue;
           if (!stalkerturretCanSeeMoby(turretMoby, pTargetMoby)) continue;
         }
 

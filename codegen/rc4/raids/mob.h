@@ -196,7 +196,8 @@ struct MobVars {
 	int NextAction;
 	int LastAction;
 	float Health;
-	float ClosestDist;
+	float ClosestDistToLocal;
+	float ClosestDistToPlayer;
   u32 Userdata;
 	int LastAcidBy;
   float LastAcidByDamage;

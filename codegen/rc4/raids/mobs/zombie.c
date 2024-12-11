@@ -330,12 +330,12 @@ Moby* zombieGetNextTarget(Moby* moby)
       
       // determine angle from mob forward to player
       float theta = acosf(vector_innerproduct(forward, delta));
-			if (dist < 300) {
+			int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
+			if (dist < 300 || inAggroZone) {
 
-        // skip if not in sight or aggro zone, unless already targeted
-        if (!isCurrentTarget) {
+        // skip if not in sight, unless already targeted
+        if (!isCurrentTarget && !inAggroZone) {
           if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
-          if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && !spawnerOnChildConsiderTarget(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby)) continue;
         }
 
 				// favor existing target
@@ -682,23 +682,10 @@ void zombieForceLocalAction(Moby* moby, int action)
 		}
     case ZOMBIE_ACTION_ROAM:
     {
-      struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
-      if (path && path->NumNodes > 0 && mobAmIOwner(moby)) {
-
-        int r = rand(path->NumNodes);
-        int count = 0;
-
-        // if we're in a spawner
-        // then try and find a node thats in a habitable cuboid
-        if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-          while (count < path->NumNodes && !spawnerOnChildConsiderRoamTarget(moby->PParent, moby, pvars->MobVars.Userdata, path->Nodes[r])) {
-            r = (r + 1) % path->NumNodes;
-            ++count;
-          }
-        }
-
-        vector_copy(pvars->MobVars.MoveVars.TargetPosition, path->Nodes[r]);
-        pvars->MobVars.MoveVars.TargetPosition[3] = 0;
+      // if we're in a spawner
+      // then let it determine where we roam
+      if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
+        spawnerOnChildGetRandomRoamTarget(moby->PParent, moby, pvars->MobVars.MoveVars.TargetPosition);
       }
       break;
     }

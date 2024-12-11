@@ -7,6 +7,8 @@
 #include <libdl/time.h>
 #include <libdl/player.h>
 #include <libdl/math3d.h>
+#include "mob.h"
+#include "game.h"
 
 #define SPAWNER_OCLASS                        (0x4001)
 #define SPAWNER_MAX_SPAWN_CUBOIDS             (4)
@@ -14,6 +16,9 @@
 #define SPAWNER_MAX_AGGRO_CUBOIDS             (4)
 #define SPAWNER_MAX_ROAMABLE_CUBOIDS          (4)
 #define SPAWNER_MAX_MOB_TYPES                 (8)
+
+#define SPAWNER_MAX_SPAWN_REQUESTS            (20)
+#define SPAWNER_SPAWN_NEAR_DISTANCE           (100)
 
 enum SpawnerEventType {
 	SPAWNER_EVENT_SPAWN,
@@ -25,6 +30,12 @@ enum SpawnerState {
 	SPAWNER_STATE_PAUSED,
 	SPAWNER_STATE_ACTIVATED,
 	SPAWNER_STATE_COMPLETED = 127,
+};
+
+struct SpawnerSpawnRequest
+{
+  Moby* Spawner;
+  struct MobCreateArgs SpawnArgs;
 };
 
 struct SpawnerMobParams
@@ -41,6 +52,8 @@ struct SpawnerMobParams
 
 struct SpawnerRuntimeState
 {
+  float ClosestPlayerDistSqr;
+  int PlayerIsNear;
   u32 NumTotalSpawned;
   u32 NumTotalKilled;
   u32 NumSpawned[SPAWNER_MAX_MOB_TYPES];
@@ -59,6 +72,7 @@ struct SpawnerPVar
   int RoamableCuboidIds[SPAWNER_MAX_ROAMABLE_CUBOIDS];
   int PathGraphIdx;
   int NumMobsToSpawn;
+  float LimitDespawnPercent;
   struct SpawnerMobParams SpawnableMobParam[SPAWNER_MAX_MOB_TYPES];
   struct SpawnerRuntimeState State;
 };
@@ -67,8 +81,9 @@ void spawnerBroadcastNewState(Moby* moby, enum SpawnerState state);
 void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata);
 void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, int weaponId);
 void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata);
-int spawnerOnChildConsiderTarget(Moby* moby, Moby* childMoby, u32 userdata, Moby* target);
+int spawnerOnChildIsTargetInAggroZone(Moby* moby, Moby* childMoby, u32 userdata, Moby* target);
 int spawnerOnChildConsiderRoamTarget(Moby* moby, Moby* childMoby, u32 userdata, VECTOR targetPosition);
+void spawnerOnChildGetRandomRoamTarget(Moby* moby, Moby* childMoby, VECTOR outPosition);
 struct Guber* spawnerGetGuber(Moby* moby);
 int spawnerHandleEvent(Moby* moby, GuberEvent* event);
 void spawnerStart(void);

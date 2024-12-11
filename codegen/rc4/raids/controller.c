@@ -98,7 +98,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_CHECK_PLAYER) {
     for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
       Player* p = players[j];
-      if (!p || !p->SkinMoby || !playerIsConnected(p)) continue;
+      if (!playerIsValid(p) || playerIsDead(p)) continue;
 
       // check if player is inside the cuboid
       int isInside = spawnPointIsPointInside(triggerCuboid, p->PlayerPosition, NULL);
@@ -171,7 +171,7 @@ int controllerIsPlayerButtonConditionTrue(Moby* moby, int conditionIdx, char val
 
   for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
     Player* p = players[j];
-    if (!p || !p->SkinMoby || !playerIsConnected(p)) continue;
+    if (!playerIsValid(p) || playerIsDead(p)) continue;
 
     // check if player is inside the cuboid
     int hasButtonMask = playerPadGetButton(p, condition->PlayerButtons.PadMask);
@@ -643,6 +643,7 @@ void controllerUpdate(Moby* moby)
   if (!gameAmIHost()) return;
   if (moby->State == CONTROLLER_STATE_DEACTIVATED) return;
   if (moby->State == CONTROLLER_STATE_COMPLETED) return;
+  if (MapConfig.State && MapConfig.State->MissionComplete) return;
 
   // update triggers
   controllerUpdateTriggers(moby);

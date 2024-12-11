@@ -57,6 +57,9 @@ void mobPreUpdate(Moby* moby);
 int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby);
 int mobIsProjectileComing(Moby* moby);
 
+int mobCollisionIdIsLethal(int collisionId);
+int mobCollisionIdIsWalkable(int collisionId);
+
 void mobInit(void);
 void mobTick(void);
 

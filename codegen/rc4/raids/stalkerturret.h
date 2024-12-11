@@ -102,6 +102,7 @@ typedef struct StalkerturretMobVars {
   char GatlingActive;
   char GatlingDelay1;
   char GatlingDelay2;
+  char Team;
 } StalkerturretMobVars_t;
 
 extern struct MobVTable StalkerturretVTable;

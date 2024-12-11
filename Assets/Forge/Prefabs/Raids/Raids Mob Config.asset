@@ -25,7 +25,7 @@ MonoBehaviour:
         SourceMapId: 2
         SourceMissionId: -1
     Behaviors: []
-    Xp: 15
+    Xp: 5
     Bolts: 150
     Damage: 10
     DamageMax: 0
@@ -67,7 +67,7 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 14
     Behaviors: []
-    Xp: 5
+    Xp: 1
     Bolts: 50
     Damage: 4
     DamageMax: 0
@@ -95,7 +95,7 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     Behaviors: []
-    Xp: 10
+    Xp: 2
     Bolts: 100
     Damage: 7
     DamageMax: 0

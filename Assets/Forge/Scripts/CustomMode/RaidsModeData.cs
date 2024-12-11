@@ -19,6 +19,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int CHECKPOINT_OCLASS = 0x4008;
     public static readonly int LASERBEAM_OCLASS = 0x4009;
     public static readonly int LASER_OCLASS = 0x400A;
+    public static readonly int PVARPOKE_OCLASS = 0x400B;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -72,6 +73,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laser.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pvarpoke.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
@@ -94,6 +96,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"checkpoint.h\"");
         state.Includes.Add("#include \"laser.h\"");
         state.Includes.Add("#include \"controller.h\"");
+        state.Includes.Add("#include \"pvarpoke.h\"");
         state.Includes.Add("#include \"mover.h\"");
         state.Includes.Add("#include \"mob.h\"");
         state.Includes.Add("#include \"shared.h\"");
@@ -119,6 +122,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"messagerInit();");
         state.InitBody.Add($"checkpointInit();");
         state.InitBody.Add($"laserInit();");
+        state.InitBody.Add($"pvarpokeInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
@@ -138,6 +142,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBodyReady.Add("npcStart();");
         state.MainBodyReady.Add("checkpointStart();");
         state.MainBodyReady.Add("laserStart();");
+        state.MainBodyReady.Add("pvarpokeStart();");
 
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
@@ -253,6 +258,19 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.RCVersion = RCVER.DL;
         moby.UpdateDistance = 255;
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Controller");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/PVar Poke Moby", priority = 10)]
+    public static void CreatePVarPokeMoby()
+    {
+        var go = new GameObject("PVar Poke");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = PVARPOKE_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("PVarPoke");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

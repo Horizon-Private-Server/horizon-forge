@@ -678,7 +678,14 @@
     "RCVersion": 4,
     "MobyOClass": 9266,
     "Length": 144,
-    "Default": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    "Default": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "Overlay": [
+      {
+        "Name": "Closed (Runtime Only)",
+        "DataType": "Bool",
+        "Offset": 136
+      }
+    ]
   },
   {
     "Name": "Hill (KOTH)",
@@ -3289,7 +3296,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 408,
+    "Length": 420,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3325,6 +3332,14 @@
         "Min": 0
       },
       {
+        "Name": "Limit Despawn Percent",
+        "DataType": "Float",
+        "Tooltip": "Limits despawn logic to never despawn more than this percent of mobs.",
+        "Offset": 80,
+        "Min": 0,
+        "Max": 1
+      },
+      {
         "Name": "Spawn Zones",
         "DataType": "CuboidRef",
         "Offset": 8,
@@ -3351,7 +3366,7 @@
       {
         "Name": "Mob Parameters",
         "DataType": "Struct",
-        "Offset": 80,
+        "Offset": 84,
         "DataSize": 28,
         "Count": 8,
         "Fields": [
@@ -4147,7 +4162,7 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 992,
+    "Length": 976,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -4499,6 +4514,51 @@
         "DataType": "Float",
         "Default": 1,
         "Offset": 28
+      }
+    ]
+  },
+  {
+    "Name": "Raids PVar Poke",
+    "RCVersion": 4,
+    "MobyOClass": 16395,
+    "Length": 16,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Target",
+        "DataType": "MobyRef",
+        "Offset": 4
+      },
+      {
+        "Name": "PVar",
+        "DataType": "MobyRefPVar",
+        "Ref": "Target",
+        "Offset": 8
+      },
+      {
+        "Name": "Value",
+        "DataType": "MobyRefPVarValue",
+        "Ref": "PVar",
+        "Offset": 16
       }
     ]
   }

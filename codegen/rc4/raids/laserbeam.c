@@ -50,11 +50,13 @@ void laserbeamPostDraw(Moby* moby)
 
   vector_scale(fireTo, fireForward, distance);
   vector_add(fireTo, fireTo, fireFrom);
+  weaponTurnOnHoloshields(-1);
   if (CollLine_Fix(fireFrom, fireTo, 0, moby->PParent, 0)) {
     vector_copy(fireTo, CollLine_Fix_GetHitPosition());
     distance = vector_distance(fireTo, fireFrom);
     hit = 1;
   }
+  weaponTurnOffHoloshields();
 
   // get vector perpendicular to camera (right/left)
   vector_subtract(camRight, camera->pos, fireFrom);

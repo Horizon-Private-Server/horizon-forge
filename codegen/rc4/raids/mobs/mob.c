@@ -25,6 +25,7 @@
 #include "maputils.h"
 #include "shared.h"
 #include "gate.h"
+#include "spawner.h"
 #include "pathfind.h"
 
 void mobForceIntoMapBounds(Moby* moby);
@@ -316,7 +317,7 @@ int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int fri
   if (!friendlyFire) {
     for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
       Player* player = players[i];
-      if (!player || !playerIsConnected(player) || playerIsDead(player))
+      if (!playerIsValid(player) || playerIsDead(player))
         continue;
 
       vector_subtract(delta, player->PlayerPosition, p);
@@ -561,10 +562,17 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
 }
 
 //--------------------------------------------------------------------------
-int mobHitIdIsBad(int hitId)
+int mobCollisionIdIsLethal(int collisionId)
 {
-  hitId &= 0x0f;
-  return hitId == 0x4 || hitId == 0xb || hitId == 0x0d;
+  collisionId &= 0x0f;
+  return collisionId == 0x4 || collisionId == 0xb || collisionId == 0x0d;
+}
+
+//--------------------------------------------------------------------------
+int mobCollisionIdIsWalkable(int collisionId)
+{
+  collisionId &= 0x0f;
+  return collisionId == 0x03 || collisionId == 0x07 || collisionId == 0x09 || collisionId == 0x0A || collisionId == 0x0E || collisionId == 0x0F;
 }
 
 //--------------------------------------------------------------------------
@@ -676,7 +684,7 @@ void mobMove(Moby* moby)
     vector_copy(groundCheckTo, ledgePos);
     groundCheckTo[2] = gameGetDeathHeight();
     if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
-      if (mobHitIdIsBad(CollLine_Fix_GetHitCollisionId())) {
+      if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
         nextPosHasSafeGround = 0;
       }
     } else {
@@ -696,7 +704,7 @@ void mobMove(Moby* moby)
         pvars->MobVars.MoveVars.Grounded = 1;
 
         // check if we've hit death barrier
-        if (isOwner && mobHitIdIsBad(CollLine_Fix_GetHitCollisionId())) {
+        if (isOwner && mobCollisionIdIsLethal(CollLine_Fix_GetHitCollisionId())) {
           pvars->MobVars.Respawn = 1;
         }
 
