@@ -44,7 +44,7 @@ public class CodeManager : MonoBehaviour
 #endif
     }
 
-    public bool Generate()
+    public bool Generate(CodeGenState state)
     {
         var scene = SceneManager.GetActiveScene();
         if (scene == null) return false;
@@ -55,7 +55,6 @@ public class CodeManager : MonoBehaviour
         // only DL is supported atm
         if (mapConfig.FirstRacVersion != RCVER.DL && mapConfig.SecondRacVersion != RCVER.DL) return false;
 
-        var state = new CodeGenState();
         state.Includes.Add($"#include \"common.h\"");
         state.ObjectFiles.Add("src/main.o");
         state.ObjectFiles.Add("src/common.o");
@@ -103,7 +102,13 @@ public class CodeManager : MonoBehaviour
 
         // write hook
         File.WriteAllBytes(Path.Combine(outDir, "hook.bin"), BitConverter.GetBytes(0x08000000 | (0x01EF0000 >> 2)));
+
         return true;
+    }
+
+    public void PostBuild(CodeGenState state)
+    {
+
     }
 
     string Indent(string str, int indent)

@@ -1806,9 +1806,11 @@ public static class ForgeBuilder
             var codeManager = GameObject.FindObjectOfType<CodeManager>();
             if (codeManager && codeManager.Enabled)
             {
-                if (codeManager.Generate())
+                var state = new CodeGenState();
+                if (codeManager.Generate(state))
                 {
                     await codeManager.Build(ctx.MapSceneName, ctx.RacVersion);
+                    codeManager.PostBuild(state);
                 }
             }
         }
