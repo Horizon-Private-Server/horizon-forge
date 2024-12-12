@@ -261,6 +261,8 @@ void gateOnGuberCreated(Moby* moby)
   pvars->Init = 0;
   pvars->Opacity = 0;
 
+  mobySetState(moby, pvars->DefaultState, -1);
+
   // update global collision data ptr
   if (!gateCollisionData)
     gateCollisionData = moby->CollData;

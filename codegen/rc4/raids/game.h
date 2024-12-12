@@ -32,7 +32,7 @@
 
 #define MAX_MOBS_BASE													(10)
 #define MAX_MOBS_ROUND_WEIGHT									(10)
-#define MAX_MOBS_ALIVE											  (60)
+#define MAX_MOBS_ALIVE											  (50)
 #define MAX_MOBS_ALIVE_BUFFER									(10)
 #define MAX_MOBS_ALIVE_REAL									  (MAX_MOBS_ALIVE - MAX_MOBS_ALIVE_BUFFER)
 

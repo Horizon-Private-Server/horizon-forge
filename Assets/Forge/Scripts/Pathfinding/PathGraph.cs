@@ -464,7 +464,7 @@ public class PathGraph : MonoBehaviour
   }},";
     }
 
-    public string ExportPathsAsC(string varPrefix, out int longestPath)
+    public string ExportPathsAsC(string varPrefix, out int longestPath, int maxPathSize = 3)
     {
         var str = "";
         var edgeIdxs = new List<int>();
@@ -503,6 +503,23 @@ public class PathGraph : MonoBehaviour
             }
         }
 
+        // limit longest path
+        if (longestPath > maxPathSize)
+            longestPath = maxPathSize;
+
+        // count unique paths
+        //var uniquePaths = new HashSet<string>();
+        //foreach (var path in paths)
+        //{
+        //    var pathStr = "";
+        //    for (int i = 0; i < longestPath; ++i)
+        //    {
+        //        pathStr += "," + path.ElementAtOrDefault(i);
+        //    }
+        //    uniquePaths.Add(pathStr);
+        //}
+        //Debug.Log($"Found {uniquePaths.Count}/{paths.Count} unique paths for {gameObject.name}");
+        
         // build list of nodes
         str += $"u8 {varPrefix}_PATHFINDING_PATHS[][{longestPath}] = {{\n";
         foreach (var path in paths)

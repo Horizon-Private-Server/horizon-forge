@@ -67,16 +67,8 @@ void checkpointOnStateChanged(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void checkpointUpdate(Moby* moby)
+void checkpointSetCuboid(Moby* moby)
 {
-  // detect when state was changed
-  if ((moby->Triggers & 1) == 0) {
-    checkpointOnStateChanged(moby);
-    moby->Triggers |= 1;
-  }
-
-  if (moby->State != CHECKPOINT_ACTIVE) return;
-
   // update cuboid
   int i;
   int spCount = spawnPointGetCount();
@@ -91,11 +83,28 @@ void checkpointUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void checkpointUpdate(Moby* moby)
+{
+  // detect when state was changed
+  if ((moby->Triggers & 1) == 0) {
+    checkpointOnStateChanged(moby);
+    moby->Triggers |= 1;
+  }
+
+  if (moby->State != CHECKPOINT_ACTIVE) return;
+
+  // update cuboid
+  checkpointSetCuboid(moby);
+}
+
+//--------------------------------------------------------------------------
 int checkpointSetActive(Moby* checkpointMoby)
 {
   if (!checkpointManagerMoby) return 0;
+  if (!gameAmIHost()) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
+
 
   // get index of checkpoint
   int idx = 0;
@@ -270,17 +279,20 @@ void checkpointInit(void)
 
       if (managerPvars && checkpointCount < CHECKPOINT_MAX_CHECKPOINTS) {
 
+        managerPvars->CheckpointMobys[checkpointCount] = moby;
+        checkpointCount++;
+        
         // set default state
         if (managerPvars->DefaultCheckpointMoby == moby) {
           DLOG_MNGR(checkpointManagerMoby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
           DLOG_CHPT(moby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
-          mobySetState(checkpointManagerMoby, checkpointCount, -1);
+          checkpointSetActive(moby);
+          checkpointSetCuboid(moby);
+          mobySetState(checkpointManagerMoby, checkpointCount-1, -1);
           mobySetState(moby, CHECKPOINT_ACTIVE, -1);
-          checkpointUpdate(moby);
+          //checkpointUpdate(moby);
         }
 
-        managerPvars->CheckpointMobys[checkpointCount] = moby;
-        checkpointCount++;
       }
     }
 

@@ -316,6 +316,8 @@ int controllerControlMobyState(Moby* moby, struct ControllerTarget* target)
   if (target->TargetUpdateType == CONTROLLER_TARGET_UPDATE_TYPE_MOBY_STATE_ADDITIVE)
     state += targetMoby->State;
 
+  DLOG(moby, "controller set %08X state %d=>%d\n", (u32)targetMoby, targetMoby->State, state);
+
   // only when state changes
   if (targetMoby->State == state) return 0;
 
@@ -324,8 +326,6 @@ int controllerControlMobyState(Moby* moby, struct ControllerTarget* target)
     guberMobyDestroy(targetMoby);
     return 1;
   }
-
-  DLOG(moby, "controller set %08X state %d=>%d\n", (u32)targetMoby, targetMoby->State, state);
 
   // handle special cases
   switch (targetMoby->OClass) {
@@ -489,7 +489,7 @@ int controllerControlGivePlayerHealth(Moby* moby, struct ControllerTarget* targe
     if ((target->RespawnPlayer.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
       if (target->GivePlayer.LivingOnly && playerIsDead(player)) continue;
       
-      if (target->GivePlayer.Amount > 0 && playerIsDead(player)) playerRespawn(player);
+      if (target->GivePlayer.Amount >= 0 && playerIsDead(player)) playerRespawn(player);
       if (target->GivePlayer.Amount == 0) playerSetHealth(player, player->MaxHealth);
       else playerSetHealth(player, clamp(player->Health + target->GivePlayer.Amount, 0, player->MaxHealth));
       

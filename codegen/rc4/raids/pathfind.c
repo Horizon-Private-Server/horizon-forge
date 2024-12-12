@@ -46,6 +46,18 @@ u8* pathGetPathAt(struct PathGraph* path, int fromNodeIdx, int toNodeIdx)
 }
 
 //--------------------------------------------------------------------------
+u8* pathGetEdge(struct PathGraph* path, u8 edge)
+{
+  if (!path)
+    return NULL;
+
+  if (PATH_EDGE_IS_EMPTY(edge))
+    return NULL;
+
+  return (u8*)path->Edges[edge];
+}
+
+//--------------------------------------------------------------------------
 void pathGetSegment(struct PathGraph* path, u8* currentEdge, VECTOR fromNodePos, VECTOR toNodePos)
 {
   if (!currentEdge || !path) return;
@@ -391,7 +403,7 @@ int pathShouldFindNewPath(struct PathGraph* path, Moby* moby, struct MobMoveVars
 //--------------------------------------------------------------------------
 int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
 {
-  int i;
+  int i,j;
   int inSight = 0;
   if (!moby || !moveVars || !path)
     return 0;
@@ -416,7 +428,30 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
       lastEdgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent - 1];
   }
 
-  memcpy(moveVars->CurrentPath, pathGetPathAt(path, closestNodeIdxToMob, closestNodeIdxToTarget), sizeof(u8) * path->MaxPathNodeCount);
+  // aggregate path by connecting segments from start to end
+  int currentNodeIdx = closestNodeIdxToMob;
+  int lastCurrentNodeIdx = -1;
+  int maxLength = sizeof(moveVars->CurrentPath) / sizeof(u8);
+  i = 0;
+  j = 0;
+  memset(moveVars->CurrentPath, -1, sizeof(moveVars->CurrentPath));
+  while (currentNodeIdx != closestNodeIdxToTarget) {
+    if (j >= maxLength) break;
+    if (lastCurrentNodeIdx == currentNodeIdx) break; // prevent inf loop
+
+    lastCurrentNodeIdx = currentNodeIdx;
+    u8* pathSegment = pathGetPathAt(path, currentNodeIdx, closestNodeIdxToTarget);
+    for (i = 0; j < maxLength && i < path->MaxPathNodeCount; ++i) {
+      u8 edge = pathSegment[i];
+      if (PATH_EDGE_IS_EMPTY(edge))
+        break;
+
+      moveVars->CurrentPath[j++] = edge;
+      u8* segment = pathGetEdge(path, edge);
+      currentNodeIdx = segment[1];
+    }
+  }
+
   moveVars->PathEdgeCurrent = 0;
   moveVars->PathEdgeAlpha = 0;
   moveVars->PathHasReachedStart = 0;
@@ -424,14 +459,8 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   moveVars->PathStartEndNodes[0] = closestNodeIdxToTarget;
   moveVars->PathStartEndNodes[1] = closestNodeIdxToMob;
   moveVars->WasStuckTicks = moveVars->IsStuck ? (TPS * 4) : 0;
+  moveVars->PathEdgeCount = j;
    
-  // count path length
-  for (i = 0; i < path->MaxPathNodeCount; ++i) {
-    if (PATH_EDGE_IS_EMPTY(moveVars->CurrentPath[i]))
-      break;
-  }
-  moveVars->PathEdgeCount = i;
-
   // check if we're on same segment as last
   int isOnSameSegment = 0;
   if (!PATH_EDGE_IS_EMPTY(lastEdgeIdx)) {
