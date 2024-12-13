@@ -13,17 +13,7 @@
 
 #define TPS																		(60)
 
-#define ZOMBIE_MOBY_OCLASS										(0x20F6)
-#define EXECUTIONER_MOBY_OCLASS							  (0x2468)
-#define TREMOR_MOBY_OCLASS							      (0x24D3)
-#define SWARMER_MOBY_OCLASS							      (0x2695)
-#define REAPER_MOBY_OCLASS							      (0x2570)
-#define REACTOR_MOBY_OCLASS							      (0x20BE)
 #define NPC_MOBY_OCLASS                       (0x4006)
-
-
-#define STATUE_MOBY_OCLASS                    (0x2402)
-#define BIGAL_MOBY_OCLASS                     (0x2124)
 
 #define GRAVITY_MAGNITUDE                     (15 * MATH_DT)
 
@@ -104,12 +94,6 @@
 #define PLAYER_KNOCKBACK_BASE_POWER						(3.0)
 #define PLAYER_KNOCKBACK_BASE_TICKS						(10)
 #define PLAYER_COLL_RADIUS          					(0.5)
-
-#define BIG_AL_MAX_DIST												(5)
-#define WEAPON_VENDOR_MAX_DIST								(3)
-#define WEAPON_UPGRADE_COOLDOWN_TICKS					(15)
-#define WEAPON_MENU_COOLDOWN_TICKS						(60)
-#define VENDOR_MAX_WEAPON_LEVEL								(9)
 
 #define PLAYER_SKILLPOINT_DAMAGE_FACTOR       (0.08)
 #define PLAYER_SKILLPOINT_SPEED_FACTOR        (0.03)
@@ -223,8 +207,6 @@ struct RaidsState
   int ClientsReady;
 	int MenuOpen;
   int OnHubWorld;
-	Moby* Vendor;
-	Moby* BigAl;
 	struct RaidsPlayer* LocalPlayerState;
 	int GameOver;
   int MissionComplete;
@@ -238,6 +220,7 @@ struct RaidsState
   float AmmoDropChance;
   int DifficultyStars;
   int PendingWorldHopAtTime;
+  int PendingWorldHopDifficultyStars;
   CustomMapDef_t* PendingWorldHopMapDef;
   CustomMapDef_t* CurrentMapDef;
 	char NumTeams;

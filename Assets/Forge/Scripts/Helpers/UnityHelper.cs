@@ -333,6 +333,8 @@ public static class UnityHelper
 
         var pvarData = pvarObject.GetPVarData();
         var pvarOverlay = pvarObject.GetPVarOverlay();
+        var pvarValues = pvarObject.GetPVarValues();
+        var pvarRefs = pvarObject.GetPVarReferences();
 
         // validate pvars
         var expectedPvarSize = pvarOverlay?.GetLength(pvarObject) ?? 0;
@@ -349,6 +351,21 @@ public static class UnityHelper
                     Array.Copy(pvarOverlay.DefaultBytes, lastLength, pvarData, lastLength, expectedPvarSize - lastLength);
 
                 pvarObject.SetPVarData(pvarData);
+
+                // find missing fields, set to default
+                var paths = pvarOverlay.GetPVarPaths(pvarObject);
+                if (paths != null)
+                {
+                    foreach (var path in paths)
+                    {
+                        if (!pvarValues.ContainsPath(path) && !pvarRefs.ContainsPath(path))
+                        {
+                            var def = pvarOverlay.GetPVarMetadata(path);
+                            Array.Copy(pvarOverlay.DefaultBytes, def.Offset, pvarData, def.Offset, def.Size);
+                            InitializePVarField(mapConfig, pvarOverlay, pvarObject, path, def.Field, def.Offset - def.Field.Offset);
+                        }
+                    }
+                }
             }
 
             InitializePVars(mapConfig, pvarObject, useDefault: pvarData == null);
@@ -1530,8 +1547,8 @@ public static class UnityHelper
                 var path2 = path + $".{def.Name}";
                 if (count > 1)
                 {
-                    name = $"[{i}]";
-                    path2 += name;
+                    path2 += $"[{i}]";
+                    name = def.Labels?.ElementAtOrDefault(i) ?? $"[{i}]";
                 }
 
                 draw(defOffset, name, path2);
@@ -2005,12 +2022,14 @@ public static class UnityHelper
     {
         if (!src) return null;
 
+        var lastActive = RenderTexture.active;
         RenderTexture rt = new RenderTexture(width, height, 24);
         RenderTexture.active = rt;
         Graphics.Blit(src, rt);
         Texture2D result = new Texture2D(width, height);
         result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         result.Apply();
+        RenderTexture.active = lastActive;
         rt.Release();
         return result;
     }

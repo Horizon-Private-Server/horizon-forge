@@ -641,6 +641,7 @@ void controllerUpdate(Moby* moby)
   }
 
   if (!gameAmIHost()) return;
+  if (!missionIsActive()) return;
   if (moby->State == CONTROLLER_STATE_DEACTIVATED) return;
   if (moby->State == CONTROLLER_STATE_COMPLETED) return;
   if (MapConfig.State && MapConfig.State->MissionComplete) return;

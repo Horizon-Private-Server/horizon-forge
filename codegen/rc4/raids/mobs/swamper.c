@@ -201,7 +201,7 @@ void swamperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 	moby->PrimaryColor = SWAMPER_PRIMARY_COLOR;
 
   // targeting
-	pvars->TargetVars.targetHeight = 1 + (scale * 0.25);
+	pvars->TargetVars.targetHeight = 0.5 + (scale * 0.25);
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;

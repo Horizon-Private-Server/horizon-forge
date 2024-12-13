@@ -3296,7 +3296,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 420,
+    "Length": 456,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3326,18 +3326,43 @@
         "Offset": 72
       },
       {
-        "Name": "Number of Mobs to Spawn",
-        "DataType": "Integer",
-        "Offset": 76,
-        "Min": 0
-      },
-      {
         "Name": "Limit Despawn Percent",
         "DataType": "Float",
         "Tooltip": "Limits despawn logic to never despawn more than this percent of mobs.",
-        "Offset": 80,
+        "Offset": 76,
         "Min": 0,
         "Max": 1
+      },
+      {
+        "Name": "Spawn Config (Per Difficulty)",
+        "DataType": "Struct",
+        "DataSize": 8,
+        "Offset": 80,
+        "Count": 5,
+        "Labels": [
+          "1 Star",
+          "2 Stars",
+          "3 Stars",
+          "4 Stars",
+          "5 Stars"
+        ],
+        "Fields": [
+          {
+            "Name": "Number of Mobs to Spawn",
+            "Tooltip": "If you want the spawner to run forever, set this to a very large number.",
+            "DataType": "Integer",
+            "Offset": 0,
+            "Min": 0
+          },
+          {
+            "Name": "Spawn Rate Multiplier",
+            "Tooltip": "Adjusts the cooldown of the configured mobs.",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0,
+            "Default": 1.0
+          }
+        ]
       },
       {
         "Name": "Spawn Zones",
@@ -3366,7 +3391,7 @@
       {
         "Name": "Mob Parameters",
         "DataType": "Struct",
-        "Offset": 84,
+        "Offset": 120,
         "DataSize": 28,
         "Count": 8,
         "Fields": [

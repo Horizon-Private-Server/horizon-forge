@@ -374,13 +374,51 @@ int hasPendingWorldHop(void)
 }
 
 //--------------------------------------------------------------------------
+int missionIsComplete(void)
+{
+  return MapConfig.State && MapConfig.State->MissionComplete;
+}
+
+//--------------------------------------------------------------------------
 int isOnHubWorld(void)
 {
   return MapConfig.State && MapConfig.State->OnHubWorld;
 }
 
 //--------------------------------------------------------------------------
-void replenishAmmo(void)
+int missionIsActive(void)
+{
+  return !hasPendingWorldHop() && !missionIsComplete();
+}
+
+//--------------------------------------------------------------------------
+int bankTryChargeLocalAccount(u32 cost)
+{
+  if (!MapConfig.GetBankFunc) return 0;
+
+  RaidsPlayerBank_t* bank = MapConfig.GetBankFunc();
+  if (!bank) return 0;
+
+  if (bank->Account.Bolts < cost) return 0;
+
+  // charge
+  bank->Account.Bolts -= cost;
+
+  // send new bolts to server
+  if (MapConfig.SendBankAccountToServerFunc)
+    MapConfig.SendBankAccountToServerFunc();
+
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int getAmmoRefillCost(Player* player)
+{
+
+}
+
+//--------------------------------------------------------------------------
+void replenishAmmo(Player* player)
 {
   // if any weapon ran out of ammo, return back to max
   int i;

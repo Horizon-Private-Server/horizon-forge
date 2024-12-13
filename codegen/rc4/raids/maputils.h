@@ -54,8 +54,13 @@ int selectRandomIndex(int count, void* userdata, CanSelectIndex_func canSelectIn
 
 int hasPendingWorldHop(void);
 int isOnHubWorld(void);
+int missionIsComplete(void);
+int missionIsActive(void);
 
-void replenishAmmo(void);
+int bankTryChargeLocalAccount(u32 cost);
+
+int getAmmoRefillCost(Player* player);
+void replenishAmmo(Player* player);
 void respawnAllPlayers(void);
 
 #endif // RAIDS_MAP_UTILS_H

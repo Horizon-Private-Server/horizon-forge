@@ -49,6 +49,13 @@ int spawnerSpawnRequestsCount = 0;
 struct SpawnerSpawnRequest spawnerSpawnRequests[SPAWNER_MAX_SPAWN_REQUESTS];
 
 //--------------------------------------------------------------------------
+struct SpawnerSpawnConfig* spawnerGetConfig(Moby* moby)
+{
+  struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+  return &pvars->Config[MapConfig.State ? MapConfig.State->DifficultyStars : 0];
+}
+
+//--------------------------------------------------------------------------
 void spawnerRequestSpawn(Moby* moby, struct MobCreateArgs* args)
 {
   // should iterate requests and replace the spawner the furthest from any player
@@ -144,6 +151,7 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
 
   if (spawnerGetRandomSpawnPoint(moby, mobParamsIdx, args.Position, &args.Yaw)) {
     spawnerRequestSpawn(moby, &args);
+    return 1;
     // if (MapConfig.TryCreateMobFunc(&args)) {
     //   pvars->State.NumSpawned[mobParamsIdx]++;
     //   pvars->State.NumTotalSpawned++;
@@ -158,6 +166,10 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
 int spawnerSpawnRandom(Moby* moby)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+  struct SpawnerSpawnConfig* config = spawnerGetConfig(moby);
+
+  if (config->SpawnRateMultiplier <= 0.000001)
+    return 0;
 
   int spawnerMobIdx = selectRandomIndex(SPAWNER_MAX_MOB_TYPES, moby, &spawnerIsValidMobSpawnIdx);
   if (spawnerMobIdx < 0) return 0;
@@ -183,7 +195,7 @@ int spawnerSpawnRandom(Moby* moby)
 
   // spawn
   if (spawnerSpawn(moby, spawnerMobIdx, -1)) {
-    pvars->State.Cooldown[spawnerMobIdx] = mobParams->CooldownTicks;
+    pvars->State.Cooldown[spawnerMobIdx] = mobParams->CooldownTicks / config->SpawnRateMultiplier;
     return 1;
   }
 
@@ -194,15 +206,17 @@ int spawnerSpawnRandom(Moby* moby)
 int spawnerIsCompleted(Moby* moby)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+  struct SpawnerSpawnConfig* config = spawnerGetConfig(moby);
 
   if (MapConfig.State && MapConfig.State->MissionComplete) return 1;
-  return pvars->State.NumTotalKilled >= pvars->NumMobsToSpawn;
+  return pvars->State.NumTotalKilled >= config->NumMobsToSpawn;
 }
 
 //--------------------------------------------------------------------------
 int spawnerCanSpawn(Moby* moby)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+  struct SpawnerSpawnConfig* config = spawnerGetConfig(moby);
 
   // if (MapConfig.State) {
   //   int totalAlive = MapConfig.State->MobStats.TotalAlive; // + MapConfig.State->MobStats.TotalSpawning;
@@ -210,7 +224,7 @@ int spawnerCanSpawn(Moby* moby)
   // }
   
   int total = pvars->State.NumTotalSpawned + pvars->State.NumTotalKilled;
-  return moby->State == SPAWNER_STATE_ACTIVATED && !spawnerIsCompleted(moby) && total < pvars->NumMobsToSpawn;
+  return moby->State == SPAWNER_STATE_ACTIVATED && !spawnerIsCompleted(moby) && total < config->NumMobsToSpawn;
 }
 
 //--------------------------------------------------------------------------
@@ -302,6 +316,7 @@ void spawnerUpdate(Moby* moby)
   }
 
   if (!gameAmIHost()) return;
+  if (!missionIsActive()) return;
 
   // check if completed
   if (moby->State != SPAWNER_STATE_COMPLETED && spawnerIsCompleted(moby)) {
@@ -543,13 +558,13 @@ void spawnerOnGuberCreated(Moby* moby)
 
   // print pvars
   #if PRINT_SPAWNER_PVARS
-    DLOG(moby, "NumMobsToSpawn=%d\n", pvars->NumMobsToSpawn);
-    DLOG(moby, "PathGraphIdx=%d\n", pvars->PathGraphIdx);
-    DLOG(moby, "TriggerCuboids\n");
-    for (i = 0; i < SPAWNER_MAX_TRIGGER_CUBOIDS; ++i) {
-      DLOG(moby, " [%d].CuboidIdx=%d\n", i, pvars->TriggerCuboids[i].CuboidIdx);
-      DLOG(moby, " [%d].InteractType=%d\n", i, pvars->TriggerCuboids[i].InteractType);
+    int i;
+    DLOG(moby, "Configs\n");
+    for (i = 0; i < RAIDS_DIFFICULTY_COUNT; ++i) {
+      DLOG(moby, " [%d].NumMobsToSpawn=%d\n", i, pvars->Config[i].NumMobsToSpawn);
+      DLOG(moby, " [%d].SpawnRateMultiplier=%f\n", i, pvars->Config[i].SpawnRateMultiplier);
     }
+    DLOG(moby, "PathGraphIdx=%d\n", pvars->PathGraphIdx);
     DLOG(moby, "SpawnCuboidIds\n");
     for (i = 0; i < SPAWNER_MAX_SPAWN_CUBOIDS; ++i) { DLOG(moby, " [%d]=%d\n", i, pvars->SpawnCuboidIds[i]); }
     DLOG(moby, "SpawnableMobParam\n");

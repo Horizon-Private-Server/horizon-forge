@@ -8,8 +8,9 @@
 #include <libdl/player.h>
 #include <libdl/math3d.h>
 
-#define BANK_MAX_WEAPONS                 (64)
-#define BANK_UPDATE_WEAPONS_SIZE         (16)
+#define BANK_MAX_ITEMS                 (64)
+#define BANK_UPDATE_SIZE                 (16)
+#define BANK_BADGE_GADGET_ID             (0x41)
 
 enum RaidsGadgetPaintSpecialMask
 {
@@ -18,20 +19,37 @@ enum RaidsGadgetPaintSpecialMask
   RAIDS_GADGET_PAINTSPECIAL_ADDITIVE = 0x02,
 };
 
-enum RaidsWeaponRarity
+enum RaidsItemRarity
 {
-  RAIDS_WEAPON_RARITY_COMMON = 0,
-  RAIDS_WEAPON_RARITY_UNCOMMON,
-  RAIDS_WEAPON_RARITY_RARE,
-  RAIDS_WEAPON_RARITY_LEGENDARY,
-  RAIDS_WEAPON_RARITY_COUNT,
+  RAIDS_ITEM_RARITY_COMMON = 0,
+  RAIDS_ITEM_RARITY_UNCOMMON,
+  RAIDS_ITEM_RARITY_RARE,
+  RAIDS_ITEM_RARITY_LEGENDARY,
+  RAIDS_ITEM_RARITY_MYTHIC,
+  RAIDS_ITEM_RARITY_COUNT,
 };
 
-enum RaidsInventoryWeaponNotify
+enum RaidsInventoryItemNotify
 {
-  RAIDS_WEAPON_NOTIFY_NONE = 0,
-  RAIDS_WEAPON_NOTIFY_NEW,
-  RAIDS_WEAPON_NOTIFY_FAV,
+  RAIDS_ITEM_NOTIFY_NONE = 0,
+  RAIDS_ITEM_NOTIFY_NEW,
+  RAIDS_ITEM_NOTIFY_FAV,
+};
+
+enum RaidsBadgeType
+{
+  RAIDS_BADGE_TYPE_NONE = 0,
+  RAIDS_BADGE_TYPE_HEALTH_REGEN,
+  RAIDS_BADGE_TYPE_AMMO_REGEN,
+  RAIDS_BADGE_TYPE_EXTRA_JUMP,
+  RAIDS_BADGE_TYPE_SHARPSHOOTER,
+  RAIDS_BADGE_TYPE_BERSERKER,
+  RAIDS_BADGE_TYPE_DAMAGE_COOLDOWN,
+  RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH,
+  RAIDS_BADGE_TYPE_INFINITE_CHARGEBOOT,
+  RAIDS_BADGE_TYPE_HOVERBOOTS,
+  RAIDS_BADGE_TYPE_EXTRALIFE,
+  RAIDS_BADGE_TYPE_COUNT
 };
 
 enum RaidsSkills
@@ -43,7 +61,7 @@ enum RaidsSkills
   RAIDS_SKILLS_COUNT
 };
 
-typedef struct RaidsInventoryWeapon
+typedef struct RaidsInventoryItem
 {
   int Damage; // damage
   float Speed;  // speed of projectile
@@ -56,13 +74,14 @@ typedef struct RaidsInventoryWeapon
   u8 OmegaMod;
   char Notify;
   u8 AlphaModCounts[ALPHA_MOD_COUNT-1];
-} RaidsInventoryWeapon_t;
+} RaidsInventoryItem_t;
 
 typedef struct RaidsPlayerInventory
 {
-  RaidsInventoryWeapon_t Weapons[BANK_MAX_WEAPONS];
+  RaidsInventoryItem_t Items[BANK_MAX_ITEMS];
   u32 TotalWeapons;
   int RefreshLocalInventory;
+  char EquippedBadgeIdx;
   char EquippedWeaponIdxs[WEAPON_SLOT_COUNT-1];
 } RaidsPlayerInventory_t;
 
@@ -83,7 +102,7 @@ typedef struct RaidsPlayerBank
 
 typedef struct RaidsPlayerEquippedInventory
 {
-  RaidsInventoryWeapon_t Weapons[WEAPON_SLOT_COUNT-1];
+  RaidsInventoryItem_t Items[WEAPON_SLOT_COUNT-1];
 } RaidsPlayerEquippedInventory_t;
 
 struct RaidsGetBankRequest
@@ -97,7 +116,8 @@ struct RaidsUpdateBankInventoryRequest
 {
   int Index;
   int Count;
-  RaidsInventoryWeapon_t Weapons[BANK_UPDATE_WEAPONS_SIZE];
+  RaidsInventoryItem_t Items[BANK_UPDATE_SIZE];
+  char EquippedBadgeIdx;
   char EquippedWeaponIdxs[WEAPON_SLOT_COUNT-1];
 };
 
@@ -118,6 +138,10 @@ int bankHasPendingInventoryRequest(void);
 int bankGetHasAccount(void);
 int bankHasPendingAccountRequest(void);
 
+int bankItemIsWeapon(RaidsInventoryItem_t* item);
+int bankItemIsBadge(RaidsInventoryItem_t* item);
+void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize);
+
 u32 bankGetBolts(void);
 u32 bankAddBolts(u32 amount);
 u32 bankSubtractBolts(u32 amount);
@@ -132,14 +156,18 @@ void bankRequestAccountFromServer(void);
 void bankSendAccountToServer(void);
 
 RaidsPlayerBank_t* bankGetLocalBank(void);
-RaidsInventoryWeapon_t* bankGetLocalWeaponFromBank(int index);
-void bankEquipLocalWeaponAtIndex(int weaponIdx);
-void bankSellLocalWeaponAtIndex(int weaponIdx);
+RaidsInventoryItem_t* bankGetLocalItemFromBank(int index);
+RaidsInventoryItem_t* bankGetLocalWeaponFromBank(int index);
+RaidsInventoryItem_t* bankGetLocalBadgeFromBank(int index);
+RaidsInventoryItem_t* bankGetLocalEquippedBadge(void);
+void bankEquipLocalItemAtIndex(int weaponIdx);
+void bankSellLocalItemAtIndex(int weaponIdx);
 int bankGetEquipSlotFromGadgetId(int gadgetId);
-RaidsInventoryWeapon_t* bankGetLocalEquippedWeapon(int gadgetId);
+RaidsInventoryItem_t* bankGetLocalEquippedWeapon(int gadgetId);
+int bankGetPlayerIdxFromGadgetBox(GadgetBox* gbox);
 RaidsPlayerEquippedInventory_t* bankGetEquippedFromGadgetBox(GadgetBox* gbox);
-RaidsInventoryWeapon_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int gadgetId);
-enum RaidsWeaponRarity bankGetRarityFromQuality(u8 quality);
+RaidsInventoryItem_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int gadgetId);
+enum RaidsItemRarity bankGetRarityFromQuality(u8 quality);
 
 void bankOpen(void);
 void bankClose(void);

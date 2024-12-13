@@ -38,6 +38,12 @@ struct SpawnerSpawnRequest
   struct MobCreateArgs SpawnArgs;
 };
 
+struct SpawnerSpawnConfig
+{
+  int NumMobsToSpawn;
+  float SpawnRateMultiplier;
+};
+
 struct SpawnerMobParams
 {
   int MobParamIdx;
@@ -71,8 +77,8 @@ struct SpawnerPVar
   int AggroCuboidIds[SPAWNER_MAX_AGGRO_CUBOIDS];
   int RoamableCuboidIds[SPAWNER_MAX_ROAMABLE_CUBOIDS];
   int PathGraphIdx;
-  int NumMobsToSpawn;
   float LimitDespawnPercent;
+  struct SpawnerSpawnConfig Config[RAIDS_DIFFICULTY_COUNT];
   struct SpawnerMobParams SpawnableMobParam[SPAWNER_MAX_MOB_TYPES];
   struct SpawnerRuntimeState State;
 };

@@ -555,6 +555,7 @@ public class PvarOverlayDef
     public float? Min { get; set; }
     public float? Max { get; set; }
     public string Default { get; set; }
+    public List<string> Labels { get; set; }
     public List<PvarOverlayDef> Fields { get; set; }
     public List<PvarOverlayDisplayRule> DisplayIf { get; set; }
     public int? Order { get; set; }
