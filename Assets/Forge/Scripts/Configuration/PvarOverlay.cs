@@ -257,7 +257,7 @@ public class PvarOverlay
 
         foreach (var def in this.Overlay)
         {
-            if (def.Default != null || def.IsReferenceType())
+            if (String.IsNullOrEmpty(str) || def.Default != null || def.IsReferenceType())
             {
                 SetDefaultBytes(this, def, DefaultBytes);
             }
@@ -576,6 +576,7 @@ public class PvarOverlayDef
             case "byte":
             case "sbyte":
             case "team":
+            case "bliptype":
             case "bool": return 1;
 
             case "padmask": return 2;
@@ -656,6 +657,7 @@ public class PvarOverlayDef
         {
             case "bool": return buffer[0] != 0;
             case "team":
+            case "bliptype":
             case "byte": return buffer[0];
             case "sbyte": return (sbyte)buffer[0];
             case "fxtex":
@@ -702,6 +704,7 @@ public class PvarOverlayDef
         {
             case "bool": buffer[0] = (byte)(((bool?)value ?? false) ? 1 : 0); break;
             case "team": buffer[0] = (byte)((DLTeamIds?)value ?? 0); break;
+            case "bliptype": buffer[0] = (byte)((DLBlipTypes?)value ?? 0); break;
             case "byte": buffer[0] = (byte)((byte?)value ?? 0); break;
             case "sbyte": buffer[0] = (byte)((sbyte?)value ?? 0); break;
             case "fxtex":
@@ -837,6 +840,7 @@ public class PvarOverlayDef
 
                     return new Color32(0, 0, 0, 0);
                 }
+            case "bliptype": return Enum.TryParse<DLBlipTypes>(v, out var blipType) ? blipType : DLBlipTypes.Player;
             case "team": return Enum.TryParse<DLTeamIds>(v, out var teamId) ? teamId : DLTeamIds.Blue;
             case "fxtex": return Enum.TryParse<DLFXTextureIds>(v, out var fxtexId) ? fxtexId : DLFXTextureIds.FX_LAME_SHADOW;
             case "levelfxtex": return Enum.TryParse<DLLevelFXTextureIds>(v, out var lvlfxtexId) ? lvlfxtexId : DLLevelFXTextureIds.FX_LEVEL_0;

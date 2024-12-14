@@ -20,6 +20,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int LASERBEAM_OCLASS = 0x4009;
     public static readonly int LASER_OCLASS = 0x400A;
     public static readonly int PVARPOKE_OCLASS = 0x400B;
+    public static readonly int BLIP_OCLASS = 0x400C;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -81,6 +82,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
         state.LDFlags.Add("-DGATE");
@@ -110,6 +112,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"badges.h\"");
         state.Includes.Add("#include \"ammodrop.h\"");
         state.Includes.Add("#include \"hackerorb.h\"");
+        state.Includes.Add("#include \"blip.h\"");
 
         state.Declarations.Add("void configInit(void);");
         state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,\r\n};");
@@ -137,6 +140,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"badgesInit();");
         state.InitBody.Add($"ammodropInit();");
         state.InitBody.Add($"hackerorbInit();");
+        state.InitBody.Add($"blipInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
@@ -385,6 +389,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.UpdateDistance = 255;
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Laser");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Radar Blip Moby", priority = 10)]
+    public static void CreateRadarBlipMoby()
+    {
+        var go = new GameObject("Radar Blip Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = BLIP_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Radar Blip");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

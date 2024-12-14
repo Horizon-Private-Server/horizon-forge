@@ -920,6 +920,21 @@ public static class UnityHelper
                     }
                     break;
                 }
+            case "bliptype":
+                {
+                    // read value
+                    string strValue = pvarValues[path];
+                    int value = (int)def.FromString(strValue);
+                    if (strValue == null) value = (byte?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
+
+                    EditorGUI.BeginChangeCheck();
+                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLBlipTypes)value, def.Min, def.Max);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
+                    }
+                    break;
+                }
             case "fxtex":
                 {
                     // read value

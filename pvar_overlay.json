@@ -4626,5 +4626,45 @@
         "Offset": 16
       }
     ]
+  },
+  {
+    "Name": "Raids Radar Blip",
+    "RCVersion": 4,
+    "MobyOClass": 16396,
+    "Length": 8,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Blip Type",
+        "DataType": "BlipType",
+        "Offset": 1,
+        "DataSize": 1
+      },
+      {
+        "Name": "Blip Team",
+        "DataType": "Team",
+        "Offset": 2,
+        "DataSize": 1
+      },
+      {
+        "Name": "Attach To",
+        "DataType": "MobyRef",
+        "Offset": 4
+      }
+    ]
   }
 ]
