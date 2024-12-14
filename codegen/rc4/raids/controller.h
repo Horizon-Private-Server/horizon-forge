@@ -79,6 +79,8 @@ enum ControllerTargetUpdateType {
   CONTROLLER_TARGET_UPDATE_TYPE_RESPAWN,
   CONTROLLER_TARGET_UPDATE_TYPE_COMPLETE_MISSION,
   CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT,
+  CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY,
+  CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER,
 };
 
 struct ControllerRuntimeState
@@ -183,6 +185,17 @@ struct ControllerTarget
       char TriggeredOnly;
       char DeadOnly;
     } RespawnPlayer;
+
+    // values
+    struct {
+      union {
+        long LongValue;
+        float FloatValue;
+        int IntValue;
+        char CharValue;
+        short ShortValue;
+      };
+    } Value;
   };
 };
 
@@ -191,8 +204,8 @@ struct ControllerPVar
   int Init;
   char DefaultState;
   char Log;
-  struct ControllerTarget Targets[CONTROLLER_MAX_TARGETS];
   char TriggerIfAllTrue;
+  struct ControllerTarget Targets[CONTROLLER_MAX_TARGETS];
   short Repeat;
   struct ControllerCondition Conditions[CONTROLLER_MAX_CONDITIONS];
   struct ControllerRuntimeState State;

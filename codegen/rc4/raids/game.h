@@ -145,6 +145,7 @@ struct MobCreateArgs;
 
 typedef void (*PushSnack_func)(char * string, int ticksAlive, int localPlayerIdx);
 typedef RaidsPlayerBank_t* (*GetBank_func)(void);
+typedef long (*GetAmmoRefillCost_func)(Player* player);
 typedef void (*BeginWorldHop_func)(char* mapFilename, int difficulty, int cost, int delayMs);
 typedef void (*SendBankAccountToServer_func)(void);
 typedef void (*PopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobConfig* config, int spawnParamsIdx, int isBaseConfig, float difficultyMult);
@@ -157,6 +158,7 @@ typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobUpdate_func)(Moby* moby);
 typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, int weaponId);
+typedef void (*MapCreateAmmoDropAt_func)(Moby* moby);
 typedef void (*FrameTick_func)(void);
 
 struct RaidsPlayerState
@@ -215,9 +217,11 @@ struct RaidsState
 	int WinningTeam;
 	int ActivePlayerCount;
 	int AlivePlayerCount;
+  int TicksWithNoLivingPlayers;
 	int IsHost;
 	float Difficulty;
   float AmmoDropChance;
+  float AmmoRefillCostMultiplier;
   int DifficultyStars;
   int PendingWorldHopAtTime;
   int PendingWorldHopDifficultyStars;
@@ -237,6 +241,7 @@ struct RaidsMapConfig
   // mode
   PushSnack_func PushSnackFunc;
   GetBank_func GetBankFunc;
+  GetAmmoRefillCost_func GetAmmoRefillCostFunc;
   BeginWorldHop_func BeginWorldHopFunc;
   SendBankAccountToServer_func SendBankAccountToServerFunc;
   PopulateSpawnArgs_func PopulateSpawnArgsFunc;
@@ -250,6 +255,7 @@ struct RaidsMapConfig
   MapOnMobSpawned_func OnMobSpawnedFunc;
   MapOnMobUpdate_func OnMobUpdateFunc;
   MapOnMobKilled_func OnMobKilledFunc;
+  MapCreateAmmoDropAt_func CreateAmmoDropAtFunc;
   FrameTick_func OnFrameTickFunc;
 };
 

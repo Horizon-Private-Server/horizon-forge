@@ -57,7 +57,7 @@ int isOnHubWorld(void);
 int missionIsComplete(void);
 int missionIsActive(void);
 
-int bankTryChargeLocalAccount(u32 cost);
+int bankTryChargeLocalAccount(Player* player, u32 cost);
 
 int getAmmoRefillCost(Player* player);
 void replenishAmmo(Player* player);

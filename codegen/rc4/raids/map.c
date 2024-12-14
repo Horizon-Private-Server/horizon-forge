@@ -13,6 +13,7 @@
 #include "mover.h"
 #include "gate.h"
 #include "controller.h"
+#include "hackerorb.h"
 #include "checkpoint.h"
 #include "mob.h"
 #include "game.h"
@@ -68,6 +69,7 @@ struct Guber* mapGetGuber(Moby* moby)
     case CONTROLLER_OCLASS: return controllerGetGuber(moby);
     case CHECKPOINT_MANAGER_OCLASS:
     case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);
+    case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);
 #if GATE
     case GATE_OCLASS: return gateGetGuber(moby);
 #endif
@@ -109,6 +111,7 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
       case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;
       case CHECKPOINT_MANAGER_OCLASS:
       case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;
+      case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;
 #if GATE
     case GATE_OCLASS: gateHandleEvent(moby, event); break;
 #endif
@@ -142,4 +145,10 @@ void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
   mobyFunctions->GetGuberObject = &mapGetGuber;
   mobyFunctions->GetMobyInterface = NULL;
   mobyFunctions->MobyEventHandler = &mapHandleEvent;
+}
+
+//--------------------------------------------------------------------------
+void mapInit(void)
+{
+
 }

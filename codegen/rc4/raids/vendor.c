@@ -33,14 +33,11 @@
 #include "vendor.h"
 #include "game.h"
 
-extern char LocalPlayerStrBuffer[2][64];
+extern char LocalPlayerStrBuffer[GAME_MAX_LOCALS][64];
 
 //--------------------------------------------------------------------------
 void vendorUpdate(Moby* moby)
 {
-  if (!moby || !moby->PVar)
-    return;
-  
   if (!MapConfig.State)
     return;
 
@@ -52,21 +49,23 @@ void vendorUpdate(Moby* moby)
       continue;
     
 	  struct RaidsPlayer * playerData = &MapConfig.State->PlayerStates[player->PlayerId];
-    vector_subtract(dt, player->PlayerPosition, moby->Position);
-    if (vector_sqrmag(dt) < (VENDOR_INTERACT_RADIUS * VENDOR_INTERACT_RADIUS)) {
-      
-      // get cost
-      int cost = getAmmoRefillCost(player);
-      if (cost >= 0) {
+    if (playerData->ActionCooldownTicks == 0) {
+      vector_subtract(dt, player->PlayerPosition, moby->Position);
+      if (vector_sqrmag(dt) < (VENDOR_INTERACT_RADIUS * VENDOR_INTERACT_RADIUS)) {
+        
+        // get cost
+        int cost = getAmmoRefillCost(player);
+        if (cost >= 0) {
 
-        // draw help popup
-        snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "Refill Ammo \x0E%'d", cost);
-        uiShowPopup(i, LocalPlayerStrBuffer[i]);
-        playerData->MessageCooldownTicks = 3;
+          // draw help popup
+          snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "\x11 Refill Ammo \x0E%'d", cost);
+          uiShowPopup(i, LocalPlayerStrBuffer[i]);
+          playerData->MessageCooldownTicks = 3;
 
-        if (padGetButtonDown(i, PAD_CIRCLE) > 0 && bankTryChargeLocalAccount(cost)) {
-          playerData->ActionCooldownTicks = 2;
-          replenishAmmo();
+          if (padGetButtonDown(i, PAD_CIRCLE) > 0 && bankTryChargeLocalAccount(player, cost)) {
+            playerData->ActionCooldownTicks = TPS;
+            replenishAmmo(player);
+          }
         }
       }
     }
@@ -87,10 +86,11 @@ void vendorInit(void)
   Moby* moby = mobyListGetStart();
 	while ((moby = mobyFindNextByOClass(moby, VENDOR_OCLASS)))
 	{
-		if (!mobyIsDestroyed(moby) && moby->PVar) {
+		if (!mobyIsDestroyed(moby)) {
       DPRINTF("found vendor %08X\n", (u32)moby);
 
       moby->PUpdate = vendorUpdate;
+      moby->ModeBits &= ~MOBY_MODE_BIT_NO_UPDATE;
     }
 
 		++moby;

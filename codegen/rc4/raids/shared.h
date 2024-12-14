@@ -29,6 +29,7 @@ void mapOnMobSpawned(Moby* moby);
 struct Guber* mapGetGuber(Moby* moby);
 void mapHandleEvent(Moby* moby, GuberEvent* event);
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);
+void mapInit(void);
 
 int mobAmIOwner(Moby* moby);
 void mobResetSoundTrigger(Moby* moby);

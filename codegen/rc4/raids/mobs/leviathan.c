@@ -42,6 +42,7 @@ int leviathanCanAttack(struct MobPVar* pvars);
 int leviathanIsFlinching(Moby* moby);
 int leviathanIsDying(Moby* moby);
 int leviathanShouldStrafe(Moby* moby);
+int leviathanGetLaserForTicks(Moby* moby);
 
 struct MobVTable LeviathanVTable = {
   .PreUpdate = &leviathanPreUpdate,
@@ -567,7 +568,7 @@ int leviathanDoActionMove(Moby* moby)
     if (dir != 0 && sqrDistToTarget < (LEVIATHAN_CHASE_TARGET_RADIUS*LEVIATHAN_CHASE_TARGET_RADIUS)) {
       // move towards target if normal/aggro
       // move away if evasive
-      vector_scale(strafeFwd, moby->M0_03, behavior == LEVIATHAN_BEHAVIOR_EVASIVE ? -3 : 3);
+      vector_scale(strafeFwd, moby->M0_03, behavior == LEVIATHAN_BEHAVIOR_EVASIVE ? -5 : 5);
       vector_add(strafeVec, strafeVec, strafeFwd);
     }
 
@@ -854,7 +855,7 @@ void leviathanDoAction(Moby* moby)
           }
 
           // stop after n seconds
-          if (pvars->MobVars.CurrentActionForTicks > LEVIATHAN_LASER_FIRE_FOR_TICKS) {
+          if (pvars->MobVars.CurrentActionForTicks > leviathanGetLaserForTicks(moby)) {
             nextAnimId = LEVIATHAN_ANIM_LASER_FIRE_EXHAUSTED;
           }
           break;
@@ -1096,4 +1097,10 @@ int leviathanShouldStrafe(Moby* moby)
   }
 
   return strafe;
+}
+
+//--------------------------------------------------------------------------
+int leviathanGetLaserForTicks(Moby* moby)
+{
+  return LEVIATHAN_LASER_FIRE_FOR_TICKS * ((MapConfig.State ? MapConfig.State->DifficultyStars : 0)+1);
 }

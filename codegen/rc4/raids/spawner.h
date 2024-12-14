@@ -42,6 +42,7 @@ struct SpawnerSpawnConfig
 {
   int NumMobsToSpawn;
   float SpawnRateMultiplier;
+  u8 MaxSpawnedAtOnce; // 0=MAX
 };
 
 struct SpawnerMobParams

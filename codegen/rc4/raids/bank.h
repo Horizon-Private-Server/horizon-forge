@@ -41,13 +41,10 @@ enum RaidsBadgeType
   RAIDS_BADGE_TYPE_NONE = 0,
   RAIDS_BADGE_TYPE_HEALTH_REGEN,
   RAIDS_BADGE_TYPE_AMMO_REGEN,
-  RAIDS_BADGE_TYPE_EXTRA_JUMP,
   RAIDS_BADGE_TYPE_SHARPSHOOTER,
   RAIDS_BADGE_TYPE_BERSERKER,
-  RAIDS_BADGE_TYPE_DAMAGE_COOLDOWN,
+  RAIDS_BADGE_TYPE_FLINCH_RESISTANCE,
   RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH,
-  RAIDS_BADGE_TYPE_INFINITE_CHARGEBOOT,
-  RAIDS_BADGE_TYPE_HOVERBOOTS,
   RAIDS_BADGE_TYPE_EXTRALIFE,
   RAIDS_BADGE_TYPE_COUNT
 };
@@ -68,7 +65,10 @@ typedef struct RaidsInventoryItem
   u8 GadgetId;
   u8 Paint; // 0=none, 1=blue, etc (teams)
   u8 PaintSpecialMask; // RaidsGadgetPaintSpecialMask
-  u8 Proficiency; // what proficiency the item was created at (v1-v99)
+  union {
+    u8 Proficiency; // what proficiency the item was created at (v1-v99)
+    u8 BadgeType;
+  };
   u8 Quality; // determines rarity + values on probability curve
   u8 CritChance; // 0-255 (0-100%) chance crit
   u8 OmegaMod;
@@ -103,6 +103,7 @@ typedef struct RaidsPlayerBank
 typedef struct RaidsPlayerEquippedInventory
 {
   RaidsInventoryItem_t Items[WEAPON_SLOT_COUNT-1];
+  RaidsInventoryItem_t Badge;
 } RaidsPlayerEquippedInventory_t;
 
 struct RaidsGetBankRequest

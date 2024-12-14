@@ -257,7 +257,10 @@ public class PvarOverlay
 
         foreach (var def in this.Overlay)
         {
-            SetDefaultBytes(this, def, DefaultBytes);
+            if (def.Default != null || def.IsReferenceType())
+            {
+                SetDefaultBytes(this, def, DefaultBytes);
+            }
         }
 
         var ptrs = Pointers?.Replace(" ", "")?.Split(',', StringSplitOptions.RemoveEmptyEntries);

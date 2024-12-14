@@ -76,6 +76,11 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pvarpoke.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
         state.LDFlags.Add("-DGATE");
@@ -101,6 +106,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"mob.h\"");
         state.Includes.Add("#include \"shared.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
+        state.Includes.Add("#include \"vendor.h\"");
+        state.Includes.Add("#include \"badges.h\"");
+        state.Includes.Add("#include \"ammodrop.h\"");
+        state.Includes.Add("#include \"hackerorb.h\"");
 
         state.Declarations.Add("void configInit(void);");
         state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,\r\n};");
@@ -112,6 +121,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
 
+        state.InitBody.Add($"mapInit();");
         state.InitBody.Add($"mobInit();");
         state.InitBody.Add($"configInit();");
         state.InitBody.Add($"spawnerInit();");
@@ -123,11 +133,16 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"checkpointInit();");
         state.InitBody.Add($"laserInit();");
         state.InitBody.Add($"pvarpokeInit();");
+        state.InitBody.Add($"vendorInit();");
+        state.InitBody.Add($"badgesInit();");
+        state.InitBody.Add($"ammodropInit();");
+        state.InitBody.Add($"hackerorbInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
         state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
         state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
+        state.InitBody.Add($"MapConfig.CreateAmmoDropAtFunc = &ammodropCreateAt;");
         state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
 
         state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
@@ -143,6 +158,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBodyReady.Add("checkpointStart();");
         state.MainBodyReady.Add("laserStart();");
         state.MainBodyReady.Add("pvarpokeStart();");
+        state.MainBodyReady.Add("vendorStart();");
+        state.MainBodyReady.Add("badgesStart();");
+        state.MainBodyReady.Add("ammodropStart();");
 
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");

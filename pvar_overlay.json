@@ -914,11 +914,17 @@
     "Length": 304,
     "Default": "5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000E000000000000000F400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F000000000000000000000000000000000000000000000000000007FF000000000000000000FF0000000001FF000000000A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFF0BF8B030000000000000000000000000000000000000000000000000000000000000000FFFFFFFF00000000000000000000000000000000000000000400000000000000FFFFFFFF4000000000000000000000000000000000000000FFFFFFFF0000000000000000",
     "Pointers": "0",
+    "States": {
+      "Capture In Progress": 1,
+      "Captured": 4,
+      "Uncaptured": 5
+    },
     "Overlay": [
       {
-        "Name": "Some Value",
+        "Name": "Seconds to Hack",
         "DataType": "Integer",
-        "Offset": 260
+        "Offset": 260,
+        "Min": 1
       }
     ]
   },
@@ -3296,7 +3302,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 456,
+    "Length": 476,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3336,7 +3342,7 @@
       {
         "Name": "Spawn Config (Per Difficulty)",
         "DataType": "Struct",
-        "DataSize": 8,
+        "DataSize": 12,
         "Offset": 80,
         "Count": 5,
         "Labels": [
@@ -3361,6 +3367,15 @@
             "Offset": 4,
             "Min": 0,
             "Default": 1.0
+          },
+          {
+            "Name": "Max Alive At Once (0=MAX)",
+            "DataType": "Integer",
+            "Offset": 8,
+            "DataSize": 1,
+            "Min": 0,
+            "Max": 50,
+            "Default": 0
           }
         ]
       },
@@ -3391,7 +3406,7 @@
       {
         "Name": "Mob Parameters",
         "DataType": "Struct",
-        "Offset": 120,
+        "Offset": 140,
         "DataSize": 28,
         "Count": 8,
         "Fields": [
@@ -3637,7 +3652,7 @@
     "Name": "Raids Controller",
     "RCVersion": 4,
     "MobyOClass": 16387,
-    "Length": 284,
+    "Length": 320,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3666,7 +3681,7 @@
         "Name": "Trigger When",
         "DataType": "Enum",
         "DataSize": 1,
-        "Offset": 104,
+        "Offset": 6,
         "Options": {
           "Any True": 0,
           "All True": 1
@@ -3676,14 +3691,14 @@
         "Name": "Iterations (0=INFINITE)",
         "DataType": "Integer",
         "DataSize": 2,
-        "Offset": 106,
+        "Offset": 136,
         "Min": 0,
         "Max": 32767
       },
       {
         "Name": "Conditions",
         "DataType": "Struct",
-        "Offset": 108,
+        "Offset": 140,
         "DataSize": 16,
         "Count": 8,
         "Fields": [
@@ -3854,7 +3869,7 @@
         "Name": "Targets",
         "DataType": "Struct",
         "Offset": 8,
-        "DataSize": 12,
+        "DataSize": 16,
         "Count": 8,
         "Fields": [
           {
@@ -3875,7 +3890,9 @@
               "Player Give Ammo": 8,
               "Player Give Health": 9,
               "Player Respawn": 10,
-              "Set Raid Completed": 11
+              "Set Raid Completed": 11,
+              "Set Ammo Drop Probability": 13,
+              "Set Refill Ammo Multiplier": 14
             }
           },
           {
@@ -3888,7 +3905,7 @@
           {
             "Name": "Moby",
             "DataType": "MobyRef",
-            "Offset": 4,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "1", "2", "3", "5" ] }
             ]
@@ -3898,7 +3915,7 @@
             "DataType": "MobyRefState",
             "DataSize": 4,
             "Ref": "Moby",
-            "Offset": 8,
+            "Offset": 12,
             "Min": -1,
             "Max": 127,
             "DisplayIf": [
@@ -3908,7 +3925,7 @@
           {
             "Name": "Amount",
             "DataType": "Integer",
-            "Offset": 8,
+            "Offset": 12,
             "Min": -127,
             "Max": 127,
             "DisplayIf": [
@@ -3918,7 +3935,7 @@
           {
             "Name": "Animation",
             "DataType": "Integer",
-            "Offset": 8,
+            "Offset": 12,
             "Min": 0,
             "Max": 127,
             "DisplayIf": [
@@ -3928,7 +3945,7 @@
           {
             "Name": "Enabled",
             "DataType": "Bool",
-            "Offset": 8,
+            "Offset": 12,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "3" }
             ]
@@ -3936,7 +3953,7 @@
           {
             "Name": "NPC Controller",
             "DataType": "MobyRef",
-            "Offset": 4,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "6", "7" ] }
             ]
@@ -3944,7 +3961,7 @@
           {
             "Name": "Target Moby",
             "DataType": "MobyRef",
-            "Offset": 8,
+            "Offset": 12,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "6" }
             ]
@@ -3952,7 +3969,7 @@
           {
             "Name": "Cuboid",
             "DataType": "CuboidRef",
-            "Offset": 4,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "4" }
             ]
@@ -3960,7 +3977,7 @@
           {
             "Name": "Cuboid To",
             "DataType": "CuboidRef",
-            "Offset": 8,
+            "Offset": 12,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "4" }
             ]
@@ -3969,7 +3986,7 @@
             "Name": "Target Player(s)",
             "DataType": "Mask",
             "DataSize": 4,
-            "Offset": 4,
+            "Offset": 8,
             "Options": {
               "Player 0": 1,
               "Player 1": 2,
@@ -3990,7 +4007,7 @@
           {
             "Name": "Triggered Only",
             "DataType": "Bool",
-            "Offset": 8,
+            "Offset": 12,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
             ]
@@ -3998,7 +4015,7 @@
           {
             "Name": "Living Only",
             "DataType": "Bool",
-            "Offset": 9,
+            "Offset": 13,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8", "9" ] }
             ]
@@ -4007,7 +4024,7 @@
             "Name": "Amount (0=MAX)",
             "DataType": "Integer",
             "DataSize": 2,
-            "Offset": 10,
+            "Offset": 14,
             "Min": -32767,
             "Max": 32767,
             "DisplayIf": [
@@ -4017,7 +4034,7 @@
           {
             "Name": "Dead Only",
             "DataType": "Bool",
-            "Offset": 9,
+            "Offset": 13,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "10" ] }
             ]
@@ -4025,9 +4042,32 @@
           {
             "Name": "Checkpoint Moby",
             "DataType": "MobyRef",
-            "Offset": 4,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "12" ] }
+            ]
+          },
+          {
+            "Name": "Probability",
+            "Tooltip": "Default value is 0.1.",
+            "DataType": "Float",
+            "Offset": 8,
+            "Default": 0.1,
+            "Min": 0,
+            "Max": 1,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "13" }
+            ]
+          },
+          {
+            "Name": "Multiplier",
+            "Tooltip": "Default value is 1.",
+            "DataType": "Float",
+            "Offset": 8,
+            "Default": 1.0,
+            "Min": 0,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "14" }
             ]
           }
         ]

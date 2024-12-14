@@ -33,7 +33,7 @@
 #include "game.h"
 #include "maputils.h"
 
-extern char LocalPlayerStrBuffer[2][64];
+char LocalPlayerStrBuffer[2][64];
 extern struct RaidsMapConfig MapConfig;
 
 /* 
@@ -392,7 +392,7 @@ int missionIsActive(void)
 }
 
 //--------------------------------------------------------------------------
-int bankTryChargeLocalAccount(u32 cost)
+int bankTryChargeLocalAccount(Player* player, u32 cost)
 {
   if (!MapConfig.GetBankFunc) return 0;
 
@@ -403,6 +403,7 @@ int bankTryChargeLocalAccount(u32 cost)
 
   // charge
   bank->Account.Bolts -= cost;
+  playPaidSound(player);
 
   // send new bolts to server
   if (MapConfig.SendBankAccountToServerFunc)
@@ -414,24 +415,24 @@ int bankTryChargeLocalAccount(u32 cost)
 //--------------------------------------------------------------------------
 int getAmmoRefillCost(Player* player)
 {
+  if (!player || !player->GadgetBox) return -1;
+  if (!MapConfig.GetAmmoRefillCostFunc) return -1;
 
+  return MapConfig.GetAmmoRefillCostFunc(player);
 }
 
 //--------------------------------------------------------------------------
 void replenishAmmo(Player* player)
 {
   // if any weapon ran out of ammo, return back to max
-  int i;
-  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
-    Player* player = playerGetFromSlot(i);
-    if (!player || !player->GadgetBox) continue;
+  if (!player || !player->GadgetBox) return;
 
-    int j;
-    for (j = WEAPON_SLOT_VIPERS; j < WEAPON_SLOT_COUNT; ++j) {
-      int gadgetId = weaponSlotToId(j);
-      if (player->GadgetBox->Gadgets[gadgetId].Level >= 0 && player->GadgetBox->Gadgets[gadgetId].Ammo <= 0) {
-        player->GadgetBox->Gadgets[gadgetId].Ammo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
-      }
+  int j;
+  for (j = WEAPON_SLOT_VIPERS; j < WEAPON_SLOT_COUNT; ++j) {
+    int gadgetId = weaponSlotToId(j);
+    int maxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
+    if (player->GadgetBox->Gadgets[gadgetId].Level >= 0 && player->GadgetBox->Gadgets[gadgetId].Ammo < maxAmmo) {
+      player->GadgetBox->Gadgets[gadgetId].Ammo = maxAmmo;
     }
   }
 }

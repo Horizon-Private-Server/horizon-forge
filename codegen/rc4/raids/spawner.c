@@ -224,7 +224,10 @@ int spawnerCanSpawn(Moby* moby)
   // }
   
   int total = pvars->State.NumTotalSpawned + pvars->State.NumTotalKilled;
-  return moby->State == SPAWNER_STATE_ACTIVATED && !spawnerIsCompleted(moby) && total < config->NumMobsToSpawn;
+  return moby->State == SPAWNER_STATE_ACTIVATED
+      && !spawnerIsCompleted(moby)
+      && total < config->NumMobsToSpawn
+      && (config->NumMobsToSpawn == 0 || pvars->State.NumTotalSpawned < config->NumMobsToSpawn);
 }
 
 //--------------------------------------------------------------------------
@@ -341,17 +344,20 @@ void spawnerUpdate(Moby* moby)
       closestDistSqr = distSqr;
     }
   }
-  pvars->State.ClosestPlayerDistSqr = closestDistSqr;
-  if (spawnerMinClosestDistToPlayerSqr < 0 || closestDistSqr < spawnerMinClosestDistToPlayerSqr)
-    spawnerMinClosestDistToPlayerSqr = closestDistSqr;
-  if (closestDistSqr > spawnerMaxClosestDistToPlayerSqr)
-    spawnerMaxClosestDistToPlayerSqr = closestDistSqr;
 
   pvars->State.PlayerIsNear = spawnerIsPlayerNear(moby);
 
   // spawn
   spawnerNumActive++;
   if (spawnerCanSpawn(moby)) {
+    
+    // 
+    pvars->State.ClosestPlayerDistSqr = closestDistSqr;
+    if (spawnerMinClosestDistToPlayerSqr < 0 || closestDistSqr < spawnerMinClosestDistToPlayerSqr)
+      spawnerMinClosestDistToPlayerSqr = closestDistSqr;
+    if (closestDistSqr > spawnerMaxClosestDistToPlayerSqr)
+      spawnerMaxClosestDistToPlayerSqr = closestDistSqr;
+
     if (spawnerSpawnRandom(moby)) {
       
     }
@@ -712,13 +718,15 @@ void spawnerStart(void)
   }
 
   int totalAlive = MapConfig.State ? MapConfig.State->MobStats.TotalAlive : 0;
+  int restrictSpawning = totalAlive >= (MAX_MOBS_ALIVE_REAL*0.9);
   for (i = 0; i < spawnerSpawnRequestsCount; ++i) {
     struct SpawnerSpawnRequest* request = &spawnerSpawnRequests[i];
     Moby* moby = request->Spawner;
     struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
 
     float priority = (pvars->State.ClosestPlayerDistSqr - spawnerMinClosestDistToPlayerSqr) / ((spawnerMaxClosestDistToPlayerSqr-spawnerMinClosestDistToPlayerSqr) + 1);
-    int spawn = randRange(0, 1) >= priority;
+    int spawn = !restrictSpawning || randRange(0, 1) >= priority;
+    //DPRINTF("%08X %f-%f (%f) => %f (%d)\n", request->Spawner, spawnerMinClosestDistToPlayerSqr, spawnerMaxClosestDistToPlayerSqr, pvars->State.ClosestPlayerDistSqr, priority, spawn);
     //DLOG("try spawn %08X:%d => %d (%f of [%f - %f] => %f)\n", request->Spawner, request->SpawnArgs.Userdata, spawn, pvars->State.ClosestPlayerDistSqr, spawnerMinClosestDistToPlayerSqr, spawnerMaxClosestDistToPlayerSqr, priority);
     if (spawn) {
     
@@ -727,7 +735,7 @@ void spawnerStart(void)
       // if its been awhile since we've delete a mob, then we can try and spawn a mob that isn't near the player
       // we just want to avoid rapidly spawning/despawning mobs until they converge near the player\
       // given that the despawn mechanism only despawns far-away mobs
-      if (spawnerTicksSinceLastDelete < 10 && totalAlive >= (MAX_MOBS_ALIVE_REAL*0.9) && !spawnerIsPointNearPlayer(request->SpawnArgs.Position, SPAWNER_SPAWN_NEAR_DISTANCE*0.8))
+      if (spawnerTicksSinceLastDelete < 10 && restrictSpawning && !spawnerIsPointNearPlayer(request->SpawnArgs.Position, SPAWNER_SPAWN_NEAR_DISTANCE*0.8))
         continue;
 
       // we need to despawn other mobs

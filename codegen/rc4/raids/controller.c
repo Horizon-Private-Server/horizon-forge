@@ -539,6 +539,26 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
 }
 
 //--------------------------------------------------------------------------
+int controllerControlSetAmmoDropProbability(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  if (MapConfig.State->AmmoDropChance == target->Value.FloatValue) return 0;
+
+  MapConfig.State->AmmoDropChance = target->Value.FloatValue;
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlSetRefillAmmoCostMultiplier(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  if (MapConfig.State->AmmoRefillCostMultiplier == target->Value.FloatValue) return 0;
+
+  MapConfig.State->AmmoRefillCostMultiplier = target->Value.FloatValue;
+  return 1;
+}
+
+//--------------------------------------------------------------------------
 int controllerIterate(Moby* moby)
 {
   int i;
@@ -561,6 +581,8 @@ int controllerIterate(Moby* moby)
       case CONTROLLER_TARGET_UPDATE_TYPE_RESPAWN: changed += controllerControlRespawnPlayer(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_COMPLETE_MISSION: changed += controllerControlCompleteMission(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT: changed += controllerControlMobySetCheckpoint(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY: changed += controllerControlSetAmmoDropProbability(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER: changed += controllerControlSetRefillAmmoCostMultiplier(moby, &pvars->Targets[i]); break;
     }
   }
   
