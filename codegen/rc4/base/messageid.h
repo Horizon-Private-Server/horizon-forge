@@ -313,6 +313,16 @@ enum CustomMessageId
     CUSTOM_MSG_ID_GENERATE_RAIDS_LOOT_RESPONSE = 56,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_STORE_REQUEST = 57,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_BUY_STORE_ITEM_REQUEST = 58,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,

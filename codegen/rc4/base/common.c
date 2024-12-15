@@ -35,6 +35,33 @@ void helperAlign(float* pX, float* pY, float w, float h, enum TextAlign alignmen
 }
 
 //------------------------------------------------------------------------------
+void helperRealign(float* pX, float* pY, float w, float h, enum TextAlign fromAlignment, enum TextAlign toAlignment)
+{
+  if (fromAlignment == toAlignment) return;
+
+  float x = 0, y = 0;
+  if (pX) x = *pX;
+  if (pY) y = *pY;
+
+  helperAlign(&x, &y, w, h, fromAlignment);
+  switch (toAlignment)
+  {
+    case TEXT_ALIGN_TOPLEFT: break;
+    case TEXT_ALIGN_TOPCENTER: x += w * 0.5; break;
+    case TEXT_ALIGN_TOPRIGHT: x += w; break;
+    case TEXT_ALIGN_MIDDLELEFT: y += h * 0.5; break;
+    case TEXT_ALIGN_MIDDLECENTER: x += w * 0.5; y += h * 0.5; break;
+    case TEXT_ALIGN_MIDDLERIGHT: x += w; y += h * 0.5; break;
+    case TEXT_ALIGN_BOTTOMLEFT: y += h; break;
+    case TEXT_ALIGN_BOTTOMCENTER: x += w * 0.5; y += h; break;
+    case TEXT_ALIGN_BOTTOMRIGHT: x += w; y += h; break;
+  }
+
+  if (pX) *pX = x;
+  if (pY) *pY = y;
+}
+
+//------------------------------------------------------------------------------
 //------------------------------------ DRAW ------------------------------------
 //------------------------------------------------------------------------------
 void gfxHelperDrawBox(float anchorX, float anchorY, float offsetX, float offsetY, float w, float h, u32 color, enum TextAlign alignment, enum COMMON_DZO_DRAW_TYPE dzoDrawType)

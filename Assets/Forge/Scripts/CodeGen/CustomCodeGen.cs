@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -10,8 +11,10 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
     public string InitFunctionName = "customModuleInit";
     public string TickFunctionName = "customModuleTick";
     public bool WaitForClientsReady = false;
+    public List<CodeGenMeta> Metas;
 
     public bool IsEnabled => this.isActiveAndEnabled;
+    public int CodeGenOrder => 10;
 
     public void Configure(string buildFolder, CodeGenState state)
     {
@@ -59,5 +62,23 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
 
         foreach (var define in Defines)
             state.LDFlags.Add($"-D{define}");
+
+        if (Metas != null)
+        {
+            foreach (var meta in Metas)
+            {
+                if (!state.Meta.TryGetValue(meta.Key, out var list))
+                    state.Meta.Add(meta.Key, list = new List<string>());
+
+                list.AddRange(meta.Values);
+            }
+        }
+    }
+
+    [Serializable]
+    public struct CodeGenMeta
+    {
+        public string Key;
+        public string[] Values;
     }
 }

@@ -61,7 +61,7 @@ enum RaidsSkills
 typedef struct RaidsInventoryItem
 {
   int Damage; // damage
-  float Speed;  // speed of projectile
+  u32 Price;
   u8 GadgetId;
   u8 Paint; // 0=none, 1=blue, etc (teams)
   u8 PaintSpecialMask; // RaidsGadgetPaintSpecialMask

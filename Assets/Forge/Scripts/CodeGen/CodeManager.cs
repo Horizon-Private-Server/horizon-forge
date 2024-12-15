@@ -71,7 +71,7 @@ public class CodeManager : MonoBehaviour
         if (!Directory.Exists(outSrcDir)) Directory.CreateDirectory(outSrcDir);
 
         // pass to generators
-        var generators = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<ICodeGen>()).Where(x => x != null).ToArray();
+        var generators = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<ICodeGen>()).Where(x => x != null).OrderBy(x => x.CodeGenOrder).ToArray();
         foreach (var generator in generators)
         {
             if (!generator.IsEnabled) continue;
@@ -177,4 +177,7 @@ public class CodeGenState
     // makefile
     public List<string> ObjectFiles { get; set; } = new List<string>();
     public List<string> LDFlags { get; set; } = new List<string>();
+
+    // extra
+    public Dictionary<string, List<string>> Meta { get; set; } = new Dictionary<string, List<string>>();
 }

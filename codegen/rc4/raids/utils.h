@@ -31,7 +31,6 @@ int getWeaponIdFromOClass(short oclass);
 u8 decTimerU8(u8* timeValue);
 u16 decTimerU16(u16* timeValue);
 u32 decTimerU32(u32* timeValue);
-u32 getPriceForWeapon(int proficiency, int quality);
 int getProficiencyFromXp(u64 xp);
 u64 getXpForProficiency(int level);
 int getLevelFromXp(u64 xp);
