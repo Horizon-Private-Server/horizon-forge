@@ -724,6 +724,17 @@ void spawnerStart(void)
     Moby* moby = request->Spawner;
     struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
 
+    // respawn mob bypasses spawn logic
+    int isRespawn = request->SpawnArgs.SpawnFromUID > 0;
+    if (isRespawn) {
+      vector_copy(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition());
+      if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
+        pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
+        pvars->State.NumTotalSpawned++;
+      }
+      continue;
+    }
+
     float priority = (pvars->State.ClosestPlayerDistSqr - spawnerMinClosestDistToPlayerSqr) / ((spawnerMaxClosestDistToPlayerSqr-spawnerMinClosestDistToPlayerSqr) + 1);
     int spawn = !restrictSpawning || randRange(0, 1) >= priority;
     //DPRINTF("%08X %f-%f (%f) => %f (%d)\n", request->Spawner, spawnerMinClosestDistToPlayerSqr, spawnerMaxClosestDistToPlayerSqr, pvars->State.ClosestPlayerDistSqr, priority, spawn);

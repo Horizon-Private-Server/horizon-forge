@@ -25,6 +25,7 @@ void windowResolve(float* x, float *y, Window_t* window, float offsetX, float of
 void windowDrawSprite(Window_t* window, enum TextAlign windowAnchor, float offsetX, float offsetY, float width, float height, int spriteId, int spriteDimW, int spriteDimH, u32 color, enum TextAlign alignment);
 void windowDrawBox(Window_t* window, enum TextAlign windowAnchor, float offsetX, float offsetY, float width, float height, u32 color, enum TextAlign alignment);
 void windowFill(Window_t* window, u32 color);
+void windowBorder(Window_t* window, u32 color, float left, float top, float right, float bottom);
 float windowDrawText(Window_t* window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char* str, int length, enum TextAlign alignment);
 void windowDrawTextWindow(Window_t* window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char* str, int length, enum TextAlign alignment);
 int windowHasArea(Window_t* window);

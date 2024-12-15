@@ -81,9 +81,7 @@
 #define NANOLEECH_HEALTH											(5)
 #define NANOLEECH_CHANCE											(0.01)
 
-#define LEVELUP_XP_QUADRATIC_RATE             (10)
-#define LEVELUP_XP_LINEAR_RATE                (0)
-#define LEVELUP_XP_CONSTANT                   (0)
+#define LEVELUP_MAX_LEVEL                     (98)
 
 #define PLAYER_BASE_REVIVE_TICKS					    (60 * TPS)
 #define PLAYER_MIN_REVIVE_TICKS					      (10 * TPS)
@@ -128,6 +126,7 @@ enum RaidsCustomMenus
   RAIDS_CUSTOM_MENU_INVENTORY,
   RAIDS_CUSTOM_MENU_LEVELSELECT,
   RAIDS_CUSTOM_MENU_STORE,
+  RAIDS_CUSTOM_MENU_SKILLS,
 };
 
 enum RaidsDifficultys
@@ -154,6 +153,7 @@ typedef void (*RegisterNpc_func)(Moby* moby);
 typedef int (*OnGuberEvent_func)(Moby* moby, GuberEvent* event);
 typedef struct Guber* (*OnGetGuber_func)(Moby* moby);
 typedef int (*TryCreateMob_func)(struct MobCreateArgs* args);
+typedef void (*RequestPrestigeLoot_func)(int gadgetId);
 
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
@@ -250,6 +250,7 @@ struct RaidsMapConfig
   OnGuberEvent_func OnGuberEventFunc;
   OnGetGuber_func OnGetGuberFunc;
   TryCreateMob_func TryCreateMobFunc;
+  RequestPrestigeLoot_func RequestPrestigeLootFunc;
 
   // map
   MapOnMobCreate_func OnMobCreateFunc;

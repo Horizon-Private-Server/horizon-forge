@@ -32,6 +32,11 @@ u8 decTimerU8(u8* timeValue);
 u16 decTimerU16(u16* timeValue);
 u32 decTimerU32(u32* timeValue);
 
+int getProficiencyFromXp(u64 xp);
+u64 getXpForProficiency(int level);
+int getLevelFromXp(u64 xp);
+u64 getXpForLevel(int level);
+
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive);
 void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
 

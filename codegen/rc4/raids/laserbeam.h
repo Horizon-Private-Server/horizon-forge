@@ -28,6 +28,8 @@ struct LaserbeamPVar
   u32 ColorParticleEnd;
   int BeamTexId;
   int GlowTexId;
+  float Length;
+  int Hit;
 };
 
 void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength, float width, float damage, u32 damageFlags, u32 colorBeam, u32 colorGlow, u32 colorParticleStart, u32 colorParticleEnd, int beamTexId, int glowTexId);

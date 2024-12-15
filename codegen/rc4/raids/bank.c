@@ -12,7 +12,6 @@
 #include <libdl/net.h>
 #include <libdl/ui.h>
 #include <libdl/graphics.h>
-#include "utils.h"
 #include "game.h"
 #include "bank.h"
 #include "common.h"

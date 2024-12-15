@@ -62,7 +62,13 @@ void laserUpdateBeam(Moby* moby)
   beamColor = colorSetChannel(colorScale(beamColor, 255.0 / colorGetMax(beamColor)), 3, 0x80);
   u32 glowColor = colorSetChannel(hudGetTeamColor(pvars->TeamColor, 1), 3, 0x80);
   u32 particleColor = glowColor;
-  vector_fromyaw(dir, moby->Rotation[2]);
+
+  MATRIX m;
+  matrix_unit(m);
+  matrix_rotate_x(m, m, -moby->Rotation[0]);
+  matrix_rotate_y(m, m, -moby->Rotation[1]);
+  matrix_rotate_z(m, m, -moby->Rotation[2]);
+  vector_scale(dir, &m[0], 1);
 
   // update state
   int state = beamMoby->SubState ? LASER_STATE_ON_HIT_MOBY : LASER_STATE_ON;

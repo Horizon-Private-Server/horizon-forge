@@ -261,8 +261,13 @@ void mapOnV10VipersHitSurface(Moby* moby)
 {
   ((void (*)(Moby*))0x003C05D8)(moby);
 
-  // explosion
-  ((void (*)(float damage, float radius, VECTOR p, u32 damageFlags, Moby* moby, Moby* hitMoby))0x003c3a48)(1, 0.5, moby->Position, 0x801, moby, NULL);
+  Player* player = guberMobyGetPlayerDamager(moby);
+  if (player && player->GadgetBox) {
+    RaidsInventoryItem_t* item = bankGetLocalEquippedWeapon(WEAPON_ID_VIPERS);
+    if (item && bankGetRarityFromQuality(item->Quality) == RAIDS_ITEM_RARITY_MYTHIC) {
+      ((void (*)(float radius, float damage, VECTOR p, u32 damageFlags, Moby* moby, Moby* hitMoby))0x003c3a48)(item->AlphaModCounts[ALPHA_MOD_AREA-1] * 0.5, item->Damage * 0.25, moby->Position, 0x801, moby, NULL);
+    }
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -318,7 +323,7 @@ void mapInit(void)
   *(u32*)0x006210D8 = 0;	// all enemies leave (9)
 
   // spawn area mod explosion on each ricochet of the v10 vipers
-  //HOOK_JAL(0x003C283C, &mapOnV10VipersHitSurface);
+  HOOK_JAL(0x003C283C, &mapOnV10VipersHitSurface);
 
   // disable holoshields from disappearing
   //*(u16*)0x00401478 = 2;

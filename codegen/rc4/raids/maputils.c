@@ -413,6 +413,53 @@ int bankTryChargeLocalAccount(Player* player, u32 cost)
 }
 
 //--------------------------------------------------------------------------
+int getLevelFromXp(u64 xp)
+{
+  if (xp < 0) return 0;
+
+  // (500 (2/3)^(1/3))/(sqrt(3) sqrt(27 x^2 + 500000000) - 9 x)^(1/3) - (sqrt(3) sqrt(27 x^2 + 500000000) - 9 x)^(1/3)/(2^(1/3) 3^(2/3))
+  // Constants
+  const double c1 = 0.87358046;                 // (2/3)^(1/3)
+  const double c2 = 1.25992104;                 // 2^(1/3)
+  const double c3 = 2.08008382;                 // 3^(2/3)
+  const double sqrt3 = 1.73205080;              // sqrt(3)
+
+  // Calculate the inner term
+  double inner = sqrt3 * sqrt((double)27.0 * xp * xp + 500000000.0) - (double)9.0 * xp;
+  
+  // Compute the two terms
+  double term1 = (double)500.0 * c1 / pow(inner, (double)1.0 / (double)3.0);
+  double term2 = pow(inner, (double)1.0 / (double)3.0) / (c2 * c3);
+
+  // Final result
+  double level = term1 - term2;
+  
+  if (level < 0) return 0;
+  if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
+  return (int)level;
+}
+
+//--------------------------------------------------------------------------
+u64 getXpForLevel(int level)
+{
+  if (level > LEVELUP_MAX_LEVEL) level = LEVELUP_MAX_LEVEL;
+  if (level <= 0) return 0;
+  return (u64)((double)powf(1*level, 3) + 500*level);
+}
+
+//--------------------------------------------------------------------------
+int getProficiencyFromXp(u64 xp)
+{
+  return getLevelFromXp(xp);
+}
+
+//--------------------------------------------------------------------------
+u64 getXpForProficiency(int proficiency)
+{
+  return getXpForLevel(proficiency);
+}
+
+//--------------------------------------------------------------------------
 int getAmmoRefillCost(Player* player)
 {
   if (!player || !player->GadgetBox) return -1;

@@ -12,7 +12,6 @@
 #include <libdl/net.h>
 #include <libdl/ui.h>
 #include <libdl/graphics.h>
-#include "utils.h"
 #include "game.h"
 #include "window.h"
 #include "common.h"
@@ -56,7 +55,7 @@ void windowDrawBox(Window_t* window, enum TextAlign windowAnchor, float offsetX,
 
   float x,y;
   windowResolve(&x, &y, window, 0, 0, windowAnchor);
-  gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x + offsetX, y + offsetY, window->Width, window->Height, color, alignment, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x + offsetX, y + offsetY, width, height, color, alignment, COMMON_DZO_DRAW_NORMAL);
 }
 
 //--------------------------------------------------------------------------
@@ -66,7 +65,36 @@ void windowFill(Window_t* window, u32 color)
 
   float x,y;
   windowResolve(&x, &y, window, 0, 0, window->AnchorAlign);
-  gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x, y, window->Width, window->Height, color, window->AnchorAlign, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x, y, window->Width - window->Position[0], window->Height - window->Position[1], color, window->AnchorAlign, COMMON_DZO_DRAW_NORMAL);
+}
+
+//--------------------------------------------------------------------------
+void windowBorder(Window_t* window, u32 color, float left, float top, float right, float bottom)
+{
+  if (!windowHasArea(window)) return 0;
+
+  float x,y;
+  windowResolve(&x, &y, window, 0, 0, window->AnchorAlign);
+
+  if (left > 0) {
+    windowResolve(&x, &y, window, 0, 0, TEXT_ALIGN_MIDDLELEFT);
+    gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x, y, left, window->Height - window->Position[1], color, TEXT_ALIGN_MIDDLELEFT, COMMON_DZO_DRAW_NORMAL);
+  }
+  
+  if (right > 0) {
+    windowResolve(&x, &y, window, 0, 0, TEXT_ALIGN_MIDDLERIGHT);
+    gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x, y, right, window->Height - window->Position[1], color, TEXT_ALIGN_MIDDLERIGHT, COMMON_DZO_DRAW_NORMAL);
+  }
+  
+  if (top > 0) {
+    windowResolve(&x, &y, window, 0, 0, TEXT_ALIGN_TOPCENTER);
+    gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x, y, window->Width - window->Position[0], top*SCREEN_RATIO_INV, color, TEXT_ALIGN_TOPCENTER, COMMON_DZO_DRAW_NORMAL);
+  }
+  
+  if (bottom > 0) {
+    windowResolve(&x, &y, window, 0, 0, TEXT_ALIGN_BOTTOMCENTER);
+    gfxHelperDrawBox(window->AnchorPoint[0], window->AnchorPoint[1], x, y, window->Width - window->Position[0], bottom*SCREEN_RATIO_INV, color, TEXT_ALIGN_BOTTOMCENTER, COMMON_DZO_DRAW_NORMAL);
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -76,7 +104,7 @@ void windowDrawTextWindow(Window_t* window, enum TextAlign windowAnchor, float o
 
   float x,y;
   windowResolve(&x, &y, window, 0, 0, windowAnchor);
-  gfxHelperDrawTextWindow(window->AnchorPoint[0], window->AnchorPoint[1], x, y, window->Width, window->Height, offsetX, offsetY, scale, color, str, -1, alignment, FONT_WINDOW_FLAGS_NO_SCISSOR, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawTextWindow(window->AnchorPoint[0], window->AnchorPoint[1], x, y, window->Width - window->Position[0], window->Height - window->Position[1], offsetX, offsetY, scale, color, str, -1, alignment, FONT_WINDOW_FLAGS_NO_SCISSOR, COMMON_DZO_DRAW_NORMAL);
 }
 
 //--------------------------------------------------------------------------

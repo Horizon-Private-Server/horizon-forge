@@ -81,7 +81,7 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
 //--------------------------------------------------------------------------
 void badgesUpdate_HealthRegen(Player* player, int badgeLevel)
 {
-  if (playerIsDead(player)) return;
+  if (playerIsDead(player) || player->Health <= 0) return;
 
   float newHealth = clamp(player->Health + BADGES_HEALTH_REGEN_AMOUNT*(badgeLevel+1), 0, player->MaxHealth);
   if (newHealth != player->Health) {

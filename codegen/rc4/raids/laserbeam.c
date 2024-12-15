@@ -58,6 +58,10 @@ void laserbeamPostDraw(Moby* moby)
   }
   weaponTurnOffHoloshields();
 
+  // update length
+  pvars->Length = distance;
+  pvars->Hit = hit;
+
   // get vector perpendicular to camera (right/left)
   vector_subtract(camRight, camera->pos, fireFrom);
   vector_normalize(camRight, camRight);

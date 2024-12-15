@@ -21,7 +21,6 @@
 #include <libdl/utils.h>
 #include "game.h"
 #include "mob.h"
-#include "utils.h"
 #include "maputils.h"
 #include "shared.h"
 #include "gate.h"
@@ -706,6 +705,8 @@ void mobMove(Moby* moby)
         // check if we've hit death barrier
         if (isOwner && mobCollisionIdIsLethal(CollLine_Fix_GetHitCollisionId())) {
           pvars->MobVars.Respawn = 1;
+        } else if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
+          nextPosHasSafeGround = 1; // disable ledge if we're already on 
         }
 
         // force position to above ground
@@ -753,12 +754,8 @@ void mobMove(Moby* moby)
 
     // detect ledge
     if (!nextPosHasSafeGround) {
-      //vector_projectonvertical(pvars->MobVars.MoveVars.Velocity, pvars->MobVars.MoveVars.Velocity);
-      //vector_scale(pvars->MobVars.MoveVars.Velocity, lastVelocity, 0.9);
-      //vector_copy(nextPos, pvars->MobVars.MoveVars.LastPosition);
       nextPos[0] = moby->Position[0];
       nextPos[1] = moby->Position[1];
-      //DPRINTF("%f\n", nextPos[2] - moby->Position[2]);
     }
 
     // set position

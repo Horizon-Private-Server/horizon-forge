@@ -5,7 +5,7 @@
 #include "common.h"
 #include "messageid.h"
 
-#define OFFSET_TO_DZO_X(x) (x * (1080.0 / SCREEN_WIDTH));
+#define OFFSET_TO_DZO_X(x) (x * (1080.0 / SCREEN_HEIGHT));
 #define OFFSET_TO_DZO_Y(y) (y * (1080.0 / SCREEN_HEIGHT));
 
 //------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ void gfxHelperDrawBox(float anchorX, float anchorY, float offsetX, float offsetY
     float x = anchorX + offsetX;
     float y = anchorY + offsetY;
     helperAlign(&x, &y, w, h, alignment);
-    gfxPixelSpaceBox(x, y, w, h, color);
+    gfxPixelSpaceBox(x, y, w, h+1, color);
   }
 }
 
@@ -112,7 +112,7 @@ void gfxHelperDrawBox_WS(VECTOR worldPosition, float w, float h, u32 color, enum
     if (dzoDrawType != COMMON_DZO_DRAW_ONLY) {
       float fx = x, fy = y;
       helperAlign(&fx, &fy, w, h, alignment);
-      gfxPixelSpaceBox(fx, fy, w, h, color);
+      gfxPixelSpaceBox(fx, fy, w, h+1, color);
     }
   }
 }
@@ -170,7 +170,12 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
 {
   float fx = anchorX + offsetX;
   float fy = anchorY + offsetY;
-  helperAlign(&fx, &fy, width, height, alignment);
+  //helperAlign(&fx, &fy, width, height, alignment);
+
+  if (alignment >= TEXT_ALIGN_MIDDLELEFT && alignment <= TEXT_ALIGN_MIDDLERIGHT)
+    flags |= FONT_WINDOW_FLAGS_V_ALIGN_CENTER;
+  if ((alignment % 3) == 1)
+    flags |= FONT_WINDOW_FLAGS_H_ALIGN_CENTER;
 
   struct FontWindow fontWindow = {
     .windowLeft = fx,
@@ -183,9 +188,21 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
     .maxHeight = height,
     .lineSpacing = 16 * scale,
     .flags = flags,
+    //.subPixelX = (short)((fx + textOffsetX)*2) % 2,
+    //.subPixelY = (short)((fy + textOffsetY)*2) % 2,
     .shadowOffsetX = 1,
     .shadowOffsetY = 1
   };
+
+  if ((flags & FONT_WINDOW_FLAGS_V_ALIGN_CENTER)) {
+    fontWindow.windowTop = fy - height*0.5;
+    fontWindow.windowBottom = fy + height*0.5;
+  }
+
+  if ((flags & FONT_WINDOW_FLAGS_H_ALIGN_CENTER)) {
+    fontWindow.windowLeft = fx - width*0.5;
+    fontWindow.windowRight = fx + width*0.5;
+  }
 
   // pass to dzo
   if (0 && dzoDrawType > 0 && PATCH_DZO_INTEROP_FUNCS && isInGame()) {
