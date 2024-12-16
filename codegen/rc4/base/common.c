@@ -130,6 +130,7 @@ void gfxHelperDrawText(float anchorX, float anchorY, float offsetX, float offset
     textCmd.Color = color;
     textCmd.AnchorX = anchorX / SCREEN_WIDTH;
     textCmd.AnchorY = anchorY / SCREEN_HEIGHT;
+    memset(textCmd.Text, 0, sizeof(textCmd.Text));
     strncpy(textCmd.Text, str, (length >= 0 && length < 64) ? length : 64);
     PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT, sizeof(textCmd), &textCmd);
   }
@@ -154,6 +155,7 @@ void gfxHelperDrawText_WS(VECTOR worldPosition, float scale, u32 color, char* st
       textCmd.Scale = scale;
       textCmd.Alignment = alignment;
       textCmd.Color = color;
+      memset(textCmd.Text, 0, sizeof(textCmd.Text));
       strncpy(textCmd.Text, str, (length >= 0 && length < 64) ? length : 64);
       PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_WS_TEXT, sizeof(textCmd), &textCmd);
     }

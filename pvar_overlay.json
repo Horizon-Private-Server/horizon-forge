@@ -3414,6 +3414,7 @@
             "Name": "Mob Param Id",
             "DataType": "RaidsMobId",
             "DataSize": 4,
+            "Default": -1,
             "Offset": 0
           },
           {
