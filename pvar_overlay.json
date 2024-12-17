@@ -3907,7 +3907,7 @@
               "Player Respawn": 10,
               "Set Raid Completed": 11,
               "Set Ammo Drop Probability": 13,
-              "Set Refill Ammo Multiplier": 14,
+              "Set Refill Ammo Cost Multiplier": 14,
               "Play Music Track": 15
             }
           },
@@ -4119,6 +4119,14 @@
             "Offset": 11,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "15" ] }
+            ]
+          },
+          {
+            "Name": "Spawn Loot Cuboid",
+            "DataType": "CuboidRef",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
             ]
           }
         ]

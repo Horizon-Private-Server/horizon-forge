@@ -11,6 +11,7 @@ public class RaidsLaserMoby : MonoBehaviour, IRenderHandlePrefab
 {
     public LineRenderer m_BeamLineRenderer;
     public LineRenderer m_GlowLineRenderer;
+    public Vector3 m_Direction = Vector3.right;
 
     private Moby m_Moby;
     private MaterialPropertyBlock m_Mpb;
@@ -66,7 +67,7 @@ public class RaidsLaserMoby : MonoBehaviour, IRenderHandlePrefab
         var linePositions = new Vector3[]
         {
             Vector3.zero,
-            Vector3.right * m_Length
+            m_Direction * m_Length
         };
 
         // read beam texture

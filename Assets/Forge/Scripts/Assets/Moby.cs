@@ -329,7 +329,10 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     public void Write(BinaryWriter writer)
     {
-        var euler = this.transform.rotation.eulerAngles * -Mathf.Deg2Rad;
+        var euler = this.transform.rotation.eulerAngles;
+        euler.x = Mathf.DeltaAngle(0, euler.x) * -Mathf.Deg2Rad;
+        euler.y = Mathf.DeltaAngle(0, euler.y) * -Mathf.Deg2Rad;
+        euler.z = Mathf.DeltaAngle(0, euler.z) * -Mathf.Deg2Rad;
 
         switch (RCVersion)
         {
@@ -346,7 +349,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                     writer.Write(0);
                     writer.Write(0);
                     writer.Write(OClass);
-                    writer.Write(this.transform.localScale.x);
+                    writer.Write(this.transform.lossyScale.x);
                     writer.Write(DrawDistance);
                     writer.Write(UpdateDistance);
                     writer.Write(0x20);
@@ -380,7 +383,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                     writer.Write(Uid);
                     writer.Write(Bolts);
                     writer.Write(OClass);
-                    writer.Write(this.transform.localScale.x);
+                    writer.Write(this.transform.lossyScale.x);
                     writer.Write(DrawDistance);
                     writer.Write(UpdateDistance);
                     writer.Write(0);

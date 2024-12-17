@@ -165,7 +165,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
         var manipulators = _manipulators?.Where(x => x && x.IsEnabled);
         if (_renderers != null)
         {
-            foreach (var renderer in _renderers)
+            foreach (var renderer in _renderers.Where(x => x))
             {
                 renderer.GetPropertyBlock(_mpb);
                 TfragManipulator.ApplyMaterial(_mpb, manipulators);

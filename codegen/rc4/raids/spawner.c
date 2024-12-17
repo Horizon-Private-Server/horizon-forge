@@ -318,7 +318,6 @@ void spawnerUpdate(Moby* moby)
   }
 
   if (!gameAmIHost()) return;
-  if (!missionIsActive()) return;
 
   // check if completed
   if (moby->State != SPAWNER_STATE_COMPLETED && spawnerIsCompleted(moby)) {
@@ -327,6 +326,7 @@ void spawnerUpdate(Moby* moby)
     return;
   }
 
+  if (!missionIsActive()) return;
   if (moby->State != SPAWNER_STATE_ACTIVATED) return;
 
   // update closest player dist

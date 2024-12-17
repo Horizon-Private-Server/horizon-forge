@@ -536,6 +536,7 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
   MapConfig.State->MissionStatus = RAIDS_MISSION_COMPLETED;
   MapConfig.State->MissionCompleteTime = gameAmIHost() ? gameGetTime() : pvars->State.RemoteIterationTime;
   musicPlayTrack(MUSIC_TRACK_VICTORY, 0);
+  if (MapConfig.RequestMissionCompleteLootFunc) MapConfig.RequestMissionCompleteLootFunc(target->Cuboid.DestIdx);
   DLOG(moby, "mission end\n");
   return 1;
 }

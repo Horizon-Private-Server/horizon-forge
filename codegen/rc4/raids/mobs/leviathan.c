@@ -1091,6 +1091,13 @@ int leviathanShouldStrafe(Moby* moby)
     strafe = pvars->MobVars.TimeTargetOutOfSightTicks < LEVIATHAN_EVADE_MAX_OUT_OF_SIGHT_TICKS;
   }
 
+  // if mob is ready to attack
+  // and we're not already strafing (if we are timeout at 15 seconds)
+  // or if target is looking away, rush at them
+  if (pvars->MobVars.AttackCooldownTicks <= 10 && (pvars->MobVars.Action != LEVIATHAN_ACTION_STRAFE || pvars->MobVars.CurrentActionForTicks > (15*TPS) || vector_innerproduct_unscaled(moby->M0_03, target->M0_03) >= 0)) {
+    strafe = 0;
+  }
+
   // if stuck, return to walk state
   if (pvars->MobVars.MoveVars.IsStuck) {
     strafe = 0;

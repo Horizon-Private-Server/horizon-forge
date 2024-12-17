@@ -65,9 +65,9 @@ void laserUpdateBeam(Moby* moby)
 
   MATRIX m;
   matrix_unit(m);
-  matrix_rotate_x(m, m, -moby->Rotation[0]);
-  matrix_rotate_y(m, m, -moby->Rotation[1]);
-  matrix_rotate_z(m, m, -moby->Rotation[2]);
+  matrix_rotate_y(m, m, moby->Rotation[1]);
+  matrix_rotate_x(m, m, moby->Rotation[0]);
+  matrix_rotate_z(m, m, moby->Rotation[2]);
   vector_scale(dir, &m[0], 1);
 
   // update state
@@ -119,7 +119,7 @@ void laserUpdate(Moby* moby)
 //--------------------------------------------------------------------------
 void laserStart(void)
 {
-  
+
 }
 
 //--------------------------------------------------------------------------

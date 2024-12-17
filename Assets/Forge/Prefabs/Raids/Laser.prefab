@@ -76,7 +76,7 @@ LineRenderer:
   m_SortingOrder: 0
   m_Positions:
   - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 1}
+  - {x: 1, y: 0, z: 0}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 0.1
@@ -212,7 +212,7 @@ LineRenderer:
   m_SortingOrder: 0
   m_Positions:
   - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 1}
+  - {x: 1, y: 0, z: 0}
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 0.1
@@ -320,3 +320,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_BeamLineRenderer: {fileID: 1423867115567808496}
   m_GlowLineRenderer: {fileID: 4111376610553101851}
+  m_Direction: {x: 1, y: 0, z: 0}
+  m_Rotation: {x: 0, y: 0, z: 0, w: 1}
