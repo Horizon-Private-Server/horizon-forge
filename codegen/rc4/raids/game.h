@@ -139,6 +139,13 @@ enum RaidsDifficultys
   RAIDS_DIFFICULTY_COUNT
 };
 
+enum RaidsMissionStatus
+{
+  RAIDS_MISSION_ACTIVE = 0,
+  RAIDS_MISSION_FAILED = 1,
+  RAIDS_MISSION_COMPLETED = 2,
+};
+
 struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobCreateArgs;
@@ -165,6 +172,7 @@ typedef void (*FrameTick_func)(void);
 struct RaidsPlayerState
 {
   u64 Experience;
+  u64 Bolts;
 	int Kills;
 	int Deaths;
   u16 Skills[RAIDS_SKILLS_COUNT];
@@ -212,7 +220,7 @@ struct RaidsState
   int OnHubWorld;
 	struct RaidsPlayer* LocalPlayerState;
 	int GameOver;
-  int MissionComplete;
+  int MissionStatus;
   int MissionStartTime;
   int MissionCompleteTime;
 	int WinningTeam;
@@ -224,11 +232,15 @@ struct RaidsState
   float AmmoDropChance;
   float AmmoRefillCostMultiplier;
   int DifficultyStars;
+  int DesiredMusicTrack;
   int PendingWorldHopAtTime;
   int PendingWorldHopDifficultyStars;
   CustomMapDef_t* PendingWorldHopMapDef;
   CustomMapDef_t* CurrentMapDef;
 	char NumTeams;
+  char DesiredMusicTrackSkipTransition;
+  char DesiredMusicTrackForce;
+  char DesiredMusicTrackLoop;
 };
 
 struct RaidsMapConfig
@@ -238,6 +250,9 @@ struct RaidsMapConfig
   struct RaidsState* State;
   struct MobSpawnParams* MobSpawnParams;
   int MobSpawnParamsCount;
+  int* TrackWhitelist;
+  int TrackWhitelistCount;
+  int TrackWhitelistEnabled;
 
   // mode
   PushSnack_func PushSnackFunc;

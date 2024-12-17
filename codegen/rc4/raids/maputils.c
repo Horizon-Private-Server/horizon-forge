@@ -374,21 +374,27 @@ int hasPendingWorldHop(void)
 }
 
 //--------------------------------------------------------------------------
+int missionIsFailed(void)
+{
+  return MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_FAILED;
+}
+
+//--------------------------------------------------------------------------
 int missionIsComplete(void)
 {
-  return MapConfig.State && MapConfig.State->MissionComplete;
+  return MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_COMPLETED;
+}
+
+//--------------------------------------------------------------------------
+int missionIsActive(void)
+{
+  return !hasPendingWorldHop() && MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_ACTIVE;
 }
 
 //--------------------------------------------------------------------------
 int isOnHubWorld(void)
 {
   return MapConfig.State && MapConfig.State->OnHubWorld;
-}
-
-//--------------------------------------------------------------------------
-int missionIsActive(void)
-{
-  return !hasPendingWorldHop() && !missionIsComplete();
 }
 
 //--------------------------------------------------------------------------

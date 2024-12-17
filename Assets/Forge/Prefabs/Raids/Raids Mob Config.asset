@@ -26,11 +26,11 @@ MonoBehaviour:
         SourceMissionId: -1
     Behaviors: []
     Xp: 5
-    Bolts: 150
+    Bolts: 100
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 3
+    Speed: 1
     SpeedMax: 7.5
     SpeedScale: 0.5
     Health: 20
@@ -67,7 +67,7 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 14
     Behaviors: []
-    Xp: 1
+    Xp: 3
     Bolts: 50
     Damage: 4
     DamageMax: 0
@@ -95,7 +95,7 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     Behaviors: []
-    Xp: 2
+    Xp: 5
     Bolts: 100
     Damage: 7
     DamageMax: 0
@@ -126,7 +126,7 @@ MonoBehaviour:
         SourceMapId: 46
         SourceMissionId: -1
     Behaviors: []
-    Xp: 50
+    Xp: 25
     Bolts: 500
     Damage: 25
     DamageMax: 0
@@ -136,7 +136,7 @@ MonoBehaviour:
     SpeedScale: 0.5
     Health: 200
     HealthMax: 0
-    HealthScale: 1.2
+    HealthScale: 1.1
     AttackRadius: 50
     HitRadius: 0.5
     CollRadius: 1
@@ -157,7 +157,7 @@ MonoBehaviour:
     - Normal
     - Aggressive (Chase)
     - Evasive (Ranged)
-    Xp: 40
+    Xp: 15
     Bolts: 250
     Damage: 10
     DamageMax: 0
@@ -165,9 +165,9 @@ MonoBehaviour:
     Speed: 5
     SpeedMax: 20
     SpeedScale: 0.1
-    Health: 50
+    Health: 100
     HealthMax: 0
-    HealthScale: 1
+    HealthScale: 1.1
     AttackRadius: 5
     HitRadius: 0.5
     CollRadius: 2

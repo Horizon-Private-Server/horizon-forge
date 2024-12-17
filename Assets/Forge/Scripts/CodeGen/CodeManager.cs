@@ -10,7 +10,6 @@ using UnityEngine.SceneManagement;
 public class CodeManager : MonoBehaviour
 {
     public bool Enabled = false;
-    public bool DebugBuild = true;
 
     public async Task<bool> Build(string map, int racVersion)
     {
@@ -20,6 +19,7 @@ public class CodeManager : MonoBehaviour
 #if DOCKER
         var manager = DockerManager.GetOrCreate();
         if (!manager) return false;
+        manager.Validate();
         if (!manager.ContainerStarting() && !manager.ContainerReady()) await manager.Run();
 
         // waiting on docker container
@@ -44,7 +44,7 @@ public class CodeManager : MonoBehaviour
 #endif
     }
 
-    public bool Generate(CodeGenState state)
+    public bool Generate(ForgeBuilder.RebuildContext ctx, CodeGenState state)
     {
         var scene = SceneManager.GetActiveScene();
         if (scene == null) return false;
@@ -53,7 +53,7 @@ public class CodeManager : MonoBehaviour
         if (!mapConfig) return false;
 
         // only DL is supported atm
-        if (mapConfig.FirstRacVersion != RCVER.DL && mapConfig.SecondRacVersion != RCVER.DL) return false;
+        if (ctx.RacVersion != RCVER.DL) return false;
 
         state.Includes.Add($"#include \"common.h\"");
         state.ObjectFiles.Add("src/main.o");
@@ -96,7 +96,7 @@ public class CodeManager : MonoBehaviour
         var makefileContent = File.ReadAllText(makefilePath)
             .Replace("##EEOBJS##", string.Join(" ", state.ObjectFiles))
             .Replace("##EELDFLAGS##", string.Join(" ", state.LDFlags))
-            .Replace("##EEBUILD##", this.DebugBuild ? "DEBUG" : "RELEASE")
+            .Replace("##EEBUILD##", state.Debug ? "DEBUG" : "RELEASE")
             ;
         File.WriteAllText(makefilePath, makefileContent);
 
@@ -166,6 +166,8 @@ public class CodeManager : MonoBehaviour
 
 public class CodeGenState
 {
+    public bool Debug { get; set; } = false;
+
     // main.c
     public List<string> Includes { get; set; } = new List<string>();
     public List<string> Declarations { get; set; } = new List<string>();

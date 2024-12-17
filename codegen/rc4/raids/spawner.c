@@ -97,7 +97,7 @@ void spawnerGetRandomPointInCuboid(SpawnPoint* cuboid, VECTOR outPos)
   // determine where to spawn mob
   outPos[0] = randRange(-1, 1);
   outPos[1] = randRange(-1, 1);
-  outPos[2] = 0;
+  outPos[2] = 1;
   vector_apply(outPos, outPos, cuboid->M0);
 }
 
@@ -124,7 +124,6 @@ int spawnerGetRandomSpawnPoint(Moby* moby, int mobParamsIdx, VECTOR outPos, floa
 
   // determine where to spawn mob
   spawnerGetRandomPointInCuboid(cuboid, pos);
-  pos[2] += 3;
 
   if (outPos) vector_copy(outPos, pos);
   if (outYaw) *outYaw = cuboid->M1[14] + randRadian();
@@ -208,7 +207,7 @@ int spawnerIsCompleted(Moby* moby)
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
   struct SpawnerSpawnConfig* config = spawnerGetConfig(moby);
 
-  if (MapConfig.State && MapConfig.State->MissionComplete) return 1;
+  if (missionIsComplete()) return 1;
   return pvars->State.NumTotalKilled >= config->NumMobsToSpawn;
 }
 

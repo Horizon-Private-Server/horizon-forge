@@ -21,6 +21,7 @@
 #include <libdl/stdio.h>
 #include <libdl/gamesettings.h>
 #include <libdl/dialog.h>
+#include <libdl/music.h>
 #include <libdl/sound.h>
 #include <libdl/patch.h>
 #include <libdl/ui.h>
@@ -530,10 +531,11 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   if (!MapConfig.State) return 0;
-  if (MapConfig.State->MissionComplete) return 0;
+  if (!missionIsActive()) return 0;
   
-  MapConfig.State->MissionComplete = 1;
+  MapConfig.State->MissionStatus = RAIDS_MISSION_COMPLETED;
   MapConfig.State->MissionCompleteTime = gameAmIHost() ? gameGetTime() : pvars->State.RemoteIterationTime;
+  musicPlayTrack(MUSIC_TRACK_VICTORY, 0);
   DLOG(moby, "mission end\n");
   return 1;
 }
@@ -555,6 +557,18 @@ int controllerControlSetRefillAmmoCostMultiplier(Moby* moby, struct ControllerTa
   if (MapConfig.State->AmmoRefillCostMultiplier == target->Value.FloatValue) return 0;
 
   MapConfig.State->AmmoRefillCostMultiplier = target->Value.FloatValue;
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerSetMusicTrack(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  
+  MapConfig.State->DesiredMusicTrack = target->Music.TrackId;
+  MapConfig.State->DesiredMusicTrackForce = target->Music.Force;
+  MapConfig.State->DesiredMusicTrackSkipTransition = target->Music.SkipTransition;
+  MapConfig.State->DesiredMusicTrackLoop = target->Music.Loop;
   return 1;
 }
 
@@ -583,6 +597,7 @@ int controllerIterate(Moby* moby)
       case CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT: changed += controllerControlMobySetCheckpoint(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY: changed += controllerControlSetAmmoDropProbability(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER: changed += controllerControlSetRefillAmmoCostMultiplier(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_SET_MUSIC_TRACK: changed += controllerSetMusicTrack(moby, &pvars->Targets[i]); break;
     }
   }
   
@@ -666,7 +681,7 @@ void controllerUpdate(Moby* moby)
   if (!missionIsActive()) return;
   if (moby->State == CONTROLLER_STATE_DEACTIVATED) return;
   if (moby->State == CONTROLLER_STATE_COMPLETED) return;
-  if (MapConfig.State && MapConfig.State->MissionComplete) return;
+  if (!missionIsActive()) return;
 
   // update triggers
   controllerUpdateTriggers(moby);

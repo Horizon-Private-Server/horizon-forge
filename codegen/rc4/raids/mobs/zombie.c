@@ -140,17 +140,18 @@ void zombiePostUpdate(Moby* moby)
   }
 
   // adjust animSpeed by speed and by animation
-	float animSpeed = 0.7 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+  float baseSpeed = 0.7;
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP) {
-    animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / 35, 2));
+    animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
     if (pvars->MobVars.MoveVars.Grounded) {
-      animSpeed = 0.9;
+      animSpeed = baseSpeed;
     }
   } else if (zombieIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
-    animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+    animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (zombieIsDying(moby)) {
-    animSpeed = 0.9;
+    animSpeed = baseSpeed;
   }
 
 	if ((moby->DrawDist == 0 && pvars->MobVars.Action == ZOMBIE_ACTION_WALK)) {
@@ -591,7 +592,7 @@ void zombieDoAction(Moby* moby)
       if (!isInAirFromFlinching) {
         if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
           pvars->MobVars.Dirty = 1; // new path, sync with other clients
-        mobMoveTowards(moby, t, speed * 0.5, turnSpeed, acceleration, dir);
+        mobMoveTowards(moby, t, speed, turnSpeed, acceleration, dir);
       }
 
 			// 

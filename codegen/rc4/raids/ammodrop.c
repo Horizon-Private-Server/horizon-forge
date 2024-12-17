@@ -111,7 +111,9 @@ void ammodropCreateAt(Moby* moby)
 //--------------------------------------------------------------------------
 void ammodropStart(void)
 {
-  
+  // if (padGetButtonDown(0, PAD_DOWN) > 0) {
+  //   ammodropCreateAt(playerGetFromSlot(0)->PlayerMoby);
+  // }
 }
 
 //--------------------------------------------------------------------------

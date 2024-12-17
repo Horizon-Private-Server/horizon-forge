@@ -9,8 +9,8 @@
 #include <libdl/math3d.h>
 #include "game.h"
 
-#define BADGES_HEALTH_REGEN_AMOUNT                  (5)
-#define BADGES_HEALTH_REGEN_COOLDOWN_TICKS          (2*TPS)
+#define BADGES_HEALTH_REGEN_AMOUNT                  (3)
+#define BADGES_HEALTH_REGEN_COOLDOWN_TICKS          (10)
 
 #define BADGES_AMMO_REGEN_COOLDOWN_TICKS            (5*TPS)
 

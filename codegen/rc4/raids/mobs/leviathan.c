@@ -408,7 +408,7 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
   if (distSqr > attackRadiusSqr) {
 
     // check if moby is looking at (close to) target
-    if (leviathanVars->AttackLaserCooldownTicks == 0) {
+    if (leviathanVars->AttackLaserCooldownTicks == 0 && (MapConfig.State ? MapConfig.State->DifficultyStars : 0) > 0) {
       float theta = acosf(vector_innerproduct(dt, moby->M0_03));
       if (pvars->MobVars.Action != LEVIATHAN_ACTION_ATTACK_LASER && fabsf(theta) < (30 * MATH_DEG2RAD))
         return LEVIATHAN_ACTION_ATTACK_LASER;
@@ -588,7 +588,7 @@ int leviathanDoActionMove(Moby* moby)
     }
     return strafeDir > 0 ? LEVIATHAN_ANIM_WALK_LEFT : LEVIATHAN_ANIM_WALK_RIGHT;
   } else {
-    mobMoveTowards(moby, t, speed * 0.5, turnSpeed, acceleration, dir);
+    mobMoveTowards(moby, t, speed, turnSpeed, acceleration, dir);
     return LEVIATHAN_ANIM_WALK;
   }
 }

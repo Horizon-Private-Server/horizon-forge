@@ -59,6 +59,7 @@ int selectRandomIndex(int count, void* userdata, CanSelectIndex_func canSelectIn
 
 int hasPendingWorldHop(void);
 int isOnHubWorld(void);
+int missionIsFailed(void);
 int missionIsComplete(void);
 int missionIsActive(void);
 

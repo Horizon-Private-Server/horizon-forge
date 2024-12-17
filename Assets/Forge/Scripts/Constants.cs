@@ -160,7 +160,7 @@ public enum DLBlipTypes
 
 public enum DLFXTextureIds
 {
-    FX_TEXTURE_FIRST_SPECIAL = -8,
+    //FX_TEXTURE_FIRST_SPECIAL = -8,
     FX_BACK_ALPHA_CLUT = -8,
     FX_RAW_FRONT_BUFFER = -7,
     FX_RAW_BACK_BUFFER = -6,
@@ -330,6 +330,126 @@ public enum GameRegion
 {
     NTSC,
     PAL
+}
+
+public enum DLAlignment
+{
+    Top_Left = 0,
+    Top_Center,
+    Top_Right,
+    Middle_Left,
+    Middle_Center,
+    Middle_Right,
+    Bottom_Left,
+    Bottom_Center,
+    Bottom_Right,
+}
+
+public enum DLPadMask
+{
+    Up = 0x0010,
+    Right = 0x0020,
+    Down = 0x0040,
+    Left = 0x0080,
+
+    Start = 0x0008,
+    Select = 0x0001,
+
+    L3 = 0x0002,
+    R3 = 0x0004,
+    L2 = 0x0100,
+    R2 = 0x0200,
+    L1 = 0x0400,
+    R1 = 0x0800,
+
+    Triangle = 0x1000,
+    Circle = 0x2000,
+    Cross = 0x4000,
+    Square = 0x8000,
+}
+
+public enum DLRaidsDifficulties
+{
+    _1Star = 0,
+    _2Stars = 1,
+    _3Stars = 2,
+    _4Stars = 3,
+    _5Stars = 4,
+}
+
+public enum DLRaidsDifficultyMask
+{
+    _1Star = 1,
+    _2Stars = 2,
+    _3Stars = 4,
+    _4Stars = 8,
+    _5Stars = 16,
+}
+
+public enum DLMusicTracks
+{
+    OnlineLobby = 0x0,
+    GameLobby = 0x2,
+    Victory = 0x4,
+    Loss = 0x6,
+    MarauderAdvancedQualifier = 0x8,
+    AvengerTowerOfPower = 0xA,
+    CatacromOnTheProwl = 0xC,
+    SarathosSarathosSpirit = 0xE,
+    OrxonNodeOverload = 0x10,
+    StygiaEnergyCollector = 0x12,
+    MaraxusTotalControl = 0x14,
+    GhostStationGrindingChase = 0x16,
+    DreadzoneWestGenerator = 0x18,
+    DreadzoneEastGenerator = 0x1A,
+
+    // The following tracks are only available if single player music is turned on.
+    DreadzoneStation = 0x1C,
+    DreadzoneTraining = 0x1E,
+    DreadzoneGristForTheMill = 0x20,
+    DreadzoneAvengerSpeedDemon = 0x22,
+    DreadzoneZombieAttack = 0x24,
+    DreadzoneCrusaderDeathTrap = 0x26,
+    DreadzoneCrusaderMarathon = 0x28,
+    DreadzoneHeavyMetal = 0x2A,
+    DreadzoneEndZone = 0x2C,
+    DreadzoneVindicatorAirDrop = 0x2E,
+    CatacromValleyOfHeroes = 0x30,
+    CatacromAllAboardTheLandstalker = 0x32,
+    CatacromRiseUp = 0x34,
+    SarathosAlienSoil = 0x38,
+    SarathosWhereTheLaviathansRoam = 0x3A,
+    SarathosKingOfTheLeviathans = 0x3C,
+    KronosInfiltrateTheCathedral = 0x3E,
+    KronosIntroducingShellshock = 0x40,
+    KronosEnemiesAreSuchAGrind = 0x42,
+    KronosShowdownWithShellshock = 0x44,
+    ShaarDeathbowl = 0x46,
+    ShaarLandstalkerStalkin = 0x48,
+    ShaarAsTheWrenchTurns = 0x4A,
+    ShaarFrozenTundra = 0x4C,
+    OrxonLabyrinthOfDeath = 0x4E,
+    OrxonRefineryAmbush = 0x50,
+    OrxonChainsOfVillainy = 0x52,
+    ValixLostAndFound = 0x54,
+    ValixSpaceAce = 0x56,
+    ValixPowerUp = 0x58,
+    ValixLetTheLightShineThrough = 0x5A,
+    TorvalHoverbikeOrBust = 0x5C,
+    TorvalSeekAndDestroy = 0x5E,
+    TorvalTheTurnOn = 0x60,
+    TorvalBlastOfFreshAir = 0x62,
+    StygiaJunkingTheJammers = 0x64,
+    StygiaShieldsUp = 0x66,
+    StygiaShieldSurvival = 0x68,
+    MaraxusJailBreak = 0x6A,
+    MaraxusLeaveNoManBehind = 0x6C,
+    MaraxusDeltaBlock = 0x6E,
+    GhostStationRunningTheGauntlet = 0x70,
+    GhostStationPrisonBreak = 0x72,
+    GhostStationEscape = 0x74,
+    DreadzoneCredits = 0x76,
+    DreadzoneDefeatGleemonVox = 0x78
 }
 
 public static class Constants

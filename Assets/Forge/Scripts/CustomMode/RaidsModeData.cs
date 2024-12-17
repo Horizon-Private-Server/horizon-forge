@@ -36,13 +36,17 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public string Author;
     [Multiline] public string Description;
 
-    [Header("Debug")]
-    public bool DebugPath;
-
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
     {
         new RaidsMobSpawnParam() { Name = "Zombie" }
     };
+
+    [Header("Debug")]
+    public bool DebugPath;
+
+    [Header("Music")]
+    public bool OverrideTrackList = false;
+    public List<DLMusicTracks> TrackWhitelist = new List<DLMusicTracks>();
 
     private void OnValidate()
     {
@@ -66,6 +70,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/map.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gate.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
@@ -115,20 +120,22 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"ammodrop.h\"");
         state.Includes.Add("#include \"hackerorb.h\"");
         state.Includes.Add("#include \"blip.h\"");
+        state.Includes.Add("#include \"levelselect.h\"");
 
         state.Declarations.Add("void configInit(void);");
-        state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,\r\n};");
+        state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,  .TrackWhitelist = NULL,\r\n};");
 
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  levelselectFrameTick();\r\n  messagerFrameUpdate();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
 
+        state.InitBody.Add($"configInit();");
         state.InitBody.Add($"mapInit();");
         state.InitBody.Add($"mobInit();");
-        state.InitBody.Add($"configInit();");
+        state.InitBody.Add($"levelselectInit();");
         state.InitBody.Add($"spawnerInit();");
         state.InitBody.Add($"moverInit();");
         state.InitBody.Add($"controllerInit();");
@@ -157,6 +164,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add("respawnAllPlayers();");
 
         state.MainBodyReady.Add("mapStart();");
+        state.MainBodyReady.Add("levelselectStart();");
         state.MainBodyReady.Add("spawnerStart();");
         state.MainBodyReady.Add("moverStart();");
         state.MainBodyReady.Add("controllerStart();");
@@ -213,7 +221,15 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine("");
 
-        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n}\r\n");
+        sb.AppendLine($"int musicTrackWhitelistEnabled = {(OverrideTrackList ? 1 : 0)};");
+        sb.AppendLine($"int musicTrackWhitelistCount = {TrackWhitelist.Count};");
+        sb.AppendLine("int musicTrackWhitelist[] = {");
+        foreach (var track in TrackWhitelist)
+            sb.AppendLine($"  {(int)track},");
+        sb.AppendLine("};");
+        sb.AppendLine("");
+
+        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n  MapConfig.TrackWhitelist = musicTrackWhitelist;\r\n  MapConfig.TrackWhitelistCount = musicTrackWhitelistCount;\r\n  MapConfig.TrackWhitelistEnabled = musicTrackWhitelistEnabled;\r\n}\r\n");
 
         return sb.ToString();
     }

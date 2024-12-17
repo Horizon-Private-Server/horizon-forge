@@ -81,6 +81,7 @@ enum ControllerTargetUpdateType {
   CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT,
   CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY,
   CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER,
+  CONTROLLER_TARGET_UPDATE_TYPE_SET_MUSIC_TRACK,
 };
 
 struct ControllerRuntimeState
@@ -185,6 +186,14 @@ struct ControllerTarget
       char TriggeredOnly;
       char DeadOnly;
     } RespawnPlayer;
+
+    // respawn player
+    struct {
+      short TrackId;
+      char SkipTransition;
+      char Force;
+      char Loop;
+    } Music;
 
     // values
     struct {

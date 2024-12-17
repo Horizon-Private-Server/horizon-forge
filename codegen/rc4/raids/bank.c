@@ -68,9 +68,17 @@ enum RaidsItemRarity bankGetRarityFromQuality(u8 quality)
 {
   if (quality < 64) return RAIDS_ITEM_RARITY_COMMON;
   if (quality < 128) return RAIDS_ITEM_RARITY_UNCOMMON;
-  if (quality < 196) return RAIDS_ITEM_RARITY_RARE;
+  if (quality < 192) return RAIDS_ITEM_RARITY_RARE;
   if (quality < 255) return RAIDS_ITEM_RARITY_LEGENDARY;
   return RAIDS_ITEM_RARITY_MYTHIC;
+}
+
+//--------------------------------------------------------------------------
+RaidsPlayerBank_t* bankGetLocalBank(void)
+{
+  if (MapConfig.GetBankFunc) return MapConfig.GetBankFunc();
+
+  return NULL;
 }
 
 //--------------------------------------------------------------------------

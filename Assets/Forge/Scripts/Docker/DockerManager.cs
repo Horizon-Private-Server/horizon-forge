@@ -53,6 +53,21 @@ public class DockerManager : MonoBehaviour
         }
     }
 
+    public async void Validate()
+    {
+        if (container == null) return;
+
+        try
+        {
+            await container.GetExitCodeAsync();
+        }
+        catch
+        {
+            // bad container
+            container = null;
+        }
+    }
+
     public TestcontainersStates? GetStatus()
     {
         return container?.State;

@@ -36,7 +36,7 @@ public class BuildWindow : EditorWindow
     };
 
     // rebuild
-    Toggle toggleRebuildCode;
+    DropdownField dropdownBuildCode;
     Toggle toggleRebuildCollision;
     Toggle toggleRebuildTfrags;
     Toggle toggleRebuildTies;
@@ -100,7 +100,7 @@ public class BuildWindow : EditorWindow
         root.BuildLabel("Rebuild");
         root.BuildPadding();
 
-        CreateGUI_Toggle(ref toggleRebuildCode, "Custom Code", true);
+        CreateGUI_Dropdown(ref dropdownBuildCode, "Custom Code", new List<string>() { "Off", "Release", "Debug" }, 1);
         CreateGUI_Toggle(ref toggleRebuildCollision, "Collision", true);
         CreateGUI_Toggle(ref toggleRebuildCuboidsSplinesAreas, "Cuboids/Splines/Areas/Cameras/Ambient Sounds", true);
         CreateGUI_Toggle(ref toggleRebuildDZO, "DZO", true);
@@ -110,7 +110,7 @@ public class BuildWindow : EditorWindow
         CreateGUI_Toggle(ref toggleRebuildTies, "Ties", true);
         CreateGUI_Toggle(ref toggleRebuildLighting, "World Lighting", true);
 
-        root.Add(toggleRebuildCode);
+        root.Add(dropdownBuildCode);
         root.Add(toggleRebuildCollision);
         root.Add(toggleRebuildCuboidsSplinesAreas);
         root.Add(toggleRebuildDZO);
@@ -169,6 +169,15 @@ public class BuildWindow : EditorWindow
         patchButton.style.flexGrow = 1;
         patchButton.style.maxHeight = 30;
         buttonContainer.Add(patchButton);
+    }
+
+    void CreateGUI_Dropdown(ref DropdownField dropdown, string name, List<string> choices, int defaultIndex)
+    {
+        if (dropdown != null) return;
+
+        var key = $"FORGE_BUILDER_{name}";
+        dropdown = new DropdownField(name, choices, defaultIndex) { index = SessionState.GetInt(key, defaultIndex) };
+        dropdown.RegisterValueChangedCallback((e) => SessionState.SetInt(key, choices.IndexOf(e.newValue)));
     }
 
     void CreateGUI_Toggle(ref Toggle toggle, string name, bool defaultValue)
@@ -300,7 +309,7 @@ public class BuildWindow : EditorWindow
                 if (region == GameRegion.PAL && buildBothRC3Regions)
                 {
                     // we need to rebuild code if PAL otherwise we 
-                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, toggleRebuildCode.value); if (ctx.Cancel) return false;
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
                 }
                 else
                 {
@@ -322,7 +331,7 @@ public class BuildWindow : EditorWindow
                     // always rebuild code
                     // to account for NTSC/PAL using different code segments
                     // we must always keep the build folder's code up-to-date
-                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, toggleRebuildCode.value); if (ctx.Cancel) return false;
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
                 }
 
                 EditorUtility.ClearProgressBar();

@@ -623,7 +623,7 @@ void swamperDoAction(Moby* moby)
 			mobTransAnim(moby, attack1AnimId, 0);
 
       float t = moby->AnimSeqT / 42;
-      float speedCurve = powf(clamp((1.5-t) * 3, 0, 2.25), 2);
+      float speedCurve = powf(clamp((1.5-t) * 1.5, 0, 1.5), 2);
 			float speedMult = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < 15 || moby->AnimSeqT > 30)) ? 0 : speedCurve;
 			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 22 && moby->AnimSeqT < 30;
 			u32 damageFlags = 0x00081801;

@@ -126,8 +126,8 @@ void laserbeamPostDraw(Moby* moby)
       // rotate and offset uvs
       float rCos = cosf(rot);
       float rSin = sinf(rot);
-      v0 = t + p;
-      v1 = t + p + 1;
+      v0 = p + fastmodf(t, 1);
+      v1 = v0 + 1;
       quad.VertexUVs[0] = (struct UV){u0*rCos - v0*rSin,v0*rCos + u0*rSin};
       quad.VertexUVs[1] = (struct UV){u1*rCos - v0*rSin,v0*rCos + u1*rSin};
       quad.VertexUVs[2] = (struct UV){u0*rCos - v1*rSin,v1*rCos + u0*rSin};
@@ -224,7 +224,7 @@ Moby* laserbeamCreate(Moby* parent)
   if (moby) {
     moby->PUpdate = &laserbeamUpdate;
     moby->ModeBits &= ~(MOBY_MODE_BIT_NO_UPDATE);
-    moby->UpdateDist = 128;
+    moby->UpdateDist = 255;
     moby->PParent = parent;
   }
 

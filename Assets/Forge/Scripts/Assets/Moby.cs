@@ -79,7 +79,13 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     public void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs) => PVarReferences = pvarRefs;
     public void SetPVarStrings(string[] strings) => PVarStrings = strings;
     public object GetPVarValue(string path) => GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences);
-    public T GetPVarValue<T>(string path) => (T?)GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences) ?? default(T);
+    public T GetPVarValue<T>(string path)
+    {
+        var value = GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences);
+        if (value == null) return default(T);
+
+        return (T)Convert.ChangeType(value, typeof(T));
+    }
 
     public GameObject GameObject => this ? this.gameObject : null;
     public bool IsHidden => renderHandle?.IsHidden ?? false;

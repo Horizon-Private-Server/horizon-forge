@@ -1764,7 +1764,7 @@ public static class ForgeBuilder
 
     }
 
-    public static async Task RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder, bool buildCodeGen = true)
+    public static async Task RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder, bool buildCodeGen = true, bool codeGenBuildDebug = false)
     {
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var mapRender = GameObject.FindObjectOfType<MapRender>();
@@ -1806,11 +1806,17 @@ public static class ForgeBuilder
             var codeManager = GameObject.FindObjectOfType<CodeManager>();
             if (codeManager && codeManager.Enabled)
             {
-                var state = new CodeGenState();
-                if (codeManager.Generate(state))
+                var state = new CodeGenState() { Debug = codeGenBuildDebug };
+                if (codeManager.Generate(ctx, state))
                 {
-                    await codeManager.Build(ctx.MapSceneName, ctx.RacVersion);
-                    codeManager.PostBuild(state);
+                    if (await codeManager.Build(ctx.MapSceneName, ctx.RacVersion))
+                    {
+                        codeManager.PostBuild(state);
+                    }
+                    else
+                    {
+                        Debug.LogError("Failed to build. Make sure that Docker is running.");
+                    }
                 }
             }
         }

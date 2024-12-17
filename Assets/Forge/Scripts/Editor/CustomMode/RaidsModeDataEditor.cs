@@ -45,6 +45,7 @@ public class RaidsModeDataEditor : Editor
             }
         }
 
+        GUILayout.Space(40);
         if (missingVariants.Any())
         {
             EditorGUILayout.HelpBox($"Some mob mobys are not in your Map yet. Please use the button below to install them.", MessageType.Error);

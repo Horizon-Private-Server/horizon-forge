@@ -35,6 +35,7 @@
 
 char badgesPlayerHasUsedSelfRevive[GAME_MAX_PLAYERS] = {0};
 int badgesPlayerCooldown[GAME_MAX_PLAYERS] = {0};
+int badgesPlayerTimeLastLastHit[GAME_MAX_PLAYERS] = {0};
 int badgesAmmoRegenAmount[WEAPON_SLOT_COUNT] = {
   [WEAPON_SLOT_VIPERS] 5,
   [WEAPON_SLOT_MAGMA_CANNON] 2,
@@ -82,12 +83,25 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
 void badgesUpdate_HealthRegen(Player* player, int badgeLevel)
 {
   if (playerIsDead(player) || player->Health <= 0) return;
+  
+  int delayMs = (TIME_SECOND * 5);
+  int timeSinceLastHitMs = gameGetTime() - (badgesPlayerTimeLastLastHit[player->PlayerId] + delayMs);
+  if (timeSinceLastHitMs < 0) return;
 
-  float newHealth = clamp(player->Health + BADGES_HEALTH_REGEN_AMOUNT*(badgeLevel+1), 0, player->MaxHealth);
+  timeSinceLastHitMs *= 1 + (0.5 * badgeLevel);
+  int cooldown = BADGES_HEALTH_REGEN_COOLDOWN_TICKS;
+  if (timeSinceLastHitMs < (TIME_SECOND * 10))
+    cooldown *= 5;
+  else if (timeSinceLastHitMs < (TIME_SECOND * 15))
+    cooldown *= 3;
+  else if (timeSinceLastHitMs < (TIME_SECOND * 20))
+    cooldown *= 2;
+
+  float newHealth = clamp(player->Health + BADGES_HEALTH_REGEN_AMOUNT, 0, player->MaxHealth);
   if (newHealth != player->Health) {
     playerSetHealth(player, newHealth);
-    mobyPlaySoundByClass(1, 0, player->PlayerMoby, MOBY_ID_HEALTH_BOX_MULT);
-    badgesPlayerCooldown[player->PlayerId] = BADGES_HEALTH_REGEN_COOLDOWN_TICKS;
+    //mobyPlaySoundByClass(1, 0, player->PlayerMoby, MOBY_ID_HEALTH_BOX_MULT);
+    badgesPlayerCooldown[player->PlayerId] = cooldown;
   }
 }
 
@@ -183,6 +197,10 @@ void badgesUpdate_ExtraLife(Player* player, int badgeLevel)
 void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badgeLevel)
 {
   if (!player) return;
+
+  // update time last had full health
+  if (player->PlayerState == PLAYER_STATE_GET_HIT)
+    badgesPlayerTimeLastLastHit[player->PlayerId] = gameGetTime();
 
   u32 cooldown = decTimerU32(&badgesPlayerCooldown[player->PlayerId]);
   if (cooldown) return;

@@ -389,30 +389,6 @@ public class PvarOverlay
                         Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
-            case "raidsdifficulty":
-                {
-                    // default enum to first value in list
-
-                    var count = def.Count ?? 1;
-                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
-                    var value = defaultValue ?? 0;
-                    var valueBytes = BitConverter.GetBytes(value);
-                    for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
-                    break;
-                }
-            case "raidsdifficultymask":
-                {
-                    // default enum to first value in list
-
-                    var count = def.Count ?? 1;
-                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
-                    var value = defaultValue ?? 0;
-                    var valueBytes = BitConverter.GetBytes(value);
-                    for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
-                    break;
-                }
             case "raidsmobid":
                 {
                     // default enum to first value in list
@@ -553,6 +529,7 @@ public class PvarOverlayDef
     public string Ref { get; set; }
     public int Offset { get; set; }
     public Dictionary<string, long> Options { get; set; }
+    public string OptionsLookupKey { get; set; }
     public int? DataSize { get; set; }
     public int? Count { get; set; }
     public float? Min { get; set; }
@@ -575,11 +552,7 @@ public class PvarOverlayDef
         {
             case "byte":
             case "sbyte":
-            case "team":
-            case "bliptype":
             case "bool": return 1;
-
-            case "padmask": return 2;
 
             case "colorrgb": return 3;
 
@@ -596,9 +569,6 @@ public class PvarOverlayDef
             case "levelfxtex":
             case "fxtex":
             case "colorrgba":
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
             case "raidsmobbehavior":
             case "screenposition":
@@ -656,7 +626,6 @@ public class PvarOverlayDef
         switch (this.DataType?.ToLower())
         {
             case "bool": return buffer[0] != 0;
-            case "team":
             case "bliptype":
             case "byte": return buffer[0];
             case "sbyte": return (sbyte)buffer[0];
@@ -671,13 +640,9 @@ public class PvarOverlayDef
             case "vector3": return new Vector3(BitConverter.ToSingle(buffer), BitConverter.ToSingle(buffer, 4), BitConverter.ToSingle(buffer, 8));
             case "colorrgb": return new Color32(buffer[0], buffer[1], buffer[2], 255);
             case "colorrgba": return new Color32(buffer[0], buffer[1], buffer[2], buffer[3]);
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
             case "raidsmobbehavior":
             case "mask":
-            case "padmask":
             case "mobyrefstate":
             case "enum": return BitConverter.ToInt64(buffer);
             case "mobyrefpvar":
@@ -703,12 +668,8 @@ public class PvarOverlayDef
         switch (this.DataType?.ToLower())
         {
             case "bool": buffer[0] = (byte)(((bool?)value ?? false) ? 1 : 0); break;
-            case "team": buffer[0] = (byte)((DLTeamIds?)value ?? 0); break;
-            case "bliptype": buffer[0] = (byte)((DLBlipTypes?)value ?? 0); break;
             case "byte": buffer[0] = (byte)((byte?)value ?? 0); break;
             case "sbyte": buffer[0] = (byte)((sbyte?)value ?? 0); break;
-            case "fxtex":
-            case "levelfxtex":
             case "mobygroupid":
             case "tiegroupid":
             case "integer": BitConverter.TryWriteBytes(buffer, (int?)value ?? 0); break;
@@ -718,13 +679,9 @@ public class PvarOverlayDef
             case "vector3": BitConverter.TryWriteBytes(buffer, ((Vector3?)value ?? Vector3.zero).x); BitConverter.TryWriteBytes(buffer.AsSpan(4), ((Vector3?)value ?? Vector3.zero).y); BitConverter.TryWriteBytes(buffer.AsSpan(8), ((Vector3?)value ?? Vector3.zero).z); break;
             case "colorrgb": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; break;
             case "colorrgba": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; buffer[3] = ((Color32)value).a; break;
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
             case "raidsmobbehavior":
             case "mask":
-            case "padmask":
             case "mobyrefstate":
             case "enum": BitConverter.TryWriteBytes(buffer, (long)value); break;
 
@@ -840,23 +797,17 @@ public class PvarOverlayDef
 
                     return new Color32(0, 0, 0, 0);
                 }
-            case "bliptype": return Enum.TryParse<DLBlipTypes>(v, out var blipType) ? blipType : DLBlipTypes.Player;
-            case "team": return Enum.TryParse<DLTeamIds>(v, out var teamId) ? teamId : DLTeamIds.Blue;
-            case "fxtex": return Enum.TryParse<DLFXTextureIds>(v, out var fxtexId) ? fxtexId : DLFXTextureIds.FX_LAME_SHADOW;
-            case "levelfxtex": return Enum.TryParse<DLLevelFXTextureIds>(v, out var lvlfxtexId) ? lvlfxtexId : DLLevelFXTextureIds.FX_LEVEL_0;
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
             case "raidsmobbehavior":
             case "mask":
-            case "padmask":
             case "mobyrefstate":
             case "enum": return long.TryParse(v, out var enumValue) ? enumValue : 0;
             case "mobyrefpvar": return value;
             default: return null;
         }
     }
+
+    public Dictionary<string, long> GetOptions() => Options ?? PvarOverlayConstants.PVAR_OPTIONS_LOOKUP.GetValueOrDefault(OptionsLookupKey?.ToLower()) ?? new Dictionary<string, long>();
 
     public (PvarOverlayDef def, int offset) FindFieldFrom(PvarOverlay pvarOverlay, string fieldName, int offset)
     {
@@ -931,4 +882,26 @@ public class PvarOverlayDefMetadata
     public int Offset { get; set; }
     public int Size { get; set; }
     public PvarOverlayDef Field { get; set; }
+}
+
+public static class PvarOverlayConstants
+{
+    public static readonly Dictionary<string, Dictionary<string, long>> PVAR_OPTIONS_LOOKUP = new Dictionary<string, Dictionary<string, long>>()
+    {
+        { "padmask", FromEnum<DLPadMask>() },
+        { "alignment", FromEnum<DLAlignment>() },
+        { "raidsdifficulty", FromEnum<DLRaidsDifficulties>() },
+        { "raidsdifficultymask", FromEnum<DLRaidsDifficultyMask>() },
+        { "musictracks", FromEnum<DLMusicTracks>() },
+        { "levelfxtex", FromEnum<DLLevelFXTextureIds>() },
+        { "fxtex", FromEnum<DLFXTextureIds>() },
+        { "teams", FromEnum<DLTeamIds>() },
+        { "bliptypes", FromEnum<DLBlipTypes>() },
+    };
+
+    private static Dictionary<string, long> FromEnum<T>() where T : Enum
+    {
+        return ((T[])Enum.GetValues(typeof(T))).ToDictionary(x => ObjectNames.NicifyVariableName(x.ToString()), x => Convert.ToInt64(x));
+    }
+
 }

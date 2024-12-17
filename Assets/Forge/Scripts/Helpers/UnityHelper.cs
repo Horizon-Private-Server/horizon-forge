@@ -14,60 +14,6 @@ public static class UnityHelper
     private static Texture2D _defaultTexture;
     public static Texture2D DefaultTexture => _defaultTexture ? _defaultTexture : (_defaultTexture = new Texture2D(32, 32, TextureFormat.ARGB32, false));
 
-    private static readonly Dictionary<string, long> PAD_MASK_OPTIONS = new Dictionary<string, long>()
-    {
-        { "Up", 0x0010 },
-        { "Right", 0x0020 },
-        { "Down", 0x0040 },
-        { "Left", 0x0080 },
-
-        { "Start", 0x0008 },
-        { "Select", 0x0001 },
-
-        { "L3", 0x0002 },
-        { "R3", 0x0004 },
-        { "L2", 0x0100 },
-        { "R2", 0x0200 },
-        { "L1", 0x0400 },
-        { "R1", 0x0800 },
-
-        { "Triangle", 0x1000 },
-        { "Circle", 0x2000 },
-        { "Cross", 0x4000 },
-        { "Square", 0x8000 },
-    };
-
-    private static readonly Dictionary<string, long> ALIGNMENT_OPTIONS = new Dictionary<string, long>()
-    {
-        { "Top Left", 0 },
-        { "Top Center", 1 },
-        { "Top Right", 2 },
-        { "Middle Left", 3 },
-        { "Middle Center", 4 },
-        { "Middle Right", 5 },
-        { "Bottom Left", 6 },
-        { "Bottom Center", 7 },
-        { "Bottom Right", 8 },
-    };
-
-    private static readonly Dictionary<string, long> RAIDS_STARS_OPTIONS = new Dictionary<string, long>()
-    {
-        { "1 Star", 0 },
-        { "2 Stars", 1 },
-        { "3 Stars", 2 },
-        { "4 Stars", 3 },
-        { "5 Stars", 4 },
-    };
-
-    private static readonly Dictionary<string, long> RAIDS_DIFFICULTY_MASK_OPTIONS = new Dictionary<string, long>()
-    {
-        { "1 Star", 0x01 },
-        { "2 Stars", 0x02 },
-        { "3 Stars", 0x04 },
-        { "4 Stars", 0x08 },
-        { "5 Stars", 0x10 },
-    };
-
     public static void Matrix4x4PropertyField(SerializedProperty property)
     {
         EditorGUI.BeginDisabledGroup(!property.editable);
@@ -905,66 +851,6 @@ public static class UnityHelper
                     }
                     break;
                 }
-            case "team":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (byte?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLTeamIds)value, def.Min, def.Max);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
-            case "bliptype":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (byte?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLBlipTypes)value, def.Min, def.Max);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
-            case "fxtex":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (int?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLFXTextureIds)value, def.Min, def.Max);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
-            case "levelfxtex":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (int?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLLevelFXTextureIds)value, def.Min, def.Max);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
             case "enum":
                 {
                     Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
@@ -976,45 +862,7 @@ public static class UnityHelper
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
                         EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "alignment":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, ALIGNMENT_OPTIONS, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "raidsdifficulty":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, RAIDS_STARS_OPTIONS, dataSize);
+                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, def.GetOptions(), dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
@@ -1033,26 +881,7 @@ public static class UnityHelper
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
                         EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "raidsdifficultymask":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, RAIDS_DIFFICULTY_MASK_OPTIONS, dataSize);
+                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, def.GetOptions(), dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
@@ -1124,25 +953,6 @@ public static class UnityHelper
 
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, behaviors, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "padmask":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, PAD_MASK_OPTIONS, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));

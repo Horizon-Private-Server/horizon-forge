@@ -9,6 +9,7 @@
 #include <libdl/moby.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
+#include <libdl/ui.h>
 #include <libdl/utils.h>
 #include "spawner.h"
 #include "mover.h"
@@ -195,14 +196,14 @@ char * mapCustomGetGadgetVersionName(int localPlayerIndex, int weaponId, int sho
 	if (level >= 9)
     msgId = capitalize ? gadgetDef->upgUCTag : gadgetDef->upgQSTag;
 
+  RaidsInventoryItem_t* item = bankGetLocalEquippedWeapon(weaponId);
+  if (!item) {
+    return uiMsgString(msgId);
+  }
+
 	char* str = uiMsgString(msgId);
-	if (0 && level >= minLevel) {
-		snprintf(buf, 0x40, "%s V%d", str, level+1);
-		return buf;
-	} else {
-		snprintf(buf, 0x40, "%s", str);
-		return buf;
-	}
+  snprintf(buf, 0x40, "%s P%d", str, item->Proficiency+1);
+  return buf;
 }
 
 //--------------------------------------------------------------------------
@@ -315,13 +316,6 @@ void mapInit(void)
 {
   int i;
 
-	// Disable normal game ending
-	*(u32*)0x006219B8 = 0;	// survivor (8)
-	*(u32*)0x00620F54 = 0;	// time end (1)
-	*(u32*)0x00621568 = 0;	// kills reached (2)
-	*(u32*)0x006211A0 = 0;	// all enemies leave (9)
-  *(u32*)0x006210D8 = 0;	// all enemies leave (9)
-
   // spawn area mod explosion on each ricochet of the v10 vipers
   HOOK_JAL(0x003C283C, &mapOnV10VipersHitSurface);
 
@@ -394,7 +388,7 @@ void mapInit(void)
 	//*(u32*)0x005DD890 = 0x0C000000 | ((u32)&customBangelizeWeapons >> 2);
 
 	// Enable weapon version and v10 name variant in places that display weapon name
-  //HOOK_J_OP(0x00541850, &mapCustomGetGadgetVersionName, 0);
+  HOOK_J_OP(0x00541850, &mapCustomGetGadgetVersionName, 0);
 
 	// patch who killed me to prevent damaging others
   HOOK_JAL(0x005E07C8, &mapWhoKilledMeHook);
@@ -416,4 +410,13 @@ void mapInit(void)
   // hook spawn
   HOOK_JAL(0x00610724, &mapGetResurrectPoint);
   HOOK_JAL(0x005e2d44, &mapGetResurrectPoint);
+
+  // set health
+  Player** players = playerGetAll();
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* player = players[i];
+    if (!playerIsValid(player) || playerIsDead(player)) continue;
+    
+    playerSetHealth(player, player->MaxHealth);
+  }
 }
