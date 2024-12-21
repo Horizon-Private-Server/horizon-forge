@@ -462,7 +462,8 @@ public enum RaidsMob
     Swarmer,
     Swamper,
     StalkerTurret,
-    Leviathan
+    Leviathan,
+    DZStriker
 }
 
 [Flags]
@@ -530,7 +531,7 @@ public class RaidsMobSpawnParam
 
         sb.AppendLine("  {");
         sb.AppendLine($"    .MobCreate = &{mobPrefix}Create,");
-        sb.AppendLine($"    .MobVTable = &{mobPrefix.ToTitleCase()}VTable,");
+        sb.AppendLine($"    .MobVTable = &{this.Mob}VTable,");
         sb.AppendLine($"    .RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
         sb.AppendLine($"    .Scale = {SizeMultiplier},");
         sb.AppendLine($"    .OClass = {variant.OClass},");

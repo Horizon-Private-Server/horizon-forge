@@ -74,6 +74,9 @@ struct Guber* mapGetGuber(Moby* moby)
     case CHECKPOINT_MANAGER_OCLASS:
     case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);
     case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);
+#if MOB_DZSTRIKER
+      case MOBY_ID_DZ_STRIKER_TORSO_RED: return (Guber*)moby->GuberMoby;
+#endif
 #if GATE
     case GATE_OCLASS: return gateGetGuber(moby);
 #endif
@@ -116,6 +119,9 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
       case CHECKPOINT_MANAGER_OCLASS:
       case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;
       case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;
+#if MOB_DZSTRIKER
+      case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;
+#endif
 #if GATE
     case GATE_OCLASS: gateHandleEvent(moby, event); break;
 #endif
@@ -298,6 +304,14 @@ void mapGetResurrectPoint(Player* player, VECTOR outPos, VECTOR outRot, int firs
 }
 
 //--------------------------------------------------------------------------
+void mapOnHealthboxHeal(Player* player, float amount)
+{
+  if (amount > 100) amount = 100;
+
+  playerIncHealth(player, amount);
+}
+
+//--------------------------------------------------------------------------
 void mapStart(void)
 {
   // tick down mob sound cooldown
@@ -410,6 +424,9 @@ void mapInit(void)
   // hook spawn
   HOOK_JAL(0x00610724, &mapGetResurrectPoint);
   HOOK_JAL(0x005e2d44, &mapGetResurrectPoint);
+
+  // hook healthbox heal
+  HOOK_JAL(0x004130F4, &mapOnHealthboxHeal);
 
   // set health
   Player** players = playerGetAll();

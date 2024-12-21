@@ -33,7 +33,6 @@
 #include "badges.h"
 #include "game.h"
 
-char badgesPlayerHasUsedSelfRevive[GAME_MAX_PLAYERS] = {0};
 int badgesPlayerCooldown[GAME_MAX_PLAYERS] = {0};
 int badgesPlayerTimeLastLastHit[GAME_MAX_PLAYERS] = {0};
 int badgesAmmoRegenAmount[WEAPON_SLOT_COUNT] = {
@@ -69,7 +68,7 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
   // 
   if (stateId == PLAYER_STATE_GET_HIT) {
     RaidsInventoryItem_t* badge = &MapConfig.State->PlayerStates[player->PlayerId].Inventory.Badge;
-    if (bankItemIsBadge(badge) && badge->BadgeType == RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH && bankGetRarityFromQuality(badge->Quality) == RAIDS_ITEM_RARITY_MYTHIC) {
+    if (bankItemIsBadge(badge) && badge->BadgeType == RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH) {
       if (player->PlayerState == PLAYER_STATE_JUMP_ATTACK && player->PlayerMoby->AnimSeqId == 43) {
         return;
       }
@@ -90,11 +89,11 @@ void badgesUpdate_HealthRegen(Player* player, int badgeLevel)
 
   timeSinceLastHitMs *= 1 + (0.5 * badgeLevel);
   int cooldown = BADGES_HEALTH_REGEN_COOLDOWN_TICKS;
-  if (timeSinceLastHitMs < (TIME_SECOND * 10))
+  if (timeSinceLastHitMs < (TIME_SECOND * 15))
     cooldown *= 5;
-  else if (timeSinceLastHitMs < (TIME_SECOND * 15))
+  else if (timeSinceLastHitMs < (TIME_SECOND * 30))
     cooldown *= 3;
-  else if (timeSinceLastHitMs < (TIME_SECOND * 20))
+  else if (timeSinceLastHitMs < (TIME_SECOND * 60))
     cooldown *= 2;
 
   float newHealth = clamp(player->Health + BADGES_HEALTH_REGEN_AMOUNT, 0, player->MaxHealth);
@@ -184,16 +183,6 @@ void badgesUpdate_ExplosiveWrench(Player* player, int badgeLevel)
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_ExtraLife(Player* player, int badgeLevel)
-{
-  if (badgesPlayerHasUsedSelfRevive[player->PlayerId]) return;
-  if (!playerIsDead(player)) return;
-
-  badgesPlayerHasUsedSelfRevive[player->PlayerId] = 1;
-  playerRespawn(player);
-}
-
-//--------------------------------------------------------------------------
 void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badgeLevel)
 {
   if (!player) return;
@@ -213,7 +202,6 @@ void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badge
     case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, badgeLevel); break;
     case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, badgeLevel); break;
     case RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH: badgesUpdate_ExplosiveWrench(player, badgeLevel); break;
-    case RAIDS_BADGE_TYPE_EXTRALIFE: badgesUpdate_ExtraLife(player, badgeLevel); break;
     default: break;
   }
 }

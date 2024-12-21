@@ -25,7 +25,6 @@ char* bankBadgeNames[] = {
   [RAIDS_BADGE_TYPE_BERSERKER] "%cBerserker %s\x08",
   [RAIDS_BADGE_TYPE_FLINCH_RESISTANCE] "%cFlinch Resistance %s\x08",
   [RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH] "%cExplosive Wrench %s\x08",
-  [RAIDS_BADGE_TYPE_EXTRALIFE] "%cSecond Chance\x08",
   [RAIDS_BADGE_TYPE_COUNT] NULL,
 };
 

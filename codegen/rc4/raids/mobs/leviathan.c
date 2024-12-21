@@ -888,7 +888,7 @@ void leviathanDoAction(Moby* moby)
 //--------------------------------------------------------------------------
 void leviathanDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
 {
-  mobDoDamage(moby, radius, amount, damageFlags, friendlyFire, LEVIATHAN_SUBSKELETON_JOINT_TAIL_HEAD, 1, 0);
+  mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, LEVIATHAN_SUBSKELETON_JOINT_TAIL_HEAD, 1, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -1023,9 +1023,10 @@ int leviathanShouldForceStateUpdateOnAction(Moby* moby, int action)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
   // only send state updates at regular intervals, unless dying
-  // or if we're entering/leaving the roaming state
+  // or if we're entering/leaving the roaming/laser states
   if (action == LEVIATHAN_ACTION_DIE) return 1;
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_ROAM || action == LEVIATHAN_ACTION_ROAM) return 1;
+  if (pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER || action == LEVIATHAN_ACTION_ATTACK_LASER) return 1;
 
   return 0;
 }

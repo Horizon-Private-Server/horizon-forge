@@ -41,7 +41,7 @@ int stalkerturretCanAttack(struct MobPVar* pvars);
 int stalkerturretCanShoot(struct MobPVar* pvars);
 int stalkerturretIsDying(Moby* moby);
 
-struct MobVTable StalkerturretVTable = {
+struct MobVTable StalkerTurretVTable = {
   .PreUpdate = &stalkerturretPreUpdate,
   .PostUpdate = &stalkerturretPostUpdate,
   //.PostDraw = &stalkerturretPostDraw,
@@ -72,7 +72,7 @@ int stalkerturretCreate(struct MobCreateArgs* args)
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(StalkerturretMobVars_t), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(StalkerTurretMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -111,11 +111,11 @@ void stalkerturretPreUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   int i;
   for (i = 0; i < STALKERTURRET_TARGET_CACHE_COUNT; ++i) {
-    struct StalkerturretTargetCache* cache = &turretVars->TargetCache[i];
+    struct StalkerTurretTargetCache* cache = &turretVars->TargetCache[i];
     if (cache->Moby && cache->TicksSinceLastCheck < 15) {
       cache->TicksSinceLastCheck++;
     }
@@ -133,7 +133,7 @@ void stalkerturretPostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
   pvars->MobVars.MoveVars.IsStuck = 0;
   pvars->MobVars.MoveVars.StuckCounter = 0;
   pvars->MobVars.MoveVars.Grounded = 1;
@@ -179,7 +179,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
 {
   VECTOR turretOffset = {0,0,0.75,0}; 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
   struct MobSpawnParams* params = &MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx];
 
   // set scale
@@ -243,7 +243,7 @@ void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
   if (turretVars && turretVars->TurretMoby && !mobyIsDestroyed(turretVars->TurretMoby)) {
     //mobyDestroy(turretVars->TurretMoby);
     turretVars->TurretMoby = NULL;
@@ -311,7 +311,7 @@ void stalkerturretOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 float stalkerturretGetRoamYaw(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   if (!turretVars->BaseMoby) return 0;
 
@@ -340,7 +340,7 @@ float stalkerturretSpinTurretGatling(Moby* turretMoby, int jointIdx, float rot)
 Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   VECTOR from, to={0,0,1,0}, dir, vel, offset;
   MATRIX m;
@@ -391,12 +391,12 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
 int stalkerturretCanSeeMoby(Moby* moby, Moby* canSeeMoby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   int i = 0;
   int freeSlot = -1;
   for (i = 0; i < STALKERTURRET_TARGET_CACHE_COUNT; ++i) {
-    struct StalkerturretTargetCache* cache = &turretVars->TargetCache[i];
+    struct StalkerTurretTargetCache* cache = &turretVars->TargetCache[i];
     if (!cache->Moby) {
       freeSlot = i;
       continue;
@@ -417,7 +417,7 @@ int stalkerturretCanSeeMoby(Moby* moby, Moby* canSeeMoby)
   turretVars->TargetCacheThisFrame = 1;
   int canSee = mobCanSeeMoby(moby, canSeeMoby);
   if (freeSlot >= 0) {
-    struct StalkerturretTargetCache* cache = &turretVars->TargetCache[freeSlot];
+    struct StalkerTurretTargetCache* cache = &turretVars->TargetCache[freeSlot];
     cache->Moby = canSeeMoby;
     cache->CanSee = canSee;
     cache->TicksSinceLastCheck = 0;
@@ -430,7 +430,7 @@ int stalkerturretCanSeeMoby(Moby* moby, Moby* canSeeMoby)
 Moby* stalkerturretGetNextTarget(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
 	Player ** players = playerGetAll();
 	int i;
 	VECTOR delta;
@@ -486,7 +486,7 @@ Moby* stalkerturretGetNextTarget(Moby* moby)
 int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
   Moby* turretMoby = turretVars->TurretMoby;
   Moby* baseMoby = turretVars->BaseMoby;
 	VECTOR t;
@@ -559,7 +559,7 @@ void stalkerturretRenderPath(Moby* moby)
 void stalkerturretDoAction(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
   struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
 	Moby* target = pvars->MobVars.MoveVars.Target;
   Moby* turretMoby = turretVars->TurretMoby;
@@ -802,7 +802,7 @@ int stalkerturretCanAttack(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int stalkerturretCanShoot(struct MobPVar* pvars)
 {
-  StalkerturretMobVars_t* turretVars = (StalkerturretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
 	return turretVars->GatlingSpeed >= STALKERTURRET_SHOOT_AT_GATLING_SPEED;
 }
 

@@ -518,7 +518,7 @@ void npcDoAction(Moby* moby)
 //--------------------------------------------------------------------------
 void npcDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
 {
-  //mobDoDamage(moby, radius, amount, damageFlags, friendlyFire, NPC_SUBSKELETON_JOINT_JAW, 1, 0);
+  //mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, NPC_SUBSKELETON_JOINT_JAW, 1, 0);
 }
 
 //--------------------------------------------------------------------------

@@ -253,6 +253,13 @@ void levelselectHandleInput(void)
     levelselectGo(&levelselectDrawState);
   }
 
+#if DEBUG
+  else if (gameAmIHost() && MapConfig.BeginWorldHopFunc && padGetButtonDown(0, PAD_CIRCLE) > 0) {           // TO HUB
+    MapConfig.BeginWorldHopFunc(RAIDS_HUB_MAPFILENAME, 0, 0, 5 * TIME_SECOND);
+    levelselectClose();
+  }
+#endif
+
   // clamp selected index
   if (levelselectDrawState.SelectedIdx >= levelselectDrawState.NumPlanets) {
     levelselectDrawState.SelectedIdx = levelselectDrawState.NumPlanets - 1;
@@ -274,6 +281,7 @@ void levelselectFrameTick(void)
 //--------------------------------------------------------------------------
 void levelselectStart(void)
 {
+  static int missionFailed = 0; // resets when mission is reloaded
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
   
@@ -290,8 +298,9 @@ void levelselectStart(void)
   int canOpen = state->MenuOpen == RAIDS_CUSTOM_MENU_NONE && PATCH_POINTERS_PATCHMENU == 0 && !gameIsAnyStartMenuOpen() && padGetButtonDown(0, PAD_UP) > 0;
   if (canOpen) {
     levelselectOpen();
-  } else if (missionIsFailed() && !hasPendingWorldHop()) {
+  } else if (!missionFailed && missionIsFailed() && !hasPendingWorldHop() && gameAmIHost()) {
     levelselectOpen();
+    missionFailed = 1;
   }
 }
 

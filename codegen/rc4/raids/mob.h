@@ -15,6 +15,7 @@
 #include "swarmer.h"
 #include "swamper.h"
 #include "leviathan.h"
+#include "dzstriker.h"
 //#include "reaper.h"
 #include "game.h"
 
@@ -169,6 +170,7 @@ struct MobMoveVars {
   char LastMoveStep;
   char PathGraphIdx;
   char ForceUseTargetPosition;
+  char IsOwner;
   u8 WasStuckTicks;
   u8 StuckCheckTicks;
   u8 StuckJumpCount;

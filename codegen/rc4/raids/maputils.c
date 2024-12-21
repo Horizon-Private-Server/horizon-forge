@@ -388,7 +388,7 @@ int missionIsComplete(void)
 //--------------------------------------------------------------------------
 int missionIsActive(void)
 {
-  return !hasPendingWorldHop() && MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_ACTIVE;
+  return !isOnHubWorld() && !hasPendingWorldHop() && MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_ACTIVE;
 }
 
 //--------------------------------------------------------------------------

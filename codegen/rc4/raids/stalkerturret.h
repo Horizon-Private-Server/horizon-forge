@@ -46,31 +46,16 @@
 
 #define STALKERTURRET_TARGET_CACHE_COUNT             (10)
 
-enum StalkerturretAnimId
+enum StalkerTurretAnimId
 {
 	STALKERTURRET_ANIM_0
 };
 
-enum StalkerturretBangles {
-	STALKERTURRET_BANGLE_HEAD_1 =  	(1 << 0),
-	STALKERTURRET_BANGLE_HEAD_2 =  	(1 << 1),
-	STALKERTURRET_BANGLE_HEAD_3 =  	(1 << 2),
-	STALKERTURRET_BANGLE_HEAD_4 =  	(1 << 3),
-	STALKERTURRET_BANGLE_HEAD_5 =  	(1 << 4),
-	STALKERTURRET_BANGLE_TORSO_1 = 	(1 << 5),
-	STALKERTURRET_BANGLE_TORSO_2 = 	(1 << 6),
-	STALKERTURRET_BANGLE_TORSO_3 = 	(1 << 7),
-	STALKERTURRET_BANGLE_TORSO_4 = 	(1 << 8),
-	STALKERTURRET_BANGLE_HIPS = 			(1 << 9),
-	STALKERTURRET_BANGLE_LLEG = 			(1 << 10),
-	STALKERTURRET_BANGLE_RFOOT = 		(1 << 11),
-	STALKERTURRET_BANGLE_RLEG = 			(1 << 12),
-	STALKERTURRET_BANGLE_RARM = 			(1 << 13),
-	STALKERTURRET_BANGLE_LARM = 			(1 << 14),
-	STALKERTURRET_BANGLE_HIDE_BODY =	(1 << 15)
-};
+// enum StalkerTurretBangles {
+  
+// };
 
-enum StalkerturretAction
+enum StalkerTurretAction
 {
 	STALKERTURRET_ACTION_SPAWN,
 	STALKERTURRET_ACTION_IDLE,
@@ -81,31 +66,31 @@ enum StalkerturretAction
 	STALKERTURRET_ACTION_RESET_ROTATION,
 };
 
-enum StalkerturretSubskeletonJoints
+enum StalkerTurretSubskeletonJoints
 {
   STALKERTURRET_SUBSKELETON_JOINT_0 = 0,
 };
 
-struct StalkerturretTargetCache {
+struct StalkerTurretTargetCache {
   Moby* Moby;
   char CanSee;
   u8 TicksSinceLastCheck;
 };
 
-typedef struct StalkerturretMobVars {
+typedef struct StalkerTurretMobVars {
   Moby* TurretMoby;
   Moby* BaseMoby;
   float GatlingRotation;
   float GatlingSpeed;
-  struct StalkerturretTargetCache TargetCache[STALKERTURRET_TARGET_CACHE_COUNT];
+  struct StalkerTurretTargetCache TargetCache[STALKERTURRET_TARGET_CACHE_COUNT];
   int TargetCacheThisFrame;
   char GatlingActive;
   char GatlingDelay1;
   char GatlingDelay2;
   char Team;
-} StalkerturretMobVars_t;
+} StalkerTurretMobVars_t;
 
-extern struct MobVTable StalkerturretVTable;
+extern struct MobVTable StalkerTurretVTable;
 
 int stalkerturretCreate(struct MobCreateArgs* args);
 

@@ -30,10 +30,10 @@ MonoBehaviour:
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 1
+    Speed: 3
     SpeedMax: 7.5
     SpeedScale: 0.5
-    Health: 20
+    Health: 15
     HealthMax: 0
     HealthScale: 1
     AttackRadius: 5
@@ -75,7 +75,7 @@ MonoBehaviour:
     Speed: 2
     SpeedMax: 5
     SpeedScale: 0.5
-    Health: 15
+    Health: 5
     HealthMax: 0
     HealthScale: 1
     AttackRadius: 5
@@ -89,7 +89,7 @@ MonoBehaviour:
     Variants:
     - Name: Normal
       OClass: 9215
-      Bangles: 1
+      Bangles: 0
       Dependencies:
       - OClass: 9215
         SourceMapId: 4
@@ -100,10 +100,10 @@ MonoBehaviour:
     Damage: 7
     DamageMax: 0
     DamageScale: 1
-    Speed: 3
+    Speed: 2
     SpeedMax: 6
     SpeedScale: 0.5
-    Health: 20
+    Health: 5
     HealthMax: 0
     HealthScale: 1
     AttackRadius: 5
@@ -128,7 +128,7 @@ MonoBehaviour:
     Behaviors: []
     Xp: 25
     Bolts: 500
-    Damage: 25
+    Damage: 10
     DamageMax: 0
     DamageScale: 1
     Speed: 1
@@ -168,8 +168,59 @@ MonoBehaviour:
     Health: 100
     HealthMax: 0
     HealthScale: 1.1
-    AttackRadius: 5
+    AttackRadius: 4
     HitRadius: 0.5
     CollRadius: 2
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2
+  - Mob: 5
+    BlipType: 4
+    BlipTeam: 1
+    Variants:
+    - Name: Normal
+      OClass: 8496
+      Bangles: 31
+      Dependencies:
+      - OClass: 8496
+        SourceMapId: 1
+        SourceMissionId: 24
+      - OClass: 8499
+        SourceMapId: 1
+        SourceMissionId: -1
+    - Name: Blaster
+      OClass: 8496
+      Bangles: 542
+      Dependencies:
+      - OClass: 8496
+        SourceMapId: 1
+        SourceMissionId: 24
+      - OClass: 8499
+        SourceMapId: 1
+        SourceMissionId: -1
+    - Name: Sniper
+      OClass: 8496
+      Bangles: 286
+      Dependencies:
+      - OClass: 8496
+        SourceMapId: 1
+        SourceMissionId: 24
+      - OClass: 8499
+        SourceMapId: 1
+        SourceMissionId: -1
+    Behaviors: []
+    Xp: 5
+    Bolts: 50
+    Damage: 10
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 3
+    SpeedMax: 15
+    SpeedScale: 1
+    Health: 30
+    HealthMax: 0
+    HealthScale: 1
+    AttackRadius: 4
+    HitRadius: 0.75
+    CollRadius: 1.25
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2

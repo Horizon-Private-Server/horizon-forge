@@ -401,6 +401,74 @@ int pathShouldFindNewPath(struct PathGraph* path, Moby* moby, struct MobMoveVars
 }
 
 //--------------------------------------------------------------------------
+int pathBuildPath(struct PathGraph* path, int fromNodeIdx, int toNodeIdx, u8* outPath, int maxLength)
+{
+  // aggregate path by connecting segments from start to end
+  int currentNodeIdx = fromNodeIdx;
+  int lastCurrentNodeIdx = -1;
+  int i = 0;
+  int j = 0;
+  memset(outPath, -1, maxLength);
+  while (currentNodeIdx != toNodeIdx) {
+    if (j >= maxLength) break;
+    if (lastCurrentNodeIdx == currentNodeIdx) break; // prevent inf loop
+
+    lastCurrentNodeIdx = currentNodeIdx;
+    u8* pathSegment = pathGetPathAt(path, currentNodeIdx, toNodeIdx);
+    for (i = 0; j < maxLength && i < path->MaxPathNodeCount; ++i) {
+      u8 edge = pathSegment[i];
+      if (PATH_EDGE_IS_EMPTY(edge))
+        break;
+
+      outPath[j++] = edge;
+      u8* segment = pathGetEdge(path, edge);
+      currentNodeIdx = segment[1];
+    }
+  }
+
+  return j;
+}
+
+//--------------------------------------------------------------------------
+void pathSetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd)
+{
+  int i;
+  if (!moby || !moveVars || !path)
+    return;
+
+  int maxLength = sizeof(moveVars->CurrentPath) / sizeof(u8);
+  moveVars->PathEdgeCount = pathBuildPath(path, fromNodeIdx, toNodeIdx, moveVars->CurrentPath, maxLength);
+  //memcpy(moveVars->CurrentPath, pathGetPathAt(path, fromNodeIdx, toNodeIdx), sizeof(u8) * path->MaxPathNodeCount);
+  if (moveVars->PathEdgeCurrent != currentOnPath) {
+    moveVars->PathEdgeAlpha = 0;
+  }
+  
+  moveVars->PathEdgeCurrent = currentOnPath;
+  moveVars->PathHasReachedStart = hasReachedStart;
+  moveVars->PathHasReachedEnd = hasReachedEnd;
+  moveVars->PathStartEndNodes[0] = toNodeIdx;
+  moveVars->PathStartEndNodes[1] = fromNodeIdx;
+  moveVars->PathTicks = 0;
+  moveVars->WasStuckTicks = moveVars->IsStuck ? (TPS * 4) : 0;
+  
+#if DEBUGPATH && DEBUG
+  DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
+  DPRINTF("\tFROM NODE %d (skip:%d,%d)\n", fromNodeIdx, moveVars->PathHasReachedStart, moveVars->IsStuck);
+  DPRINTF("\tTO NODE %d\n", toNodeIdx);
+  DPRINTF("\tNODES: ");
+  
+  // count path length
+  for (i = 0; i < moveVars->PathEdgeCount; ++i) {
+    int edgeIdx = moveVars->CurrentPath[i];
+    u8 * edge = path->Edges[edgeIdx];
+    DPRINTF("%d->%d, ", edge[0], edge[1]);
+  }
+  DPRINTF("\n");
+#endif
+
+}
+
+//--------------------------------------------------------------------------
 int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
 {
   int i,j;
@@ -429,29 +497,8 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   }
 
   // aggregate path by connecting segments from start to end
-  int currentNodeIdx = closestNodeIdxToMob;
-  int lastCurrentNodeIdx = -1;
   int maxLength = sizeof(moveVars->CurrentPath) / sizeof(u8);
-  i = 0;
-  j = 0;
-  memset(moveVars->CurrentPath, -1, sizeof(moveVars->CurrentPath));
-  while (currentNodeIdx != closestNodeIdxToTarget) {
-    if (j >= maxLength) break;
-    if (lastCurrentNodeIdx == currentNodeIdx) break; // prevent inf loop
-
-    lastCurrentNodeIdx = currentNodeIdx;
-    u8* pathSegment = pathGetPathAt(path, currentNodeIdx, closestNodeIdxToTarget);
-    for (i = 0; j < maxLength && i < path->MaxPathNodeCount; ++i) {
-      u8 edge = pathSegment[i];
-      if (PATH_EDGE_IS_EMPTY(edge))
-        break;
-
-      moveVars->CurrentPath[j++] = edge;
-      u8* segment = pathGetEdge(path, edge);
-      currentNodeIdx = segment[1];
-    }
-  }
-
+  moveVars->PathEdgeCount = pathBuildPath(path, closestNodeIdxToMob, closestNodeIdxToTarget, moveVars->CurrentPath, maxLength);
   moveVars->PathEdgeCurrent = 0;
   moveVars->PathEdgeAlpha = 0;
   moveVars->PathHasReachedStart = 0;
@@ -459,7 +506,6 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   moveVars->PathStartEndNodes[0] = closestNodeIdxToTarget;
   moveVars->PathStartEndNodes[1] = closestNodeIdxToMob;
   moveVars->WasStuckTicks = moveVars->IsStuck ? (TPS * 4) : 0;
-  moveVars->PathEdgeCount = j;
    
   // check if we're on same segment as last
   int isOnSameSegment = 0;
@@ -496,9 +542,9 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   }
 
   // mark mob dirty to send path to others
-  //if (pvars->MobVars.Owner == gameGetMyClientId()) {
-  //  pvars->MobVars.Dirty = 1;
-  //}
+  // if (pvars->MobVars.Owner == gameGetMyClientId()) {
+  //   pvars->MobVars.Dirty = 1;
+  // }
 
 #if DEBUGPATH && DEBUG
   DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
@@ -517,31 +563,6 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
 #endif
 
   return 1;
-}
-
-//--------------------------------------------------------------------------
-void pathSetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd)
-{
-  int i;
-  if (!moby || !moveVars || !path)
-    return;
-
-  memcpy(moveVars->CurrentPath, pathGetPathAt(path, fromNodeIdx, toNodeIdx), sizeof(u8) * path->MaxPathNodeCount);
-  if (moveVars->PathEdgeCurrent != currentOnPath) {
-    moveVars->PathEdgeAlpha = 0;
-  }
-  moveVars->PathEdgeCurrent = currentOnPath;
-  moveVars->PathHasReachedStart = hasReachedStart;
-  moveVars->PathHasReachedEnd = hasReachedEnd;
-  moveVars->PathStartEndNodes[0] = toNodeIdx;
-  moveVars->PathStartEndNodes[1] = fromNodeIdx;
-  
-  // count path length
-  for (i = 0; i < path->MaxPathNodeCount; ++i) {
-    if (PATH_EDGE_IS_EMPTY(moveVars->CurrentPath[i]))
-      break;
-  }
-  moveVars->PathEdgeCount = i;
 }
 
 //--------------------------------------------------------------------------
@@ -635,8 +656,19 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   VECTOR up = {0,0,1,0};
   VECTOR targetNodePos, delta;
   VECTOR from, to, edgeDir;
-  if (!moby || !path || !moveVars)
+  if (!moby || !moveVars)
     return 0;
+
+  // no path, go straight to target
+  if (!path) {
+    if (moveVars->Target && !moveVars->ForceUseTargetPosition) {
+      vector_copy(output, moveVars->Target->Position);
+    } else {
+      vector_copy(output, moveVars->TargetPosition);
+    }
+    vector_copy(moveVars->LastTargetPos, output);
+    return 0;
+  }
 
   int isStuck = (moveVars->IsStuck && moveVars->StuckCounter > 1) || moveVars->WasStuckTicks;
 
@@ -661,7 +693,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, pathGetCurrentEdge(path, moby, moveVars));
 
   // new path
-  if (moveVars->PathNewTicks == 0 && pathShouldFindNewPath(path, moby, moveVars)) {
+  if (moveVars->PathNewTicks == 0 && moveVars->IsOwner && pathShouldFindNewPath(path, moby, moveVars)) {
     newPath = pathGetPath(path, moby, moveVars);
     moveVars->PathNewTicks = 255;
   }
