@@ -405,10 +405,11 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
   vector_subtract(dt, target->Position, moby->Position);
   float distSqr = vector_sqrmag(dt);
   float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+  float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
   if (distSqr > attackRadiusSqr) {
 
     // check if moby is looking at (close to) target
-    if (leviathanVars->AttackLaserCooldownTicks == 0 && (MapConfig.State ? MapConfig.State->DifficultyStars : 0) > 0) {
+    if (distSqr <= rangedAttackRadiusSqr && leviathanVars->AttackLaserCooldownTicks == 0 && (MapConfig.State ? MapConfig.State->DifficultyStars : 0) > 0) {
       float theta = acosf(vector_innerproduct(dt, moby->M0_03));
       if (pvars->MobVars.Action != LEVIATHAN_ACTION_ATTACK_LASER && fabsf(theta) < (30 * MATH_DEG2RAD))
         return LEVIATHAN_ACTION_ATTACK_LASER;
@@ -1080,6 +1081,9 @@ int leviathanShouldStrafe(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
+  float maxDistSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+  if (sqrDistToTarget > maxDistSqr)
+    return 0;
 
   int strafe = 0;
   if (behavior == LEVIATHAN_BEHAVIOR_NORMAL) {

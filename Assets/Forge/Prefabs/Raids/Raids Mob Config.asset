@@ -210,6 +210,7 @@ MonoBehaviour:
     Behaviors:
     - Normal
     - Hold Position
+    - Flying
     Xp: 5
     Bolts: 50
     Damage: 10

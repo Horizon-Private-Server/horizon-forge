@@ -96,6 +96,7 @@ struct MobConfig {
   float CollRadius;
   float AutoAggroMaxRange;
   float VisionRange;
+  float RangedMaxDistanceToTarget;
   float PeripheryRangeTheta;
 	u16 Bangles;
 	u16 Xp;
@@ -118,6 +119,7 @@ struct MobSpawnedConfig {
 
   float AutoAggroMaxRange;
   float VisionRange;
+  float RangedMaxDistanceToTarget;
   float PeripheryRangeTheta;
 
 	u16 Bangles;

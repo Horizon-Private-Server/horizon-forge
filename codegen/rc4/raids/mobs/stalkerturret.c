@@ -502,7 +502,12 @@ int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks)
 	// get next target
 	Moby * target = stalkerturretGetNextTarget(moby);
 	if (target) {
-    if (stalkerturretCanAttack(pvars)) {
+      
+    VECTOR dt;
+    vector_subtract(dt, target->Position, moby->Position);
+    float distSqr = vector_sqrmag(dt);
+    float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+    if (distSqr <= rangedAttackRadiusSqr && stalkerturretCanAttack(pvars)) {
       if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
       return STALKERTURRET_ACTION_ATTACK;
     }

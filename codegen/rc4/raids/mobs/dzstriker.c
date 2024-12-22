@@ -410,6 +410,22 @@ Moby* dzstrikerGetNextTarget(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int dzstrikerIsTargetOutOfRange(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+  Moby* target = pvars->MobVars.MoveVars.Target;
+  if (!target) return 0;
+
+  // check if target is within range
+  VECTOR dt;
+  vector_subtract(dt, target->Position, moby->Position);
+  float distSqr = vector_sqrmag(dt);
+  float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+  return distSqr > rangedAttackRadiusSqr;
+}
+
+//--------------------------------------------------------------------------
 enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -424,10 +440,12 @@ enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
   vector_subtract(dt, target->Position, moby->Position);
   float distSqr = vector_sqrmag(dt);
   float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+  float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
   if (distSqr > attackRadiusSqr) {
 
-    // check if moby is looking at (close to) target
-    if (1) {
+    // check if in range
+    if (distSqr <= rangedAttackRadiusSqr) {
+      dt[2] = 0;
       float theta = acosf(vector_innerproduct(dt, dzstrikerVars->TorsoMoby->M0_03));
       if (pvars->MobVars.Action != DZSTRIKER_ACTION_AIM && fabsf(theta) < (30 * MATH_DEG2RAD))
         return DZSTRIKER_ACTION_AIM;
@@ -491,7 +509,7 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
     if (dzstrikerShouldStrafe(moby))
       return DZSTRIKER_ACTION_STRAFE;
 
-    if (pvars->MobVars.TimeTargetOutOfSightTicks < TPS)
+    if (!dzstrikerIsTargetOutOfRange(moby) && pvars->MobVars.TimeTargetOutOfSightTicks < TPS)
       return DZSTRIKER_ACTION_LOOK_AT_TARGET;
 
     return DZSTRIKER_ACTION_WALK;
@@ -1150,6 +1168,9 @@ int dzstrikerShouldStrafe(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
+  float maxDistSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+  if (sqrDistToTarget > maxDistSqr)
+    return 0;
 
   int strafe = 0;
   if (pvars->MobVars.TimeTargetOutOfSightTicks < 2) {

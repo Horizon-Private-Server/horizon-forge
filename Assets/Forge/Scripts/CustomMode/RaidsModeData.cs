@@ -518,6 +518,7 @@ public class RaidsMobSpawnParam
     [Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
 
     [Header("Interaction")]
+    [Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public float RangedAttackDistance = 50;
     [Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
     [Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
     [Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
@@ -560,6 +561,7 @@ public class RaidsMobSpawnParam
         sb.AppendLine($"      .CollRadius = {defaults.CollRadius * SizeMultiplier},");
         sb.AppendLine($"      .AutoAggroMaxRange = {ForceAggroRange},");
         sb.AppendLine($"      .VisionRange = {VisionRange},");
+        sb.AppendLine($"      .RangedMaxDistanceToTarget = {RangedAttackDistance},");
         sb.AppendLine($"      .PeripheryRangeTheta = {PeripheralVisionDegrees * 0.5f * Mathf.Deg2Rad},");
         sb.AppendLine($"      .OutOfSightDeAggroTickCount = {(int)(OutOfSightDeAggroTime * 60)},");
         sb.AppendLine($"      .ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
