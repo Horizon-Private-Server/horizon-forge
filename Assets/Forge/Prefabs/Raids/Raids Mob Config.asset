@@ -187,9 +187,9 @@ MonoBehaviour:
       - OClass: 8499
         SourceMapId: 1
         SourceMissionId: -1
-    - Name: Blaster
+    - Name: Sniper
       OClass: 8496
-      Bangles: 542
+      Bangles: 286
       Dependencies:
       - OClass: 8496
         SourceMapId: 1
@@ -197,9 +197,9 @@ MonoBehaviour:
       - OClass: 8499
         SourceMapId: 1
         SourceMissionId: -1
-    - Name: Sniper
+    - Name: Blaster
       OClass: 8496
-      Bangles: 286
+      Bangles: 542
       Dependencies:
       - OClass: 8496
         SourceMapId: 1

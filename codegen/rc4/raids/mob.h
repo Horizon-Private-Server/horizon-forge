@@ -99,8 +99,8 @@ struct MobConfig {
   float PeripheryRangeTheta;
 	u16 Bangles;
 	u16 Xp;
-  u16 OutOfSightDeAggroTickCount;
 	u16 AttackCooldownTickCount;
+  u16 OutOfSightDeAggroTickCount;
 	u8 ReactionTickCount;
 };
 
