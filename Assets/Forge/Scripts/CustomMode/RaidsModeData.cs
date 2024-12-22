@@ -43,6 +43,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     [Header("Debug")]
     public bool DebugPath;
+    public bool DebugMove;
 
     [Header("Music")]
     public bool OverrideTrackList = false;
@@ -99,6 +100,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         if (DebugPath)
             state.LDFlags.Add("-DDEBUGPATH");
+        if (DebugMove)
+            state.LDFlags.Add("-DDEBUGMOVE");
 
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");

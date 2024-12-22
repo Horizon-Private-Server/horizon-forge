@@ -371,9 +371,7 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
   int i;
 
   // force path graph
-  if (pvars->PathGraphIdx >= 0) {
-    childPVars->MobVars.MoveVars.PathGraphIdx = pvars->PathGraphIdx;
-  }
+  childPVars->MobVars.MoveVars.PathGraphIdx = pvars->PathGraphIdx;
 
   // destroy if spawner has completed
   if (moby->State == SPAWNER_STATE_COMPLETED) {
@@ -531,8 +529,7 @@ void spawnerOnChildGetRandomRoamTarget(Moby* moby, Moby* childMoby, VECTOR outPo
         ++count;
       }
 
-      vector_copy(outPosition, path->Nodes[r]);
-      outPosition[3] = 0; 
+      pathGetNodePosition(path, r, 0, outPosition);
       return;
     }
 

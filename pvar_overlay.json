@@ -4287,7 +4287,7 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 976,
+    "Length": 992,
     "States": {
       "Destroyed": -1,
       "Off": 0,

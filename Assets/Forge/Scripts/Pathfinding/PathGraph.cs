@@ -376,6 +376,7 @@ public class PathGraph : MonoBehaviour
 
         string nodesVarName = $"{varPrefix}_PATHFINDING_NODES";
         string nodesCorneringVarName = $"{varPrefix}_PATHFINDING_NODES_CORNERING";
+        string nodesHeightVarName = $"{varPrefix}_PATHFINDING_NODES_HEIGHT";
         string edgesVarName = $"{varPrefix}_PATHFINDING_EDGES";
         string edgesRequiredVarName = $"{varPrefix}_PATHFINDING_EDGES_REQUIRED";
         string edgesPathFitVarName = $"{varPrefix}_PATHFINDING_EDGES_PATHFIT";
@@ -404,6 +405,15 @@ public class PathGraph : MonoBehaviour
         foreach (var node in _cachedNodes)
         {
             dataDefs += $"\t{(int)(node.Cornering * 255)},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of node height amount
+        dataDefs += $"u16 {nodesHeightVarName}[] = {{\n";
+        foreach (var node in _cachedNodes)
+        {
+            var heightLimit = node.HasHeightLimit ? (node.HeightLimit * 256) : ushort.MaxValue;
+            dataDefs += $"\t{(ushort)(Mathf.Clamp(heightLimit, 0, ushort.MaxValue))},\n";
         }
         dataDefs += "};\n\n";
 
@@ -454,6 +464,7 @@ public class PathGraph : MonoBehaviour
     .MaxPathNodeCount = {longestPath},
     .Nodes = {nodesVarName},
     .Cornering = {nodesCorneringVarName},
+    .Heights = {nodesHeightVarName},
     .Edges = {edgesVarName},
     .EdgesRequired = {edgesRequiredVarName},
     .EdgesPathFit = {edgesPathFitVarName},

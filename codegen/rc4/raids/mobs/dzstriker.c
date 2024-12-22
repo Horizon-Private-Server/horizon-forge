@@ -248,6 +248,8 @@ void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
+  if (pvars->MobVars.Behavior == DZSTRIKER_BEHAVIOR_FLY)
+    pvars->MobVars.MoveVars.PreferredHeight = 10;
   vector_copy(pvars->MobVars.MoveVars.TargetPosition, moby->Position);
 }
 
@@ -444,6 +446,7 @@ enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
 int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  int isFlying = pvars->MobVars.MoveVars.PreferredHeight > 0;
 	VECTOR t;
 
 	// no preferred action
@@ -488,6 +491,9 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
     if (dzstrikerShouldStrafe(moby))
       return DZSTRIKER_ACTION_STRAFE;
 
+    if (pvars->MobVars.TimeTargetOutOfSightTicks < TPS)
+      return DZSTRIKER_ACTION_LOOK_AT_TARGET;
+
     return DZSTRIKER_ACTION_WALK;
 	}
 
@@ -496,10 +502,11 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
 
     // check how close we are to target
     vector_subtract(t, pvars->MobVars.MoveVars.TargetPosition, moby->Position);
-    t[2] = 0;
+    t[2] += minf(pvars->MobVars.MoveVars.PreferredHeight, pvars->MobVars.MoveVars.CurrentHeightLimit);
+    if (!isFlying) t[2] = 0;
     float distSqr = vector_sqrmag(t);
     float radius = 1 + pvars->MobVars.Config.CollRadius; //pvars->MobVars.Config.AttackRadius;
-    
+
     // idle if near target or randomly
     if (distSqr < (radius*radius) || rand(10007) == 0) {
       return DZSTRIKER_ACTION_IDLE;
@@ -547,8 +554,12 @@ void dzstrikerRenderPath(Moby* moby)
 //--------------------------------------------------------------------------
 void dzstrikerTransAnim(Moby* moby, int animId, int torsoAnimId, float startOff)
 {
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  int isFlying = pvars->MobVars.MoveVars.PreferredHeight > 0;
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   Moby* torsoMoby = dzstrikerVars->TorsoMoby;
+
+  if (isFlying) animId = DZSTRIKER_LEGS_ANIM_FLYING;
 
   mobTransAnim(moby, animId, 0);
   if (torsoMoby) {
@@ -593,7 +604,8 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
     vector_normalize(dir, dir);
     VECTOR planarForward;
     vector_projectonplane(planarForward, dir, moby->M2_03);
-    if (acosf(vector_innerproduct(planarForward, moby->M0_03)) < (1*MATH_DEG2RAD)) {
+    float angle = acosf(vector_innerproduct(planarForward, moby->M0_03));
+    if (angle < (1*MATH_DEG2RAD)) {
       vector_add(to, to, target->Position);
       vector_subtract(vel, to, from);
       vector_normalize(vel, vel);
@@ -604,7 +616,6 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
       vector_add(vel, vel, dir);
     }
   }
-
 
   float shotTrail = 1;
   float damage = pvars->MobVars.Config.Damage;
@@ -620,7 +631,7 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
     ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0); // shot type
     ((void (*)(Moby*, int))0x0045d788)(shotMoby, TEAM_RED); // shot color
     ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 1); // hit flag
-    ((void (*)(Moby*, int))0x0045d798)(shotMoby, (int)(pvars->MobVars.Config.VisionRange * 2)); // shot life (ticks)
+    ((void (*)(Moby*, int))0x0045d798)(shotMoby, 2*TPS + (int)(pvars->MobVars.Config.VisionRange)); // shot life (ticks)
     shotMoby->PParent = moby;
   }
 
@@ -800,6 +811,7 @@ void dzstrikerDoAction(Moby* moby)
 			}
 		case DZSTRIKER_ACTION_LOOK_AT_TARGET:
     {
+      dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, DZSTRIKER_TORSO_ANIM_IDLE, 0);
       mobStand(moby);
       if (target)
         mobTurnTowards(moby, target->Position, turnSpeed);
@@ -1132,6 +1144,7 @@ int dzstrikerShouldStrafe(Moby* moby)
   int behavior = pvars->MobVars.Behavior;
 
   if (!target) return 0;
+  if (pvars->MobVars.MoveVars.PreferredHeight > 0) return 0;
 
   // get distance to target
   VECTOR dt;
