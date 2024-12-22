@@ -657,7 +657,7 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
   ((void (*)(float, float, float, Moby*, int, int, int))0x0042c178)(0.75, 0.75, 1.0, dzstrikerVars->TorsoMoby, 0, 0, jointId);
   
   // play sound
-  mobyPlaySound(1, 0, dzstrikerVars->TorsoMoby);
+  mobyPlaySoundByClass(1, 0, dzstrikerVars->TorsoMoby, MOBY_ID_LANDSTALKER);
 }
 
 //--------------------------------------------------------------------------

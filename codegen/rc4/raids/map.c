@@ -413,6 +413,13 @@ void mapInit(void)
   POKE_U32(0x005e419c, 0);
   HOOK_JAL(0x005e41bc, &mapPlayerOnPushedIntoWall);
 
+  // disable ammo drop pickup text "Got %s ammo"
+  POKE_U32(0x003AC400, 0);
+
+  // disable MP dialog messages
+  //POKE_U32(0x00620E70, 0);
+  //POKE_U32(0x00620e88, 0);
+
 	// set default ammo for flail to 8
 	//*(u8*)0x0039A3B4 = 8;
 
