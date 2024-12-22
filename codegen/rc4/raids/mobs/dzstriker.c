@@ -496,10 +496,12 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
 
     // check how close we are to target
     vector_subtract(t, pvars->MobVars.MoveVars.TargetPosition, moby->Position);
-    float dist = vector_length(t);
+    t[2] = 0;
+    float distSqr = vector_sqrmag(t);
+    float radius = 1 + pvars->MobVars.Config.CollRadius; //pvars->MobVars.Config.AttackRadius;
     
     // idle if near target or randomly
-    if (dist < pvars->MobVars.Config.AttackRadius || rand(10007) == 0) {
+    if (distSqr < (radius*radius) || rand(10007) == 0) {
       return DZSTRIKER_ACTION_IDLE;
     }
   }
@@ -549,8 +551,20 @@ void dzstrikerTransAnim(Moby* moby, int animId, int torsoAnimId, float startOff)
   Moby* torsoMoby = dzstrikerVars->TorsoMoby;
 
   mobTransAnim(moby, animId, 0);
-  if (torsoMoby && torsoMoby->AnimSeqId != torsoAnimId) {
-    mobyAnimTransition(torsoMoby, torsoAnimId, 10, startOff);
+  if (torsoMoby) {
+    mobTransAnimLerp(torsoMoby, torsoAnimId, 10, startOff, &dzstrikerVars->TorsoAnimationReset, &dzstrikerVars->TorsoAnimationLooped);
+  }
+}
+
+//--------------------------------------------------------------------------
+void dzstrikerAnimUpdate(Moby* moby)
+{
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+  Moby* torsoMoby = dzstrikerVars->TorsoMoby;
+
+  mobUpdateAnim(moby);
+  if (torsoMoby) {
+    mobTransAnimLerp(torsoMoby, torsoMoby->AnimSeqId, 0, 0, &dzstrikerVars->TorsoAnimationReset, &dzstrikerVars->TorsoAnimationLooped);
   }
 }
 
@@ -711,7 +725,7 @@ void dzstrikerDoAction(Moby* moby)
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&dzstrikerRenderPath, moby);
 #endif
 
-  mobUpdateAnim(moby);
+  dzstrikerAnimUpdate(moby);
 	switch (pvars->MobVars.Action)
 	{
 		case DZSTRIKER_ACTION_SPAWN:
@@ -1038,11 +1052,12 @@ short dzstrikerGetArmor(Moby* moby)
 int dzstrikerIsAttacking(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   switch (pvars->MobVars.Action)
   {
     //case DZSTRIKER_ACTION_AIM:
     case DZSTRIKER_ACTION_FIRE: return pvars->MobVars.CurrentActionForTicks < TPS;
-    case DZSTRIKER_ACTION_ATTACK: return !pvars->MobVars.AnimationLooped;
+    case DZSTRIKER_ACTION_ATTACK: return !dzstrikerVars->TorsoAnimationLooped;
     default: return 0;
   }
 }

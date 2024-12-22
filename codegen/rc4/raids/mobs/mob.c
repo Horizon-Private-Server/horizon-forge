@@ -380,25 +380,24 @@ void mobSetAction(Moby* moby, int action)
 }
 
 //--------------------------------------------------------------------------
-void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff)
+void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff, char* animationReset, char* animationLooped)
 {
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	if (moby->AnimSeqId != animId) {
 		mobyAnimTransition(moby, animId, lerpFrames, startOff);
 
-		pvars->MobVars.AnimationReset = 1;
-		pvars->MobVars.AnimationLooped = 0;
+		*animationReset = 1;
+		*animationLooped = 0;
 	} else {
 		
 		// get current t
 		// if our stored start is uninitialized, then set current t as start
 		float t = moby->AnimSeqT;
 		float end = *(u8*)((u32)moby->AnimSeq + 0x10) - (float)(lerpFrames * 0.5);
-		if (t >= end && pvars->MobVars.AnimationReset) {
-			pvars->MobVars.AnimationLooped++;
-			pvars->MobVars.AnimationReset = 0;
+		if (t >= end && *animationReset) {
+			*animationLooped += 1;
+			*animationReset = 0;
 		} else if (t < end) {
-			pvars->MobVars.AnimationReset = 1;
+			*animationReset = 1;
 		}
 	}
 }
@@ -406,13 +405,15 @@ void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff)
 //--------------------------------------------------------------------------
 void mobTransAnim(Moby* moby, int animId, float startOff)
 {
-	mobTransAnimLerp(moby, animId, 10, startOff);
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	mobTransAnimLerp(moby, animId, 10, startOff, &pvars->MobVars.AnimationReset, &pvars->MobVars.AnimationLooped);
 }
 
 //--------------------------------------------------------------------------
 void mobUpdateAnim(Moby* moby)
 {
-	mobTransAnimLerp(moby, moby->AnimSeqId, 0, 0);
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	mobTransAnimLerp(moby, moby->AnimSeqId, 0, 0, &pvars->MobVars.AnimationReset, &pvars->MobVars.AnimationLooped);
 }
 
 //--------------------------------------------------------------------------

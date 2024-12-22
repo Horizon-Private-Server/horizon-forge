@@ -39,7 +39,7 @@ int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int
 int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE);
 int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float sqrHitRadius, int damageFlags, float amount);
 void mobSetAction(Moby* moby, int action);
-void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff);
+void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff, char* animationReset, char* animationLooped);
 void mobTransAnim(Moby* moby, int animId, float startOff);
 void mobUpdateAnim(Moby* moby);
 int mobHasVelocity(struct MobPVar* pvars);

@@ -416,10 +416,12 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
 
     // check how close we are to target
     vector_subtract(t, pvars->MobVars.MoveVars.TargetPosition, moby->Position);
-    float dist = vector_length(t);
+    t[2] = 0;
+    float distSqr = vector_sqrmag(t);
+    float radius = 1 + pvars->MobVars.Config.CollRadius; //pvars->MobVars.Config.AttackRadius;
     
     // idle if near target or randomly
-    if (dist < pvars->MobVars.Config.AttackRadius || rand(10007) == 0) {
+    if (distSqr < (radius*radius) || rand(10007) == 0) {
       return ZOMBIE_ACTION_IDLE;
     }
   }

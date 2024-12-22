@@ -518,7 +518,7 @@ public class RaidsMobSpawnParam
     [Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
     [Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
     [Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
-    [Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 5;
+    [Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 15;
 
     public string GetDef()
     {

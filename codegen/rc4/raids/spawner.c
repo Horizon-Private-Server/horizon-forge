@@ -516,23 +516,25 @@ void spawnerOnChildGetRandomRoamTarget(Moby* moby, Moby* childMoby, VECTOR outPo
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
   struct MobPVar* childPVars = (struct MobPVar*)childMoby->PVar;
   struct PathGraph* path = pathGetMobyPathGraph(childMoby, &childPVars->MobVars.MoveVars);
-  if (path && path->NumNodes > 0 && mobAmIOwner(childMoby)) {
+  if (mobAmIOwner(childMoby)) {
 
-    int r = rand(path->NumNodes);
-    int count = 0;
-
-    // try and find a node thats in a habitable cuboid
-    while (count < path->NumNodes && !spawnerOnChildConsiderRoamTarget(moby, childMoby, childPVars->MobVars.Userdata, path->Nodes[r])) {
-      r = (r + 1) % path->NumNodes;
-      ++count;
-    }
-
-    // try and get random roamable cuboid
-    // if none exist, return position of previously selected node
+    // select random roamable cuboid
     int selSpawnIdx = selectRandomIndex(SPAWNER_MAX_ROAMABLE_CUBOIDS, moby, spawnerIsValidCuboidRoamIdx);
-    vector_copy(outPosition, path->Nodes[r]);
-    outPosition[3] = 0;
-    if (selSpawnIdx < 0) return;
+    if (path && path->NumNodes > 0 && selSpawnIdx < 0) {
+
+      int r = rand(path->NumNodes);
+      int count = 0;
+
+      // try and find a node thats in a habitable cuboid
+      while (count < path->NumNodes && !spawnerOnChildConsiderRoamTarget(moby, childMoby, childPVars->MobVars.Userdata, path->Nodes[r])) {
+        r = (r + 1) % path->NumNodes;
+        ++count;
+      }
+
+      vector_copy(outPosition, path->Nodes[r]);
+      outPosition[3] = 0; 
+      return;
+    }
 
     int cuboidIdx = pvars->RoamableCuboidIds[selSpawnIdx];
     if (cuboidIdx < 0) return;
@@ -542,7 +544,7 @@ void spawnerOnChildGetRandomRoamTarget(Moby* moby, Moby* childMoby, VECTOR outPo
 
     // determine where to spawn mob
     spawnerGetRandomPointInCuboid(cuboid, outPosition);
-    outPosition[2] += 3;
+    //outPosition[2] += 3;
   }
 }
 

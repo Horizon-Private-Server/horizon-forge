@@ -138,6 +138,8 @@ typedef struct DZStrikerMobVars {
   Moby* TorsoMoby;
   float TorsoRotation[3];
   float LastShotAtAnimT;
+  char TorsoAnimationLooped;
+  char TorsoAnimationReset;
 } DZStrikerMobVars_t;
 
 typedef struct DZStrikerTorsoPVar {
