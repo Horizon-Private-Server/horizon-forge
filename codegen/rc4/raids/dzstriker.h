@@ -125,10 +125,19 @@ enum DZStrikerAction
 	DZSTRIKER_ACTION_FIRE,
 };
 
+enum DZStrikerBehaviorId
+{
+	DZSTRIKER_BEHAVIOR_NORMAL,
+	DZSTRIKER_BEHAVIOR_HOLD_POSITION,
+};
+
 extern struct MobVTable DZStrikerVTable;
 
 typedef struct DZStrikerMobVars {
+  VECTOR HoldPosition;
   Moby* TorsoMoby;
+  float TorsoRotation[3];
+  float LastShotAtAnimT;
 } DZStrikerMobVars_t;
 
 typedef struct DZStrikerTorsoPVar {

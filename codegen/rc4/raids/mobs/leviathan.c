@@ -549,16 +549,12 @@ int leviathanDoActionMove(Moby* moby)
   float speed = pvars->MobVars.Config.Speed;
   float turnSpeed = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_TURN_RADIANS_PER_SEC : LEVIATHAN_TURN_AIR_RADIANS_PER_SEC;
   float acceleration = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_MOVE_ACCELERATION : LEVIATHAN_MOVE_AIR_ACCELERATION;
-  
+
   // 
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-
-  float dir = 0;
-  if (target) {
-    dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
-  }
+  float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
 
   pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
   float strafeDir = ((pvars->MobVars.Random + (pvars->MobVars.ActionId/2)) % 2) ? 1 : -1;

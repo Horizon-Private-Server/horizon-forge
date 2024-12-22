@@ -100,8 +100,8 @@ struct MobConfig {
 	u16 Bangles;
 	u16 Xp;
   u16 OutOfSightDeAggroTickCount;
+	u16 AttackCooldownTickCount;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobSpawnedConfig {
@@ -122,10 +122,10 @@ struct MobSpawnedConfig {
 
 	u16 Bangles;
 	u16 Xp;
+	u16 AttackCooldownTickCount;
 
   u16 OutOfSightDeAggroTickCount;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobSpawnParams {
@@ -347,12 +347,12 @@ struct MobSpawnEventArgs
 	u16 SpeedEighths;
 	u16 Damage;
 	u16 AttackRadiusEighths;
+	u16 AttackCooldownTickCount;
   u8 SpawnParamsIdx;
 	u8 Xp;
 	u8 HitRadiusEighths;
   u8 CollRadiusEighths;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobCreateArgs

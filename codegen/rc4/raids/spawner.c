@@ -726,7 +726,7 @@ void spawnerStart(void)
     // respawn mob bypasses spawn logic
     int isRespawn = request->SpawnArgs.SpawnFromUID > 0;
     if (isRespawn) {
-      vector_copy(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition());
+      //vector_copy(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition());
       if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;

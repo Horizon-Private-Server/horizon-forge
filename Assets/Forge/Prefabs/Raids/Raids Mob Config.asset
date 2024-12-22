@@ -207,7 +207,9 @@ MonoBehaviour:
       - OClass: 8499
         SourceMapId: 1
         SourceMissionId: -1
-    Behaviors: []
+    Behaviors:
+    - Normal
+    - Hold Position
     Xp: 5
     Bolts: 50
     Damage: 10
@@ -223,4 +225,4 @@ MonoBehaviour:
     HitRadius: 0.75
     CollRadius: 1.25
     ReactionDelaySeconds: 0.25
-    AttackCooldownSeconds: 2
+    AttackCooldownSeconds: 10

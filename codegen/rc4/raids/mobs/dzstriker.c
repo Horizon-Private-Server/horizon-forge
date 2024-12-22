@@ -24,6 +24,7 @@ void dzstrikerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int dzstrikerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void dzstrikerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
 Moby* dzstrikerGetNextTarget(Moby* moby);
+enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby);
 int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks);
 void dzstrikerDoAction(Moby* moby);
 void dzstrikerDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
@@ -39,6 +40,8 @@ int dzstrikerIsIdling(struct MobPVar* pvars);
 int dzstrikerCanAttack(struct MobPVar* pvars);
 int dzstrikerIsFlinching(Moby* moby);
 int dzstrikerIsDying(Moby* moby);
+int dzstrikerShouldStrafe(Moby* moby);
+int dzstrikerIsSniper(Moby* moby);
 
 struct MobVTable DZStrikerVTable = {
   .PreUpdate = &dzstrikerPreUpdate,
@@ -126,6 +129,7 @@ void dzstrikerPreUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
 
   // decrement path target pos ticker
   decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
@@ -157,7 +161,7 @@ void dzstrikerPostUpdate(Moby* moby)
   }
 
   // adjust animSpeed by speed and by animation
-  float baseSpeed = 0.7;
+  float baseSpeed = 0.5;
 	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   if (moby->AnimSeqId == DZSTRIKER_LEGS_ANIM_JUMP) {
@@ -184,10 +188,11 @@ void dzstrikerPostUpdate(Moby* moby)
   mobyGetJointMatrix(moby, DZSTRIKER_LEGS_SUBSKELETON_JOINT_HIPS, mtxHips);
   vector_copy(torsoMoby->Position, &mtxHips[12]);
   mobyUpdateTransform(torsoMoby);
-  matrix_rotate_y(mtxHips, mtxHips, torsoMoby->Rotation[1]);
-  matrix_rotate_x(mtxHips, mtxHips, torsoMoby->Rotation[0]);
-  matrix_rotate_z(mtxHips, mtxHips, torsoMoby->Rotation[2]);
+  matrix_rotate_y(mtxHips, mtxHips, torsoMoby->Rotation[1] + dzstrikerVars->TorsoRotation[1]);
+  matrix_rotate_x(mtxHips, mtxHips, torsoMoby->Rotation[0] + dzstrikerVars->TorsoRotation[0]);
+  matrix_rotate_z(mtxHips, mtxHips, torsoMoby->Rotation[2] + dzstrikerVars->TorsoRotation[2]);
   memcpy(torsoMoby->M0_03, mtxHips, sizeof(VECTOR)*3);
+  memset(dzstrikerVars->TorsoRotation, 0, sizeof(dzstrikerVars->TorsoRotation));
 }
 
 //--------------------------------------------------------------------------
@@ -227,6 +232,9 @@ void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
   // colors by mob type
 	moby->GlowRGBA = DZSTRIKER_GLOW_COLOR;
 	moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
+
+  // set hold position to start position
+  vector_copy(dzstrikerVars->HoldPosition, moby->Position);
 
   // targeting
   MATRIX m;
@@ -400,6 +408,39 @@ Moby* dzstrikerGetNextTarget(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+  Moby* target = pvars->MobVars.MoveVars.Target;
+  int behavior = pvars->MobVars.Behavior;
+  if (!target)
+    return -1;
+
+  // check if target is within range
+  VECTOR dt;
+  vector_subtract(dt, target->Position, moby->Position);
+  float distSqr = vector_sqrmag(dt);
+  float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+  if (distSqr > attackRadiusSqr) {
+
+    // check if moby is looking at (close to) target
+    if (1) {
+      float theta = acosf(vector_innerproduct(dt, dzstrikerVars->TorsoMoby->M0_03));
+      if (pvars->MobVars.Action != DZSTRIKER_ACTION_AIM && fabsf(theta) < (30 * MATH_DEG2RAD))
+        return DZSTRIKER_ACTION_AIM;
+      else if (pvars->MobVars.Action == DZSTRIKER_ACTION_AIM && fabsf(theta) < (30 * MATH_DEG2RAD))
+        return DZSTRIKER_ACTION_FIRE;
+    }
+
+    return -1;
+  }
+
+  // default to swing
+	return DZSTRIKER_ACTION_ATTACK;
+}
+
+//--------------------------------------------------------------------------
 int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -436,20 +477,18 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
 	// get next target
 	Moby * target = dzstrikerGetNextTarget(moby);
 	if (target) {
-		vector_copy(t, target->Position);
-		vector_subtract(t, t, moby->Position);
-		float distSqr = vector_sqrmag(t);
-		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-
-		if (distSqr <= attackRadiusSqr) {
-			if (dzstrikerCanAttack(pvars)) {
+    if (dzstrikerCanAttack(pvars)) {
+      int preferredAttack = dzstrikerGetPreferredAttack(moby);
+      if (preferredAttack >= 0) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return DZSTRIKER_ACTION_ATTACK;
+        return preferredAttack;
       }
-			return DZSTRIKER_ACTION_WALK;
-		} else {
-			return DZSTRIKER_ACTION_WALK;
-		}
+    }
+
+    if (dzstrikerShouldStrafe(moby))
+      return DZSTRIKER_ACTION_STRAFE;
+
+    return DZSTRIKER_ACTION_WALK;
 	}
 
   // if roaming, then we want to periodically stop or reroute
@@ -516,6 +555,137 @@ void dzstrikerTransAnim(Moby* moby, int animId, int torsoAnimId, float startOff)
 }
 
 //--------------------------------------------------------------------------
+Moby* dzstrikerFireShot(Moby* moby, Moby* target)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+  int isSniper = dzstrikerIsSniper(moby);
+  int jointId = isSniper ? DZSTRIKER_TORSO_SUBSKELETON_JOINT_SNIPER_CHAMBER : DZSTRIKER_TORSO_SUBSKELETON_JOINT_GUN_CHAMBER;
+
+  VECTOR from, to={0,0,1,0}, dir, vel, offset;
+  MATRIX m;
+  mobyGetJointMatrix(dzstrikerVars->TorsoMoby, jointId, m);
+  vector_copy(from, &m[12]);
+  vector_copy(vel, &m[0]);
+  
+  // move shot from forward
+  vector_scale(offset, &m[0], 0.15);
+  vector_add(from, from, offset);
+
+  if (target) {
+
+    // determine if we should shoot directly towards target
+    vector_subtract(dir, target->Position, moby->Position);
+    vector_normalize(dir, dir);
+    VECTOR planarForward;
+    vector_projectonplane(planarForward, dir, moby->M2_03);
+    if (acosf(vector_innerproduct(planarForward, moby->M0_03)) < (1*MATH_DEG2RAD)) {
+      vector_add(to, to, target->Position);
+      vector_subtract(vel, to, from);
+      vector_normalize(vel, vel);
+    } else {
+      vector_subtract(dir, dir, planarForward);
+      vector_projectonplane(vel, vel, moby->M2_03);
+      vector_normalize(vel, vel);
+      vector_add(vel, vel, dir);
+    }
+  }
+
+
+  float shotTrail = 1;
+  float damage = pvars->MobVars.Config.Damage;
+  if (isSniper) {
+    shotTrail = 3;
+    damage *= 2;
+    vector_scale(vel, vel, 2); // speed
+  }
+
+  // fire shot
+  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(shotTrail, damage, from, vel, dzstrikerVars->TorsoMoby, 1, 0x222124, -1, 0);
+  if (shotMoby) {
+    ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0); // shot type
+    ((void (*)(Moby*, int))0x0045d788)(shotMoby, TEAM_RED); // shot color
+    ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 1); // hit flag
+    ((void (*)(Moby*, int))0x0045d798)(shotMoby, (int)(pvars->MobVars.Config.VisionRange * 2)); // shot life (ticks)
+    shotMoby->PParent = moby;
+  }
+
+  // spawn flare
+  ((void (*)(float, float, float, Moby*, int, int, int))0x0042c178)(0.75, 0.75, 1.0, dzstrikerVars->TorsoMoby, 0, 0, jointId);
+  
+  // play sound
+  mobyPlaySound(1, 0, dzstrikerVars->TorsoMoby);
+}
+
+//--------------------------------------------------------------------------
+int dzstrikerDoActionMove(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+  struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
+	Moby* target = pvars->MobVars.MoveVars.Target;
+  VECTOR targetPosition;
+	VECTOR t;
+  int behavior = pvars->MobVars.Behavior;
+  int strafe = pvars->MobVars.Action == DZSTRIKER_ACTION_STRAFE;
+  float speed = pvars->MobVars.Config.Speed;
+  float turnSpeed = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_TURN_RADIANS_PER_SEC : DZSTRIKER_TURN_AIR_RADIANS_PER_SEC;
+  float acceleration = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_MOVE_ACCELERATION : DZSTRIKER_MOVE_AIR_ACCELERATION;
+
+  pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
+  if (!target) {
+    strafe = 0;
+    vector_copy(targetPosition, moby->Position);
+  } else {
+    vector_copy(targetPosition, target->Position);
+  }
+
+  // if walking (target out of sight), then return to hold position  
+  if (!strafe && behavior == DZSTRIKER_BEHAVIOR_HOLD_POSITION) {
+    vector_copy(targetPosition, dzstrikerVars->HoldPosition);
+    pvars->MobVars.MoveVars.ForceUseTargetPosition = 1;
+  }
+
+  // 
+  VECTOR dt;
+  vector_subtract(dt, targetPosition, moby->Position);
+  float dir = ((pvars->MobVars.ActionId/2 + pvars->MobVars.Random) % 3) - 1;
+
+  float strafeDir = ((pvars->MobVars.Random + (pvars->MobVars.ActionId/2) + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
+  if (strafe) {
+    VECTOR strafeVec, strafeFwd;
+    vector_outerproduct(strafeVec, dt, moby->M2_03);
+    vector_normalize(strafeVec, strafeVec);
+    vector_scale(strafeVec, strafeVec, 5 * strafeDir);
+    vector_add(pvars->MobVars.MoveVars.TargetPosition, moby->Position, strafeVec);
+  } else {
+    vector_copy(pvars->MobVars.MoveVars.TargetPosition, targetPosition);
+  }
+
+  if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby)) {
+    pvars->MobVars.Dirty = 1; // new path, sync with other clients
+  }
+  
+  if (strafe) {
+    if (dir) {
+      VECTOR dt2;
+      vector_subtract(dt2, t, moby->Position);
+      float yaw2 = atan2f(dt2[1], dt2[0]);
+      float yaw = atan2f(dt[1], dt[0]);
+      mobMoveTowards(moby, t, speed, 1000, acceleration, 0);
+      dzstrikerVars->TorsoRotation[2] = clampAngle(yaw - yaw2);
+    } else {
+      mobStand(moby);
+      mobTurnTowards(moby, targetPosition, turnSpeed);
+    }
+    return DZSTRIKER_LEGS_ANIM_RUN_FORWARD;
+  } else {
+    mobMoveTowards(moby, t, speed, turnSpeed, acceleration, dir);
+    return DZSTRIKER_LEGS_ANIM_RUN_FORWARD;
+  }
+}
+
+//--------------------------------------------------------------------------
 void dzstrikerDoAction(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -524,6 +694,7 @@ void dzstrikerDoAction(Moby* moby)
   struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
 	Moby* target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
+  int isSniper = dzstrikerIsSniper(moby);
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
   float turnSpeed = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_TURN_RADIANS_PER_SEC : DZSTRIKER_TURN_AIR_RADIANS_PER_SEC;
@@ -641,16 +812,11 @@ void dzstrikerDoAction(Moby* moby)
       break;
     }
     case DZSTRIKER_ACTION_WALK:
+    case DZSTRIKER_ACTION_STRAFE:
 		{
-      float dir = 0;
-      if (target) {
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
-      }
-
+      int walkAnimId = DZSTRIKER_LEGS_ANIM_RUN_FORWARD;
       if (!isInAirFromFlinching) {
-        if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
-          pvars->MobVars.Dirty = 1; // new path, sync with other clients
-        mobMoveTowards(moby, t, speed, turnSpeed, acceleration, dir);
+        walkAnimId = dzstrikerDoActionMove(moby);
       }
 
 			// 
@@ -659,8 +825,8 @@ void dzstrikerDoAction(Moby* moby)
       } else if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
         dzstrikerForceLocalAction(moby, DZSTRIKER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
-        dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_RUN_FORWARD, DZSTRIKER_TORSO_ANIM_IDLE, 0);
-      } else if (moby->AnimSeqId != DZSTRIKER_LEGS_ANIM_RUN_FORWARD || pvars->MobVars.AnimationLooped) {
+        dzstrikerTransAnim(moby, walkAnimId, DZSTRIKER_TORSO_ANIM_IDLE, 0);
+      } else if (moby->AnimSeqId != walkAnimId || pvars->MobVars.AnimationLooped) {
         dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, DZSTRIKER_TORSO_ANIM_IDLE, 0);
       }
 			break;
@@ -702,6 +868,45 @@ void dzstrikerDoAction(Moby* moby)
       dzstrikerTransAnim(moby, legsAnimId, torsoAnimId, 0);
 			break;
 		}
+    case DZSTRIKER_ACTION_AIM:
+    {
+      int torsoAnimId = isSniper ? DZSTRIKER_TORSO_ANIM_AIM_SNIPER : DZSTRIKER_TORSO_ANIM_AIM_GUN;
+
+      mobStand(moby);
+      if (!isInAirFromFlinching) {
+        if (target) {
+          mobTurnTowards(moby, target->Position, turnSpeed);
+        }
+      }
+
+      dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, torsoAnimId, 0);
+      break;
+    }
+    case DZSTRIKER_ACTION_FIRE:
+    {
+      int torsoAnimId = isSniper ? DZSTRIKER_TORSO_ANIM_FIRE_SNIPER : DZSTRIKER_TORSO_ANIM_FIRE_GUN_LOOP;
+
+      mobStand(moby);
+      if (!isInAirFromFlinching) {
+        if (target) {
+          mobTurnTowards(moby, target->Position, turnSpeed);
+
+          float animT = dzstrikerVars->TorsoMoby->AnimSeqT;
+          if (dzstrikerVars->TorsoMoby->AnimSeqId == torsoAnimId) {
+            if (animT < dzstrikerVars->LastShotAtAnimT)
+              dzstrikerVars->LastShotAtAnimT = -1;
+
+            if (animT >= 1 && dzstrikerVars->LastShotAtAnimT < 0) {
+              dzstrikerFireShot(moby, target);
+              dzstrikerVars->LastShotAtAnimT = animT;
+            }
+          }
+        }
+      }
+
+      dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, torsoAnimId, 0);
+      break;
+    }
   }
 
   pvars->MobVars.CurrentActionForTicks ++;
@@ -727,6 +932,8 @@ void dzstrikerDoDamage(Moby* moby, float radius, float amount, int damageFlags, 
 void dzstrikerForceLocalAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+  if (!dzstrikerVars->TorsoMoby) return;
   float difficulty = 1;
 
   if (MapConfig.State)
@@ -759,10 +966,17 @@ void dzstrikerForceLocalAction(Moby* moby, int action)
 		}
     case DZSTRIKER_ACTION_ROAM:
     {
-      // if we're in a spawner
-      // then let it determine where we roam
-      if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-        spawnerOnChildGetRandomRoamTarget(moby->PParent, moby, pvars->MobVars.MoveVars.TargetPosition);
+      if (pvars->MobVars.Behavior == DZSTRIKER_BEHAVIOR_HOLD_POSITION) {
+
+        // hold target position
+        vector_copy(pvars->MobVars.MoveVars.TargetPosition, dzstrikerVars->HoldPosition);
+      } else {
+
+        // if we're in a spawner
+        // then let it determine where we roam
+        if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
+          spawnerOnChildGetRandomRoamTarget(moby->PParent, moby, pvars->MobVars.MoveVars.TargetPosition);
+        }
       }
       break;
     }
@@ -776,9 +990,21 @@ void dzstrikerForceLocalAction(Moby* moby, int action)
       pvars->MobVars.Destroy = 1;
 			break;
 		}
-		case DZSTRIKER_ACTION_ATTACK:
+		case DZSTRIKER_ACTION_AIM:
+    {
+      // face legs in direction of torso
+      dzstrikerVars->LastShotAtAnimT = -1;
+      moby->Rotation[2] = atan2f(dzstrikerVars->TorsoMoby->M0_03[1], dzstrikerVars->TorsoMoby->M0_03[0]);
+      break;
+    }
+		case DZSTRIKER_ACTION_FIRE:
 		{
 			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+			break;
+		}
+		case DZSTRIKER_ACTION_ATTACK:
+		{
+      pvars->MobVars.AttackCooldownTicks = TPS*2;
 			break;
 		}
 		case DZSTRIKER_ACTION_FLINCH:
@@ -812,7 +1038,13 @@ short dzstrikerGetArmor(Moby* moby)
 int dzstrikerIsAttacking(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == DZSTRIKER_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
+  switch (pvars->MobVars.Action)
+  {
+    //case DZSTRIKER_ACTION_AIM:
+    case DZSTRIKER_ACTION_FIRE: return pvars->MobVars.CurrentActionForTicks < TPS;
+    case DZSTRIKER_ACTION_ATTACK: return !pvars->MobVars.AnimationLooped;
+    default: return 0;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -833,6 +1065,8 @@ int dzstrikerShouldForceStateUpdateOnAction(Moby* moby, int action)
   // or if we're entering/leaving the roaming state
   if (action == DZSTRIKER_ACTION_DIE) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_ROAM || action == DZSTRIKER_ACTION_ROAM) return 1;
+  if (pvars->MobVars.Action == DZSTRIKER_ACTION_AIM || action == DZSTRIKER_ACTION_AIM) return 1;
+  if (pvars->MobVars.Action == DZSTRIKER_ACTION_FIRE || action == DZSTRIKER_ACTION_FIRE) return 1;
 
   return 0;
 }
@@ -874,6 +1108,41 @@ int dzstrikerIsDying(Moby* moby)
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	return pvars->MobVars.Action == DZSTRIKER_ACTION_DIE;
 }
+
+//--------------------------------------------------------------------------
+int dzstrikerShouldStrafe(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	Moby* target = pvars->MobVars.MoveVars.Target;
+  int behavior = pvars->MobVars.Behavior;
+
+  if (!target) return 0;
+
+  // get distance to target
+  VECTOR dt;
+  vector_subtract(dt, target->Position, moby->Position);
+  float sqrDistToTarget = vector_sqrmag(dt);
+
+  int strafe = 0;
+  if (pvars->MobVars.TimeTargetOutOfSightTicks < 2) {
+    strafe = 1;
+  }
+
+  // if stuck, return to walk state
+  if (pvars->MobVars.MoveVars.IsStuck) {
+    strafe = 0;
+  }
+
+  return strafe;
+}
+
+//--------------------------------------------------------------------------
+int dzstrikerIsSniper(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return (pvars->MobVars.Config.Bangles & DZSTRIKER_TORSO_BANGLE_SNIPER) != 0;
+}
+
 
 //--------------------------------------------------------------------------
 void dzstrikerTorsoUpdate(Moby* moby)
