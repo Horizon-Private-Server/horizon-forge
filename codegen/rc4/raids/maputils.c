@@ -423,6 +423,26 @@ int getLevelFromXp(u64 xp)
 {
   if (xp < 0) return 0;
 
+  int level = (int)xp / LEVELUP_PLAYER_LINEAR_FACTOR;
+  if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
+  if (level < 0) return 0;
+  return level;
+}
+
+//--------------------------------------------------------------------------
+u64 getXpForLevel(int level)
+{
+  if (level > LEVELUP_MAX_LEVEL) level = LEVELUP_MAX_LEVEL;
+  if (level <= 0) return 0;
+  
+  return level * LEVELUP_PLAYER_LINEAR_FACTOR;
+}
+
+//--------------------------------------------------------------------------
+int getProficiencyFromXp(u64 xp)
+{
+  if (xp < 0) return 0;
+
   // (500 (2/3)^(1/3))/(sqrt(3) sqrt(27 x^2 + 500000000) - 9 x)^(1/3) - (sqrt(3) sqrt(27 x^2 + 500000000) - 9 x)^(1/3)/(2^(1/3) 3^(2/3))
   // Constants
   const double c1 = 0.87358046;                 // (2/3)^(1/3)
@@ -446,23 +466,11 @@ int getLevelFromXp(u64 xp)
 }
 
 //--------------------------------------------------------------------------
-u64 getXpForLevel(int level)
-{
-  if (level > LEVELUP_MAX_LEVEL) level = LEVELUP_MAX_LEVEL;
-  if (level <= 0) return 0;
-  return (u64)((double)powf(1*level, 3) + 500*level);
-}
-
-//--------------------------------------------------------------------------
-int getProficiencyFromXp(u64 xp)
-{
-  return getLevelFromXp(xp);
-}
-
-//--------------------------------------------------------------------------
 u64 getXpForProficiency(int proficiency)
 {
-  return getXpForLevel(proficiency);
+  if (proficiency > LEVELUP_MAX_LEVEL) proficiency = LEVELUP_MAX_LEVEL;
+  if (proficiency <= 0) return 0;
+  return (u64)((double)powf(1*proficiency, 3) + 500*proficiency);
 }
 
 //--------------------------------------------------------------------------

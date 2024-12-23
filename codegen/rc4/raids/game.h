@@ -82,6 +82,8 @@
 #define NANOLEECH_CHANCE											(0.01)
 
 #define LEVELUP_MAX_LEVEL                     (98)
+#define LEVELUP_PLAYER_LINEAR_FACTOR          (100)
+#define LEVELUP_PLAYER_INCREMENT_AMOUNT       (25)
 
 #define PLAYER_BASE_REVIVE_TICKS					    (60 * TPS)
 #define PLAYER_MIN_REVIVE_TICKS					      (10 * TPS)
