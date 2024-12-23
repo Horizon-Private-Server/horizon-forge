@@ -485,7 +485,7 @@ void npcDoAction(Moby* moby)
       int walkAnimId = pvars->Parameters.WalkAnim.Id;
       float dir = 0;
       if (target) {
-        dir = ((pvars->Mob.MobVars.ActionId + pvars->Mob.MobVars.Random) % 3) - 1;
+        dir = ((pvars->Mob.MobVars.ActionId + pvars->Mob.MobVars.DynamicRandom) % 3) - 1;
       }
 
       // determine next position

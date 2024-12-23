@@ -40,6 +40,7 @@
 #define DLOG(moby, format, ...) if (((struct SpawnerPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
 
 int spawnerInitialized = 0;
+int spawnerInitializedTime = 0;
 int spawnerNumLastActive = 0;
 int spawnerNumActive = 0;
 int spawnerTicksSinceLastDelete = 0;
@@ -318,6 +319,10 @@ void spawnerUpdate(Moby* moby)
   }
 
   if (!gameAmIHost()) return;
+
+  // add delay after game loads before spawners start spawning
+  // to try and mitigate lag/crashing at the start
+  if ((gameGetTime() - spawnerInitializedTime) < (1*TIME_SECOND)) return;
 
   // check if completed
   if (moby->State != SPAWNER_STATE_COMPLETED && spawnerIsCompleted(moby)) {
@@ -814,5 +819,6 @@ void spawnerInit(void)
 		++moby;
 	}
 
+  spawnerInitializedTime = gameGetTime();
   DPRINTF("spawner pvar size %d\n", sizeof(struct SpawnerPVar));
 }

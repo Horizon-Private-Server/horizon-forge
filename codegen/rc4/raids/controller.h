@@ -36,6 +36,7 @@ enum ControllerConditionType {
   CONTROLLER_CONDITION_TYPE_NPC_TARGET,
   CONTROLLER_CONDITION_TYPE_DIFFICULTY,
   CONTROLLER_CONDITION_TYPE_CHECKPOINT,
+  CONTROLLER_CONDITION_TYPE_CHANCE,
 };
 
 enum ControllerMobyStateInteractType {
@@ -139,6 +140,11 @@ struct ControllerCondition
     struct {
       char IsActive;
     } Checkpoint;
+
+    // trigger if chance
+    struct {
+      float Probability;
+    } Chance;
   };
 };
 

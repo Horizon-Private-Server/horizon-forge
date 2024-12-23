@@ -42,6 +42,7 @@ int leviathanCanAttack(struct MobPVar* pvars);
 int leviathanIsFlinching(Moby* moby);
 int leviathanIsDying(Moby* moby);
 int leviathanShouldStrafe(Moby* moby);
+int leviathanShouldChase(Moby* moby);
 int leviathanGetLaserForTicks(Moby* moby);
 
 struct MobVTable LeviathanVTable = {
@@ -135,6 +136,7 @@ void leviathanPostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = pvars->MobVars.Config.Scale;
   LeviathanMobVars_t* leviathanVars = (LeviathanMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   // 
@@ -173,7 +175,9 @@ void leviathanPostUpdate(Moby* moby)
     case LEVIATHAN_ANIM_STAB_DOWN:
     case LEVIATHAN_ANIM_WALK:
       {
-        animSpeed *= (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+        animSpeed *= (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
+        if (pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE)
+          animSpeed *= LEVIATHAN_CHASE_SPEED_MULT;
         break;
       }
   }
@@ -480,6 +484,9 @@ int leviathanGetPreferredAction(Moby* moby, int * delayTicks)
       }
     }
 
+    if (leviathanShouldChase(moby))
+      return LEVIATHAN_ACTION_CHASE;
+
     if (leviathanShouldStrafe(moby))
       return LEVIATHAN_ACTION_STRAFE;
 
@@ -557,10 +564,18 @@ int leviathanDoActionMove(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-  float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
+  float dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
+
+  // chase goes directly towards target, quickly
+  if (pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE) {
+    speed *= LEVIATHAN_CHASE_SPEED_MULT;
+    turnSpeed *= LEVIATHAN_CHASE_SPEED_MULT;
+    strafe = 0;
+    dir = 0;
+  }
 
   pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
-  float strafeDir = ((pvars->MobVars.Random + (pvars->MobVars.ActionId/2)) % 2) ? 1 : -1;
+  float strafeDir = ((pvars->MobVars.DynamicRandom + (pvars->MobVars.ActionId/2)) % 2) ? 1 : -1;
   if (strafe) {
     VECTOR strafeVec, strafeFwd;
     vector_scale(strafeVec, moby->M1_03, 5 * strafeDir);
@@ -736,6 +751,7 @@ void leviathanDoAction(Moby* moby)
       }
       break;
     }
+    case LEVIATHAN_ACTION_CHASE:
     case LEVIATHAN_ACTION_WALK:
     case LEVIATHAN_ACTION_STRAFE:
 		{
@@ -851,6 +867,14 @@ void leviathanDoAction(Moby* moby)
           if (laserbeamMoby) {
             laserbeamMoby->State = LASERBEAM_STATE_ACTIVATED;
             laserbeamSet(laserbeamMoby, &mtxTailHead[12], leviathanVars->LaserbeamDirection, 100, 0.3, pvars->MobVars.Config.Damage, 0x1, 0x80208040, 0x3020FF20, 0x00ff00, 0x00ff00, 0x45, 0x0E);
+          }
+
+          // check for laser hit target
+          if (mobAmIOwner(moby) && laserbeamMoby) {
+	          struct LaserbeamPVar* pvars = (struct LaserbeamPVar*)laserbeamMoby->PVar;
+            if (pvars->Hit && pvars->HitMoby == target) {
+              leviathanForceLocalAction(moby, LEVIATHAN_ACTION_WALK);
+            }
           }
 
           // stop after n seconds
@@ -986,7 +1010,7 @@ short leviathanGetArmor(Moby* moby)
 int leviathanIsExhausted(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  int exhaustedLoopCount = LEVIATHAN_LASER_EXHAUSTED_ANIM_LOOP - (MapConfig.State ? MapConfig.State->DifficultyStars : 0);
+  int exhaustedLoopCount = LEVIATHAN_LASER_EXHAUSTED_ANIM_LOOP;
   return moby->AnimSeqId == LEVIATHAN_ANIM_LASER_FIRE_EXHAUSTED && pvars->MobVars.AnimationLooped < exhaustedLoopCount;
 }
 
@@ -1022,10 +1046,11 @@ int leviathanShouldForceStateUpdateOnAction(Moby* moby, int action)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
   // only send state updates at regular intervals, unless dying
-  // or if we're entering/leaving the roaming/laser states
+  // or if we're entering/leaving the roaming/laser/chase states
   if (action == LEVIATHAN_ACTION_DIE) return 1;
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_ROAM || action == LEVIATHAN_ACTION_ROAM) return 1;
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER || action == LEVIATHAN_ACTION_ATTACK_LASER) return 1;
+  if (pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE || action == LEVIATHAN_ACTION_CHASE) return 1;
 
   return 0;
 }
@@ -1097,7 +1122,7 @@ int leviathanShouldStrafe(Moby* moby)
   // if mob is ready to attack
   // and we're not already strafing (if we are timeout at 15 seconds)
   // or if target is looking away, rush at them
-  if (pvars->MobVars.AttackCooldownTicks <= 10 && (pvars->MobVars.Action != LEVIATHAN_ACTION_STRAFE || pvars->MobVars.CurrentActionForTicks > (15*TPS) || vector_innerproduct_unscaled(moby->M0_03, target->M0_03) >= 0)) {
+  if (behavior != LEVIATHAN_BEHAVIOR_EVASIVE && pvars->MobVars.AttackCooldownTicks <= 10 && (pvars->MobVars.Action != LEVIATHAN_ACTION_STRAFE || pvars->MobVars.CurrentActionForTicks > (15*TPS) || vector_innerproduct_unscaled(moby->M0_03, target->M0_03) >= 0)) {
     strafe = 0;
   }
 
@@ -1107,6 +1132,42 @@ int leviathanShouldStrafe(Moby* moby)
   }
 
   return strafe;
+}
+
+//--------------------------------------------------------------------------
+int leviathanShouldChase(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	Moby* target = pvars->MobVars.MoveVars.Target;
+  int behavior = pvars->MobVars.Behavior;
+  int chase = pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE;
+
+  if (!target) return 0;
+  if (behavior == LEVIATHAN_BEHAVIOR_EVASIVE) return 0;
+  if (!chase && rand(500)) return 0;
+
+  // get distance to target
+  VECTOR dt;
+  vector_subtract(dt, target->Position, moby->Position);
+  float sqrDistToTarget = vector_sqrmag(dt);
+
+  // if mob is ready to attack
+  // and we're not already strafing (if we are timeout at 15 seconds)
+  // or if target is looking away, rush at them
+  if (pvars->MobVars.AttackCooldownTicks <= 10 && (pvars->MobVars.Action != LEVIATHAN_ACTION_CHASE || pvars->MobVars.CurrentActionForTicks > (15*TPS))) {
+    chase = 0;
+  }
+
+  if (pvars->MobVars.TimeTargetOutOfSightTicks < LEVIATHAN_CHASE_MAX_OUT_OF_SIGHT_TICKS && sqrDistToTarget > (LEVIATHAN_CHASE_TARGET_RADIUS*LEVIATHAN_CHASE_TARGET_RADIUS)) {
+    chase = 1;
+  }
+
+  // if stuck, return to walk state
+  if (pvars->MobVars.MoveVars.IsStuck) {
+    chase = 0;
+  }
+
+  return chase;
 }
 
 //--------------------------------------------------------------------------

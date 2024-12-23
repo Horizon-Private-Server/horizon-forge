@@ -283,6 +283,9 @@ struct RaidsMapConfig
 
 struct RaidsCustomMapExtraData
 {
+  int RaidsVersion;
+  float DifficultyApproximate;
+  int UNUSED[2];
   int Cost[5];
   char Author[32];
   char Description[256];

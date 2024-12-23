@@ -148,7 +148,7 @@ void levelselectDraw(void)
       if (def->HideFromMapList == 1) continue;
       if (def->ForcedCustomModeId != CUSTOM_MODE_RAIDS) continue;
       if (!(def->CustomModeExtraDataMask & (1<<CUSTOM_MODE_RAIDS))) continue;
-      if (strncmp(def->Filename, RAIDS_HUB_MAPFILENAME, 10) == 0) continue;
+      if (strncmp(def->Filename, RAIDS_HUB_MAPFILENAME, sizeof(def->Filename)) == 0) continue;
 
       // draw selection line
       if (levelselectDrawState.NumPlanets == levelselectDrawState.SelectedIdx) {

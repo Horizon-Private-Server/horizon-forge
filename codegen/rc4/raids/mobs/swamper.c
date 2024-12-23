@@ -143,7 +143,7 @@ void swamperPostUpdate(Moby* moby)
 
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.9;
-	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) * scale;
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   
   if (moby->AnimSeqId == SWAMPER_ANIM_JUMP) {
@@ -577,7 +577,7 @@ void swamperDoAction(Moby* moby)
       float dir = 0;
       if (target) {
         walkAnim = SWAMPER_ANIM_RUN;
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
+        dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
       } else {
         speed *= 0.5;
       }
@@ -799,7 +799,7 @@ int swamperCanAttack(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int swamperGetSideFlipLeftOrRight(struct MobPVar* pvars)
 {
-  int seed = pvars->MobVars.Random + pvars->MobVars.ActionId;
+  int seed = pvars->MobVars.DynamicRandom + pvars->MobVars.ActionId;
   sha1(&seed, 4, &seed, 4);
   return seed % 2;
 }

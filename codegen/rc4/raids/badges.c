@@ -45,20 +45,6 @@ int badgesAmmoRegenAmount[WEAPON_SLOT_COUNT] = {
   [WEAPON_SLOT_OMNI_SHIELD] 1,
   [WEAPON_SLOT_FLAIL] 2,
 };
-int badgesFlinchResistanceAmount[RAIDS_ITEM_RARITY_COUNT] = {
-  [RAIDS_ITEM_RARITY_COMMON] 10,
-  [RAIDS_ITEM_RARITY_UNCOMMON] 25,
-  [RAIDS_ITEM_RARITY_RARE] 40,
-  [RAIDS_ITEM_RARITY_LEGENDARY] 70,
-  [RAIDS_ITEM_RARITY_MYTHIC] 100
-};
-float badgesBerserkerMeleeMult[RAIDS_ITEM_RARITY_COUNT] = {
-  [RAIDS_ITEM_RARITY_COMMON] 0.75,
-  [RAIDS_ITEM_RARITY_UNCOMMON] 0.60,
-  [RAIDS_ITEM_RARITY_RARE] 0.50,
-  [RAIDS_ITEM_RARITY_LEGENDARY] 0.40,
-  [RAIDS_ITEM_RARITY_MYTHIC] 0.20
-};
 
 //--------------------------------------------------------------------------
 void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
@@ -67,8 +53,7 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
 
   // 
   if (stateId == PLAYER_STATE_GET_HIT) {
-    RaidsInventoryItem_t* badge = &MapConfig.State->PlayerStates[player->PlayerId].Inventory.Badge;
-    if (bankItemIsBadge(badge) && badge->BadgeType == RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH) {
+    if (bankGetEquippedBadgeEffectStrength(player->PlayerId, RAIDS_BADGE_TYPE_BERSERKER) > 0) {
       if (player->PlayerState == PLAYER_STATE_JUMP_ATTACK && player->PlayerMoby->AnimSeqId == 43) {
         return;
       }
@@ -79,7 +64,7 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_HealthRegen(Player* player, int badgeLevel)
+void badgesUpdate_HealthRegen(Player* player, float strength)
 {
   if (playerIsDead(player) || player->Health <= 0) return;
   
@@ -87,7 +72,7 @@ void badgesUpdate_HealthRegen(Player* player, int badgeLevel)
   int timeSinceLastHitMs = gameGetTime() - (badgesPlayerTimeLastLastHit[player->PlayerId] + delayMs);
   if (timeSinceLastHitMs < 0) return;
 
-  timeSinceLastHitMs *= 1 + (0.5 * badgeLevel);
+  timeSinceLastHitMs *= 1 + (0.5 * strength * 5);
   int cooldown = BADGES_HEALTH_REGEN_COOLDOWN_TICKS;
   if (timeSinceLastHitMs < (TIME_SECOND * 15))
     cooldown *= 5;
@@ -105,7 +90,7 @@ void badgesUpdate_HealthRegen(Player* player, int badgeLevel)
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_AmmoRegen(Player* player, int badgeLevel)
+void badgesUpdate_AmmoRegen(Player* player, float strength)
 {
   if (playerIsDead(player)) return;
 
@@ -117,7 +102,7 @@ void badgesUpdate_AmmoRegen(Player* player, int badgeLevel)
     int equippedGadgetMaxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, equippedGadgetId);
     if (equippedGadgetMaxAmmo) {
       int equippedGadgetAmmo = player->GadgetBox->Gadgets[equippedGadgetId].Ammo;
-      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*(badgeLevel+1);
+      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*(strength+1)*5;
       if (newAmmo > equippedGadgetMaxAmmo) newAmmo = equippedGadgetMaxAmmo;
       if (newAmmo != equippedGadgetAmmo) {
         player->GadgetBox->Gadgets[equippedGadgetId].Ammo = newAmmo;
@@ -128,37 +113,18 @@ void badgesUpdate_AmmoRegen(Player* player, int badgeLevel)
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_FlinchResistance(Player* player, int badgeLevel)
+void badgesUpdate_FlinchResistance(Player* player, float strength)
 {
   if (playerIsDead(player)) return;
 
   if (player->timers.postHitInvinc == 47) {
-    player->timers.postHitInvinc += badgesFlinchResistanceAmount[badgeLevel];
+    player->timers.postHitInvinc += 100 * strength;
     badgesPlayerCooldown[player->PlayerId] = player->timers.postHitInvinc - 1;
   }
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_Berserker(Player* player, int badgeLevel)
-{
-  if (playerIsDead(player)) return;
-  
-  if (player->PlayerMoby->CollDamage >= 0) {
-    u32 meleeFlags = 0x00081801;
-    u32 rangedFlags = 0x1;
-    MobyColDamage* colDamage = mobyGetDamage(player->PlayerMoby, meleeFlags | rangedFlags, 0);
-    if (colDamage) {
-      if ((colDamage->DamageFlags & meleeFlags) == meleeFlags) {
-        colDamage->DamageHp *= badgesBerserkerMeleeMult[badgeLevel];
-      } else if ((colDamage->DamageFlags & rangedFlags) == rangedFlags) {
-        colDamage->DamageHp *= BADGES_BERSERKER_RANGED_DAMAGE_MULT;
-      }
-    }
-  }
-}
-
-//--------------------------------------------------------------------------
-void badgesUpdate_ExplosiveWrench(Player* player, int badgeLevel)
+void badgesUpdate_Berserker(Player* player, float strength)
 {
   if (playerIsDead(player)) return;
   
@@ -168,7 +134,7 @@ void badgesUpdate_ExplosiveWrench(Player* player, int badgeLevel)
       // spawn explosion
       u128 vPos = vector_read(player->PlayerPosition);
       float damage = 50;
-      float radius = 5 * (badgeLevel + 1);
+      float radius = 25 * (strength + 1);
       mobySpawnExplosion
             (vPos, 1, 0x0, 0x0, 0x0, 0x10, 0x10, 0x0, 0, 0, 0, 0,
             1, 0, 0x80080840, 0, 0x801040C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0,
@@ -183,7 +149,7 @@ void badgesUpdate_ExplosiveWrench(Player* player, int badgeLevel)
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badgeLevel)
+void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, float strength)
 {
   if (!player) return;
 
@@ -196,12 +162,11 @@ void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badge
 
   switch (badgeType)
   {
-    case RAIDS_BADGE_TYPE_HEALTH_REGEN: badgesUpdate_HealthRegen(player, badgeLevel); break;
-    case RAIDS_BADGE_TYPE_AMMO_REGEN: badgesUpdate_AmmoRegen(player, badgeLevel); break;
+    case RAIDS_BADGE_TYPE_HEALTH_REGEN: badgesUpdate_HealthRegen(player, strength); break;
+    case RAIDS_BADGE_TYPE_AMMO_REGEN: badgesUpdate_AmmoRegen(player, strength); break;
     case RAIDS_BADGE_TYPE_SHARPSHOOTER: break; // handled by gamemode
-    case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, badgeLevel); break;
-    case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, badgeLevel); break;
-    case RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH: badgesUpdate_ExplosiveWrench(player, badgeLevel); break;
+    case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, strength); break;
+    case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, strength); break;
     default: break;
   }
 }
@@ -219,10 +184,16 @@ void badgesStart(void)
       continue;
 
     RaidsInventoryItem_t* badge = &MapConfig.State->PlayerStates[i].Inventory.Badge;
-    if (!badge->BadgeType)
+    if (!badge)
       continue;
 
-    badgesUpdatePlayer(player, badge->BadgeType, bankGetRarityFromQuality(badge->Quality));
+    int i;
+    for (i = 0; i < BANK_BADGE_EFFECT_COUNT; ++i) {
+      int badgeType = badge->BadgeData.Effects[i];
+      if (!badgeType) continue;
+
+      badgesUpdatePlayer(player, badgeType, badge->BadgeData.EffectStrength[i] / 255.0);
+    }
   }
 }
 

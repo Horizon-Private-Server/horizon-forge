@@ -24,7 +24,6 @@ char* bankBadgeNames[] = {
   [RAIDS_BADGE_TYPE_SHARPSHOOTER] "%cSharpshooter %s\x08",
   [RAIDS_BADGE_TYPE_BERSERKER] "%cBerserker %s\x08",
   [RAIDS_BADGE_TYPE_FLINCH_RESISTANCE] "%cFlinch Resistance %s\x08",
-  [RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH] "%cExplosive Wrench %s\x08",
   [RAIDS_BADGE_TYPE_COUNT] NULL,
 };
 
@@ -47,13 +46,13 @@ char bankRarityCode[] = {
 //--------------------------------------------------------------------------
 int bankItemIsWeapon(RaidsInventoryItem_t* item)
 {
-  return item && item->GadgetId && item->GadgetId != BANK_BADGE_GADGET_ID;
+  return item && item->Type == RAIDS_ITEM_WEAPON;
 }
 
 //--------------------------------------------------------------------------
 int bankItemIsBadge(RaidsInventoryItem_t* item)
 {
-  return item && item->GadgetId == BANK_BADGE_GADGET_ID && item->BadgeType > RAIDS_BADGE_TYPE_NONE && item->BadgeType < RAIDS_BADGE_TYPE_COUNT;
+  return item && item->Type == RAIDS_ITEM_BADGE;
 }
 
 //--------------------------------------------------------------------------
@@ -87,10 +86,11 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize)
 
   int rarity = bankGetRarityFromQuality(item->Quality);
   if (bankItemIsBadge(item)) {
-    snprintf(buf, bufSize, bankBadgeNames[item->BadgeType], bankRarityCode[rarity], bankBadgeLevelNames[rarity]);
+    //snprintf(buf, bufSize, bankBadgeNames[item->BadgeType], bankRarityCode[rarity], bankBadgeLevelNames[rarity]);
+    snprintf(buf, bufSize, "%cClass Mod", bankRarityCode[rarity]);
   } else {
-    struct GadgetDef* gadgetDef = weaponGetDef(item->GadgetId, 0);
-    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity >= RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->Proficiency + 1);
+    struct GadgetDef* gadgetDef = weaponGetDef(item->WeaponData.GadgetId, 0);
+    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity >= RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
   }
 }
 
@@ -133,6 +133,24 @@ RaidsInventoryItem_t* bankGetLocalEquippedWeapon(int gadgetId)
   if (equipIdx < 0) return NULL;
   RaidsInventoryItem_t* item = &bank->Inventory.Items[equipIdx];
 
-  if (item->GadgetId != gadgetId) return NULL;
+  if (item->Type != RAIDS_ITEM_WEAPON) return NULL;
+  if (item->WeaponData.GadgetId != gadgetId) return NULL;
   return item;
+}
+
+//--------------------------------------------------------------------------
+float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect)
+{
+  if (!MapConfig.State) return 0;
+
+  RaidsInventoryItem_t* badge = &MapConfig.State->PlayerStates[playerId].Inventory.Badge;
+  if (!badge || badge->Type != RAIDS_ITEM_BADGE) return 0;
+
+  int i;
+  for (i = 0; i < BANK_BADGE_EFFECT_COUNT; ++i) {
+    if (badge->BadgeData.Effects[i] == effect)
+      return badge->BadgeData.EffectStrength[i] / 255.0;
+  }
+
+  return 0;
 }

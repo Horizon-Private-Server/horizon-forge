@@ -129,6 +129,7 @@ void zombiePostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = pvars->MobVars.Config.Scale;
 
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
@@ -141,7 +142,7 @@ void zombiePostUpdate(Moby* moby)
 
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.7;
-	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP) {
     animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
@@ -588,7 +589,7 @@ void zombieDoAction(Moby* moby)
 		{
       float dir = 0;
       if (target) {
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
+        dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
       }
 
       if (!isInAirFromFlinching) {

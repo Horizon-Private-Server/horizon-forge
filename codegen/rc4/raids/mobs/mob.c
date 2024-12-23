@@ -1161,13 +1161,20 @@ void mobUpdateTargetOutOfSight(Moby* moby)
   // increment out of sight ticker
   if (target) {
     if (pvars->MobVars.TargetOutOfSightCheckTicks == 0) {
-      vector_add(t, moby->Position, up);
-      vector_add(t2, target->Position, up);
-      if (CollLine_Fix(t, t2, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL) && CollLine_Fix_GetHitMoby() != target) {
-        pvars->MobVars.TimeTargetOutOfSightTicks++;
-      } else {
+
+#if GATE
+      gateSetCollision(0);
+#endif
+
+      if (mobCanSeeMoby(moby, target)) {
         pvars->MobVars.TimeTargetOutOfSightTicks = 0;
+      } else {
+        pvars->MobVars.TimeTargetOutOfSightTicks++;
       }
+
+#if GATE
+      gateSetCollision(1);
+#endif
 
       pvars->MobVars.TargetOutOfSightCheckTicks = 15;
     } else {

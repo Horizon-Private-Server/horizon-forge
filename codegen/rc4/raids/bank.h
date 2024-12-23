@@ -9,8 +9,8 @@
 #include <libdl/math3d.h>
 
 #define BANK_MAX_ITEMS                 (64)
-#define BANK_UPDATE_SIZE                 (16)
-#define BANK_BADGE_GADGET_ID             (0x41)
+#define BANK_UPDATE_SIZE               (16)
+#define BANK_BADGE_EFFECT_COUNT        (8)
 
 enum RaidsGadgetPaintSpecialMask
 {
@@ -44,7 +44,6 @@ enum RaidsBadgeType
   RAIDS_BADGE_TYPE_SHARPSHOOTER,
   RAIDS_BADGE_TYPE_BERSERKER,
   RAIDS_BADGE_TYPE_FLINCH_RESISTANCE,
-  RAIDS_BADGE_TYPE_EXPLOSIVE_WRENCH,
   RAIDS_BADGE_TYPE_COUNT
 };
 
@@ -57,22 +56,37 @@ enum RaidsSkills
   RAIDS_SKILLS_COUNT
 };
 
+enum RaidsItemTypes
+{
+  RAIDS_ITEM_NONE = 0,
+  RAIDS_ITEM_WEAPON,
+  RAIDS_ITEM_BADGE,
+};
+
 typedef struct RaidsInventoryItem
 {
-  int Damage; // damage
-  u32 Price;
-  u8 GadgetId;
-  u8 Paint; // 0=none, 1=blue, etc (teams)
-  u8 PaintSpecialMask; // RaidsGadgetPaintSpecialMask
-  union {
-    u8 Proficiency; // what proficiency the item was created at (v1-v99)
-    u8 BadgeType;
-  };
-  u8 Quality; // determines rarity + values on probability curve
-  u8 CritChance; // 0-255 (0-100%) chance crit
-  u8 OmegaMod;
+  char Type;
   char Notify;
-  u8 AlphaModCounts[ALPHA_MOD_COUNT-1];
+  u8 Quality; // determines rarity + values on probability curve
+  u32 Price;
+
+  union {
+    struct {
+      int Damage; // damage
+      u8 GadgetId;
+      u8 Paint; // 0=none, 1=blue, etc (teams)
+      u8 PaintSpecialMask; // RaidsGadgetPaintSpecialMask
+      u8 Proficiency; // what proficiency the item was created at (v1-v99)
+      u8 CritChance; // 0-255 (0-100%) chance crit
+      u8 OmegaMod;
+      u8 AlphaModCounts[ALPHA_MOD_COUNT-1];
+    } WeaponData;
+
+    struct {
+      u8 Effects[BANK_BADGE_EFFECT_COUNT];
+      u8 EffectStrength[BANK_BADGE_EFFECT_COUNT];
+    } BadgeData;
+  };
 } RaidsInventoryItem_t;
 
 typedef struct RaidsPlayerInventory
@@ -168,6 +182,7 @@ int bankGetPlayerIdxFromGadgetBox(GadgetBox* gbox);
 RaidsPlayerEquippedInventory_t* bankGetEquippedFromGadgetBox(GadgetBox* gbox);
 RaidsInventoryItem_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int gadgetId);
 enum RaidsItemRarity bankGetRarityFromQuality(u8 quality);
+float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect);
 
 void bankOpen(void);
 void bankClose(void);

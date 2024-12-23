@@ -263,6 +263,15 @@ int controllerCheckpointConditionTrue(Moby* moby, int conditionIdx)
 }
 
 //--------------------------------------------------------------------------
+int controllerChanceConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+  
+  return randRange(0, 1) < condition->Chance.Probability;
+}
+
+//--------------------------------------------------------------------------
 void controllerUpdateTriggers(Moby* moby)
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
@@ -282,6 +291,7 @@ void controllerUpdateTriggers(Moby* moby)
       case CONTROLLER_CONDITION_TYPE_NPC_TARGET: count += 1; succeeded += controllerIsNpcTargetConditionTrue(moby, i); break;
       case CONTROLLER_CONDITION_TYPE_DIFFICULTY: count += 1; succeeded += controllerDifficultyConditionTrue(moby, i); break;
       case CONTROLLER_CONDITION_TYPE_CHECKPOINT: count += 1; succeeded += controllerCheckpointConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_CHANCE: count += 1; succeeded += controllerChanceConditionTrue(moby, i); break;
       default: break;
     }
 

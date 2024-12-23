@@ -9,6 +9,8 @@ using UnityEngine;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
+    public static readonly int RAIDS_VERSION = 0;
+
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int MOVER_OCLASS = 0x4002;
     public static readonly int CONTROLLER_OCLASS = 0x4003;
@@ -28,6 +30,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public bool Enabled = true;
     [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
+    [Range(1, 10), Tooltip("Estimated map difficulty, indicated to the user on a scale of 1 to 10.")] public float DifficultyApproximate = 5;
     public int Cost1Star = 0;
     public int Cost2Star = 0;
     public int Cost3Star = 0;
@@ -244,6 +247,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public override void Write(BinaryWriter writer)
     {
+        writer.Write(RAIDS_VERSION);
+        writer.Write(DifficultyApproximate);
+        writer.Write(new byte[8]);
         writer.Write(Cost1Star);
         writer.Write(Cost2Star);
         writer.Write(Cost3Star);

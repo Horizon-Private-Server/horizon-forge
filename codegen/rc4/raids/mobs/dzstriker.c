@@ -147,6 +147,7 @@ void dzstrikerPostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = pvars->MobVars.Config.Scale;
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   Moby* torsoMoby = dzstrikerVars->TorsoMoby;
   if (!torsoMoby) return;
@@ -162,7 +163,7 @@ void dzstrikerPostUpdate(Moby* moby)
 
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.5;
-	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   if (moby->AnimSeqId == DZSTRIKER_LEGS_ANIM_JUMP) {
     animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
@@ -692,9 +693,9 @@ int dzstrikerDoActionMove(Moby* moby)
   // 
   VECTOR dt;
   vector_subtract(dt, targetPosition, moby->Position);
-  float dir = ((pvars->MobVars.ActionId/2 + pvars->MobVars.Random) % 3) - 1;
+  float dir = ((pvars->MobVars.ActionId/2 + pvars->MobVars.DynamicRandom) % 3) - 1;
 
-  float strafeDir = ((pvars->MobVars.Random + (pvars->MobVars.ActionId/2) + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
+  float strafeDir = ((pvars->MobVars.DynamicRandom + (pvars->MobVars.ActionId/2) + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
   if (strafe) {
     VECTOR strafeVec, strafeFwd;
     vector_outerproduct(strafeVec, dt, moby->M2_03);

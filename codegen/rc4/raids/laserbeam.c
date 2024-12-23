@@ -61,6 +61,7 @@ void laserbeamPostDraw(Moby* moby)
   // update length
   pvars->Length = distance;
   pvars->Hit = hit;
+  pvars->HitMoby = hit ? CollLine_Fix_GetHitMoby() : NULL;
 
   // get vector perpendicular to camera (right/left)
   vector_subtract(camRight, camera->pos, fireFrom);

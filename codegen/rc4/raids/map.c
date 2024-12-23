@@ -208,7 +208,7 @@ char * mapCustomGetGadgetVersionName(int localPlayerIndex, int weaponId, int sho
   }
 
 	char* str = uiMsgString(msgId);
-  snprintf(buf, 0x40, "%s P%d", str, item->Proficiency+1);
+  snprintf(buf, 0x40, "%s P%d", str, item->WeaponData.Proficiency+1);
   return buf;
 }
 
@@ -272,7 +272,7 @@ void mapOnV10VipersHitSurface(Moby* moby)
   if (player && player->GadgetBox) {
     RaidsInventoryItem_t* item = bankGetLocalEquippedWeapon(WEAPON_ID_VIPERS);
     if (item && bankGetRarityFromQuality(item->Quality) == RAIDS_ITEM_RARITY_MYTHIC) {
-      ((void (*)(float radius, float damage, VECTOR p, u32 damageFlags, Moby* moby, Moby* hitMoby))0x003c3a48)(item->AlphaModCounts[ALPHA_MOD_AREA-1] * 0.5, item->Damage * 0.25, moby->Position, 0x801, moby, NULL);
+      ((void (*)(float radius, float damage, VECTOR p, u32 damageFlags, Moby* moby, Moby* hitMoby))0x003c3a48)(item->WeaponData.AlphaModCounts[ALPHA_MOD_AREA-1] * 0.5, item->WeaponData.Damage * 0.25, moby->Position, 0x801, moby, NULL);
     }
   }
 }

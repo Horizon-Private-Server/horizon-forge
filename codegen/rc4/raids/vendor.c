@@ -58,11 +58,11 @@ void vendorUpdate(Moby* moby)
         if (cost >= 0) {
 
           // draw help popup
-          snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "\x11 Refill Ammo \x0E%'d", cost);
+          snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "\x12 Refill Ammo \x0E%'d", cost);
           uiShowPopup(i, LocalPlayerStrBuffer[i]);
           playerData->MessageCooldownTicks = 3;
 
-          if (padGetButtonDown(i, PAD_CIRCLE) > 0 && bankTryChargeLocalAccount(player, cost)) {
+          if (padGetButtonDown(i, PAD_TRIANGLE) > 0 && bankTryChargeLocalAccount(player, cost)) {
             playerData->ActionCooldownTicks = TPS;
             replenishAmmo(player);
           }

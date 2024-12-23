@@ -3709,7 +3709,8 @@
         "DataSize": 2,
         "Offset": 136,
         "Min": 0,
-        "Max": 32767
+        "Max": 32767,
+        "Default": 1
       },
       {
         "Name": "Conditions",
@@ -3732,7 +3733,8 @@
               "Not Yet Triggered": 5,
               "NPC Target": 6,
               "Difficulty Stars": 7,
-              "Checkpoint": 8
+              "Checkpoint": 8,
+              "Random Chance": 9
             }
           },
           {
@@ -3880,6 +3882,17 @@
             },
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8" ] }
+            ]
+          },
+          {
+            "Name": "Probability",
+            "DataType": "Float",
+            "DataSize": 4,
+            "Offset": 8,
+            "Min": 0,
+            "Max": 1,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "9" }
             ]
           }
         ]
