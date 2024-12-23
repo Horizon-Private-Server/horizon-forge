@@ -679,11 +679,36 @@ public class PvarOverlayDef
             case "vector3": BitConverter.TryWriteBytes(buffer, ((Vector3?)value ?? Vector3.zero).x); BitConverter.TryWriteBytes(buffer.AsSpan(4), ((Vector3?)value ?? Vector3.zero).y); BitConverter.TryWriteBytes(buffer.AsSpan(8), ((Vector3?)value ?? Vector3.zero).z); break;
             case "colorrgb": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; break;
             case "colorrgba": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; buffer[3] = ((Color32)value).a; break;
-            case "raidsmobid":
             case "raidsmobbehavior":
             case "mask":
             case "mobyrefstate":
             case "enum": BitConverter.TryWriteBytes(buffer, (long)value); break;
+
+            case "raidsmobid":
+                {
+                    // validate mob isn't disabled
+                    var mobIdx = (long)value;
+                    if (mobIdx >= 0)
+                    {
+                        var raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
+                        if (raidsModeData != null && raidsModeData?.Mobs != null)
+                        {
+
+                            var mob = raidsModeData.Mobs.ElementAtOrDefault((int)mobIdx);
+                            if (mob == null || mob.Disabled)
+                                mobIdx = -1;
+                            else
+                                mobIdx = raidsModeData.Mobs.Where(x => !x.Disabled).ToList().IndexOf(mob);
+                        }
+                        else
+                        {
+                            mobIdx = -1;
+                        }
+                    }
+
+                    BitConverter.TryWriteBytes(buffer, mobIdx);
+                    break;
+                }
 
             case "mobyrefpvar":
                 {

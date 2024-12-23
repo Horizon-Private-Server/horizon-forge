@@ -902,7 +902,7 @@ public static class UnityHelper
                         if (!_raidsModeData)
                             _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
 
-                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
+                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Disabled ? $"{x.Name} (DISABLED)" : x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
                         mobIds.Add("None", -1);
 
                         EditorGUI.BeginChangeCheck();

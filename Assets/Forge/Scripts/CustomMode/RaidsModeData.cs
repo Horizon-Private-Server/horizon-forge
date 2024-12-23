@@ -62,6 +62,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     {
         var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
         var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
+        var enabledMobs = Mobs.Where(x => !x.Disabled);
 
         // copy raids base code
         CodeManager.CopySourceFilesIntoWorkingDirectory(FolderNames.GetCodeGenFolder(RCVER.DL, "raids"), buildFolder);
@@ -97,7 +98,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
         state.LDFlags.Add("-DGATE");
-        var mobTypes = Mobs.Select(x => x.Mob).Distinct();
+        var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
 
@@ -197,7 +198,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         // add mob oclasses
         var mobConfig = RaidsMobsScriptableObject.Load();
-        foreach (var mob in this.Mobs)
+        foreach (var mob in this.Mobs.Where(x => !x.Disabled))
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -222,7 +223,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("");
 
         sb.AppendLine("struct MobSpawnParams mobSpawnParams[] = {");
-        foreach (var mob in Mobs)
+        foreach (var mob in Mobs.Where(x => !x.Disabled))
             sb.AppendLine(mob.GetDef());
         sb.AppendLine("};");
         sb.AppendLine("");
@@ -472,7 +473,8 @@ public enum RaidsMob
     Swamper,
     StalkerTurret,
     Leviathan,
-    DZStriker
+    DZStriker,
+    Executioner
 }
 
 [Flags]
@@ -499,6 +501,7 @@ public enum RaidsMobBangle
 public class RaidsMobSpawnParam
 {
     public string Name;
+    public bool Disabled;
     public RaidsMob Mob;
     public int Variant;
     [Tooltip("For Mobs with team textures only.")]

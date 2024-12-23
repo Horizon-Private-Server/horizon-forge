@@ -87,7 +87,7 @@ public class DockerManager : MonoBehaviour
     {
         if (container != null)
         {
-            await container.StopAsync();
+            //await container.StopAsync();
             await container.DisposeAsync();
             container = null;
         }
@@ -102,8 +102,11 @@ public class DockerManager : MonoBehaviour
               //.WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")
               //.WithWaitStrategy(Wait.ForUnixContainer())
               //.WithReuse(true)
+              .WithCleanUp(true)
               .WithEntrypoint(SleepInfinity)
               .WithOutputConsumer(Consume.RedirectStdoutAndStderrToConsole());
+
+        container =
 
         //builder = builder.WithPortBinding(5432, 5432);
         container = builder.Build();

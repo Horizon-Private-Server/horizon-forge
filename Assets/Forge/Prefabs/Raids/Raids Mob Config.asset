@@ -227,3 +227,31 @@ MonoBehaviour:
     CollRadius: 1.25
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 10
+  - Mob: 6
+    BlipType: 3
+    BlipTeam: 1
+    Variants:
+    - Name: Normal
+      OClass: 8353
+      Bangles: 63
+      Dependencies:
+      - OClass: 8353
+        SourceMapId: 6
+        SourceMissionId: -1
+    Behaviors: []
+    Xp: 15
+    Bolts: 250
+    Damage: 10
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 2
+    SpeedMax: 10
+    SpeedScale: 0.2
+    Health: 100
+    HealthMax: 0
+    HealthScale: 1.1
+    AttackRadius: 5
+    HitRadius: 0.5
+    CollRadius: 1.5
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 7

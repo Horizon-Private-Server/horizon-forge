@@ -154,11 +154,11 @@ void dzstrikerPostUpdate(Moby* moby)
 
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(DZSTRIKER_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
+    torsoMoby->PrimaryColor = moby->PrimaryColor = colorLerp(DZSTRIKER_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
   } else if (pvars->MobVars.FreezeEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(DZSTRIKER_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
+    torsoMoby->PrimaryColor = moby->PrimaryColor = colorLerp(DZSTRIKER_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
   } else {
-    moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
+    torsoMoby->PrimaryColor = moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
   }
 
   // adjust animSpeed by speed and by animation
@@ -1239,6 +1239,7 @@ int dzstrikerTorsoOnSpawn(Moby* torsoMoby, GuberEvent* event)
   torsoMoby->Bangles = mobPVars->MobVars.Config.Bangles;
   torsoMoby->PParent = mobMoby;
   torsoMoby->PUpdate = &dzstrikerTorsoUpdate;
+  torsoMoby->Scale = mobMoby->Scale;
   dzstrikerVars->TorsoMoby = torsoMoby;
 
 	// 

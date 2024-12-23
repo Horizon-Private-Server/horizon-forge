@@ -9,7 +9,7 @@
 #include <libdl/sound.h>
 #include "zombie.h"
 #include "stalkerturret.h"
-//#include "executioner.h"
+#include "executioner.h"
 //#include "reactor.h"
 //#include "tremor.h"
 #include "swarmer.h"
