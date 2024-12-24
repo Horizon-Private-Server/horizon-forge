@@ -759,7 +759,7 @@ void executionerDoAction(Moby* moby)
         if (target) {
           mobTurnTowards(moby, target->Position, turnSpeed*0.5);
 
-          if (moby->AnimSeqId == animId && moby->AnimSeqT > 29 && moby->AnimSeqT < 30 && executionerVars->AnimationLoopLastFire != pvars->MobVars.AnimationLooped) {
+          if (moby->AnimSeqId == animId && moby->AnimSeqT >= 31.5 && moby->AnimSeqT < 33 && executionerVars->AnimationLoopLastFire != pvars->MobVars.AnimationLooped) {
             executionerFireShot(moby, target);
             executionerVars->AnimationLoopLastFire = pvars->MobVars.AnimationLooped;
           }

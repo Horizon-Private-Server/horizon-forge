@@ -18,23 +18,6 @@
 
 extern struct RaidsMapConfig MapConfig;
 
-char* bankBadgeNames[] = {
-  [RAIDS_BADGE_TYPE_HEALTH_REGEN] "%cHealth Regen %s\x08",
-  [RAIDS_BADGE_TYPE_AMMO_REGEN] "%cAmmo Regen %s\x08",
-  [RAIDS_BADGE_TYPE_SHARPSHOOTER] "%cSharpshooter %s\x08",
-  [RAIDS_BADGE_TYPE_BERSERKER] "%cBerserker %s\x08",
-  [RAIDS_BADGE_TYPE_FLINCH_RESISTANCE] "%cFlinch Resistance %s\x08",
-  [RAIDS_BADGE_TYPE_COUNT] NULL,
-};
-
-char* bankBadgeLevelNames[] = {
-  [RAIDS_ITEM_RARITY_COMMON] "I",
-  [RAIDS_ITEM_RARITY_UNCOMMON] "II",
-  [RAIDS_ITEM_RARITY_RARE] "III",
-  [RAIDS_ITEM_RARITY_LEGENDARY] "IV",
-  [RAIDS_ITEM_RARITY_MYTHIC] "V",
-};
-
 char bankRarityCode[] = {
   [RAIDS_ITEM_RARITY_COMMON] '\x08',
   [RAIDS_ITEM_RARITY_UNCOMMON] '\x0A',
@@ -86,7 +69,6 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize)
 
   int rarity = bankGetRarityFromQuality(item->Quality);
   if (bankItemIsBadge(item)) {
-    //snprintf(buf, bufSize, bankBadgeNames[item->BadgeType], bankRarityCode[rarity], bankBadgeLevelNames[rarity]);
     snprintf(buf, bufSize, "%cClass Mod", bankRarityCode[rarity]);
   } else {
     struct GadgetDef* gadgetDef = weaponGetDef(item->WeaponData.GadgetId, 0);

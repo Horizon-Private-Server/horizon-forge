@@ -3,7 +3,7 @@
 
 #include "game.h"
 
-#define EXECUTIONER_RENDER_COST                    (85)
+#define EXECUTIONER_RENDER_COST                    (300)
 
 #define EXECUTIONER_BASE_REACTION_TICKS						(0.25 * TPS)
 #define EXECUTIONER_BASE_ATTACK_COOLDOWN_TICKS			(2 * TPS)

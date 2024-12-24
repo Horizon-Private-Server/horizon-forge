@@ -167,6 +167,8 @@ void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, float str
     case RAIDS_BADGE_TYPE_SHARPSHOOTER: break; // handled by gamemode
     case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, strength); break;
     case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, strength); break;
+    case RAIDS_BADGE_TYPE_HEATH_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_AMMO_BUFF: break; // handled by gamemode
     default: break;
   }
 }
