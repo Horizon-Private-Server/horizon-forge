@@ -56,6 +56,7 @@ typedef short (*MobGetArmor_func)(Moby* moby);
 typedef int (*MobIsAttacking_func)(Moby* moby);
 typedef int (*MobCanNonOwnerTransitionToAction_func)(Moby* moby, int action);
 typedef int (*MobShouldForceStateUpdateOnAction_func)(Moby* moby, int action);
+typedef int (*MobGetSeeFromPosition_func)(Moby* moby, VECTOR out);
 
 struct MobVTable {
   MobGenericCallback_func PreUpdate;
@@ -78,6 +79,7 @@ struct MobVTable {
   MobIsAttacking_func IsAttacking;
   MobCanNonOwnerTransitionToAction_func CanNonOwnerTransitionToAction;
   MobShouldForceStateUpdateOnAction_func ShouldForceStateUpdateOnAction;
+  MobGetSeeFromPosition_func GetSeeFromPosition;
 };
 
 struct MobConfig {

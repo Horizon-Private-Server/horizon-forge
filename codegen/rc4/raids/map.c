@@ -9,6 +9,7 @@
 #include <libdl/moby.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
+#include <libdl/collision.h>
 #include <libdl/ui.h>
 #include <libdl/utils.h>
 #include "spawner.h"
@@ -75,7 +76,7 @@ struct Guber* mapGetGuber(Moby* moby)
     case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);
     case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);
 #if MOB_DZSTRIKER
-      case MOBY_ID_DZ_STRIKER_TORSO_RED: return (Guber*)moby->GuberMoby;
+      case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);
 #endif
 #if GATE
     case GATE_OCLASS: return gateGetGuber(moby);
@@ -312,6 +313,26 @@ void mapOnHealthboxHeal(Player* player, float amount)
 }
 
 //--------------------------------------------------------------------------
+Moby* mapOnSetPlayerTargetMoby(void)
+{
+  Moby* targetMoby = CollLine_Fix_GetHitMoby();
+  if (!targetMoby) return NULL; // this should never happen
+
+  // intercept moby target
+  // grab guber moby instead
+  // most cases this will return the same moby
+  // special cases (like 2 moby mobs) will return parent moby
+  Guber* guber = guberGetObjectByMoby(targetMoby);
+  if (guber) {
+    Moby* guberMoby = guber->VTable->GetMoby(guber);
+    if (guberMoby)
+      return guberMoby;
+  }
+
+  return targetMoby;
+}
+
+//--------------------------------------------------------------------------
 void mapStart(void)
 {
   // tick down mob sound cooldown
@@ -434,6 +455,9 @@ void mapInit(void)
 
   // hook healthbox heal
   HOOK_JAL(0x004130F4, &mapOnHealthboxHeal);
+
+  // hook set player target moby
+  HOOK_JAL(0x005f7dcc, &mapOnSetPlayerTargetMoby);
 
   // set health
   Player** players = playerGetAll();

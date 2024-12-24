@@ -133,7 +133,7 @@ MonoBehaviour:
     DamageScale: 1
     Speed: 1
     SpeedMax: 10
-    SpeedScale: 0.5
+    SpeedScale: 1
     Health: 200
     HealthMax: 0
     HealthScale: 1.1
@@ -213,13 +213,13 @@ MonoBehaviour:
     - Flying
     Xp: 5
     Bolts: 50
-    Damage: 10
+    Damage: 5
     DamageMax: 0
     DamageScale: 1
     Speed: 3
-    SpeedMax: 15
-    SpeedScale: 1
-    Health: 30
+    SpeedMax: 7
+    SpeedScale: 0.6
+    Health: 25
     HealthMax: 0
     HealthScale: 1
     AttackRadius: 4
@@ -245,8 +245,8 @@ MonoBehaviour:
     DamageMax: 0
     DamageScale: 1
     Speed: 2
-    SpeedMax: 10
-    SpeedScale: 0.2
+    SpeedMax: 7
+    SpeedScale: 0.3
     Health: 100
     HealthMax: 0
     HealthScale: 1.1

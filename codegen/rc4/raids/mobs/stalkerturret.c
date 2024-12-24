@@ -23,7 +23,6 @@ void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void stalkerturretOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int stalkerturretOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void stalkerturretOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-Moby* stalkerturretGetNextTarget(Moby* moby);
 int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks);
 void stalkerturretDoAction(Moby* moby);
 void stalkerturretDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
@@ -51,7 +50,7 @@ struct MobVTable StalkerTurretVTable = {
   .OnDamage = &stalkerturretOnDamage,
   .OnLocalDamage = &stalkerturretOnLocalDamage,
   .OnStateUpdate = &stalkerturretOnStateUpdate,
-  .GetNextTarget = &stalkerturretGetNextTarget,
+  .GetNextTarget = &mobGetNextTarget,
   .GetPreferredAction = &stalkerturretGetPreferredAction,
   .ForceLocalAction = &stalkerturretForceLocalAction,
   .DoAction = &stalkerturretDoAction,
@@ -355,7 +354,7 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
     VECTOR planarForward;
     vector_projectonplane(planarForward, dir, moby->M2_03);
     if (acosf(vector_innerproduct(planarForward, moby->M0_03)) < STALKERTURRET_SHOT_LOCK_ON_WITHIN_RAD) {
-      vector_add(to, to, target->Position);
+      mobGetTargetCenter(target, to);
       vector_subtract(vel, to, from);
       vector_normalize(vel, vel);
     } else {
@@ -427,62 +426,6 @@ int stalkerturretCanSeeMoby(Moby* moby, Moby* canSeeMoby)
 }
 
 //--------------------------------------------------------------------------
-Moby* stalkerturretGetNextTarget(Moby* moby)
-{
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
-  VECTOR forward;
-	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
-  Moby* turretMoby = turretVars->TurretMoby;
-  Moby* baseMoby = turretVars->BaseMoby;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
-
-  if (!turretMoby || !baseMoby) return NULL;
-
-  vector_fromyaw(forward, turretMoby->Rotation[2]);
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = players[i];
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
-      Moby* pTargetMoby = playerGetTargetMoby(p);
-      int isCurrentTarget = pTargetMoby == currentTarget;
-      
-      // determine angle from mob forward to player
-      float theta = acosf(vector_innerproduct(forward, delta));
-      int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
-			if (dist < 300 || inAggroZone) {
-
-        // skip if not in sight, unless already targeted
-        if (!isCurrentTarget && !inAggroZone) {
-          if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
-          if (!stalkerturretCanSeeMoby(turretMoby, pTargetMoby)) continue;
-        }
-
-				// favor existing target
-				if (isCurrentTarget)
-					dist *= (1.0 / STALKERTURRET_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-	}
-
-	if (closestPlayer)
-		return playerGetTargetMoby(closestPlayer);
-
-	return NULL;
-}
-
-//--------------------------------------------------------------------------
 int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -500,7 +443,7 @@ int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks)
 		return -1;
 
 	// get next target
-	Moby * target = stalkerturretGetNextTarget(moby);
+	Moby * target = mobGetNextTarget(moby);
 	if (target) {
       
     VECTOR dt;

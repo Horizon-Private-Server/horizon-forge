@@ -271,6 +271,9 @@ Player* mobyGetPlayer(Moby* moby)
 Moby* playerGetTargetMoby(Player* player)
 {
   if (!player) return NULL;
+  if (player->InVehicle && player->Vehicle && player->Vehicle->pMoby)
+    return player->Vehicle->pMoby;
+
   return player->SkinMoby;
 }
 

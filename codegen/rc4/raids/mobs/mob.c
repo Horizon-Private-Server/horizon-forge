@@ -1134,20 +1134,84 @@ void mobPostDrawDebug(Moby* moby)
 #endif
 
 //--------------------------------------------------------------------------
+void mobGetTargetCenter(Moby* target, VECTOR out)
+{
+  if (!target) return;
+
+  switch (target->OClass)
+  {
+    default: vector_add(out, target->Position, target->M2_03);
+  }
+}
+
+//--------------------------------------------------------------------------
 int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby)
 {
 	VECTOR t, t2;
   VECTOR up = {0,0,1,0};
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
   // increment out of sight ticker
   if (canSeeMoby) {
-    vector_add(t, moby->Position, up);
-    vector_add(t2, canSeeMoby->Position, up);
-    
+    mobGetTargetCenter(canSeeMoby, t2);
+
+    if (!pvars->VTable->GetSeeFromPosition || !pvars->VTable->GetSeeFromPosition(moby, t)) {
+      vector_scale(up, up, pvars->TargetVars.targetHeight);
+      vector_add(t, moby->Position, up);
+    }
+
     return !CollLine_Fix(t, t2, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL) || CollLine_Fix_GetHitMoby() == canSeeMoby;
   }
   
   return 0;
+}
+
+//--------------------------------------------------------------------------
+Moby* mobGetNextTarget(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	Player ** players = playerGetAll();
+	int i;
+	VECTOR delta;
+  VECTOR forward;
+	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
+	Player * closestPlayer = NULL;
+	float closestPlayerDist = 100000;
+
+  vector_fromyaw(forward, moby->Rotation[2]);
+	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+		Player * p = players[i];
+		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
+			vector_subtract(delta, p->PlayerPosition, moby->Position);
+			float dist = vector_length(delta);
+      Moby* pTargetMoby = playerGetTargetMoby(p);
+      int isCurrentTarget = pTargetMoby == currentTarget;
+      
+      // determine angle from mob forward to player
+      float theta = acosf(vector_innerproduct(forward, delta));
+			int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
+
+      // skip if not in sight, unless already targeted
+      if (!isCurrentTarget && !inAggroZone) {
+        if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
+      }
+
+      // favor existing target
+      if (isCurrentTarget)
+        dist *= (1.0 / 3.0); // factor of 3 favor current target
+      
+      // pick closest target
+      if (dist < closestPlayerDist) {
+        closestPlayer = p;
+        closestPlayerDist = dist;
+      }
+		}
+	}
+
+	if (closestPlayer)
+		return playerGetTargetMoby(closestPlayer);
+
+	return NULL;
 }
 
 //--------------------------------------------------------------------------

@@ -23,7 +23,6 @@ void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void dzstrikerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int dzstrikerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void dzstrikerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-Moby* dzstrikerGetNextTarget(Moby* moby);
 enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby);
 int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks);
 void dzstrikerDoAction(Moby* moby);
@@ -33,6 +32,7 @@ short dzstrikerGetArmor(Moby* moby);
 int dzstrikerIsAttacking(Moby* moby);
 int dzstrikerCanNonOwnerTransitionToAction(Moby* moby, int action);
 int dzstrikerShouldForceStateUpdateOnAction(Moby* moby, int action);
+int dzstrikerGetSeeFromPosition(Moby* moby, VECTOR out);
 
 int dzstrikerIsSpawning(struct MobPVar* pvars);
 int dzstrikerIsRoaming(struct MobPVar* pvars);
@@ -42,6 +42,8 @@ int dzstrikerIsFlinching(Moby* moby);
 int dzstrikerIsDying(Moby* moby);
 int dzstrikerShouldStrafe(Moby* moby);
 int dzstrikerIsSniper(Moby* moby);
+
+int dzstrikerTorsoOnSpawn(Moby* mobMoby, Moby* torsoMoby);
 
 struct MobVTable DZStrikerVTable = {
   .PreUpdate = &dzstrikerPreUpdate,
@@ -53,7 +55,7 @@ struct MobVTable DZStrikerVTable = {
   .OnDamage = &dzstrikerOnDamage,
   .OnLocalDamage = &dzstrikerOnLocalDamage,
   .OnStateUpdate = &dzstrikerOnStateUpdate,
-  .GetNextTarget = &dzstrikerGetNextTarget,
+  .GetNextTarget = &mobGetNextTarget,
   .GetPreferredAction = &dzstrikerGetPreferredAction,
   .ForceLocalAction = &dzstrikerForceLocalAction,
   .DoAction = &dzstrikerDoAction,
@@ -62,6 +64,7 @@ struct MobVTable DZStrikerVTable = {
   .IsAttacking = &dzstrikerIsAttacking,
   .CanNonOwnerTransitionToAction = &dzstrikerCanNonOwnerTransitionToAction,
   .ShouldForceStateUpdateOnAction = &dzstrikerShouldForceStateUpdateOnAction,
+  .GetSeeFromPosition = &dzstrikerGetSeeFromPosition,
 };
 
 //--------------------------------------------------------------------------
@@ -106,13 +109,6 @@ int dzstrikerCreate(struct MobCreateArgs* args)
 		guberEventWrite(guberEvent, &random, 1);
 		guberEventWrite(guberEvent, &args->Behavior, 1);
 		guberEventWrite(guberEvent, &spawnArgs, sizeof(struct MobSpawnEventArgs));
-      
-    // create torso
-    GuberEvent * guberEventTorso = 0;
-    guberMobyCreateSpawned(MOBY_ID_DZ_STRIKER_TORSO_RED, sizeof(DZStrikerTorsoPVar_t), &guberEventTorso, NULL);
-    if (guberEventTorso) {
-      guberEventWrite(guberEventTorso, &guberUid, 4);
-    }
 	}
 	else
 	{
@@ -222,7 +218,6 @@ void dzstrikerMove(Moby* moby)
 //--------------------------------------------------------------------------
 void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
-  
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
 
@@ -250,8 +245,17 @@ void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
   if (pvars->MobVars.Behavior == DZSTRIKER_BEHAVIOR_FLY)
-    pvars->MobVars.MoveVars.PreferredHeight = 10;
+    pvars->MobVars.MoveVars.PreferredHeight = 6;
   vector_copy(pvars->MobVars.MoveVars.TargetPosition, moby->Position);
+  
+  // create torso
+  Moby* torsoMoby = dzstrikerVars->TorsoMoby = mobySpawn(MOBY_ID_DZ_STRIKER_TORSO_RED, sizeof(DZStrikerTorsoPVar_t));
+  if (!torsoMoby) {
+    pvars->MobVars.Destroy = 2;
+    return;
+  }
+
+  dzstrikerTorsoOnSpawn(moby, torsoMoby);
 }
 
 //--------------------------------------------------------------------------
@@ -361,56 +365,6 @@ void dzstrikerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 }
 
 //--------------------------------------------------------------------------
-Moby* dzstrikerGetNextTarget(Moby* moby)
-{
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
-  VECTOR forward;
-	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
-
-  vector_fromyaw(forward, moby->Rotation[2]);
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = players[i];
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
-      Moby* pTargetMoby = playerGetTargetMoby(p);
-      int isCurrentTarget = pTargetMoby == currentTarget;
-      
-      // determine angle from mob forward to player
-      float theta = acosf(vector_innerproduct(forward, delta));
-			int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
-			if (dist < 300 || inAggroZone) {
-
-        // skip if not in sight, unless already targeted
-        if (!isCurrentTarget && !inAggroZone) {
-          if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
-        }
-
-				// favor existing target
-				if (isCurrentTarget)
-					dist *= (1.0 / DZSTRIKER_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-	}
-
-	if (closestPlayer)
-		return playerGetTargetMoby(closestPlayer);
-
-	return NULL;
-}
-
-//--------------------------------------------------------------------------
 int dzstrikerIsTargetOutOfRange(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -421,6 +375,7 @@ int dzstrikerIsTargetOutOfRange(Moby* moby)
   // check if target is within range
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
+  dt[2] = 0;
   float distSqr = vector_sqrmag(dt);
   float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
   return distSqr > rangedAttackRadiusSqr;
@@ -436,16 +391,18 @@ enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
   if (!target)
     return -1;
 
+  if (pvars->MobVars.TimeTargetOutOfSightTicks > TPS)
+    return -1;
+
   // check if target is within range
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float distSqr = vector_sqrmag(dt);
   float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-  float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
   if (distSqr > attackRadiusSqr) {
 
     // check if in range
-    if (distSqr <= rangedAttackRadiusSqr) {
+    if (!dzstrikerIsTargetOutOfRange(moby)) {
       dt[2] = 0;
       float theta = acosf(vector_innerproduct(dt, dzstrikerVars->TorsoMoby->M0_03));
       if (pvars->MobVars.Action != DZSTRIKER_ACTION_AIM && fabsf(theta) < (30 * MATH_DEG2RAD))
@@ -497,7 +454,7 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
 		return -1;
 
 	// get next target
-	Moby * target = dzstrikerGetNextTarget(moby);
+	Moby * target = mobGetNextTarget(moby);
 	if (target) {
     if (dzstrikerCanAttack(pvars)) {
       int preferredAttack = dzstrikerGetPreferredAttack(moby);
@@ -625,7 +582,7 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
     vector_projectonplane(planarForward, dir, moby->M2_03);
     float angle = acosf(vector_innerproduct(planarForward, moby->M0_03));
     if (angle < (1*MATH_DEG2RAD)) {
-      vector_add(to, to, target->Position);
+      mobGetTargetCenter(target, to);
       vector_subtract(vel, to, from);
       vector_normalize(vel, vel);
     } else {
@@ -640,7 +597,6 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
   float damage = pvars->MobVars.Config.Damage;
   if (isSniper) {
     shotTrail = 3;
-    damage *= 2;
     vector_scale(vel, vel, 2); // speed
   }
 
@@ -1118,6 +1074,21 @@ int dzstrikerShouldForceStateUpdateOnAction(Moby* moby, int action)
 }
 
 //--------------------------------------------------------------------------
+int dzstrikerGetSeeFromPosition(Moby* moby, VECTOR out)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
+
+  MATRIX m;
+  if (!dzstrikerVars->TorsoMoby)
+    return 0;
+
+  mobyGetJointMatrix(dzstrikerVars->TorsoMoby, DZSTRIKER_TORSO_SUBSKELETON_JOINT_HEAD, m);
+  vector_copy(out, &m[12]);
+  return 1;
+}
+
+//--------------------------------------------------------------------------
 int dzstrikerIsSpawning(struct MobPVar* pvars)
 {
 	return pvars->MobVars.Action == DZSTRIKER_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
@@ -1201,29 +1172,13 @@ void dzstrikerTorsoUpdate(Moby* moby)
   if (moby->CollDamage >= 0 && moby->PParent) {
     moby->PParent->CollDamage = moby->CollDamage;
     moby->CollDamage = -1;
+    DPRINTF("pass damage\n");
   }
 }
 
 //--------------------------------------------------------------------------
-int dzstrikerTorsoOnSpawn(Moby* torsoMoby, GuberEvent* event)
+int dzstrikerTorsoOnSpawn(Moby* mobMoby, Moby* torsoMoby)
 {
-  int parentUid = -1;
-  guberEventRead(event, &parentUid, 4);
-
-  Guber* parentGuber = guberGetObjectByUID(parentUid);
-  if (!parentGuber) {
-    DPRINTF("DZStriker unable to find legs for torso %08X\n", (u32)torsoMoby);
-    guberMobyDestroy(torsoMoby);
-    return 0;
-  }
-  
-  Moby* mobMoby = parentGuber->VTable->GetMoby(parentGuber);
-  if (!mobMoby) {
-    DPRINTF("DZStriker unable to find legs for torso %08X\n", (u32)torsoMoby);
-    guberMobyDestroy(torsoMoby);
-    return 0;
-  }
-
 	struct MobPVar* mobPVars = (struct MobPVar*)mobMoby->PVar;
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(mobMoby);
   DZStrikerTorsoPVar_t* torsoPVars = (DZStrikerTorsoPVar_t*)torsoMoby->PVar;
@@ -1241,10 +1196,6 @@ int dzstrikerTorsoOnSpawn(Moby* torsoMoby, GuberEvent* event)
   torsoMoby->PUpdate = &dzstrikerTorsoUpdate;
   torsoMoby->Scale = mobMoby->Scale;
   dzstrikerVars->TorsoMoby = torsoMoby;
-
-	// 
-	Guber* guber = guberGetObjectByMoby(torsoMoby);
-  ((GuberMoby*)guber)->TeamNum = 10;
 
 	// initialize move vars
 	mobySetAnimCache(torsoMoby, (void*)0x36f980, 0);

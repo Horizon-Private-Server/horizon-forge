@@ -23,7 +23,6 @@ void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void executionerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int executionerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void executionerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-Moby* executionerGetNextTarget(Moby* moby);
 enum ExecutionerAction executionerGetPreferredAttack(Moby* moby);
 int executionerGetPreferredAction(Moby* moby, int * delayTicks);
 void executionerDoAction(Moby* moby);
@@ -51,7 +50,7 @@ struct MobVTable ExecutionerVTable = {
   .OnDamage = &executionerOnDamage,
   .OnLocalDamage = &executionerOnLocalDamage,
   .OnStateUpdate = &executionerOnStateUpdate,
-  .GetNextTarget = &executionerGetNextTarget,
+  .GetNextTarget = &mobGetNextTarget,
   .GetPreferredAction = &executionerGetPreferredAction,
   .ForceLocalAction = &executionerForceLocalAction,
   .DoAction = &executionerDoAction,
@@ -313,56 +312,6 @@ void executionerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 }
 
 //--------------------------------------------------------------------------
-Moby* executionerGetNextTarget(Moby* moby)
-{
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
-  VECTOR forward;
-	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
-
-  vector_fromyaw(forward, moby->Rotation[2]);
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = players[i];
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
-      Moby* pTargetMoby = playerGetTargetMoby(p);
-      int isCurrentTarget = pTargetMoby == currentTarget;
-      
-      // determine angle from mob forward to player
-      float theta = acosf(vector_innerproduct(forward, delta));
-			int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
-			if (dist < 300 || inAggroZone) {
-
-        // skip if not in sight, unless already targeted
-        if (!isCurrentTarget && !inAggroZone) {
-          if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
-        }
-
-				// favor existing target
-				if (isCurrentTarget)
-					dist *= (1.0 / EXECUTIONER_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-	}
-
-	if (closestPlayer)
-		return playerGetTargetMoby(closestPlayer);
-
-	return NULL;
-}
-
-//--------------------------------------------------------------------------
 int executionerIsTargetOutOfRange(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -372,6 +321,7 @@ int executionerIsTargetOutOfRange(Moby* moby)
   // check if target is within range
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
+  dt[2] = 0;
   float distSqr = vector_sqrmag(dt);
   float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
   return distSqr > rangedAttackRadiusSqr;
@@ -385,17 +335,19 @@ enum ExecutionerAction executionerGetPreferredAttack(Moby* moby)
   int behavior = pvars->MobVars.Behavior;
   if (!target)
     return -1;
+  
+  if (pvars->MobVars.TimeTargetOutOfSightTicks > TPS)
+    return -1;
 
   // check if target is within range
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float distSqr = vector_sqrmag(dt);
   float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-  float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
   if (distSqr > attackRadiusSqr) {
 
     // check if in range
-    if (distSqr <= rangedAttackRadiusSqr) {
+    if (!executionerIsTargetOutOfRange(moby)) {
       dt[2] = 0;
       float theta = acosf(vector_innerproduct(dt, moby->M0_03));
       if (fabsf(theta) < (30 * MATH_DEG2RAD))
@@ -444,7 +396,7 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
 		return -1;
 
 	// get next target
-	Moby * target = executionerGetNextTarget(moby);
+	Moby * target = mobGetNextTarget(moby);
 	if (target) {
     if (executionerCanAttack(pvars)) {
       int preferredAttack = executionerGetPreferredAttack(moby);
@@ -538,7 +490,7 @@ Moby* executionerFireShot(Moby* moby, Moby* target)
     vector_projectonplane(planarForward, dir, moby->M2_03);
     float angle = acosf(vector_innerproduct(planarForward, moby->M0_03));
     if (angle < (1*MATH_DEG2RAD)) {
-      vector_add(to, to, target->Position);
+      mobGetTargetCenter(target, to);
       vector_subtract(vel, to, from);
       vector_normalize(vel, vel);
     } else {
@@ -844,7 +796,10 @@ void executionerForceLocalAction(Moby* moby, int action)
     case EXECUTIONER_ACTION_FIRE:
     {
       executionerVars->AnimationLoopLastFire = -1;
-			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+      
+      float t = (MapConfig.State ? (MapConfig.State->DifficultyStars/(float)RAIDS_DIFFICULTY_5STAR) : 0);
+      int cooldown = (int)lerpf(pvars->MobVars.Config.AttackCooldownTickCount, 2*TPS, t);
+			pvars->MobVars.AttackCooldownTicks = cooldown;
       break;
     }
 		case EXECUTIONER_ACTION_ATTACK:

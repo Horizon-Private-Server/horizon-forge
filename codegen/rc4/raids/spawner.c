@@ -411,20 +411,30 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
   }
 
   // handle respawn
-  if (childPVars->MobVars.Respawn || notInside) {
+  // just kill on respawn
+  if (childPVars->MobVars.Respawn) {
     // pass to mob
     // let mob override respawn logic
+    if (!childPVars->VTable->OnRespawn || childPVars->VTable->OnRespawn(childMoby)) {
+      childPVars->MobVars.Destroy = 2;
+      // if (spawnerSpawn(moby, userdata, guberGetUID(childMoby))) {
+      //   pvars->State.NumTotalSpawned--;
+      //   pvars->State.NumSpawned[userdata]--;
+      //   //pvars->State.NumTotalAlive--;
+      //   //pvars->State.NumAlive[userdata]--;
+      // }
+    }
+
+    childPVars->MobVars.Respawn = 0;
+  } else if (notInside) {
+    // respawn if not in habitable cuboid
     if (!childPVars->VTable->OnRespawn || childPVars->VTable->OnRespawn(childMoby)) {
       if (spawnerSpawn(moby, userdata, guberGetUID(childMoby))) {
         childPVars->MobVars.Destroyed = 2;
         pvars->State.NumTotalSpawned--;
         pvars->State.NumSpawned[userdata]--;
-        //pvars->State.NumTotalAlive--;
-        //pvars->State.NumAlive[userdata]--;
       }
     }
-
-    childPVars->MobVars.Respawn = 0;
   }
 
 }
