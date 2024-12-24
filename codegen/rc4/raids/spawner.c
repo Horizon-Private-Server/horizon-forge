@@ -181,7 +181,7 @@ int spawnerSpawnRandom(Moby* moby)
   if (mobParams->MaxCanSpawnOrUnlimited > 0 && pvars->State.NumSpawned[spawnerMobIdx] >= mobParams->MaxCanSpawnOrUnlimited)
     return 0;
 
-  if (MapConfig.State && mobParams->MaxCanAliveAtOnce > 0 && mobParams->MaxCanAliveAtOnce <= MapConfig.State->MobStats.NumAlive[mobParams->MobParamIdx])
+  if (MapConfig.State && mobParams->MaxCanAliveAtOnce > 0 && mobParams->MaxCanAliveAtOnce <= pvars->State.NumAlive[spawnerMobIdx])
     return 0;
 
   if (MapConfig.State && (mobParams->StarsMask & (1 << MapConfig.State->DifficultyStars)) == 0)
@@ -223,11 +223,11 @@ int spawnerCanSpawn(Moby* moby)
   //   if (totalAlive >= MAX_MOBS_ALIVE_REAL) return 0;
   // }
   
-  int total = pvars->State.NumTotalSpawned + pvars->State.NumTotalKilled;
+  //DLOG(moby, "%d/%d %d/%d\n", pvars->State.NumTotalSpawned, config->NumMobsToSpawn, pvars->State.NumTotalAlive, config->MaxSpawnedAtOnce);
   return moby->State == SPAWNER_STATE_ACTIVATED
       && !spawnerIsCompleted(moby)
-      && total < config->NumMobsToSpawn
-      && (config->NumMobsToSpawn == 0 || pvars->State.NumTotalSpawned < config->NumMobsToSpawn);
+      && pvars->State.NumTotalSpawned < config->NumMobsToSpawn
+      && (config->MaxSpawnedAtOnce == 0 || pvars->State.NumTotalAlive < config->MaxSpawnedAtOnce);
 }
 
 //--------------------------------------------------------------------------
@@ -419,6 +419,8 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
         childPVars->MobVars.Destroyed = 2;
         pvars->State.NumTotalSpawned--;
         pvars->State.NumSpawned[userdata]--;
+        //pvars->State.NumTotalAlive--;
+        //pvars->State.NumAlive[userdata]--;
       }
     }
 
@@ -445,10 +447,10 @@ void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int kill
     pvars->State.NumKilled[userdata]++;
   }
 
-  pvars->State.NumTotalSpawned--;
-  pvars->State.NumSpawned[userdata]--;
+  pvars->State.NumTotalAlive--;
+  pvars->State.NumAlive[userdata]--;
 
-  DLOG(moby, "MOB%d: spawned:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumKilled[userdata]);
+  DLOG(moby, "MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
   //DLOG(moby, "SPAWNER %d/%d\n", pvars->State.NumTotalKilled, pvars->NumMobsToSpawn);
 }
 
@@ -674,6 +676,8 @@ void spawnerTryDespawnMob(Moby* moby, float maxMobsAllocatedPerSpawner)
             mobPVars->MobVars.Destroy = 1;
             parentPVars->State.NumSpawned[mobPVars->MobVars.Userdata]--;
             parentPVars->State.NumTotalSpawned--;
+            parentPVars->State.NumAlive[mobPVars->MobVars.Userdata]--;
+            parentPVars->State.NumTotalAlive--;
             spawnerTicksSinceLastDelete = 0;
             return;
           }
@@ -780,6 +784,8 @@ void spawnerStart(void)
       if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;
+        pvars->State.NumAlive[request->SpawnArgs.Userdata]++;
+        pvars->State.NumTotalAlive++;
       }
     }
   }

@@ -3316,7 +3316,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 476,
+    "Length": 464,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -4304,7 +4304,7 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 996,
+    "Length": 1008,
     "States": {
       "Destroyed": -1,
       "Off": 0,

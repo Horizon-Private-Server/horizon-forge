@@ -62,10 +62,12 @@ struct SpawnerRuntimeState
   float ClosestPlayerDistSqr;
   int PlayerIsNear;
   u32 NumTotalSpawned;
+  u32 NumTotalAlive;
   u32 NumTotalKilled;
-  u32 NumSpawned[SPAWNER_MAX_MOB_TYPES];
-  u32 NumKilled[SPAWNER_MAX_MOB_TYPES];
   u32 Cooldown[SPAWNER_MAX_MOB_TYPES];
+  u16 NumSpawned[SPAWNER_MAX_MOB_TYPES];
+  u16 NumAlive[SPAWNER_MAX_MOB_TYPES];
+  u16 NumKilled[SPAWNER_MAX_MOB_TYPES];
 };
 
 struct SpawnerPVar
