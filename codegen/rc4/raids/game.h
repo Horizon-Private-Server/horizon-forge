@@ -169,6 +169,7 @@ typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobUpdate_func)(Moby* moby);
 typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, int weaponId);
+typedef void (*MapOnMobDestroyed_func)(Moby* moby);
 typedef void (*MapCreateAmmoDropAt_func)(Moby* moby);
 typedef void (*FrameTick_func)(void);
 
@@ -277,6 +278,7 @@ struct RaidsMapConfig
   MapOnMobSpawned_func OnMobSpawnedFunc;
   MapOnMobUpdate_func OnMobUpdateFunc;
   MapOnMobKilled_func OnMobKilledFunc;
+  MapOnMobDestroyed_func OnMobDestroyedFunc;
   MapCreateAmmoDropAt_func CreateAmmoDropAtFunc;
   FrameTick_func OnFrameTickFunc;
 };

@@ -52,6 +52,17 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, int weaponId)
 }
 
 //--------------------------------------------------------------------------
+void mapOnMobDestroyed(Moby* moby)
+{
+  if (!moby || !moby->PVar) return;
+
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
+    spawnerOnChildMobDestroyed(moby->PParent, moby, pvars->MobVars.Userdata);
+  }
+}
+
+//--------------------------------------------------------------------------
 void mapOnMobSpawned(Moby* moby)
 {
   if (!moby || !moby->PVar) return;

@@ -417,6 +417,8 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
     // let mob override respawn logic
     if (!childPVars->VTable->OnRespawn || childPVars->VTable->OnRespawn(childMoby)) {
       childPVars->MobVars.Destroy = 2;
+      pvars->State.NumTotalKilled++;
+      pvars->State.NumKilled[userdata]++;
       // if (spawnerSpawn(moby, userdata, guberGetUID(childMoby))) {
       //   pvars->State.NumTotalSpawned--;
       //   pvars->State.NumSpawned[userdata]--;
@@ -456,6 +458,15 @@ void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int kill
     pvars->State.NumTotalKilled++;
     pvars->State.NumKilled[userdata]++;
   }
+
+  DLOG(moby, "MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
+  //DLOG(moby, "SPAWNER %d/%d\n", pvars->State.NumTotalKilled, pvars->NumMobsToSpawn);
+}
+
+//--------------------------------------------------------------------------
+void spawnerOnChildMobDestroyed(Moby* moby, Moby* childMoby, u32 userdata)
+{
+  struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
 
   pvars->State.NumTotalAlive--;
   pvars->State.NumAlive[userdata]--;
@@ -683,11 +694,11 @@ void spawnerTryDespawnMob(Moby* moby, float maxMobsAllocatedPerSpawner)
         int destroy = mobPVars->MobVars.ClosestDistToPlayer > (SPAWNER_SPAWN_NEAR_DISTANCE*SPAWNER_SPAWN_NEAR_DISTANCE);
         if (destroy) {
           if (!mobPVars->MobVars.Destroy) {
-            mobPVars->MobVars.Destroy = 1;
+            mobPVars->MobVars.Destroy = 2;
             parentPVars->State.NumSpawned[mobPVars->MobVars.Userdata]--;
             parentPVars->State.NumTotalSpawned--;
-            parentPVars->State.NumAlive[mobPVars->MobVars.Userdata]--;
-            parentPVars->State.NumTotalAlive--;
+            //parentPVars->State.NumAlive[mobPVars->MobVars.Userdata]--;
+            //parentPVars->State.NumTotalAlive--;
             spawnerTicksSinceLastDelete = 0;
             return;
           }
