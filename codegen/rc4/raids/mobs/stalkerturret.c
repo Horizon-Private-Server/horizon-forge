@@ -320,9 +320,9 @@ float stalkerturretGetRoamYaw(Moby* moby)
   float minTheta = baseTheta - thetaRange;
   float maxTheta = baseTheta + thetaRange;
   float t = (pvars->MobVars.CurrentActionForTicks / (float)TPS);
-  float yaw = lerpfAngle(minTheta, maxTheta, (sinf(t) + 1) * 0.5);
+  float yaw = lerpf(minTheta, maxTheta, (sinf(t) + 1) * 0.5);
 
-  return yaw;
+  return clampAngle(yaw);
 }
 
 //--------------------------------------------------------------------------
@@ -498,7 +498,7 @@ int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks)
 		return -1;
 
 	// get next target
-	Moby * target = mobGetNextTarget(moby);
+	Moby * target = stalkerturretGetNextTarget(moby);
 	if (target) {
       
     VECTOR dt;
