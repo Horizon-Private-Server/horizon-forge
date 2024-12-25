@@ -105,6 +105,7 @@ int spawnerDestroyMob(Moby* moby, Moby* mobMoby, u32 userdata, int markAsKilled)
       pvars->State.NumTotalSpawned--;
       pvars->State.NumKilled[mobPVars->MobVars.Userdata]--;
       pvars->State.NumTotalKilled--;
+      DLOG(moby, "SPAWNER %08X: DESPAWN %08X (spawned:%d alive:%d killed:%d)\n", (u32)moby, (u32)mobMoby, pvars->State.NumTotalSpawned, pvars->State.NumTotalAlive, pvars->State.NumTotalKilled);
     }
 
     return 1;
@@ -466,7 +467,8 @@ void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int kill
     //pvars->State.NumKilled[userdata]++;`
   }
 
-  DLOG(moby, "MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
+  //DLOG(moby, "SPAWNER %08X: ONKILL %08X (spawned:%d alive:%d killed:%d)\n", (u32)moby, (u32)childMoby, pvars->State.NumTotalSpawned, pvars->State.NumTotalAlive, pvars->State.NumTotalKilled);
+  //DLOG(moby, "KILL MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
   //DLOG(moby, "SPAWNER %d/%d\n", pvars->State.NumTotalKilled, pvars->NumMobsToSpawn);
 }
 
@@ -480,7 +482,8 @@ void spawnerOnChildMobDestroyed(Moby* moby, Moby* childMoby, u32 userdata)
   pvars->State.NumTotalKilled++;
   pvars->State.NumKilled[userdata]++;
 
-  DLOG(moby, "MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
+  DLOG(moby, "SPAWNER %08X: ONDESTROY %08X (spawned:%d alive:%d killed:%d)\n", (u32)moby, (u32)childMoby, pvars->State.NumTotalSpawned, pvars->State.NumTotalAlive, pvars->State.NumTotalKilled);
+  //DLOG(moby, "DESTROY MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
   //DLOG(moby, "SPAWNER %d/%d\n", pvars->State.NumTotalKilled, pvars->NumMobsToSpawn);
 }
 
@@ -702,7 +705,7 @@ void spawnerTryDespawnMob(Moby* moby, float maxMobsAllocatedPerSpawner)
         struct MobPVar* mobPVars = (struct MobPVar*)m->PVar;
         int destroy = mobPVars->MobVars.ClosestDistToPlayer > (SPAWNER_SPAWN_NEAR_DISTANCE*SPAWNER_SPAWN_NEAR_DISTANCE);
         if (destroy) {
-          if (spawnerDestroyMob(moby, m, mobPVars->MobVars.Userdata, 0)) {
+          if (spawnerDestroyMob(parent, m, mobPVars->MobVars.Userdata, 0)) {
             spawnerTicksSinceLastDelete = 0;
             return;
           }
@@ -778,24 +781,26 @@ void spawnerStart(void)
       // if its been awhile since we've delete a mob, then we can try and spawn a mob that isn't near the player
       // we just want to avoid rapidly spawning/despawning mobs until they converge near the player\
       // given that the despawn mechanism only despawns far-away mobs
-      if (spawnerTicksSinceLastDelete < 10 && restrictSpawning && !spawnerIsPointNearPlayer(request->SpawnArgs.Position, SPAWNER_SPAWN_NEAR_DISTANCE*0.8))
+      int isSpawnNearPlayer = spawnerIsPointNearPlayer(request->SpawnArgs.Position, SPAWNER_SPAWN_NEAR_DISTANCE*0.8);
+      if (spawnerTicksSinceLastDelete < 10 && restrictSpawning && !isSpawnNearPlayer)
         continue;
 
       // we need to despawn other mobs
       if (totalAlive >= MAX_MOBS_ALIVE_REAL) {
 
-        if (pvars->State.PlayerIsNear)
+        //if (pvars->State.PlayerIsNear)
+        if (isSpawnNearPlayer)
           spawnerTryDespawnMob(moby, MAX_MOBS_ALIVE_REAL / (float)countHasPlayerIsNear);
 
         continue;
       }
 
       // don't spawn
-      if (countHasPlayerIsNear && !pvars->State.PlayerIsNear)
-        continue;
+      //if (countHasPlayerIsNear && !pvars->State.PlayerIsNear)
+      //  continue;
 
       // check for walkable ground
-      VECTOR spawnFrom, spawnTo, up={0,0,5,0}, down = {0,0,-30,0};
+      VECTOR spawnFrom, spawnTo, up={0,0,0.1,0}, down = {0,0,-30,0};
       vector_add(spawnFrom, request->SpawnArgs.Position, up);
       vector_add(spawnTo, request->SpawnArgs.Position, down);
       if (!CollLine_Fix(spawnFrom, spawnTo, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL))

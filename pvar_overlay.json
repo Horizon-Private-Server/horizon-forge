@@ -3316,7 +3316,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 464,
+    "Length": 512,
     "States": {
       "Destroyed": -1,
       "Off": 0,
