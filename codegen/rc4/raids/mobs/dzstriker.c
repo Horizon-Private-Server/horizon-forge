@@ -266,7 +266,7 @@ void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
     
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   if (dzstrikerVars->TorsoMoby && !mobyIsDestroyed(dzstrikerVars->TorsoMoby)) {
-    guberMobyDestroy(dzstrikerVars->TorsoMoby);
+    mobyDestroy(dzstrikerVars->TorsoMoby);
     dzstrikerVars->TorsoMoby = NULL;
   }
   
