@@ -93,6 +93,27 @@ int spawnerIsValidMobSpawnIdx(void* userdata, int index)
 }
 
 //--------------------------------------------------------------------------
+int spawnerDestroyMob(Moby* moby, Moby* mobMoby, u32 userdata, int markAsKilled)
+{
+  struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+  struct MobPVar* mobPVars = (struct MobPVar*)mobMoby->PVar;
+
+  if (!mobPVars->MobVars.Destroy) {
+    mobPVars->MobVars.Destroy = 2;
+    if (!markAsKilled) {
+      pvars->State.NumSpawned[mobPVars->MobVars.Userdata]--;
+      pvars->State.NumTotalSpawned--;
+      pvars->State.NumKilled[mobPVars->MobVars.Userdata]--;
+      pvars->State.NumTotalKilled--;
+    }
+
+    return 1;
+  }
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 void spawnerGetRandomPointInCuboid(SpawnPoint* cuboid, VECTOR outPos)
 {
   // determine where to spawn mob
@@ -380,9 +401,7 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
 
   // destroy if spawner has completed
   if (moby->State == SPAWNER_STATE_COMPLETED) {
-    if (!childPVars->MobVars.Destroyed) {
-      childPVars->MobVars.Destroy = 2;
-    }
+    spawnerDestroyMob(moby, childMoby, userdata, 1);
     return;
   }
 
@@ -404,9 +423,7 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
 
   // if spawner is idled and we're not inside a habitable cuboid, despawn
   if (moby->State != SPAWNER_STATE_ACTIVATED && notInside) {
-    if (!childPVars->MobVars.Destroyed) {
-      childPVars->MobVars.Destroy = 2;
-    }
+    spawnerDestroyMob(moby, childMoby, userdata, 0);
     return;
   }
 
@@ -416,15 +433,7 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
     // pass to mob
     // let mob override respawn logic
     if (!childPVars->VTable->OnRespawn || childPVars->VTable->OnRespawn(childMoby)) {
-      childPVars->MobVars.Destroy = 2;
-      pvars->State.NumTotalKilled++;
-      pvars->State.NumKilled[userdata]++;
-      // if (spawnerSpawn(moby, userdata, guberGetUID(childMoby))) {
-      //   pvars->State.NumTotalSpawned--;
-      //   pvars->State.NumSpawned[userdata]--;
-      //   //pvars->State.NumTotalAlive--;
-      //   //pvars->State.NumAlive[userdata]--;
-      // }
+      spawnerDestroyMob(moby, childMoby, userdata, 1);
     }
 
     childPVars->MobVars.Respawn = 0;
@@ -432,9 +441,7 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
     // respawn if not in habitable cuboid
     if (!childPVars->VTable->OnRespawn || childPVars->VTable->OnRespawn(childMoby)) {
       if (spawnerSpawn(moby, userdata, guberGetUID(childMoby))) {
-        childPVars->MobVars.Destroyed = 2;
-        pvars->State.NumTotalSpawned--;
-        pvars->State.NumSpawned[userdata]--;
+        spawnerDestroyMob(moby, childMoby, userdata, 0);
       }
     }
   }
@@ -455,8 +462,8 @@ void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int kill
 
   // log kill
   if (killedByPlayerId >= 0) {
-    pvars->State.NumTotalKilled++;
-    pvars->State.NumKilled[userdata]++;
+    //pvars->State.NumTotalKilled++;
+    //pvars->State.NumKilled[userdata]++;`
   }
 
   DLOG(moby, "MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
@@ -470,6 +477,8 @@ void spawnerOnChildMobDestroyed(Moby* moby, Moby* childMoby, u32 userdata)
 
   pvars->State.NumTotalAlive--;
   pvars->State.NumAlive[userdata]--;
+  pvars->State.NumTotalKilled++;
+  pvars->State.NumKilled[userdata]++;
 
   DLOG(moby, "MOB%d: spawned:%d alive:%d killed:%d\n", userdata, pvars->State.NumSpawned[userdata], pvars->State.NumAlive[userdata], pvars->State.NumKilled[userdata]);
   //DLOG(moby, "SPAWNER %d/%d\n", pvars->State.NumTotalKilled, pvars->NumMobsToSpawn);
@@ -693,12 +702,7 @@ void spawnerTryDespawnMob(Moby* moby, float maxMobsAllocatedPerSpawner)
         struct MobPVar* mobPVars = (struct MobPVar*)m->PVar;
         int destroy = mobPVars->MobVars.ClosestDistToPlayer > (SPAWNER_SPAWN_NEAR_DISTANCE*SPAWNER_SPAWN_NEAR_DISTANCE);
         if (destroy) {
-          if (!mobPVars->MobVars.Destroy) {
-            mobPVars->MobVars.Destroy = 2;
-            parentPVars->State.NumSpawned[mobPVars->MobVars.Userdata]--;
-            parentPVars->State.NumTotalSpawned--;
-            //parentPVars->State.NumAlive[mobPVars->MobVars.Userdata]--;
-            //parentPVars->State.NumTotalAlive--;
+          if (spawnerDestroyMob(moby, m, mobPVars->MobVars.Userdata, 0)) {
             spawnerTicksSinceLastDelete = 0;
             return;
           }
