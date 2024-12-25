@@ -245,8 +245,8 @@ MonoBehaviour:
     DamageMax: 0
     DamageScale: 1
     Speed: 2
-    SpeedMax: 7
-    SpeedScale: 0.3
+    SpeedMax: 25
+    SpeedScale: 0.2
     Health: 100
     HealthMax: 0
     HealthScale: 1.1

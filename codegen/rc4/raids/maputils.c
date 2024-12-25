@@ -69,6 +69,21 @@ Moby * spawnExplosion(VECTOR position, float size, u32 color)
 }
 
 //--------------------------------------------------------------------------
+Moby * spawnExplosionDamage(VECTOR position, float size, u32 color, Moby* damager, float damage, u32 damageFlags)
+{
+	// SpawnMoby_5025
+  Moby* moby = mobySpawnExplosion(
+    vector_read(position), 0, 0, 0, 0, 16, 0, 16, 0, 1, 0, 0, 0, 0,
+    damageFlags, 0, color, color, color, color, color, color, color, color,
+    0, 0, damager, 0, 0, size / 2.5, 0, damage, size
+  );
+  
+  mobyPlaySoundByClass(0, 0, moby, MOBY_ID_ARBITER_ROCKET0);
+
+	return moby;
+}
+
+//--------------------------------------------------------------------------
 void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, float damageRadius)
 {
 	MobyColDamageIn in;
@@ -526,4 +541,36 @@ void * mobyGetClassPtr(int oClass)
 {
   int mClass = *(u8*)(0x0024a110 + oClass);
   return *(u32*)(0x002495c0 + mClass*4);
+}
+
+//--------------------------------------------------------------------------
+void blowCorn(Moby* moby)
+{
+  if (!moby || !moby->PClass) return;
+
+  int cornCob = *(short*)(moby->PClass + 0x2e);
+  if (!cornCob) return;
+
+  mobyBlowCorn(
+    moby
+  , cornCob
+  , 0
+  , 3.0
+  , 6.0
+  , 3.0
+  , 6.0
+  , -1
+  , -1.0
+  , -1.0
+  , 255
+  , 1
+  , 0
+  , 1
+  , 1.0
+  , 0x23
+  , 3
+  , 1.0
+  , NULL
+  , 0
+  );
 }

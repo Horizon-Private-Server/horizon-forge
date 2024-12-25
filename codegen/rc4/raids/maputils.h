@@ -18,6 +18,7 @@ typedef int (*CanSelectIndex_func)(void* userdata, int index);
 
 
 Moby * spawnExplosion(VECTOR position, float size, u32 color);
+Moby * spawnExplosionDamage(VECTOR position, float size, u32 color, Moby* damager, float damage, u32 damageFlags);
 void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, float damageRadius);
 void playPaidSound(Player* player);
 GuberEvent* guberCreateEvent(Moby* moby, u32 eventType);
@@ -68,5 +69,7 @@ int bankTryChargeLocalAccount(Player* player, u32 cost);
 int getAmmoRefillCost(Player* player);
 void replenishAmmo(Player* player);
 void respawnAllPlayers(void);
+
+void blowCorn(Moby* moby);
 
 #endif // RAIDS_MAP_UTILS_H

@@ -15,6 +15,7 @@
 #include "spawner.h"
 #include "mover.h"
 #include "gate.h"
+#include "dummy.h"
 #include "controller.h"
 #include "hackerorb.h"
 #include "checkpoint.h"
@@ -85,6 +86,7 @@ struct Guber* mapGetGuber(Moby* moby)
     case CONTROLLER_OCLASS: return controllerGetGuber(moby);
     case CHECKPOINT_MANAGER_OCLASS:
     case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);
+    case DUMMY_OCLASS: return dummyGetGuber(moby);
     case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);
 #if MOB_DZSTRIKER
       case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);
@@ -130,6 +132,7 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
       case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;
       case CHECKPOINT_MANAGER_OCLASS:
       case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;
+      case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;
       case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;
 #if MOB_DZSTRIKER
       case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;

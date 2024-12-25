@@ -46,6 +46,13 @@
 int controllerInitialized = 0;
 
 //--------------------------------------------------------------------------
+void controllerSetTriggerMoby(Moby* moby, Moby* triggerMoby)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  pvars->State.TriggeredByMoby = triggerMoby;
+}
+
+//--------------------------------------------------------------------------
 int controllerAnyTriggerActivated(Moby* moby)
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
@@ -551,6 +558,18 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
 }
 
 //--------------------------------------------------------------------------
+int controllerControlFailMission(Moby* moby, struct ControllerTarget* target)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  if (!MapConfig.State) return 0;
+  if (!missionIsActive()) return 0;
+  
+  if (MapConfig.OnMissionFailFunc) MapConfig.OnMissionFailFunc();
+  DLOG(moby, "mission fail\n");
+  return 1;
+}
+
+//--------------------------------------------------------------------------
 int controllerControlSetAmmoDropProbability(Moby* moby, struct ControllerTarget* target)
 {
   if (!MapConfig.State) return 0;
@@ -604,6 +623,7 @@ int controllerIterate(Moby* moby)
       case CONTROLLER_TARGET_UPDATE_TYPE_GIVE_PLAYER_HEALTH: changed += controllerControlGivePlayerHealth(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_RESPAWN: changed += controllerControlRespawnPlayer(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_COMPLETE_MISSION: changed += controllerControlCompleteMission(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_FAIL_MISSION: changed += controllerControlFailMission(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT: changed += controllerControlMobySetCheckpoint(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY: changed += controllerControlSetAmmoDropProbability(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER: changed += controllerControlSetRefillAmmoCostMultiplier(moby, &pvars->Targets[i]); break;

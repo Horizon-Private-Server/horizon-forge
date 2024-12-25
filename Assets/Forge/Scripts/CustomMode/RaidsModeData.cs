@@ -23,6 +23,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int LASER_OCLASS = 0x400A;
     public static readonly int PVARPOKE_OCLASS = 0x400B;
     public static readonly int BLIP_OCLASS = 0x400C;
+    public static readonly int DUMMY_OCLASS = 0x400D;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -94,6 +95,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
@@ -127,6 +129,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"ammodrop.h\"");
         state.Includes.Add("#include \"hackerorb.h\"");
         state.Includes.Add("#include \"blip.h\"");
+        state.Includes.Add("#include \"dummy.h\"");
         state.Includes.Add("#include \"levelselect.h\"");
 
         state.Declarations.Add("void configInit(void);");
@@ -157,6 +160,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"ammodropInit();");
         state.InitBody.Add($"hackerorbInit();");
         state.InitBody.Add($"blipInit();");
+        state.InitBody.Add($"dummyInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
@@ -184,6 +188,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBodyReady.Add("vendorStart();");
         state.MainBodyReady.Add("badgesStart();");
         state.MainBodyReady.Add("ammodropStart();");
+        state.MainBodyReady.Add("dummyStart();");
 
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
@@ -433,6 +438,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.UpdateDistance = 255;
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Radar Blip");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Health Proxy Moby", priority = 10)]
+    public static void CreateHealthProxyMoby()
+    {
+        var go = new GameObject("Health Proxy Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = DUMMY_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Health Proxy");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

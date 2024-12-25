@@ -19,6 +19,8 @@
 //#include "reaper.h"
 #include "game.h"
 
+#define MOB_MAX_OTHER_TARGETS       (32)
+
 enum MobEvent
 {
 	MOB_EVENT_SPAWN,
@@ -386,6 +388,7 @@ struct MobUnreliableMsgStateUpdateArgs
   struct MobStateUpdateEventArgs StateUpdate;
 };
 
+void mobRegisterTarget(Moby* moby);
 int mobOnUnreliableMsgRemote(void* connection, void* data);
 void mobReactToExplosionAt(int byPlayerId, VECTOR position, float damage, float radius);
 void mobNuke(int killedByPlayerId);

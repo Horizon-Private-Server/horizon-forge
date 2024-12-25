@@ -164,6 +164,7 @@ typedef struct Guber* (*OnGetGuber_func)(Moby* moby);
 typedef int (*TryCreateMob_func)(struct MobCreateArgs* args);
 typedef void (*RequestPrestigeLoot_func)(int gadgetId);
 typedef void (*OnMissionComplete_func)(int cuboidIdx);
+typedef void (*OnMissionFail_func)(void);
 
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
@@ -272,6 +273,7 @@ struct RaidsMapConfig
   TryCreateMob_func TryCreateMobFunc;
   RequestPrestigeLoot_func RequestPrestigeLootFunc;
   OnMissionComplete_func OnMissionCompleteFunc;
+  OnMissionFail_func OnMissionFailFunc;
 
   // map
   MapOnMobCreate_func OnMobCreateFunc;

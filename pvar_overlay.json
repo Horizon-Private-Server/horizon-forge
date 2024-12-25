@@ -3923,6 +3923,7 @@
               "Player Give Health": 9,
               "Player Respawn": 10,
               "Set Raid Completed": 11,
+              "Set Raid Failed": 16,
               "Set Ammo Drop Probability": 13,
               "Set Refill Ammo Cost Multiplier": 14,
               "Play Music Track": 15
@@ -4749,6 +4750,143 @@
         "Name": "Attach To",
         "DataType": "MobyRef",
         "Offset": 4
+      }
+    ]
+  },
+  {
+    "Name": "Raids Health Proxy",
+    "RCVersion": 4,
+    "MobyOClass": 16397,
+    "Length": 332,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "Paused": 2,
+      "Reset": 3,
+      "Dead": 127
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 80,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 81
+      },
+      {
+        "Name": "Team",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 82,
+        "Options": {
+          "Friendly": 0,
+          "Enemy": 1
+        }
+      },
+      {
+        "Name": "Death Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 83,
+        "Options": {
+          "None": 0,
+          "Delete": 1,
+          "Explode": 2,
+          "Explode & Blow Corn": 3
+        }
+      },
+      {
+        "Name": "Target Moby",
+        "DataType": "MobyRef",
+        "Offset": 84
+      },
+      {
+        "Name": "Targeting Height",
+        "DataType": "Float",
+        "Offset": 88,
+        "Default": 1
+      },
+      {
+        "Name": "Targeting Radius",
+        "DataType": "Float",
+        "Offset": 92,
+        "Default": 1
+      },
+      {
+        "Name": "Mob Aggro Type",
+        "DataType": "Enum",
+        "Offset": 96,
+        "Options": {
+          "Ignore": 0,
+          "When In Range": 1,
+          "Always Aggro": 2
+        },
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" }
+        ]
+      },
+      {
+        "Name": "Mob Aggro Distance",
+        "DataType": "Float",
+        "Offset": 100,
+        "Default": 15,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" },
+          { "Field": "Mob Aggro Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "On Hit (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 104
+      },
+      {
+        "Name": "On Dead (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 108
+      },
+      {
+        "Name": "Values",
+        "DataType": "Struct",
+        "Offset": 112,
+        "DataSize": 12,
+        "Count": 5,
+        "Labels": [
+          "1 Star",
+          "2 Stars",
+          "3 Stars",
+          "4 Stars",
+          "5 Stars"
+        ],
+        "Fields": [
+          {
+            "Name": "Health",
+            "DataType": "Float",
+            "Offset": 0,
+            "Min": 1
+          },
+          {
+            "Name": "Explosion Radius",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0
+          },
+          {
+            "Name": "Explosion Damage",
+            "DataType": "Float",
+            "Offset": 8,
+            "Min": 0
+          }
+        ]
       }
     ]
   }

@@ -83,6 +83,7 @@ enum ControllerTargetUpdateType {
   CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY,
   CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER,
   CONTROLLER_TARGET_UPDATE_TYPE_SET_MUSIC_TRACK,
+  CONTROLLER_TARGET_UPDATE_TYPE_FAIL_MISSION,
 };
 
 struct ControllerRuntimeState
@@ -226,6 +227,7 @@ struct ControllerPVar
   struct ControllerRuntimeState State;
 };
 
+void controllerSetTriggerMoby(Moby* moby, Moby* triggerMoby);
 void controllerBroadcastNewState(Moby* moby, enum ControllerState state);
 struct Guber* controllerGetGuber(Moby* moby);
 int controllerHandleEvent(Moby* moby, GuberEvent* event);
