@@ -219,7 +219,7 @@ int mobMobyProcessHitFlags(Moby* moby, Moby* hitMoby, float damage, int reactToT
 }
 
 //--------------------------------------------------------------------------
-int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float sqrHitRadius, int damageFlags, float amount)
+int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float hitRadius, int damageFlags, float amount)
 {
   VECTOR mobToHitMoby, mobToJoint, jointToHitMoby;
   VECTOR hitMobyCenter = {0,0,1,0};
@@ -227,19 +227,21 @@ int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR joi
   Player* player = guberMobyGetPlayerDamager(hitMoby);
   struct TargetVars* targetVars = mobyGetTargetVars(hitMoby);
 	MobyColDamageIn in;
-  float hitMobyCollRadiusSqr = 0;
+  float hitMobyCollRadius = 0;
+  float hitHeight = 0.25;
 
   if (player && player->PlayerMoby) {
     mobyGetJointMatrix(player->PlayerMoby, 10, playerJointMtx);
     vector_copy(hitMobyCenter, &playerJointMtx[12]);
     hitMobyCenter[2] = clamp(jointPosition[2], playerJointMtx[14] - player->Coll.bot, playerJointMtx[14] + player->Coll.top);
-    hitMobyCollRadiusSqr = player->Coll.radiusSqd;
+    hitMobyCollRadius = player->Coll.radius;
   } else {
     if (targetVars) {
       vector_scale(hitMobyCenter, hitMoby->M2_03, targetVars->targetHeight);
+      hitHeight = targetVars->targetHeight;
     }
     
-    hitMobyCollRadiusSqr = powf(hitMoby->BSphere[3] / 1024.0, 2);
+    hitMobyCollRadius = (hitMoby->BSphere[3] / 1024.0) * 2;
     vector_add(hitMobyCenter, hitMobyCenter, hitMoby->Position);
   }
 
@@ -252,11 +254,11 @@ int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR joi
     return 0;
 
   // clamp within arbitrary vertical limit
-  if (!isAoE && fabsf(jointToHitMoby[2]) > 0.25)
+  if (!isAoE && fabsf(jointToHitMoby[2]) > hitHeight)
     return 0;
 
   // ignore if past attack radius
-  if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_sqrmag(jointToHitMoby) > (hitMobyCollRadiusSqr + sqrHitRadius))
+  if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_sqrmag(jointToHitMoby) > powf(hitMobyCollRadius + hitRadius, 2))
     return 0;
 
   vector_write(in.Momentum, 0);
@@ -304,7 +306,7 @@ int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, fl
         if ((vector_length(delta)-otherTargetRadius) > firstPassRadius)
           continue;
 
-        if (mobDoDamageTryHit(mobMoby, sourceMoby, otherTarget, p, isAoE, sqrRadius, damageFlags, amount)) {
+        if (mobDoDamageTryHit(mobMoby, sourceMoby, otherTarget, p, isAoE, radius, damageFlags, amount)) {
           result |= mobMobyProcessHitFlags(mobMoby, otherTarget, amount, reactToThorns);
         }
       }
@@ -318,7 +320,7 @@ int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, fl
         if (vector_sqrmag(delta) > firstPassSqrRadius)
           continue;
 
-        if (mobDoDamageTryHit(mobMoby, sourceMoby, player->PlayerMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+        if (mobDoDamageTryHit(mobMoby, sourceMoby, player->PlayerMoby, p, isAoE, radius, damageFlags, amount)) {
           result |= mobMobyProcessHitFlags(mobMoby, player->PlayerMoby, amount, reactToThorns);
         }
       }
@@ -327,7 +329,7 @@ int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, fl
       Moby* hitMoby;
       while ((hitMoby = *hitMobies++)) {
         if (hitMoby == mobMoby) continue;
-        if (mobDoDamageTryHit(mobMoby, sourceMoby, hitMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+        if (mobDoDamageTryHit(mobMoby, sourceMoby, hitMoby, p, isAoE, radius, damageFlags, amount)) {
           result |= mobMobyProcessHitFlags(mobMoby, hitMoby, amount, reactToThorns);
         }
       }
@@ -365,7 +367,7 @@ int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int
       if ((vector_length(delta)-otherTargetRadius) > firstPassRadius)
         continue;
 
-      if (mobDoDamageTryHit(mobMoby, sourceMoby, otherTarget, p, isAoE, sqrRadius, damageFlags, amount)) {
+      if (mobDoDamageTryHit(mobMoby, sourceMoby, otherTarget, p, isAoE, radius, damageFlags, amount)) {
         result |= mobMobyProcessHitFlags(mobMoby, otherTarget, amount, reactToThorns);
       }
     }
@@ -379,7 +381,7 @@ int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int
       if (vector_sqrmag(delta) > firstPassSqrRadius)
         continue;
 
-      if (mobDoDamageTryHit(mobMoby, sourceMoby, player->PlayerMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+      if (mobDoDamageTryHit(mobMoby, sourceMoby, player->PlayerMoby, p, isAoE, radius, damageFlags, amount)) {
         result |= mobMobyProcessHitFlags(mobMoby, player->PlayerMoby, amount, reactToThorns);
       }
     }
@@ -388,7 +390,7 @@ int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int
     Moby* hitMoby;
     while ((hitMoby = *hitMobies++)) {
       if (hitMoby == mobMoby) continue;
-      if (mobDoDamageTryHit(mobMoby, sourceMoby, hitMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+      if (mobDoDamageTryHit(mobMoby, sourceMoby, hitMoby, p, isAoE, radius, damageFlags, amount)) {
         result |= mobMobyProcessHitFlags(mobMoby, hitMoby, amount, reactToThorns);
       }
     }
@@ -1242,8 +1244,9 @@ Moby* mobGetNextTarget(Moby* moby)
     if (otherTarget->OClass != DUMMY_OCLASS) break;
 
     struct DummyPVar* otherPVars = (struct DummyPVar*)otherTarget->PVar;
-    if (otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_ALWAYS)
+    if ((!currentTarget || currentTarget == otherTarget) && otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_ALWAYS) {
       return otherTarget;
+    }
 
     vector_subtract(delta, otherTarget->Position, moby->Position);
     float dist = vector_length(delta);

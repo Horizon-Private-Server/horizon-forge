@@ -15,6 +15,7 @@
 #include <libdl/time.h>
 #include <libdl/net.h>
 #include <libdl/game.h>
+#include <libdl/hud.h>
 #include <libdl/string.h>
 #include <libdl/math.h>
 #include <libdl/math3d.h>
@@ -135,6 +136,27 @@ void dummyOnStateChanged(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void dummyDrawHealthbar(Moby* moby)
+{
+  struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+  struct DummyDifficultyConfig* difficultyConfig = dummyGetDifficultyConfig(moby);
+  float scale = pvars->Config.HealthbarScale;
+  float hp = clamp(pvars->TargetVars.hitPoints / difficultyConfig->Health, 0, 1);
+  u32 bgColor = 0x80000000;
+  u32 frColor = 0x80101010;
+  u32 fgColor = hudGetTeamColor(pvars->Config.IsOnEnemyTeam ? TEAM_RED : TEAM_BLUE, 1);
+
+  gfxResetGsRegisters();
+
+  VECTOR pos = {0,0,1,0};
+  vector_scale(pos, pos, pvars->Config.HealthbarOffset);
+  vector_add(pos, pos, moby->Position);
+  gfxHelperDrawBox_WS(pos, 50 * scale + 2, 2 + 5 * scale, frColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawBox_WS(pos, 50 * scale, 5 * scale, bgColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawBox_WS(pos, 50 * scale * hp, 5 * scale, fgColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+}
+
+//--------------------------------------------------------------------------
 void dummyUpdate(Moby* moby)
 {
   int i;
@@ -194,6 +216,11 @@ void dummyUpdate(Moby* moby)
     mobRegisterTarget(moby);
   }
 
+  // healthbar
+  if (pvars->Config.Healthbar) {
+    gfxRegisterDrawFunction((void**)0x0022251C, &dummyDrawHealthbar, moby);
+  }
+
   // handle damage
   if (gameAmIHost()) {
     int damageIndex = moby->CollDamage;
@@ -243,6 +270,7 @@ void dummyOnGuberCreated(Moby* moby)
 
   moby->PUpdate = &dummyUpdate;
   moby->ModeBits = MOBY_MODE_BIT_HIDDEN | MOBY_MODE_BIT_NO_POST_UPDATE | MOBY_MODE_BIT_HAS_SPECIAL_VARS;
+  moby->Bolts = -1; // can damage players
 
   // update moby target ref
   pvars->Config.TargetMoby = mobyGetFromIdxOrNull((int)pvars->Config.TargetMoby);

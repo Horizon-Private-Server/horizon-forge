@@ -4757,7 +4757,7 @@
     "Name": "Raids Health Proxy",
     "RCVersion": 4,
     "MobyOClass": 16397,
-    "Length": 332,
+    "Length": 340,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -4822,9 +4822,35 @@
         "Default": 1
       },
       {
+        "Name": "Healthbar",
+        "DataType": "Bool",
+        "DataSize": 1,
+        "Offset": 96
+      },
+      {
+        "Name": "Healthbar Scale",
+        "DataType": "Float",
+        "Offset": 104,
+        "Min": 0,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Healthbar", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Healthbar Offset",
+        "DataType": "Float",
+        "Offset": 108,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Healthbar", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
         "Name": "Mob Aggro Type",
         "DataType": "Enum",
-        "Offset": 96,
+        "DataSize": 1,
+        "Offset": 97,
         "Options": {
           "Ignore": 0,
           "When In Range": 1,
@@ -4847,17 +4873,17 @@
       {
         "Name": "On Hit (Controller)",
         "DataType": "MobyRef",
-        "Offset": 104
+        "Offset": 112
       },
       {
         "Name": "On Dead (Controller)",
         "DataType": "MobyRef",
-        "Offset": 108
+        "Offset": 116
       },
       {
         "Name": "Values",
         "DataType": "Struct",
-        "Offset": 112,
+        "Offset": 120,
         "DataSize": 12,
         "Count": 5,
         "Labels": [

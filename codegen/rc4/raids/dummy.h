@@ -55,8 +55,11 @@ struct DummyConfig
   Moby* TargetMoby;
   float TargetHeight;
   float TargetRadius;
-  int MobTargetType;
+  char Healthbar;
+  char MobTargetType;
   float MobTargetDistance;
+  float HealthbarScale;
+  float HealthbarOffset;
   Moby* OnHitControllerMoby;
   Moby* OnKilledControllerMoby;
   struct DummyDifficultyConfig DifficultyConfigs[RAIDS_DIFFICULTY_COUNT];
