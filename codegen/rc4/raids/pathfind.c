@@ -695,6 +695,8 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   if (!moby || !moveVars)
     return 0;
 
+  vector_write(heightOffset, 0);
+
   // no path, go straight to target
   if (!path) {
     if (moveVars->Target && !moveVars->ForceUseTargetPosition) {
@@ -702,7 +704,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     } else {
       vector_copy(output, moveVars->TargetPosition);
     }
-    vector_scale(heightOffset, up, moveVars->PreferredHeight);
+    //vector_scale(heightOffset, up, moveVars->PreferredHeight);
     vector_add(output, output, heightOffset);
     vector_copy(moveVars->LastTargetPos, output);
     moveVars->CurrentHeightLimit = PATHGRAPH_MAX_HEIGHT_LIMIT;
@@ -730,7 +732,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   // delay next getTargetPos until next tick
   moveVars->PathTicks = 1;
   moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, pathGetCurrentEdge(path, moby, moveVars), &moveVars->CurrentHeightLimit);
-  vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
+  //vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
 
   // new path
   if (moveVars->PathNewTicks == 0 && moveVars->IsOwner && pathShouldFindNewPath(path, moby, moveVars)) {
@@ -743,7 +745,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     vector_copy(moveVars->TargetPosition, moveVars->Target->Position);
   }
   
-  vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
+  //vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
   vector_add(output, moveVars->TargetPosition, heightOffset);
 
   // no path
@@ -854,7 +856,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   //float fromHeight = path->Heights[targetNodeIdx]/256.0;
   //float toHeight = path->Heights[moveVars->CurrentPath[moveVars->PathEdgeCurrent+1]]/256.0;
   //moveVars->CurrentHeightLimit = lerpf(fromHeight, toHeight, moveVars->PathEdgeAlpha);
-  vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
+  //vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
 
   // get point
   pathGetClosestPointOnNode(path, output, moby->Position, moveVars->TargetPosition, targetNodeIdx, moveVars->CurrentPath[moveVars->PathEdgeCurrent+1], moveVars->CollRadius);

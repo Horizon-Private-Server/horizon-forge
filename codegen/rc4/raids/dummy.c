@@ -100,7 +100,7 @@ void dummyOnStateChanged(Moby* moby)
         if (targetMoby && !mobyIsDestroyed(targetMoby)) {
 
           // explode
-          if (pvars->Config.OnDeathType >= DUMMY_ON_DEATH_EXPLODE) {
+          if (pvars->Config.OnDeathType >= DUMMY_ON_DEATH_EXPLODE && difficultyConfig->ExplosionRadius > 0) {
             spawnExplosionDamage(targetMoby->Position, difficultyConfig->ExplosionRadius, 0x80004080, moby, difficultyConfig->ExplosionDamage, 0x00081801);
           }
 
@@ -195,7 +195,7 @@ void dummyUpdate(Moby* moby)
 
   // copy target moby
   Moby* targetMoby = pvars->Config.TargetMoby;
-  if (pvars->Config.IsOnEnemyTeam) moby->ModeBits |= MOBY_MODE_BIT_CAN_BE_AUTO_TARGETED;
+  if (pvars->Config.IsOnEnemyTeam && pvars->Config.Targetable) moby->ModeBits |= MOBY_MODE_BIT_CAN_BE_AUTO_TARGETED;
   moby->ModeBits |= MOBY_MODE_BIT_CAN_BE_DAMAGED;
   moby->ModeBits &= ~MOBY_MODE_BIT_NO_POST_UPDATE;
   vector_copy(moby->Position, targetMoby->Position);

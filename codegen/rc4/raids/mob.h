@@ -168,6 +168,7 @@ struct MobMoveVars {
   float PathEdgeAlpha;
   float LastPathEdgeAlphaForJump;
   float CollRadius;
+  float DistFromGround;
   float PreferredHeight;
   float CurrentHeightLimit;
 	u16 StuckCounter;

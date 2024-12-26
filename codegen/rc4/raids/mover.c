@@ -226,6 +226,7 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* p = players[i];
     if (!p || !p->SkinMoby || !p->PlayerMoby || p->Ground.pMoby != target) continue;
+    if (p->Ground.dist > 0.1) continue;
 
     // transform player position to target local space
     // apply new transformation

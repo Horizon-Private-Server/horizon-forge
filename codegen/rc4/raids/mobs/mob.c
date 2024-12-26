@@ -760,9 +760,10 @@ void mobMove(Moby* moby)
       vector_copy(groundCheckTo, ledgePos);
       groundCheckTo[2] = gameGetDeathHeight();
       if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
-        currentHeightFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
+        currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
       } else {
         // no ground
+        currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = 0;
         nextPosHasSafeGround = 0;
       }
 
@@ -779,12 +780,14 @@ void mobMove(Moby* moby)
       vector_copy(groundCheckTo, ledgePos);
       groundCheckTo[2] = gameGetDeathHeight();
       if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+        currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
         if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
           nextPosHasSafeGround = 0;
         }
       } else {
         // no ground
         nextPosHasSafeGround = 0;
+        currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = 0;
       }
 
       // check ground
@@ -797,6 +800,7 @@ void mobMove(Moby* moby)
 
           // mark grounded this frame
           pvars->MobVars.MoveVars.Grounded = 1;
+          pvars->MobVars.MoveVars.DistFromGround = 0;
 
           // check if we've hit death barrier
           if (isOwner && mobCollisionIdIsLethal(CollLine_Fix_GetHitCollisionId())) {
@@ -990,12 +994,9 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
   vector_add(velocity, velocity, temp);
 
   if (isFlying) {
-    float dy = to[2] - from[2];
-    if (fabsf(dy) > 1) {
-      velocity[2] = clamp(dy, -targetSpeed, targetSpeed);
-    } else {
-      velocity[2] = 0;
-    }
+    float height = minf(pvars->MobVars.MoveVars.PreferredHeight, pvars->MobVars.MoveVars.CurrentHeightLimit);
+    float dy = (height - pvars->MobVars.MoveVars.DistFromGround);
+    velocity[2] = dy * MATH_DT * lerpf(1, 0, 1 - powf(MATH_E, -1 * fabsf(dy) * MATH_DT));
   }
 
   // stop when at target

@@ -810,7 +810,15 @@ void spawnerStart(void)
       if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId()))
         continue;
 
-      vector_copy(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition());
+      // check ground slope
+      VECTOR groundNormal, tangent;
+      vector_normalize(groundNormal, CollLine_Fix_GetHitNormal());
+      float groundSlope = asinf(vector_innerproduct(up, groundNormal));
+      if (fabsf(groundSlope) > (35*MATH_DEG2RAD)) {
+        continue;
+      }
+
+      vector_add(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition(), up);
       if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;

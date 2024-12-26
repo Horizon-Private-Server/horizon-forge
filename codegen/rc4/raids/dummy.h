@@ -56,6 +56,8 @@ struct DummyConfig
   float TargetHeight;
   float TargetRadius;
   char Healthbar;
+  char Targetable;
+  char DamageBubbles;
   char MobTargetType;
   float MobTargetDistance;
   float HealthbarScale;

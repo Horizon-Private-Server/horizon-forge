@@ -556,6 +556,22 @@ void dzstrikerAnimUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void dzstrikerStand(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  int isFlying = pvars->MobVars.MoveVars.PreferredHeight > 0;
+  float targetSpeed = pvars->MobVars.Config.Speed * MATH_DT;
+  Moby* target = pvars->MobVars.MoveVars.Target;
+
+  mobStand(moby);
+  if (isFlying && target) {
+    float height = minf(pvars->MobVars.MoveVars.PreferredHeight, pvars->MobVars.MoveVars.CurrentHeightLimit);
+    float dy = (height - pvars->MobVars.MoveVars.DistFromGround);
+    pvars->MobVars.MoveVars.Velocity[2] = dy * MATH_DT * lerpf(1, 0, 1 - powf(MATH_E, -1 * fabsf(dy) * MATH_DT));
+  }
+}
+
+//--------------------------------------------------------------------------
 Moby* dzstrikerFireShot(Moby* moby, Moby* target)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -675,7 +691,7 @@ int dzstrikerDoActionMove(Moby* moby)
       mobMoveTowards(moby, t, speed, 1000, acceleration, 0);
       dzstrikerVars->TorsoRotation[2] = clampAngle(yaw - yaw2);
     } else {
-      mobStand(moby);
+      dzstrikerStand(moby);
       mobTurnTowards(moby, targetPosition, turnSpeed);
     }
     return DZSTRIKER_LEGS_ANIM_RUN_FORWARD;
@@ -717,7 +733,7 @@ void dzstrikerDoAction(Moby* moby)
 		case DZSTRIKER_ACTION_SPAWN:
 		{
       dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, DZSTRIKER_TORSO_ANIM_IDLE_SPIN_GUN, 0);
-      mobStand(moby);
+      dzstrikerStand(moby);
 			break;
 		}
 		case DZSTRIKER_ACTION_FLINCH:
@@ -734,9 +750,9 @@ void dzstrikerDoAction(Moby* moby)
 				vector_scale(t, t, DZSTRIKER_KNOCKBACK_MULTIPLIER);
 				vector_add(pvars->MobVars.MoveVars.AddVelocity, pvars->MobVars.MoveVars.AddVelocity, t);
 			} else if (pvars->MobVars.MoveVars.Grounded) {
-        mobStand(moby);
+        dzstrikerStand(moby);
       } else if (pvars->MobVars.CurrentActionForTicks > (1*TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter) {
-        mobStand(moby);
+        dzstrikerStand(moby);
       }
 			break;
 		}
@@ -747,7 +763,7 @@ void dzstrikerDoAction(Moby* moby)
       else if (rand(1000) == 1) torsoIdleAnimId = DZSTRIKER_TORSO_ANIM_IDLE_LOOK_LEFT_RIGHT;
 
       dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, torsoIdleAnimId, 0);
-      mobStand(moby);
+      dzstrikerStand(moby);
 			break;
 		}
 		case DZSTRIKER_ACTION_JUMP:
@@ -787,7 +803,7 @@ void dzstrikerDoAction(Moby* moby)
 		case DZSTRIKER_ACTION_LOOK_AT_TARGET:
     {
       dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, DZSTRIKER_TORSO_ANIM_IDLE, 0);
-      mobStand(moby);
+      dzstrikerStand(moby);
       if (target)
         mobTurnTowards(moby, target->Position, turnSpeed);
       break;
@@ -852,7 +868,7 @@ void dzstrikerDoAction(Moby* moby)
           legsAnimId = DZSTRIKER_LEGS_ANIM_RUN_FORWARD;
         } else {
           // stand
-          mobStand(moby);
+          dzstrikerStand(moby);
         }
       }
       
@@ -873,7 +889,7 @@ void dzstrikerDoAction(Moby* moby)
     {
       int torsoAnimId = isSniper ? DZSTRIKER_TORSO_ANIM_AIM_SNIPER : DZSTRIKER_TORSO_ANIM_AIM_GUN;
 
-      mobStand(moby);
+      dzstrikerStand(moby);
       if (!isInAirFromFlinching) {
         if (target) {
           mobTurnTowards(moby, target->Position, turnSpeed);
@@ -887,7 +903,7 @@ void dzstrikerDoAction(Moby* moby)
     {
       int torsoAnimId = isSniper ? DZSTRIKER_TORSO_ANIM_FIRE_SNIPER : DZSTRIKER_TORSO_ANIM_FIRE_GUN_LOOP;
 
-      mobStand(moby);
+      dzstrikerStand(moby);
       if (!isInAirFromFlinching) {
         if (target) {
           mobTurnTowards(moby, target->Position, turnSpeed);
@@ -1172,7 +1188,6 @@ void dzstrikerTorsoUpdate(Moby* moby)
   if (moby->CollDamage >= 0 && moby->PParent) {
     moby->PParent->CollDamage = moby->CollDamage;
     moby->CollDamage = -1;
-    DPRINTF("pass damage\n");
   }
 }
 

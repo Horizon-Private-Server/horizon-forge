@@ -101,10 +101,8 @@ void checkpointUpdate(Moby* moby)
 int checkpointSetActive(Moby* checkpointMoby)
 {
   if (!checkpointManagerMoby) return 0;
-  if (!gameAmIHost()) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
-
 
   // get index of checkpoint
   int idx = 0;
@@ -120,11 +118,16 @@ int checkpointSetActive(Moby* checkpointMoby)
   DLOG_MNGR(checkpointManagerMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
   DLOG_CHPT(checkpointMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
   
+  // update checkpoint locally
+  mobySetState(checkpointManagerMoby, idx, -1);
+
 	// create event
-	GuberEvent * guberEvent = guberCreateEvent(checkpointManagerMoby, CHECKPOINT_EVENT_SET_STATE);
-  if (guberEvent) {
-    guberEventWrite(guberEvent, &idx, 4);
-  }
+  // if (gameAmIHost()) {
+  //   GuberEvent * guberEvent = guberCreateEvent(checkpointManagerMoby, CHECKPOINT_EVENT_SET_STATE);
+  //   if (guberEvent) {
+  //     guberEventWrite(guberEvent, &idx, 4);
+  //   }
+  // }
 
   return 1;
 }
@@ -286,7 +289,7 @@ void checkpointInit(void)
         if (managerPvars->DefaultCheckpointMoby == moby) {
           DLOG_MNGR(checkpointManagerMoby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
           DLOG_CHPT(moby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
-          checkpointSetActive(moby);
+          //checkpointSetActive(moby);
           checkpointSetCuboid(moby);
           mobySetState(checkpointManagerMoby, checkpointCount-1, -1);
           mobySetState(moby, CHECKPOINT_ACTIVE, -1);
