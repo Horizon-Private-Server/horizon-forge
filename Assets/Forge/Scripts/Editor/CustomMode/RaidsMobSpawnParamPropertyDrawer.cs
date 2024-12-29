@@ -137,11 +137,11 @@ public class RaidsMobSpawnParamPropertyDrawer : PropertyDrawer
                 }
         }
 
-        return $"1 Star: {get(init, max, scale, 0)}, "
-            + $"2 Star: {get(init, max, scale, 1)}, "
-            + $"3 Star: {get(init, max, scale, 2)}, "
-            + $"4 Star: {get(init, max, scale, 3)}, "
-            + $"5 Star: {get(init, max, scale, 4)}"
+        return $"1 Star: {get(init, max, scale, 0):N}, "
+            + $"2 Star: {get(init, max, scale, 1):N}, "
+            + $"3 Star: {get(init, max, scale, 2):N}, "
+            + $"4 Star: {get(init, max, scale, 3):N}, "
+            + $"5 Star: {get(init, max, scale, 4):N}"
             ;
     }
 
