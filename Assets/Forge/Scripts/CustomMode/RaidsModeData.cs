@@ -25,6 +25,15 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int BLIP_OCLASS = 0x400C;
     public static readonly int DUMMY_OCLASS = 0x400D;
 
+    public static readonly float[] DIFFICULTY_FACTORS = new float[]
+    {
+        0,
+        10,
+        150,
+        1000,
+        3000
+    };
+
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
     public int CodeGenOrder => 99999999;
@@ -484,6 +493,41 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     #endregion
 
+
+    #region Helpers
+
+    public static float ScaleDamage(float baseDamage, float maxDamage, float scale, int difficulty)
+    {
+        var dfactor = DIFFICULTY_FACTORS[difficulty];
+        var damage = baseDamage * (1 + (0.03f * scale * dfactor));
+        if (maxDamage > 0 && damage > maxDamage)
+            damage = maxDamage;
+
+        return damage;
+    }
+
+    public static float ScaleSpeed(float baseSpeed, float maxSpeed, float scale, int difficulty)
+    {
+        var dfactor = DIFFICULTY_FACTORS[difficulty];
+        float speed = baseSpeed * (1 + (0.03f * scale * dfactor));
+        if (maxSpeed > 0 && speed > maxSpeed)
+            speed = maxSpeed;
+
+        return speed;
+    }
+
+    public static float ScaleHealth(float baseHealth, float maxHealth, float scale, int difficulty)
+    {
+        var dfactor = DIFFICULTY_FACTORS[difficulty];
+        var health = baseHealth * Mathf.Pow(1 + (0.05f * scale * dfactor), 2);
+        if (maxHealth > 0 && health > maxHealth)
+            health = maxHealth;
+
+        return health;
+    }
+
+    #endregion
+
 }
 
 public enum RaidsMob
@@ -527,31 +571,25 @@ public class RaidsMobSpawnParam
     [Tooltip("For Mobs with team textures only.")]
     public DLTeamIds TexturePalette = DLTeamIds.Blue;
 
-    [Header("General")]
-    public float SizeMultiplier = 1;
+    [Min(0)] public float SizeMultiplier = 1;
 
-    [Header("Stats")]
-    public float XpMultiplier = 1;
-    public float BoltsMultiplier = 1;
+    [Min(0)] public float XpMultiplier = 1;
+    [Min(0)] public float BoltsMultiplier = 1;
 
-    [Header("Damage")]
-    public float DamageMultiplier = 1;
-    [Tooltip("Adjusts the rate at which the mob's damage will scale with respect to the difficulty. A larger value will result in stronger mobs in higher difficulties.")] public float DamageDifficultyRateMultiplier = 1;
+    [Min(0)] public float DamageMultiplier = 1;
+    [Min(0), Tooltip("Adjusts the rate at which the mob's damage will scale with respect to the difficulty. A larger value will result in stronger mobs in higher difficulties.")] public float DamageDifficultyRateMultiplier = 1;
 
-    [Header("Speed")]
-    public float SpeedMultiplier = 1;
-    [Tooltip("Adjusts the rate at which the mob's speed will scale with respect to the difficulty. A larger value will result in faster mobs in higher difficulties.")] public float SpeedDifficultyRateMultiplier = 1;
+    [Min(0)] public float SpeedMultiplier = 1;
+    [Min(0), Tooltip("Adjusts the rate at which the mob's speed will scale with respect to the difficulty. A larger value will result in faster mobs in higher difficulties.")] public float SpeedDifficultyRateMultiplier = 1;
 
-    [Header("Health")]
-    public float HealthMultiplier = 1;
-    [Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
+    [Min(0)] public float HealthMultiplier = 1;
+    [Min(0), Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
 
-    [Header("Interaction")]
-    [Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public float RangedAttackDistance = 50;
-    [Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
-    [Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
-    [Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
-    [Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 15;
+    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public float RangedAttackDistance = 50;
+    [Min(0), Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
+    [Min(0), Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
+    [Min(0), Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
+    [Min(0), Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 15;
 
     public string GetDef()
     {

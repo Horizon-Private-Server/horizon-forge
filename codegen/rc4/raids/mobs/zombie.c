@@ -152,6 +152,8 @@ void zombiePostUpdate(Moby* moby)
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (zombieIsDying(moby)) {
     animSpeed = baseSpeed;
+  } else if (moby->AnimSeqId == ZOMBIE_ANIM_RUN || moby->AnimSeqId == ZOMBIE_ANIM_WALK) {
+    animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
 	if ((moby->DrawDist == 0 && pvars->MobVars.Action == ZOMBIE_ACTION_WALK)) {
@@ -324,6 +326,9 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
   if (zombieIsFlinching(moby))
     return -1;
 
+  if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+    return -1;
+
 	if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
 		return ZOMBIE_ACTION_WALK;
   }
@@ -478,12 +483,11 @@ void zombieDoAction(Moby* moby)
         if (!isInAirFromFlinching) {
           if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          mobJumpTowards(moby, t);
         }
 
         // handle jumping
-        if (pvars->MobVars.MoveVars.Grounded) {
+        if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, ZOMBIE_ANIM_JUMP, 5);
           mobResetSoundTrigger(moby);
 
@@ -501,9 +505,12 @@ void zombieDoAction(Moby* moby)
             jumpSpeed = 8; //clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
           }
 
+          vector_write(pvars->MobVars.MoveVars.Velocity, 0);
           pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
           pvars->MobVars.MoveVars.Grounded = 0;
           pvars->MobVars.MoveVars.QueueJumpSpeed = 0;
+          pvars->MobVars.MoveVars.JumpedThisAction = 1;
+          mobResetMoveStep(moby);
         }
 				break;
 			}
@@ -621,6 +628,11 @@ void zombieForceLocalAction(Moby* moby, int action)
     {
       // can't undie
       return;
+    }
+    case ZOMBIE_ACTION_JUMP:
+    {
+      pvars->MobVars.MoveVars.JumpedThisAction = 0;
+      break;
     }
 	}
 

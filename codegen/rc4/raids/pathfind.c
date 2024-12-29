@@ -10,6 +10,7 @@
 #include "pathfind.h"
 
 #define PATH_EDGE_IS_EMPTY(x)               (x == 255)
+#define PATH_GET_JUMP_AT(x)                 (x / 65535.0)
 #define CLOSEST_NODES_COLL_CHECK_SIZE       (3)
 
 #if GATE
@@ -87,9 +88,9 @@ float pathGetSegmentAlpha(struct PathGraph* path, Moby* moby, struct MobMoveVars
   if (!moby || !currentEdge || !path) return 0;
 
   // get vectors from start node to end node and moby
-  vector_subtract(startNodeToEndNode, path->Nodes[currentEdge[0]], path->Nodes[currentEdge[1]]);
+  vector_subtract(startNodeToEndNode, path->Nodes[currentEdge[1]], path->Nodes[currentEdge[0]]);
+  vector_subtract(startNodeToMoby, moby->Position, path->Nodes[currentEdge[0]]);
   startNodeToEndNode[3] = 0;
-  vector_subtract(startNodeToMoby, path->Nodes[currentEdge[0]], moby->Position);
   startNodeToMoby[3] = 0;
 
   // project startToMoby on startToEnd
@@ -98,7 +99,7 @@ float pathGetSegmentAlpha(struct PathGraph* path, Moby* moby, struct MobMoveVars
   float alpha = clamp(distOnEdge / edgeLen, 0, 1);
 
   if (outHeightLimit) {
-    float heightAlpha = alpha = clamp((distOnEdge+path->Nodes[currentEdge[1]][3]) / edgeLen, 0, 1);
+    float heightAlpha = clamp((distOnEdge+path->Nodes[currentEdge[1]][3]) / edgeLen, 0, 1);
     float fromHeight = minf(path->Heights[currentEdge[0]] / 256.0, moveVars->PreferredHeight);
     float toHeight = minf(path->Heights[currentEdge[1]] / 256.0, moveVars->PreferredHeight);
     float limit = lerpf(fromHeight, toHeight, clamp(heightAlpha + 0.25, 0, 1));
@@ -123,7 +124,7 @@ int pathCanStartNodeBeSkipped(struct PathGraph* path, Moby* moby, struct MobMove
   // then circle back, we failed the jump
   // otherwise allow skipping
   float alpha = pathGetSegmentAlpha(path, moby, moveVars, startEdge, NULL);
-  float jumpAt = path->EdgesJumpAt[startEdgeIdx] / 255.0;
+  float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[startEdgeIdx]);
   if (path->EdgesJumpSpeed[startEdgeIdx] > 0 && alpha >= jumpAt)
     return 0;
 
@@ -157,7 +158,7 @@ int pathSegmentCanBeSkipped(struct PathGraph* path, Moby* moby, struct MobMoveVa
 
   // check if current edge is required or there is a jump we haven't reached
   edge = moveVars->CurrentPath[segmentStartEdgeIdx];
-  float jumpAt = path->EdgesJumpAt[edge] / 255.0;
+  float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edge]);
   float requiredAt = path->EdgesRequired[edge] / 255.0;
   if ((requiredAt > 0 && segmentStartAlpha <= requiredAt) || (path->EdgesJumpSpeed[edge] > 0 && segmentStartAlpha <= jumpAt))
     return 0;
@@ -203,7 +204,7 @@ int pathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby, struct MobMove
 
   // check if current edge is required or there is a jump we haven't reached
   edge = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
-  float jumpAt = path->EdgesJumpAt[edge] / 255.0;
+  float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edge]);
   float requiredAt = path->EdgesRequired[edge] / 255.0;
   if ((requiredAt > 0 && moveVars->PathEdgeAlpha <= requiredAt) || (path->EdgesJumpSpeed[edge] > 0 && moveVars->LastPathEdgeAlphaForJump <= jumpAt))
     return 0;
@@ -689,13 +690,10 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
 {
   int newPath = 0;
   VECTOR up = {0,0,1,0};
-  VECTOR heightOffset;
   VECTOR targetNodePos, delta;
   VECTOR from, to, edgeDir;
   if (!moby || !moveVars)
     return 0;
-
-  vector_write(heightOffset, 0);
 
   // no path, go straight to target
   if (!path) {
@@ -704,8 +702,6 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     } else {
       vector_copy(output, moveVars->TargetPosition);
     }
-    //vector_scale(heightOffset, up, moveVars->PreferredHeight);
-    vector_add(output, output, heightOffset);
     vector_copy(moveVars->LastTargetPos, output);
     moveVars->CurrentHeightLimit = PATHGRAPH_MAX_HEIGHT_LIMIT;
     return 0;
@@ -732,7 +728,6 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   // delay next getTargetPos until next tick
   moveVars->PathTicks = 1;
   moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, pathGetCurrentEdge(path, moby, moveVars), &moveVars->CurrentHeightLimit);
-  //vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
 
   // new path
   if (moveVars->PathNewTicks == 0 && moveVars->IsOwner && pathShouldFindNewPath(path, moby, moveVars)) {
@@ -745,14 +740,21 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     vector_copy(moveVars->TargetPosition, moveVars->Target->Position);
   }
   
-  //vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
-  vector_add(output, moveVars->TargetPosition, heightOffset);
+  vector_copy(output, moveVars->TargetPosition);
 
   // no path
   if (!moveVars->PathEdgeCount && (!isStuck || moveVars->PathHasReachedStart)) {
     vector_copy(moveVars->LastTargetPos, output);
     return newPath;
   }
+
+  // jump from
+  // VECTOR jumpFromPos, jumpFromRot;
+  // if (pathGetJumpFromPosition(path, moby, moveVars, jumpFromPos, jumpFromRot)) {
+  //   vector_copy(output, jumpFromPos);
+  //   vector_copy(moveVars->LastTargetPos, output);
+  //   return newPath;
+  // }
 
   // check if we can just go straight to the target
   if (!isStuck && moveVars->PathEdgeCount > 0 && !moveVars->PathCheckNearAndSeeTargetTicks && !moveVars->PathHasReachedEnd) {
@@ -764,7 +766,6 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     vector_subtract(delta, moveVars->TargetPosition, moby->Position);
     vector_add(from, moby->Position, up);
     vector_add(to, moveVars->TargetPosition, up);
-    vector_add(to, to, heightOffset);
 
     // near and can see
     if (vector_sqrmag(delta) < (MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH*MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH) && !CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
@@ -808,9 +809,17 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     vector_projectonhorizontal(delta, delta);
     float tDist = vector_length(delta);
 
+
+    int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
+    float jumpSpeed = path->EdgesJumpSpeed[edgeIdx];
+    float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edgeIdx]);
+    if (jumpSpeed > 0 && !moveVars->PathHasReachedStart && moveVars->PathEdgeAlpha > jumpAt && !moveVars->QueueJumpSpeed) {
+      // prevent counting reached node until we've reset the jump at
+    }
+
     // reached target node
     //DPRINTF("r:%f dist:%f 3:%f\n", radius, hDist, delta[3]);
-    if (hDist < (radius + 0.5) && tDist < (0.5 + moveVars->CollRadius)) {
+    else if (hDist < (radius + 0.5) && tDist < (0.5 + moveVars->CollRadius)) {
       if (moveVars->PathEdgeCurrent == 0 && !moveVars->PathHasReachedStart) {
         moveVars->PathHasReachedStart = 1;
       //} else if (moveVars->PathEdgeCurrent == (moveVars->PathEdgeCount-1) && !moveVars->PathHasReachedEnd) {
@@ -860,7 +869,6 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
 
   // get point
   pathGetClosestPointOnNode(path, output, moby->Position, moveVars->TargetPosition, targetNodeIdx, moveVars->CurrentPath[moveVars->PathEdgeCurrent+1], moveVars->CollRadius);
-  vector_add(output, output, heightOffset);
   vector_copy(moveVars->LastTargetPos, output);
   return newPath;
 }
@@ -923,6 +931,55 @@ float pathGetJumpSpeed(struct PathGraph* path, Moby* moby, struct MobMoveVars* m
 }
 
 //--------------------------------------------------------------------------
+int pathGetJumpFromPosition(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, VECTOR outPos, VECTOR outRot)
+{
+  if (!moby || !moveVars || !path)
+    return 0;
+
+  // no path
+  if (!moveVars->PathEdgeCount) {
+    return 0;
+  }
+
+  // reached end
+  if (moveVars->PathHasReachedEnd) {
+    return 0;
+  }
+
+  u8* currentEdge = pathGetCurrentEdge(path, moby, moveVars);
+  if (currentEdge) {
+
+    // check if edge has jump
+    int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
+    float jumpSpeed = path->EdgesJumpSpeed[edgeIdx];
+    float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edgeIdx]);
+
+    if (jumpSpeed <= 0 || moveVars->LastPathEdgeAlphaForJump > jumpAt)
+      return 0;
+
+    VECTOR delta;
+    vector_subtract(delta, path->Nodes[currentEdge[1]], path->Nodes[currentEdge[0]]);
+    delta[3] = 0;
+
+    // compute position along edge to jump at
+    if (outPos) {
+      vector_scale(delta, delta, jumpAt);
+      vector_add(outPos, path->Nodes[currentEdge[0]], delta);
+      outPos[3] = 0;
+    }
+
+    // get rotation of edge (yaw)
+    if (outRot) {
+      vector_write(outRot, 0);
+      outRot[2] = atan2f(delta[1], delta[0]);
+    }
+    return 1;
+  }
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 int pathShouldJump(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
 {
   if (!moby || !moveVars || !path)
@@ -944,15 +1001,21 @@ int pathShouldJump(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveV
     // check if edge has jump
     int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
     float jumpSpeed = path->EdgesJumpSpeed[edgeIdx];
-    float jumpAt = path->EdgesJumpAt[edgeIdx] / 255.0;
+    float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edgeIdx]);
     float lastDistOnEdge = moveVars->LastPathEdgeAlphaForJump;
     
     // get segment alpha if we haven't refreshed the path this tick
-    if (!moveVars->PathTicks)
-      moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, currentEdge, &moveVars->CurrentHeightLimit);
+    //if (!moveVars->PathTicks)
+    moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, currentEdge, &moveVars->CurrentHeightLimit);
 
     // update
     moveVars->LastPathEdgeAlphaForJump = moveVars->PathEdgeAlpha;
+    
+#if DEBUG && DEBUGPATH && 0
+    if (jumpSpeed > 0 && lastDistOnEdge < jumpAt) {
+      printf("jump alpha %f/%f\n", moveVars->PathEdgeAlpha, jumpAt);
+    }
+#endif
 
     // we've stepped over threshold for when to jump in the last frame
     if (jumpSpeed > 0 && lastDistOnEdge <= jumpAt && moveVars->PathEdgeAlpha > jumpAt) {

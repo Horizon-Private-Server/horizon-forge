@@ -435,6 +435,9 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
   if (dzstrikerIsFlinching(moby))
     return -1;
 
+  if (pvars->MobVars.Action == DZSTRIKER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+    return -1;
+
 	if (pvars->MobVars.Action == DZSTRIKER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
 		return DZSTRIKER_ACTION_WALK;
   }
@@ -772,12 +775,11 @@ void dzstrikerDoAction(Moby* moby)
         if (!isInAirFromFlinching) {
           if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          mobJumpTowards(moby, t);
         }
 
         // handle jumping
-        if (pvars->MobVars.MoveVars.Grounded) {
+        if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
           dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_JUMP, DZSTRIKER_TORSO_ANIM_JUMP, 0);
 
           // check if we're near last jump pos
@@ -794,9 +796,12 @@ void dzstrikerDoAction(Moby* moby)
             jumpSpeed = 8; //clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
           }
 
+          vector_write(pvars->MobVars.MoveVars.Velocity, 0);
           pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
           pvars->MobVars.MoveVars.Grounded = 0;
           pvars->MobVars.MoveVars.QueueJumpSpeed = 0;
+          pvars->MobVars.MoveVars.JumpedThisAction = 1;
+          mobResetMoveStep(moby);
         }
 				break;
 			}
@@ -863,8 +868,7 @@ void dzstrikerDoAction(Moby* moby)
 
       if (!isInAirFromFlinching) {
         if (target) {
-          mobTurnTowards(moby, target->Position, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, pvars->MobVars.Config.Speed, acceleration);
+          mobMoveTowards(moby, target->Position, pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
           legsAnimId = DZSTRIKER_LEGS_ANIM_RUN_FORWARD;
         } else {
           // stand
@@ -969,6 +973,11 @@ void dzstrikerForceLocalAction(Moby* moby, int action)
     {
       // can't undie
       return;
+    }
+    case DZSTRIKER_ACTION_JUMP:
+    {
+      pvars->MobVars.MoveVars.JumpedThisAction = 0;
+      break;
     }
 	}
 

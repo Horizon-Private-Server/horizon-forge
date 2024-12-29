@@ -158,6 +158,8 @@ void swarmerPostUpdate(Moby* moby)
     animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (swarmerIsDying(moby)) {
     animSpeed = 0.9;
+  } else if (moby->AnimSeqId == SWARMER_ANIM_WALK) {
+    animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
   if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND) {
@@ -331,6 +333,9 @@ int swarmerGetPreferredAction(Moby* moby, int * delayTicks)
   if (swarmerIsFlinching(moby))
     return -1;
 
+  if (pvars->MobVars.Action == SWARMER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+    return -1;
+
 	if (pvars->MobVars.Action == SWARMER_ACTION_DODGE) {
 		return -1;
   }
@@ -432,6 +437,31 @@ void swarmerRenderPath(Moby* moby)
   if (gfxWorldSpaceToScreenSpace(t, &x, &y)) {
     gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, "+", -1, 4);
   }
+
+  /*int edgeIdx = pvars->MobVars.MoveVars.CurrentPath[pvars->MobVars.MoveVars.PathEdgeCurrent];
+  if (edgeIdx < 255) {
+    u8* edge = pathGraph->Edges[edgeIdx];
+    float jumpAt = pathGraph->EdgesJumpAt[edgeIdx] / 255.0;
+    VECTOR dt;
+    vector_subtract(dt, pathGraph->Nodes[edge[1]], pathGraph->Nodes[edge[0]]);
+    vector_scale(t, dt, pvars->MobVars.MoveVars.PathEdgeAlpha);
+    vector_add(t, t, pathGraph->Nodes[edge[0]]);
+    t[3] = 0;
+
+    VECTOR a1;
+    VECTOR startToMoby;
+    vector_subtract(startToMoby, moby->Position, pathGraph->Nodes[edge[0]]);
+    startToMoby[3] = 0;
+    float len = vector_length(dt);
+    vector_normalize(dt, dt);
+    vector_project(a1, startToMoby, dt);
+    DPRINTF("%f / %f\n", vector_length(a1) / len, pvars->MobVars.MoveVars.PathEdgeAlpha);
+    vector_add(a1, a1, pathGraph->Nodes[edge[0]]);
+    a1[3] = 0;
+    if (gfxWorldSpaceToScreenSpace(a1, &x, &y)) {
+      gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, "I", -1, 4);
+    }
+  }*/
 }
 #endif
 
@@ -494,12 +524,11 @@ void swarmerDoAction(Moby* moby)
         if (!isInAirFromFlinching) {
           if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          mobJumpTowards(moby, t);
         }
 
         // handle jumping
-        if (pvars->MobVars.MoveVars.Grounded) {
+        if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, SWARMER_ANIM_JUMP_AND_FALL, 5);
 
           // check if we're near last jump pos
@@ -517,9 +546,12 @@ void swarmerDoAction(Moby* moby)
           }
 
           //DPRINTF("jump %f\n", jumpSpeed);
+          vector_write(pvars->MobVars.MoveVars.Velocity, 0);
           pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
           pvars->MobVars.MoveVars.Grounded = 0;
           pvars->MobVars.MoveVars.QueueJumpSpeed = 0;
+          pvars->MobVars.MoveVars.JumpedThisAction = 1;
+          mobResetMoveStep(moby);
         }
 				break;
 			}
@@ -629,8 +661,7 @@ void swarmerDoAction(Moby* moby)
 
       if (!isInAirFromFlinching) {
         if (target) {
-          mobTurnTowards(moby, target->Position, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult * pvars->MobVars.Config.Speed, acceleration);
+          mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
         } else {
           // stand
           mobStand(moby);
@@ -675,6 +706,11 @@ void swarmerForceLocalAction(Moby* moby, int action)
     {
       // can't undie
       return;
+    }
+    case SWARMER_ACTION_JUMP:
+    {
+      pvars->MobVars.MoveVars.JumpedThisAction = 0;
+      break;
     }
 	}
 

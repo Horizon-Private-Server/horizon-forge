@@ -445,15 +445,15 @@ public class PathGraph : MonoBehaviour
         dataDefs += $"u8 {edgesJumpPadSpeedVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.JumpPad ? (int)edge.JumpPadSpeed : 0)},\n";
+            dataDefs += $"\t{(edge.JumpPad ? (int)Math.Ceiling(edge.JumpPadSpeed + 0.01) : 0)},\n";
         }
         dataDefs += "};\n\n";
 
         // build list of edge jump pad ats
-        dataDefs += $"u8 {edgesJumpPadAtVarName}[] = {{\n";
+        dataDefs += $"u16 {edgesJumpPadAtVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * 255) : 0)},\n";
+            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * ushort.MaxValue) : 0)},\n";
         }
         dataDefs += "};\n\n";
         dataDefs += ExportPathsAsC(varPrefix, out int longestPath);

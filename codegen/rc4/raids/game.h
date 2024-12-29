@@ -53,6 +53,7 @@
 #define MOB_BASE_SPEED_SCALE                  (0.05*1)
 #define MOB_BASE_HEALTH										    (30)
 #define MOB_BASE_HEALTH_SCALE                 (0.05*1)
+#define MOB_JUMP_MOVE_SPEED                   (10)
 
 #define MAX_MOB_AMMO_DROPS                    (10)
 #define MOB_SPECIAL_MUTATION_PROBABILITY		  (0.005)

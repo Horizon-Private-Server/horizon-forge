@@ -156,6 +156,8 @@ void swamperPostUpdate(Moby* moby)
     animSpeed = baseSpeed * 1.5;
   } else if (swamperIsDying(moby)) {
     animSpeed = baseSpeed;
+  } else if (moby->AnimSeqId == SWAMPER_ANIM_WALK) {
+    animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
   if (pvars->MobVars.Action == SWAMPER_ACTION_DIE) {
@@ -329,6 +331,9 @@ int swamperGetPreferredAction(Moby* moby, int * delayTicks)
   if (swamperIsFlinching(moby))
     return -1;
 
+  if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+    return -1;
+
 	if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
 		return SWAMPER_ACTION_WALK;
   }
@@ -483,12 +488,11 @@ void swamperDoAction(Moby* moby)
         if (!isInAirFromFlinching) {
           if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          mobJumpTowards(moby, t);
         }
 
         // handle jumping
-        if (pvars->MobVars.MoveVars.Grounded) {
+        if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, SWAMPER_ANIM_JUMP, 5);
 
           // check if we're near last jump pos
@@ -506,9 +510,12 @@ void swamperDoAction(Moby* moby)
           }
 
           //DPRINTF("jump %f\n", jumpSpeed);
+          vector_write(pvars->MobVars.MoveVars.Velocity, 0);
           pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
           pvars->MobVars.MoveVars.Grounded = 0;
           pvars->MobVars.MoveVars.QueueJumpSpeed = 0;
+          pvars->MobVars.MoveVars.JumpedThisAction = 1;
+          mobResetMoveStep(moby);
         }
 				break;
 			}
@@ -627,6 +634,11 @@ void swamperForceLocalAction(Moby* moby, int action)
     {
       // can't undie
       return;
+    }
+    case SWAMPER_ACTION_JUMP:
+    {
+      pvars->MobVars.MoveVars.JumpedThisAction = 0;
+      break;
     }
 	}
 

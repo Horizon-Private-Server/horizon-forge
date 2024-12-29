@@ -166,6 +166,8 @@ void leviathanPostUpdate(Moby* moby)
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (leviathanIsDying(moby)) {
     animSpeed = 1;
+  } else if (moby->AnimSeqId == LEVIATHAN_ANIM_WALK || moby->AnimSeqId == LEVIATHAN_ANIM_WALK_LEFT || moby->AnimSeqId == LEVIATHAN_ANIM_WALK_RIGHT) {
+    animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
   // scale up attack and walk animations by speed
@@ -173,10 +175,10 @@ void leviathanPostUpdate(Moby* moby)
     case LEVIATHAN_ANIM_SWING:
     case LEVIATHAN_ANIM_STAB_DOWN:
     case LEVIATHAN_ANIM_WALK:
+    case LEVIATHAN_ANIM_WALK_LEFT:
+    case LEVIATHAN_ANIM_WALK_RIGHT:
       {
         animSpeed *= (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
-        if (pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE)
-          animSpeed *= LEVIATHAN_CHASE_SPEED_MULT;
         break;
       }
   }
@@ -402,6 +404,9 @@ int leviathanGetPreferredAction(Moby* moby, int * delayTicks)
 		return -1;
 
   if (leviathanIsFlinching(moby))
+    return -1;
+
+  if (pvars->MobVars.Action == LEVIATHAN_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
     return -1;
 
 	if (pvars->MobVars.Action == LEVIATHAN_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
@@ -644,12 +649,11 @@ void leviathanDoAction(Moby* moby)
         if (!isInAirFromFlinching) {
           if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          mobJumpTowards(moby, t);
         }
 
         // handle jumping
-        if (pvars->MobVars.MoveVars.Grounded) {
+        if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, LEVIATHAN_ANIM_JUMP, 5);
           mobResetSoundTrigger(moby);
 
@@ -667,9 +671,12 @@ void leviathanDoAction(Moby* moby)
             jumpSpeed = 8; //clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
           }
 
+          vector_write(pvars->MobVars.MoveVars.Velocity, 0);
           pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
           pvars->MobVars.MoveVars.Grounded = 0;
           pvars->MobVars.MoveVars.QueueJumpSpeed = 0;
+          pvars->MobVars.MoveVars.JumpedThisAction = 1;
+          mobResetMoveStep(moby);
         }
 				break;
 			}
@@ -886,6 +893,11 @@ void leviathanForceLocalAction(Moby* moby, int action)
     {
       // can't undie
       return;
+    }
+    case LEVIATHAN_ACTION_JUMP:
+    {
+      pvars->MobVars.MoveVars.JumpedThisAction = 0;
+      break;
     }
 	}
 

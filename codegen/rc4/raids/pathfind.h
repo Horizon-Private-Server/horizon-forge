@@ -51,7 +51,7 @@ struct PathGraph
 	u8* EdgesRequired;
 	u8* EdgesPathFit;
 	u8* EdgesJumpSpeed;
-	u8* EdgesJumpAt;
+	u16* EdgesJumpAt;
 	u8* Paths;
   struct TargetCache TargetsCache[TARGETS_CACHE_COUNT];
   int LastTargetUpdatedIdx;
@@ -63,8 +63,10 @@ extern const int PathsCount;
 
 void pathTick(struct PathGraph* path);
 int pathUseTargetMoby(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
+int pathGetJumpFromPosition(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, VECTOR outPos, VECTOR outRot);
 int pathShouldJump(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
 float pathGetJumpSpeed(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
+u8* pathGetCurrentEdge(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars);
 void pathGetNodePosition(struct PathGraph* path, int nodeIdx, float preferredHeight, VECTOR output);
 int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct MobMoveVars* moveVars);
 void pathSetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd);

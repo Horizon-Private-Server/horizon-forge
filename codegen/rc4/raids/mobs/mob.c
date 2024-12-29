@@ -804,7 +804,7 @@ void mobMove(Moby* moby)
 
           // check if we've hit death barrier
           if (isOwner && mobCollisionIdIsLethal(CollLine_Fix_GetHitCollisionId())) {
-            pvars->MobVars.Respawn = 1;
+            pvars->MobVars.Destroy = 2;
           } else if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
             nextPosHasSafeGround = 1; // disable ledge if we're already on 
           }
@@ -910,8 +910,19 @@ void mobMove(Moby* moby)
   struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
   if (pathGetTargetPos(path, targetPos, moby, &pvars->MobVars.MoveVars) && isOwner)
     pvars->MobVars.Dirty = 1; // new path, sync with clients
-  vector_subtract(mobyToTargetDelta, targetPos, moby->Position);
-  if (vector_innerproduct(pvars->MobVars.MoveVars.Velocity, mobyToTargetDelta) > 0.5 && pathShouldJump(path, moby, &pvars->MobVars.MoveVars)) {
+
+  u8* edge = pathGetCurrentEdge(path, moby, &pvars->MobVars.MoveVars);
+  if (edge) {
+    pathGetNodePosition(path, edge[1], 0, mobyToTargetDelta);
+    vector_subtract(mobyToTargetDelta, mobyToTargetDelta, moby->Position);
+  } else {
+    vector_copy(mobyToTargetDelta, pvars->MobVars.MoveVars.Velocity);
+  }
+
+  VECTOR hVelocity;
+  vector_projectonhorizontal(mobyToTargetDelta, mobyToTargetDelta);
+  vector_projectonhorizontal(hVelocity, pvars->MobVars.MoveVars.Velocity);
+  if (vector_innerproduct(hVelocity, mobyToTargetDelta) > 0.5 && pathShouldJump(path, moby, &pvars->MobVars.MoveVars)) {
     pvars->MobVars.MoveVars.QueueJumpSpeed = pathGetJumpSpeed(path, moby, &pvars->MobVars.MoveVars);
   }
 
@@ -1075,6 +1086,15 @@ void mobAlterTarget(VECTOR out, Moby* moby, VECTOR forward, float amount)
 }
 
 //--------------------------------------------------------------------------
+float mobGetCurrentMoveSpeed(Moby* moby)
+{
+  VECTOR hVelocity;
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  vector_projectonhorizontal(hVelocity, pvars->MobVars.MoveVars.Velocity);
+  return (vector_length(hVelocity) / (pvars->MobVars.Config.Speed * MATH_DT));
+}
+
+//--------------------------------------------------------------------------
 void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir)
 {
   VECTOR t, t2;
@@ -1101,11 +1121,25 @@ void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSp
     deltaYaw = mobTurnTowards(moby, t, turnSpeed);
   }
 
-  if (fabsf(deltaYaw) > (45*MATH_DEG2RAD)) {
-    speed *= lerpf(0.75, 0, fabsf(deltaYaw) / MATH_PI);
+  float yawLerpT = fabsf(deltaYaw) / MATH_PI;
+  if (yawLerpT > 0.25) {
+    float yt = clamp(yawLerpT+0.25, 0, 1);
+    speed *= lerpf(1, 0, yt);
   }
   
   mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, speed, acceleration);
+}
+
+//--------------------------------------------------------------------------
+void mobJumpTowards(Moby* moby, VECTOR targetPosition)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float speedCurve = lerpf(0, 1, clamp(pvars->MobVars.CurrentActionForTicks / (float)TPS, 0, 1));
+  if (pvars->MobVars.MoveVars.Velocity[2] < 0) {
+    mobMoveTowards(moby, targetPosition, MOB_JUMP_MOVE_SPEED*0.5, 45 * MATH_DEG2RAD, 10, 0);
+  } else {
+    mobMoveTowards(moby, targetPosition, MOB_JUMP_MOVE_SPEED, 180 * MATH_DEG2RAD, 10 * speedCurve, 0);
+  }
 }
 
 //--------------------------------------------------------------------------

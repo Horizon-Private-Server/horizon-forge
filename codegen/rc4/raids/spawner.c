@@ -40,7 +40,7 @@
 #define DLOG(moby, format, ...) if (((struct SpawnerPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
 
 int spawnerInitialized = 0;
-int spawnerInitializedTime = 0;
+int spawnerInitializedTicks = 0;
 int spawnerNumLastActive = 0;
 int spawnerNumActive = 0;
 int spawnerTicksSinceLastDelete = 0;
@@ -344,7 +344,7 @@ void spawnerUpdate(Moby* moby)
 
   // add delay after game loads before spawners start spawning
   // to try and mitigate lag/crashing at the start
-  if ((gameGetTime() - spawnerInitializedTime) < (1*TIME_SECOND)) return;
+  if (spawnerInitializedTicks) return;
 
   // check if completed
   if (moby->State != SPAWNER_STATE_COMPLETED && spawnerIsCompleted(moby)) {
@@ -434,7 +434,10 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
     // pass to mob
     // let mob override respawn logic
     if (!childPVars->VTable->OnRespawn || childPVars->VTable->OnRespawn(childMoby)) {
-      spawnerDestroyMob(moby, childMoby, userdata, 1);
+      if (spawnerSpawn(moby, userdata, guberGetUID(childMoby))) {
+        spawnerDestroyMob(moby, childMoby, userdata, 0);
+      }
+      //spawnerDestroyMob(moby, childMoby, userdata, 1);
     }
 
     childPVars->MobVars.Respawn = 0;
@@ -735,6 +738,7 @@ void spawnerTryDespawnMob(Moby* moby, float maxMobsAllocatedPerSpawner)
 //--------------------------------------------------------------------------
 void spawnerStart(void)
 {
+  decTimerU32(&spawnerInitializedTicks);
   spawnerTicksSinceLastDelete++;
   spawnerInitialized = 1;
   spawnerNumLastActive = spawnerNumActive;
@@ -807,14 +811,21 @@ void spawnerStart(void)
         continue;
 
       // verify point is walkable
-      if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId()))
+      if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
+        DPRINTF("bad collision %02X\n", CollLine_Fix_GetHitCollisionId());
         continue;
+      }
 
       // check ground slope
       VECTOR groundNormal, tangent;
       vector_normalize(groundNormal, CollLine_Fix_GetHitNormal());
-      float groundSlope = asinf(vector_innerproduct(up, groundNormal));
+      float groundSlope = acosf(vector_innerproduct(up, groundNormal));
       if (fabsf(groundSlope) > (35*MATH_DEG2RAD)) {
+#if DEBUG
+        printf("bad slope %f.. ", groundSlope);
+        vector_print(groundNormal);
+        printf("\n");
+#endif
         continue;
       }
 
@@ -863,6 +874,6 @@ void spawnerInit(void)
 		++moby;
 	}
 
-  spawnerInitializedTime = gameGetTime();
+  spawnerInitializedTicks = TPS;
   DPRINTF("spawner pvar size %d\n", sizeof(struct SpawnerPVar));
 }

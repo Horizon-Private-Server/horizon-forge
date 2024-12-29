@@ -160,6 +160,8 @@ void executionerPostUpdate(Moby* moby)
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (executionerIsDying(moby)) {
     animSpeed = baseSpeed;
+  } else if (moby->AnimSeqId == EXECUTIONER_ANIM_WALK) {
+    animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
 	if ((moby->DrawDist == 0 && pvars->MobVars.Action == EXECUTIONER_ACTION_WALK)) {
@@ -377,6 +379,9 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
   if (executionerIsFlinching(moby))
     return -1;
 
+  if (pvars->MobVars.Action == EXECUTIONER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+    return -1;
+
 	if (pvars->MobVars.Action == EXECUTIONER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
 		return EXECUTIONER_ACTION_WALK;
   }
@@ -586,12 +591,11 @@ void executionerDoAction(Moby* moby)
         if (!isInAirFromFlinching) {
           if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          mobJumpTowards(moby, t);
         }
 
         // handle jumping
-        if (pvars->MobVars.MoveVars.Grounded) {
+        if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, EXECUTIONER_ANIM_JUMP, 5);
           mobResetSoundTrigger(moby);
 
@@ -609,9 +613,12 @@ void executionerDoAction(Moby* moby)
             jumpSpeed = 8; //clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
           }
 
+          vector_write(pvars->MobVars.MoveVars.Velocity, 0);
           pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
           pvars->MobVars.MoveVars.Grounded = 0;
           pvars->MobVars.MoveVars.QueueJumpSpeed = 0;
+          pvars->MobVars.MoveVars.JumpedThisAction = 1;
+          mobResetMoveStep(moby);
         }
 				break;
 			}
@@ -731,12 +738,12 @@ void executionerDoDamage(Moby* moby, float radius, float amount, int damageFlags
 {
   MATRIX mFrom, mTo;
   VECTOR from, to;
-  mobyGetJointMatrix(moby, EXECUTIONER_SUBSKELETON_JOINT_RIGHT_HAND, mFrom);
+  //mobyGetJointMatrix(moby, EXECUTIONER_SUBSKELETON_JOINT_RIGHT_HAND, mFrom);
   mobyGetJointMatrix(moby, EXECUTIONER_SUBSKELETON_JOINT_STAFF_END, mTo);
-  vector_copy(from, &mFrom[12]);
+  //vector_copy(from, &mFrom[12]);
   vector_copy(to, &mTo[12]);
 
-  mobDoSweepDamage(moby, moby, from, to, 0.25, radius, amount, damageFlags, friendlyFire, 0, 0);
+  mobDoSweepDamage(moby, moby, moby->Position, to, 0.25, radius, amount, damageFlags, friendlyFire, 0, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -762,6 +769,11 @@ void executionerForceLocalAction(Moby* moby, int action)
     {
       // can't undie
       return;
+    }
+    case EXECUTIONER_ACTION_JUMP:
+    {
+      pvars->MobVars.MoveVars.JumpedThisAction = 0;
+      break;
     }
 	}
 
