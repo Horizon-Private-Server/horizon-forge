@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using DotNet.Testcontainers.Images;
+
 
 #if DOCKER
 
@@ -95,6 +97,7 @@ public class DockerManager : MonoBehaviour
         ContainerBuilder builder = new ContainerBuilder()
               // use particular version always 
               .WithImage("dnawrkshp/ps2dev-libdl:latest")
+              .WithImagePullPolicy(PullPolicy.Always)
               // name it nicely
               .WithName("FORGE_PS2DEV")
               .WithBindMount(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, FolderNames.BinaryFolder)), "/levels")
@@ -103,10 +106,9 @@ public class DockerManager : MonoBehaviour
               //.WithWaitStrategy(Wait.ForUnixContainer())
               //.WithReuse(true)
               .WithCleanUp(true)
+              .WithReuse(true)
               .WithEntrypoint(SleepInfinity)
               .WithOutputConsumer(Consume.RedirectStdoutAndStderrToConsole());
-
-        container =
 
         //builder = builder.WithPortBinding(5432, 5432);
         container = builder.Build();
