@@ -85,6 +85,9 @@ void checkpointSetCuboid(Moby* moby)
 //--------------------------------------------------------------------------
 void checkpointUpdate(Moby* moby)
 {
+  // wait for all clients to be ready before triggering anything
+  if (!MapConfig.ClientsReady) return;
+
   // detect when state was changed
   if ((moby->Triggers & 1) == 0) {
     checkpointOnStateChanged(moby);
@@ -220,7 +223,7 @@ int checkpointHandleEvent(Moby* moby, GuberEvent* event)
 //--------------------------------------------------------------------------
 void checkpointStart(void)
 {
-
+  
 }
 
 //--------------------------------------------------------------------------
@@ -283,7 +286,6 @@ void checkpointInit(void)
       if (managerPvars && checkpointCount < CHECKPOINT_MAX_CHECKPOINTS) {
 
         managerPvars->CheckpointMobys[checkpointCount] = moby;
-        checkpointCount++;
         
         // set default state
         if (managerPvars->DefaultCheckpointMoby == moby) {
@@ -291,11 +293,12 @@ void checkpointInit(void)
           DLOG_CHPT(moby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
           //checkpointSetActive(moby);
           checkpointSetCuboid(moby);
-          mobySetState(checkpointManagerMoby, checkpointCount-1, -1);
+          mobySetState(checkpointManagerMoby, checkpointCount, -1);
           mobySetState(moby, CHECKPOINT_ACTIVE, -1);
           //checkpointUpdate(moby);
         }
 
+        checkpointCount++;
       }
     }
 
