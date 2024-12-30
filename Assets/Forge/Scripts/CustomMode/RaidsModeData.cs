@@ -74,6 +74,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
         var enabledMobs = Mobs.Where(x => !x.Disabled);
 
+        state.SeparateCodeFile = true;
+
         // copy raids base code
         CodeManager.CopySourceFilesIntoWorkingDirectory(FolderNames.GetCodeGenFolder(RCVER.DL, "raids"), buildFolder);
 

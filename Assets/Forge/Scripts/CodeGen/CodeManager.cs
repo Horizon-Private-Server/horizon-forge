@@ -64,7 +64,6 @@ public class CodeManager : MonoBehaviour
         var outIncludeDir = Path.Combine(outDir, FolderNames.CodeBuildIncludeFolder);
         var outSrcDir = Path.Combine(outDir, FolderNames.CodeBuildSrcFolder);
         var cMainPath = Path.Combine(outSrcDir, "main.c");
-        var makefilePath = Path.Combine(outDir, "Makefile");
 
         // build src dir
         if (!Directory.Exists(outIncludeDir)) Directory.CreateDirectory(outIncludeDir);
@@ -92,13 +91,24 @@ public class CodeManager : MonoBehaviour
             ;
         File.WriteAllText(cMainPath, cMainContent);
 
+        // update linkfile
+        var linkfilePath = Path.Combine(outDir, "linkfile");
+        var linkfileContent = File.ReadAllText(linkfilePath)
+            .Replace("##ADDRESS##", state.SeparateCodeFile ? "0x01A00000" : "0x01EF0000")
+            ;
+        File.WriteAllText(linkfilePath, linkfileContent);
+
+
         // update makefile
-        var makefileContent = File.ReadAllText(makefilePath)
+        var makefileInPath = Path.Combine(outDir, state.SeparateCodeFile ? "Makefile.code" : "Makefile");
+        var makefileOutPath = Path.Combine(outDir, "Makefile");
+        var makefileContent = File.ReadAllText(makefileInPath)
             .Replace("##EEOBJS##", string.Join(" ", state.ObjectFiles))
             .Replace("##EELDFLAGS##", string.Join(" ", state.LDFlags))
             .Replace("##EEBUILD##", state.Debug ? "DEBUG" : "RELEASE")
+            .Replace("##MAPNAME##", mapConfig.MapFilename)
             ;
-        File.WriteAllText(makefilePath, makefileContent);
+        File.WriteAllText(makefileOutPath, makefileContent);
 
         // write hook
         File.WriteAllBytes(Path.Combine(outDir, "hook.bin"), BitConverter.GetBytes(0x08000000 | (0x01EF0000 >> 2)));
@@ -167,6 +177,7 @@ public class CodeManager : MonoBehaviour
 public class CodeGenState
 {
     public bool Debug { get; set; } = false;
+    public bool SeparateCodeFile { get; set; } = false;
 
     // main.c
     public List<string> Includes { get; set; } = new List<string>();
