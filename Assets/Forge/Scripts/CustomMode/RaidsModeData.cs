@@ -115,10 +115,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
 
-        if (DebugPath)
-            state.LDFlags.Add("-DDEBUGPATH");
-        if (DebugMove)
-            state.LDFlags.Add("-DDEBUGMOVE");
+        if (state.Debug)
+        {
+            if (DebugPath)
+                state.LDFlags.Add("-DDEBUGPATH");
+            if (DebugMove)
+                state.LDFlags.Add("-DDEBUGMOVE");
+        }
 
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");

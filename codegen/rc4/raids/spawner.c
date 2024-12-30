@@ -817,9 +817,9 @@ void spawnerStart(void)
       }
 
       // check ground slope
-      VECTOR groundNormal, tangent;
+      VECTOR groundNormal, tangent, groundUp = {0,0,1,0};
       vector_normalize(groundNormal, CollLine_Fix_GetHitNormal());
-      float groundSlope = acosf(vector_innerproduct(up, groundNormal));
+      float groundSlope = acosf(vector_innerproduct(groundUp, groundNormal));
       if (fabsf(groundSlope) > (35*MATH_DEG2RAD)) {
 #if DEBUG
         printf("bad slope %f.. ", groundSlope);
