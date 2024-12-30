@@ -14,7 +14,7 @@ public class PathGraph : MonoBehaviour
     [SerializeField, HideInInspector]
     private List<PathGraphNode> _cachedNodes;
 
-    public string VarName = "Mob";
+    [Min(1)] public int MaxExportedPathLength = 3;
     public List<PathGraphEdge> Edges = new List<PathGraphEdge>();
 
     public void RefreshCache()
@@ -475,7 +475,7 @@ public class PathGraph : MonoBehaviour
   }},";
     }
 
-    public string ExportPathsAsC(string varPrefix, out int longestPath, int maxPathSize = 3)
+    public string ExportPathsAsC(string varPrefix, out int longestPath)
     {
         var str = "";
         var edgeIdxs = new List<int>();
@@ -515,8 +515,8 @@ public class PathGraph : MonoBehaviour
         }
 
         // limit longest path
-        if (longestPath > maxPathSize)
-            longestPath = maxPathSize;
+        if (longestPath > MaxExportedPathLength)
+            longestPath = MaxExportedPathLength;
 
         // count unique paths
         //var uniquePaths = new HashSet<string>();
