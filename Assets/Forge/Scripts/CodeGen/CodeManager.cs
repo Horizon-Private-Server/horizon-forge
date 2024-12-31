@@ -94,7 +94,7 @@ public class CodeManager : MonoBehaviour
         // update linkfile
         var linkfilePath = Path.Combine(outDir, "linkfile");
         var linkfileContent = File.ReadAllText(linkfilePath)
-            .Replace("##ADDRESS##", state.SeparateCodeFile ? "0x01A00000" : "0x01EF0000")
+            .Replace("##ADDRESS##", state.SeparateCodeFile ? "0x01B80000" : "0x01EF0000")
             ;
         File.WriteAllText(linkfilePath, linkfileContent);
 
