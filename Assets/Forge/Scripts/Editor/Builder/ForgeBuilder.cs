@@ -224,6 +224,11 @@ public static class ForgeBuilder
                     Region = region
                 };
 
+                // reset build dir
+                var buildPath = FolderNames.GetMapBuildFolder(ctx.MapSceneName, ctx.RacVersion);
+                if (Directory.Exists(buildPath)) Directory.Delete(buildPath, true);
+                Directory.CreateDirectory(buildPath);
+
                 // run generators
                 UnityHelper.RunGeneratorsPreBake(BakeType.BUILD);
 
@@ -350,12 +355,14 @@ public static class ForgeBuilder
         if (!Directory.Exists(buildPath)) Directory.CreateDirectory(buildPath);
 
         // copy files
-        if (File.Exists(wadPath)) File.Copy(wadPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.wad"), true);
-        if (!string.IsNullOrEmpty(worldPath) && File.Exists(worldPath)) File.Copy(worldPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.world"), true);
-        if (File.Exists(soundPath)) File.Copy(soundPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.sound"), true);
+        if (File.Exists(wadPath)) IOHelper.CopyFile(wadPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.wad"));
+        if (!string.IsNullOrEmpty(worldPath) && File.Exists(worldPath)) IOHelper.CopyFile(worldPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.world"));
+        if (File.Exists(soundPath)) IOHelper.CopyFile(soundPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.sound"));
 
         // build version file
-        using (var fs = File.Create(Path.Combine(buildPath, $"{mapConfig.MapFilename}.version")))
+        var versionPath = Path.Combine(buildPath, $"{mapConfig.MapFilename}.version");
+        if (File.Exists(versionPath)) File.Delete(versionPath);
+        using (var fs = File.Create(versionPath))
         {
             using (var writer = new BinaryWriter(fs))
             {
@@ -454,6 +461,7 @@ public static class ForgeBuilder
                 System.IO.File.WriteAllBytes(tempPngPath, bytes);
 
                 var outBgFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.bg");
+                if (File.Exists(outBgFile)) File.Delete(outBgFile);
                 var result = PackerHelper.ConvertPngToLoadingScreen(tempPngPath, outBgFile);
                 if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                 {
@@ -1918,6 +1926,8 @@ public static class ForgeBuilder
         var outGlbFile = Path.Combine(buildFolder, $"{mapConfig.MapFilename}.dzo.glb");
         var outMetadataFile = Path.Combine(buildFolder, $"{mapConfig.MapFilename}.dzo.json");
         if (!Directory.Exists(buildFolder)) Directory.CreateDirectory(buildFolder);
+        if (File.Exists(outGlbFile)) File.Delete(outGlbFile);
+        if (File.Exists(outMetadataFile)) File.Delete(outMetadataFile);
 
         // export glb
         // export metadata on success

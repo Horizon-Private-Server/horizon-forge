@@ -25,4 +25,11 @@ public static class IOHelper
             File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
         }
     }
+
+    public static void CopyFile(string sourceFile, string destFile)
+    {
+        if (File.Exists(destFile)) File.Delete(destFile);
+
+        File.Copy(sourceFile, destFile);
+    }
 }
