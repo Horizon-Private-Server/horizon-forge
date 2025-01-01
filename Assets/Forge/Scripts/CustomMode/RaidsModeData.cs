@@ -28,10 +28,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly float[] DIFFICULTY_FACTORS = new float[]
     {
         0,
-        10,
+        25,
         150,
-        1000,
-        3000
+        500,
+        1250
     };
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
