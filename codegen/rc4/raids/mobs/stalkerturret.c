@@ -143,6 +143,10 @@ void stalkerturretPostUpdate(Moby* moby)
   else
     decTimerU8(&turretVars->GatlingDelay2);
 
+  // apply draw dist
+  if (turretVars->BaseMoby) turretVars->BaseMoby->DrawDist = moby->DrawDist;
+  if (turretVars->TurretMoby) turretVars->TurretMoby->DrawDist = moby->DrawDist;
+
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
     u32 color = colorLerp(STALKERTURRET_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);

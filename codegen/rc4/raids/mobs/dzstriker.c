@@ -156,6 +156,9 @@ void dzstrikerPostUpdate(Moby* moby)
   } else {
     torsoMoby->PrimaryColor = moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
   }
+  
+  // apply draw dist
+  torsoMoby->DrawDist = moby->DrawDist;
 
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.5;

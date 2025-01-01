@@ -3,7 +3,7 @@
 
 #include "game.h"
 
-#define DZSTRIKER_RENDER_COST                    (150)
+#define DZSTRIKER_RENDER_COST                    (300)
 
 #define DZSTRIKER_BASE_REACTION_TICKS						(0.25 * TPS)
 #define DZSTRIKER_BASE_ATTACK_COOLDOWN_TICKS			(2 * TPS)
