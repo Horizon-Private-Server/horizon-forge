@@ -21,6 +21,7 @@
 #include "checkpoint.h"
 #include "mob.h"
 #include "game.h"
+#include "shared.h"
 #include "maputils.h"
 
 extern struct RaidsMapConfig MapConfig;

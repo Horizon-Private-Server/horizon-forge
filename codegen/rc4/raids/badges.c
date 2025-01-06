@@ -102,7 +102,7 @@ void badgesUpdate_AmmoRegen(Player* player, float strength)
     int equippedGadgetMaxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, equippedGadgetId);
     if (equippedGadgetMaxAmmo) {
       int equippedGadgetAmmo = player->GadgetBox->Gadgets[equippedGadgetId].Ammo;
-      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*(strength+1)*5;
+      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*strength*5;
       if (newAmmo > equippedGadgetMaxAmmo) newAmmo = equippedGadgetMaxAmmo;
       if (newAmmo != equippedGadgetAmmo) {
         player->GadgetBox->Gadgets[equippedGadgetId].Ammo = newAmmo;

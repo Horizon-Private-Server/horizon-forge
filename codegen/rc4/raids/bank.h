@@ -102,8 +102,8 @@ typedef struct RaidsPlayerInventory
 
 typedef struct RaidsPlayerAccount
 {
-  u64 Experience;
-  u64 WeaponXp[WEAPON_SLOT_COUNT-1];
+  double WeaponXp[WEAPON_SLOT_COUNT-1];
+  u32 Experience;
   u32 Bolts;
   u32 SkillPoints;
   u16 Skills[RAIDS_SKILLS_COUNT];
@@ -161,10 +161,10 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize);
 u32 bankGetBolts(void);
 u32 bankAddBolts(u32 amount);
 u32 bankSubtractBolts(u32 amount);
-u64 bankGetXP(void);
-u64 bankAddXP(u64 amount);
-u64 bankGetWeaponXP(int gadgetId);
-u64 bankAddWeaponXP(u64 amount, int gadgetId);
+u32 bankGetXP(void);
+u32 bankAddXP(u32 amount);
+double bankGetWeaponXP(int gadgetId);
+double bankAddWeaponXP(double amount, int gadgetId);
 
 void bankRequestInventoryFromServer(void);
 void bankSendInventoryToServer(void);

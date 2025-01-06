@@ -437,7 +437,7 @@ int bankTryChargeLocalAccount(Player* player, u32 cost)
 }
 
 //--------------------------------------------------------------------------
-int getLevelFromXp(u64 xp)
+int getLevelFromXp(u32 xp)
 {
   if (xp < 0) return 0;
 
@@ -448,7 +448,7 @@ int getLevelFromXp(u64 xp)
 }
 
 //--------------------------------------------------------------------------
-u64 getXpForLevel(int level)
+u32 getXpForLevel(int level)
 {
   if (level > LEVELUP_MAX_LEVEL) level = LEVELUP_MAX_LEVEL;
   if (level <= 0) return 0;
@@ -457,26 +457,10 @@ u64 getXpForLevel(int level)
 }
 
 //--------------------------------------------------------------------------
-int getProficiencyFromXp(u64 xp)
+int getProficiencyFromXp(double xp)
 {
-  if (xp < 0) return 0;
-
-  // (500 (2/3)^(1/3))/(sqrt(3) sqrt(27 x^2 + 500000000) - 9 x)^(1/3) - (sqrt(3) sqrt(27 x^2 + 500000000) - 9 x)^(1/3)/(2^(1/3) 3^(2/3))
-  // Constants
-  const double c1 = 0.87358046;                 // (2/3)^(1/3)
-  const double c2 = 1.25992104;                 // 2^(1/3)
-  const double c3 = 2.08008382;                 // 3^(2/3)
-  const double sqrt3 = 1.73205080;              // sqrt(3)
-
-  // Calculate the inner term
-  double inner = sqrt3 * sqrt((double)27.0 * xp * xp + 500000000.0) - (double)9.0 * xp;
-  
-  // Compute the two terms
-  double term1 = (double)500.0 * c1 / pow(inner, (double)1.0 / (double)3.0);
-  double term2 = pow(inner, (double)1.0 / (double)3.0) / (c2 * c3);
-
-  // Final result
-  double level = term1 - term2;
+  // 1/32 (-125 + sqrt(16x + 15625))
+  double level = ((sqrt((double)16.0 * xp + (double)15625.0)) - (double)125.0) / (double)32.0;
   
   if (level < 0) return 0;
   if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
@@ -484,11 +468,11 @@ int getProficiencyFromXp(u64 xp)
 }
 
 //--------------------------------------------------------------------------
-u64 getXpForProficiency(int proficiency)
+double getXpForProficiency(int proficiency)
 {
   if (proficiency > LEVELUP_MAX_LEVEL) proficiency = LEVELUP_MAX_LEVEL;
   if (proficiency <= 0) return 0;
-  return (u64)((double)powf(1*proficiency, 3) + 500*proficiency);
+  return (double)powf(8*proficiency, 2) + 500*proficiency;
 }
 
 //--------------------------------------------------------------------------

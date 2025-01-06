@@ -222,7 +222,7 @@ public class Cuboid : RenderSelectionBase
 
     public void Write(BinaryWriter writer)
     {
-        var worldMatrix = Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.localScale);
+        var worldMatrix = this.transform.localToWorldMatrix; //Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.lossyScale);
         var trs = worldMatrix.SwizzleXZY();
         var inverse = worldMatrix.inverse.SwizzleXZY();
         var offset = writer.BaseStream.Position;

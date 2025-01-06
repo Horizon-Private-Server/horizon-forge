@@ -164,7 +164,7 @@ void swamperPostUpdate(Moby* moby)
     animSpeed = baseSpeed;
   }
 
-	if ((moby->DrawDist == 0 && pvars->MobVars.Action == SWAMPER_ACTION_WALK)) {
+	if ((moby->DrawDist == 0 && !swamperIsAttacking(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -178,7 +178,7 @@ void swamperPostDraw(Moby* moby)
     return;
     
   u32 color = SWAMPER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 0);
+  mobPostDrawQuad(moby, 127, color, SWAMPER_SUBSKELETON_JOINT_JAW);
 }
 
 //--------------------------------------------------------------------------
@@ -221,6 +221,9 @@ void swamperOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
     
 	// set colors before death so that the corn has the correct color
 	moby->PrimaryColor = SWAMPER_PRIMARY_COLOR;
+  
+  // spawn corn
+  mobBlowCorn(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -331,10 +334,10 @@ int swamperGetPreferredAction(Moby* moby, int * delayTicks)
   if (swamperIsFlinching(moby))
     return -1;
 
-  if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+  if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
     return -1;
 
-	if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
+	if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
 		return SWAMPER_ACTION_WALK;
   }
 

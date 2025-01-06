@@ -169,7 +169,7 @@ void stalkerturretPostDraw(Moby* moby)
     return;
     
   u32 color = STALKERTURRET_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  mobPostDrawQuad(moby, 127, color, STALKERTURRET_SUBSKELETON_JOINT_0);
 }
 
 //--------------------------------------------------------------------------
@@ -246,6 +246,12 @@ void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   if (!moby || !moby->PVar)
     return;
     
+	// set colors before death so that the corn has the correct color
+	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
+  
+  // spawn corn
+  //mobBlowCorn(moby);
+
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
   if (turretVars && turretVars->TurretMoby && !mobyIsDestroyed(turretVars->TurretMoby)) {
@@ -256,14 +262,6 @@ void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
     mobyDestroy(turretVars->BaseMoby);
     turretVars->BaseMoby = NULL;
   }
-
-	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
-  
-	// limit corn spawning to prevent freezing/framelag
-	if (MapConfig.State && MapConfig.State->MobStats.TotalAlive < 30 && killedByPlayerId >= 0) {
-		//mobSpawnCorn(moby, STALKERTURRET_BANGLE_LARM | STALKERTURRET_BANGLE_RARM | STALKERTURRET_BANGLE_LLEG | STALKERTURRET_BANGLE_RLEG | STALKERTURRET_BANGLE_RFOOT | STALKERTURRET_BANGLE_HIPS);
-	}
 }
 
 //--------------------------------------------------------------------------

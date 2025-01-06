@@ -3493,6 +3493,7 @@
       "Destroyed": -1,
       "Off": 0,
       "On": 1,
+      "Paused": 2,
       "Complete": 127
     },
     "Overlay": [
@@ -3796,10 +3797,20 @@
               "No Players": 4,
               "Any NPC": 8,
               "All NPCs": 16,
-              "No NPCs": 32
+              "No NPCs": 32,
+              "Moby": 64
             },
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "2" }
+            ]
+          },
+          {
+            "Name": "Moby",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "2" },
+              { "Field": "Trigger By", "Op": "&=", "Value": "64" }
             ]
           },
           {

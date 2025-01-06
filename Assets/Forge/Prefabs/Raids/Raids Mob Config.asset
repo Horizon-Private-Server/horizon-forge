@@ -30,9 +30,9 @@ MonoBehaviour:
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 3
+    Speed: 2.5
     SpeedMax: 7.5
-    SpeedScale: 0.5
+    SpeedScale: 0.1
     Health: 15
     HealthMax: 0
     HealthScale: 1

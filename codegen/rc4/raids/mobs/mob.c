@@ -107,32 +107,45 @@ int mobAmIOwner(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void mobSpawnCorn(Moby* moby, int bangle)
+void mobBlowCorn(Moby* moby)
 {
-#if MOB_CORN
-	mobyBlowCorn(
-			moby
-		, bangle
-		, 0
-		, 3.0
-		, 6.0
-		, 3.0
-		, 6.0
-		, -1
-		, -1.0
-		, -1.0
-		, 255
-		, 1
-		, 0
-		, 1
-		, 1.0
-		, 0x23
-		, 3
-		, 1.0
-		, NULL
-		, 0
-		);
-#endif
+  static int alt = 0;
+  int lod = 2;
+  if (!MapConfig.State) return;
+  if (!moby || !moby->PClass) return;
+  if (mobyIsDestroyed(moby)) return;
+  if (PATCH_INTEROP && PATCH_INTEROP->Config)
+    lod = PATCH_INTEROP->Config->levelOfDetailMobs;
+  
+  int cornCob = *(short*)(moby->PClass + 0x2e);
+  if (!cornCob) return;
+
+  alt = !alt;
+  if (!lod) return;
+  if (lod == 1 && !alt) return;
+
+  mobyBlowCorn(
+    moby
+  , cornCob
+  , 0
+  , 3.0
+  , 6.0
+  , 7.0
+  , 10.0
+  , -1
+  , -1.0
+  , 0
+  , TPS
+  , 0
+  , 0
+  , 0
+  , 1.0
+  , 0x23
+  , 0
+  , 1.0
+  , NULL
+  , 1 // no collision physics
+  );
 }
 
 //--------------------------------------------------------------------------
@@ -238,7 +251,7 @@ int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR joi
   } else {
     if (targetVars) {
       vector_scale(hitMobyCenter, hitMoby->M2_03, targetVars->targetHeight);
-      hitHeight = targetVars->targetHeight;
+      hitHeight = 1 + maxf(targetVars->targetHeight, hitHeight);
     }
     
     hitMobyCollRadius = (hitMoby->BSphere[3] / 1024.0) * 2;

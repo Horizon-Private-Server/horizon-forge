@@ -44,6 +44,7 @@ int moverInitialized = 0;
 float moverGetT(Moby* moby)
 {
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  if (moby->State == MOVER_STATE_PAUSED) return pvars->State.TimePausedT;
   return (gameGetTime() - pvars->State.TimeStarted) / 1000.0;
 }
 
@@ -286,7 +287,9 @@ void moverOnStateChanged(Moby* moby)
   
   if (moby->State == MOVER_STATE_ACTIVATED) {
     //pvars->State.TimeStarted = time;
-    moverInitSpline(moby);
+    //moverInitSpline(moby);
+  } else if (moby->State == MOVER_STATE_PAUSED) {
+
   } else {
     memset(&pvars->State, 0, sizeof(pvars->State));
     pvars->State.TimeStarted = -1;
@@ -408,15 +411,24 @@ int moverHandleEvent_SetState(Moby* moby, GuberEvent* event)
   if (!moby || !moby->PVar)
     return 0;
 
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  int lastState = moby->State;
+  float moverT = moverGetT(moby);
+
 	// read event
 	guberEventRead(event, &state, 4);
 	guberEventRead(event, &time, 4);
   mobySetState(moby, state, -1);
-
-  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   pvars->Init = 1;
-  if (moby->State == MOVER_STATE_ACTIVATED) {
+  
+  // resume
+  if (lastState == MOVER_STATE_PAUSED && state == MOVER_STATE_ACTIVATED) {
+    pvars->State.TimeStarted = time - (int)(moverT * 1000);
+  } else if (moby->State == MOVER_STATE_ACTIVATED) {
     pvars->State.TimeStarted = time;
+    moverInitSpline(moby);
+  } else if (moby->State == MOVER_STATE_PAUSED) {
+    pvars->State.TimePausedT = moverT;
   }
 
   return 0;

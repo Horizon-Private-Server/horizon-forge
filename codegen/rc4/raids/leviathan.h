@@ -40,6 +40,7 @@
 
 #define LEVIATHAN_LASER_EXHAUSTED_ANIM_LOOP      (2)
 #define LEVIATHAN_LASER_FIRE_FOR_TICKS           (3 * TPS)
+#define LEVIATHAN_LASER_FIRE_CYCLE_TICKS         (0.5 * TPS)
 #define LEVIATHAN_LASER_MAX_ANGLE                (80 * MATH_DEG2RAD)
 #define LEVIATHAN_LASER_COOLDOWN_TICKS_MIN       (2 * TPS)
 #define LEVIATHAN_LASER_COOLDOWN_TICKS_MAX       (20 * TPS)
@@ -104,6 +105,7 @@ enum LeviathanAction
 	LEVIATHAN_ACTION_ATTACK_STAB,
 	LEVIATHAN_ACTION_ATTACK_PROJECTILE,
 	LEVIATHAN_ACTION_ATTACK_LASER,
+	LEVIATHAN_ACTION_ATTACK_LASER_LOCKON,
 	LEVIATHAN_ACTION_ROAM,
 };
 
@@ -124,8 +126,11 @@ enum LeviathanBehaviorId
 
 typedef struct LeviathanMobVars {
   VECTOR LaserbeamDirection;
+  VECTOR LaserbeamTarget1;
+  VECTOR LaserbeamTarget2;
   Moby* LaserbeamMoby;
   u32 AttackLaserCooldownTicks;
+  int LaserAtTicks;
 } LeviathanMobVars_t;
 
 extern struct MobVTable LeviathanVTable;

@@ -97,6 +97,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   SpawnPoint* triggerCuboid = spawnPointGet(cuboidIdx);
   int pSucceeded = 0, pCount = 0;
   int npcSucceeded = 0, npcCount = 0;
+  int mobySucceeded = 0, mobyCount = 0;
 
   // no trigger by
   if (cuboidIdx < 0) return 0;
@@ -142,12 +143,28 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
     }
   }
 
+  if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_MOBY) {
+    Moby* condMoby = condition->Moby;
+    if (condMoby && !mobyIsDestroyed(condMoby)) {
+        
+      // check if moby is inside the cuboid
+      int isInside = spawnPointIsPointInside(triggerCuboid, condMoby->Position, NULL);
+      if (isInside != condition->Cuboid.InteractType) {
+        ++mobySucceeded;
+        pvars->State.TriggeredByMoby = condMoby;
+      }
+
+      ++mobyCount;
+    }
+  }
+
   int hasAnyPlayer = pSucceeded > 0 && pCount > 0;
   int hasAllPlayers = pSucceeded > 0 && pSucceeded == pCount;
   int hasNoPlayers = pSucceeded == 0 && pCount > 0;
   int hasAnyNpc = npcSucceeded > 0 && npcCount > 0;
   int hasAllNpcs = npcSucceeded > 0 && npcSucceeded == npcCount;
   int hasNoNpcs = npcSucceeded == 0; // && npcCount > 0;
+  int hasMoby = mobySucceeded > 0 && mobyCount > 0;
   int succeeded = 0, count = 0;
 
   for (j = 0; j < 8; ++j) {
@@ -160,6 +177,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
         case CONTROLLER_CUBOID_TRIGGER_BY_ANY_NPC: succeeded += hasAnyNpc; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS: succeeded += hasAllNpcs; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS: succeeded += hasNoNpcs; break;
+        case CONTROLLER_CUBOID_TRIGGER_BY_MOBY: succeeded += hasMoby; break;
       }
       ++count;
     }

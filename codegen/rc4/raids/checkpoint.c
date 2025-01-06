@@ -52,7 +52,6 @@ void checkpointOnStateChanged(Moby* moby)
 
   if (!gameAmIHost()) return;
 
-
   DLOG_CHPT(moby, "CHECKPOINT STATE %d (%08X %08X)\n", moby->State, (u32)pvars->OnActivateControllerMoby, (u32)pvars->OnDeactivateControllerMoby);
 
   if (moby->State == CHECKPOINT_ACTIVE) {
@@ -104,6 +103,7 @@ void checkpointUpdate(Moby* moby)
 int checkpointSetActive(Moby* checkpointMoby)
 {
   if (!checkpointManagerMoby) return 0;
+  if (!checkpointSetActive) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
 
@@ -123,6 +123,8 @@ int checkpointSetActive(Moby* checkpointMoby)
   
   // update checkpoint locally
   mobySetState(checkpointManagerMoby, idx, -1);
+  checkpointManagerUpdate(checkpointManagerMoby);
+  checkpointUpdate(checkpointMoby);
 
 	// create event
   // if (gameAmIHost()) {
@@ -140,10 +142,6 @@ void checkpointManagerUpdate(Moby* moby)
 {
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)moby->PVar;
 
-  if (padGetButton(0, PAD_L1 | PAD_UP) > 0) {
-    playerRespawn(playerGetFromSlot(0));
-  }
-
   // detect when state was changed
   if ((moby->Triggers & 1) == 0) {
     Moby* selectedCheckpoint = pvars->CheckpointMobys[(int)moby->State];
@@ -158,7 +156,6 @@ void checkpointManagerUpdate(Moby* moby)
     }
     moby->Triggers |= 1;
   }
-
 }
 
 //--------------------------------------------------------------------------

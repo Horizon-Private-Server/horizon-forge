@@ -27,7 +27,7 @@
 #define MAX_MOBS_ALIVE_REAL									  (MAX_MOBS_ALIVE - MAX_MOBS_ALIVE_BUFFER)
 
 #define MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH 	(100)
-#define MOB_MOVE_SKIP_TICKS                   (6)
+#define MOB_MOVE_SKIP_TICKS                   (8)
 #define MOB_MAX_STUCK_COUNTER_FOR_NEW_PATH    (3)
 
 #define MOB_SHORT_FREEZE_DURATION_TICKS       (60)
@@ -177,8 +177,8 @@ typedef void (*FrameTick_func)(void);
 
 struct RaidsPlayerState
 {
-  u64 Experience;
-  u64 Bolts;
+  u32 Bolts;
+  float Experience;
 	int Kills;
 	int Deaths;
   u16 Skills[RAIDS_SKILLS_COUNT];

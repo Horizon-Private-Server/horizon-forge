@@ -19,6 +19,7 @@ enum MoverEventType {
 enum MoverState {
 	MOVER_STATE_DEACTIVATED,
 	MOVER_STATE_ACTIVATED,
+	MOVER_STATE_PAUSED,
 	MOVER_STATE_COMPLETED = 127,
 };
 
@@ -33,6 +34,7 @@ struct MoverRuntimeState
   VECTOR LastAppliedPositionDelta;
   VECTOR LastAppliedRotationDelta;
   int TimeStarted;
+  float TimePausedT;
   int CurrentSplineDir;
   float CurrentSplineLen;
 };

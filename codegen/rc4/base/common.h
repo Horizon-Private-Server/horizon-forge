@@ -56,6 +56,7 @@ typedef struct PatchConfig
   char enableInGameScoreboard;
   char enableNPSLagComp;
   char enableFastLoad;
+  char levelOfDetailMobs;
 
 #if TWEAKERS
   char characterTweakers[1 + 7*2];

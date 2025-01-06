@@ -204,7 +204,7 @@ void dummyUpdate(Moby* moby)
   memcpy(moby->M0_03, targetMoby->M0_03, 0x40);
   moby->Scale = targetMoby->Scale;
   moby->CollData = targetMoby->CollData;
-  moby->CollActive = 1;
+  moby->CollActive = 0;
   moby->PClass = targetMoby->PClass;
   moby->MClass = targetMoby->MClass;
   moby->AnimSeq = targetMoby->AnimSeq;

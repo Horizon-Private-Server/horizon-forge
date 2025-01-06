@@ -175,7 +175,7 @@ void dzstrikerPostUpdate(Moby* moby)
     animSpeed = baseSpeed;
   }
 
-	if ((moby->DrawDist == 0 && pvars->MobVars.Action == DZSTRIKER_ACTION_WALK)) {
+	if ((moby->DrawDist == 0 && !dzstrikerIsAttacking(moby))) {
 		moby->AnimSpeed = 0;
     torsoMoby->AnimSpeed = 0;
 	} else {
@@ -202,7 +202,7 @@ void dzstrikerPostDraw(Moby* moby)
     return;
     
   u32 color = DZSTRIKER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  mobPostDrawQuad(moby, 127, color, DZSTRIKER_LEGS_SUBSKELETON_JOINT_HIPS);
 }
 
 //--------------------------------------------------------------------------
@@ -267,14 +267,18 @@ void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   if (!moby || !moby->PVar)
     return;
     
+	// set colors before death so that the corn has the correct color
+	moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
+  
+  // spawn corn
+  mobBlowCorn(moby);
+
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   if (dzstrikerVars->TorsoMoby && !mobyIsDestroyed(dzstrikerVars->TorsoMoby)) {
+    mobBlowCorn(dzstrikerVars->TorsoMoby);
     mobyDestroy(dzstrikerVars->TorsoMoby);
     dzstrikerVars->TorsoMoby = NULL;
   }
-  
-	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
 }
 
 //--------------------------------------------------------------------------
@@ -438,10 +442,10 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
   if (dzstrikerIsFlinching(moby))
     return -1;
 
-  if (pvars->MobVars.Action == DZSTRIKER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+  if (pvars->MobVars.Action == DZSTRIKER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
     return -1;
 
-	if (pvars->MobVars.Action == DZSTRIKER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
+	if (pvars->MobVars.Action == DZSTRIKER_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
 		return DZSTRIKER_ACTION_WALK;
   }
 

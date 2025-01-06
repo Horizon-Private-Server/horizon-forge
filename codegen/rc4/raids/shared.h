@@ -35,7 +35,7 @@ void mapInit(void);
 
 int mobAmIOwner(Moby* moby);
 void mobResetSoundTrigger(Moby* moby);
-void mobSpawnCorn(Moby* moby, int bangle);
+void mobBlowCorn(Moby* moby);
 int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int damageFlags, int friendlyFire, int jointId, int reactToThorns, int isAoE);
 int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE);
 int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float sqrHitRadius, int damageFlags, float amount);

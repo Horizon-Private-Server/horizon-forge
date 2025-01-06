@@ -164,7 +164,7 @@ void executionerPostUpdate(Moby* moby)
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && pvars->MobVars.Action == EXECUTIONER_ACTION_WALK)) {
+	if ((moby->DrawDist == 0 && !executionerIsAttacking(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -178,7 +178,7 @@ void executionerPostDraw(Moby* moby)
     return;
     
   u32 color = EXECUTIONER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  mobPostDrawQuad(moby, 127, color, EXECUTIONER_SUBSKELETON_JOINT_CHEST);
 }
 
 //--------------------------------------------------------------------------
@@ -221,6 +221,9 @@ void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
     
 	// set colors before death so that the corn has the correct color
 	moby->PrimaryColor = EXECUTIONER_PRIMARY_COLOR;
+  
+  // spawn corn
+  mobBlowCorn(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -379,10 +382,10 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
   if (executionerIsFlinching(moby))
     return -1;
 
-  if (pvars->MobVars.Action == EXECUTIONER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+  if (pvars->MobVars.Action == EXECUTIONER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
     return -1;
 
-	if (pvars->MobVars.Action == EXECUTIONER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded) {
+	if (pvars->MobVars.Action == EXECUTIONER_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
 		return EXECUTIONER_ACTION_WALK;
   }
 

@@ -889,10 +889,13 @@ public class PvarOverlayDisplayRule
         if (fieldDef != null && pvarValues != null && pvarValues.ContainsKey(refPath))
         {
             var fieldValue = pvarValues[refPath];
+            long a, b;
 
             switch (Op?.ToLower())
             {
                 case "==": return fieldValue == Value;
+                case "&=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && (a & b) == b;
+                case "&": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && (a & b) != 0;
                 case "!=": return fieldValue != Value;
                 case "in": return Values?.Contains(fieldValue) ?? false;
             }
