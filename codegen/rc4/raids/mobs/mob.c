@@ -785,22 +785,24 @@ void mobMove(Moby* moby)
     } else {
 
       // check ledge
-      vector_normalize(ledgePos, lastVelocity);
-      //vector_fromyaw(ledgePos, moby->Rotation[2]);
-      vector_add(ledgePos, moby->Position, ledgePos);
-      vector_copy(groundCheckFrom, ledgePos);
-      groundCheckFrom[2] = maxf(moby->Position[2], ledgePos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
-      vector_copy(groundCheckTo, ledgePos);
-      groundCheckTo[2] = gameGetDeathHeight();
-      if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
-        currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
-        if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
+      if (!pvars->MobVars.MoveVars.IsStuck) {
+        vector_normalize(ledgePos, lastVelocity);
+        //vector_fromyaw(ledgePos, moby->Rotation[2]);
+        vector_add(ledgePos, moby->Position, ledgePos);
+        vector_copy(groundCheckFrom, ledgePos);
+        groundCheckFrom[2] = maxf(moby->Position[2], ledgePos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
+        vector_copy(groundCheckTo, ledgePos);
+        groundCheckTo[2] = gameGetDeathHeight();
+        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+          currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
+          if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
+            nextPosHasSafeGround = 0;
+          }
+        } else {
+          // no ground
           nextPosHasSafeGround = 0;
+          currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = 0;
         }
-      } else {
-        // no ground
-        nextPosHasSafeGround = 0;
-        currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = 0;
       }
 
       // check ground
@@ -836,7 +838,7 @@ void mobMove(Moby* moby)
       }
 
       // check ceiling
-      if (!isMovingDown) {
+      else if (0) {
         vector_copy(groundCheckFrom, nextPos);
         groundCheckFrom[2] = moby->Position[2];
         vector_copy(groundCheckTo, nextPos);
@@ -1367,7 +1369,7 @@ void mobUpdateTargetOutOfSight(Moby* moby)
       gateSetCollision(1);
 #endif
 
-      pvars->MobVars.TargetOutOfSightCheckTicks = 15;
+      pvars->MobVars.TargetOutOfSightCheckTicks = TPS;
     } else {
       pvars->MobVars.TimeTargetOutOfSightTicks += (pvars->MobVars.TimeTargetOutOfSightTicks > 0) ? 1 : 0;
     }

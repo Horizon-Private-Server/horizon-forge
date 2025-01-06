@@ -459,8 +459,8 @@ u32 getXpForLevel(int level)
 //--------------------------------------------------------------------------
 int getProficiencyFromXp(double xp)
 {
-  // 1/32 (-125 + sqrt(16x + 15625))
-  double level = ((sqrt((double)16.0 * xp + (double)15625.0)) - (double)125.0) / (double)32.0;
+  // 1/5 (-10 + sqrt(x + 100))
+  double level = (sqrt(xp + (double)100.0) - (double)10.0) / (double)5.0;
   
   if (level < 0) return 0;
   if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
@@ -472,7 +472,7 @@ double getXpForProficiency(int proficiency)
 {
   if (proficiency > LEVELUP_MAX_LEVEL) proficiency = LEVELUP_MAX_LEVEL;
   if (proficiency <= 0) return 0;
-  return (double)powf(8*proficiency, 2) + 500*proficiency;
+  return (double)powf(5*proficiency, 2) + 100*proficiency;
 }
 
 //--------------------------------------------------------------------------
