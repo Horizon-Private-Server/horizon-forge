@@ -103,7 +103,7 @@
 #define SNACK_ITEM_MAX_COUNT                  (16)
 #define DAMAGE_BUBBLE_MAX_COUNT               (16)
 
-#define MAX_MOB_SPAWN_PARAMS                  (10)
+#define MAX_MOB_SPAWN_PARAMS                  (32)
 #define MAX_MOB_COMPLEXITY_DRAWN              (7500)
 #define MAX_MOB_COMPLEXITY_DRAWN_DZO          (MAX_MOB_COMPLEXITY_DRAWN * 1)
 #define MOB_COMPLEXITY_SKIN_FACTOR            (500)
