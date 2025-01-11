@@ -22,7 +22,6 @@ public class MapConfig : MonoBehaviour
     [Header("Deadlocked")]
     [ReadOnly] public DLMapIds DLBaseMap = DLMapIds.SP_Battledome;
     public DLCustomModeIds DLForceCustomMode = DLCustomModeIds.None;
-    public bool DLHideFromMapList;
     public Texture2D DLLoadingScreen;
     public Texture2D DLMinimap;
     public int[] DLMobysIncludedInExport;
@@ -83,6 +82,9 @@ public class MapConfig : MonoBehaviour
     {
         Upgrade();
         UpdateShaderGlobals();
+
+        if (MapName != null && MapName.Length > 32) MapName = MapName.Substring(0, 32);
+        if (MapFilename != null && MapFilename.Length > 48) MapFilename = MapFilename.Substring(0, 48);
 
         if (FogFarIntensity < FogNearIntensity)
             FogFarIntensity = FogNearIntensity + 0.01f;

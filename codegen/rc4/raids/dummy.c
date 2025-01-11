@@ -195,6 +195,9 @@ void dummyUpdate(Moby* moby)
   
   if (!missionIsActive()) return;
 
+  // increment ticks since last damage
+  ++pvars->State.TicksSinceLastDamage;
+
   // copy target moby
   Moby* targetMoby = pvars->Config.TargetMoby;
   if (pvars->Config.IsOnEnemyTeam && pvars->Config.Targetable) moby->ModeBits |= MOBY_MODE_BIT_CAN_BE_AUTO_TARGETED;
@@ -238,7 +241,8 @@ void dummyUpdate(Moby* moby)
     }
     ((void (*)(Moby*, float*, MobyColDamage*))0x005184d0)(moby, &damage, colDamage);
 
-    if (colDamage && colDamage->Damager && damage > 0) {
+    int damageCooldownTicks = (int)(pvars->Config.DamageCooldownSeconds * TPS);
+    if (pvars->State.TicksSinceLastDamage > damageCooldownTicks && colDamage && colDamage->Damager && damage > 0) {
       DLOG(moby, "dummy %08X hit for %f by %08X\n", (u32)moby, damage, (u32)colDamage->Damager);
       
       float newHealth = maxf(0, pvars->TargetVars.hitPoints - damage);
@@ -258,6 +262,12 @@ void dummyUpdate(Moby* moby)
         controllerSetTriggerMoby(pvars->Config.OnHitControllerMoby, colDamage->Damager);
         controllerBroadcastNewState(pvars->Config.OnHitControllerMoby, CONTROLLER_STATE_ACTIVATED);
       }
+
+      // bubble
+      if (MapConfig.PushDamageBubbleFunc)
+        MapConfig.PushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, 0);
+
+      pvars->State.TicksSinceLastDamage = 0;
     }
   }
 

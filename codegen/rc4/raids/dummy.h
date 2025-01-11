@@ -46,6 +46,11 @@ struct DummyDifficultyConfig
   float ExplosionDamage;
 };
 
+struct DummyRuntimeState
+{
+  int TicksSinceLastDamage;
+};
+
 struct DummyConfig
 {
   char DefaultState;
@@ -62,6 +67,7 @@ struct DummyConfig
   float MobTargetDistance;
   float HealthbarScale;
   float HealthbarOffset;
+  float DamageCooldownSeconds;
   Moby* OnHitControllerMoby;
   Moby* OnKilledControllerMoby;
   struct DummyDifficultyConfig DifficultyConfigs[RAIDS_DIFFICULTY_COUNT];
@@ -79,6 +85,7 @@ struct DummyPVar
 	char _pad3[0x18];
 
   struct DummyConfig Config;
+  struct DummyRuntimeState State;
 	struct TargetVars TargetVars;
 	struct FlashVars FlashVars;
 };

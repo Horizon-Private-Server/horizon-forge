@@ -54,7 +54,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     [Header("Challenges")]
     public List<RaidsChallenge> Challenges;
 
-    [Header("Mobs")]
+    [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 16.")]
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
     {
         new RaidsMobSpawnParam() { Name = "Zombie" }
@@ -72,6 +72,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     {
         if (Author != null && Author.Length > 32) Author = Author.Substring(0, 32);
         if (Description != null && Description.Length > 256) Description = Description.Substring(0, 256);
+        while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
     }
 
     public void Configure(string buildFolder, CodeGenState state)

@@ -33,8 +33,9 @@
 #include "badges.h"
 #include "game.h"
 
-int badgesPlayerCooldown[GAME_MAX_PLAYERS] = {0};
-int badgesPlayerTimeLastLastHit[GAME_MAX_PLAYERS] = {0};
+int badgesPlayerCooldown[GAME_MAX_PLAYERS][BANK_BADGE_EFFECT_COUNT] = {0};
+int badgesPlayerTimeLastHit[GAME_MAX_PLAYERS] = {0};
+int badgesPlayerTimeLastCantShoot[GAME_MAX_PLAYERS] = {0};
 int badgesAmmoRegenAmount[WEAPON_SLOT_COUNT] = {
   [WEAPON_SLOT_VIPERS] 5,
   [WEAPON_SLOT_MAGMA_CANNON] 2,
@@ -64,15 +65,16 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_HealthRegen(Player* player, float strength)
+void badgesUpdate_HealthRegen(Player* player, int badgeIdx, float strength)
 {
   if (playerIsDead(player) || player->Health <= 0) return;
   
   int delayMs = (TIME_SECOND * 5);
-  int timeSinceLastHitMs = gameGetTime() - (badgesPlayerTimeLastLastHit[player->PlayerId] + delayMs);
+  if ((gameGetTime() - badgesPlayerTimeLastCantShoot[player->PlayerId]) < TIME_SECOND) return;
+  int timeSinceLastHitMs = gameGetTime() - (badgesPlayerTimeLastHit[player->PlayerId] + delayMs);
   if (timeSinceLastHitMs < 0) return;
 
-  timeSinceLastHitMs *= 1 + (0.5 * strength * 5);
+  timeSinceLastHitMs *= 1 + (0.5 * powf(strength, 2) * 5);
   int cooldown = BADGES_HEALTH_REGEN_COOLDOWN_TICKS;
   if (timeSinceLastHitMs < (TIME_SECOND * 15))
     cooldown *= 5;
@@ -85,14 +87,15 @@ void badgesUpdate_HealthRegen(Player* player, float strength)
   if (newHealth != player->Health) {
     playerSetHealth(player, newHealth);
     //mobyPlaySoundByClass(1, 0, player->PlayerMoby, MOBY_ID_HEALTH_BOX_MULT);
-    badgesPlayerCooldown[player->PlayerId] = cooldown;
+    badgesPlayerCooldown[player->PlayerId][badgeIdx] = cooldown;
   }
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_AmmoRegen(Player* player, float strength)
+void badgesUpdate_AmmoRegen(Player* player, int badgeIdx, float strength)
 {
   if (playerIsDead(player)) return;
+  if ((gameGetTime() - badgesPlayerTimeLastCantShoot[player->PlayerId]) < TIME_SECOND) return;
 
   int equippedGadgetId = player->WeaponHeldId;
   int gadgetSlotId = weaponIdToSlot(equippedGadgetId);
@@ -102,34 +105,34 @@ void badgesUpdate_AmmoRegen(Player* player, float strength)
     int equippedGadgetMaxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, equippedGadgetId);
     if (equippedGadgetMaxAmmo) {
       int equippedGadgetAmmo = player->GadgetBox->Gadgets[equippedGadgetId].Ammo;
-      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*strength*3;
+      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*powf(strength, 2)*5;
       if (newAmmo > equippedGadgetMaxAmmo) newAmmo = equippedGadgetMaxAmmo;
       if (newAmmo != equippedGadgetAmmo) {
         player->GadgetBox->Gadgets[equippedGadgetId].Ammo = newAmmo;
-        badgesPlayerCooldown[player->PlayerId] = BADGES_AMMO_REGEN_COOLDOWN_TICKS;
+        badgesPlayerCooldown[player->PlayerId][badgeIdx] = BADGES_AMMO_REGEN_COOLDOWN_TICKS;
       }
     }
   }
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_FlinchResistance(Player* player, float strength)
+void badgesUpdate_FlinchResistance(Player* player, int badgeIdx, float strength)
 {
   if (playerIsDead(player)) return;
 
   if (player->timers.postHitInvinc == 47) {
     player->timers.postHitInvinc += 100 * strength;
-    badgesPlayerCooldown[player->PlayerId] = player->timers.postHitInvinc - 1;
+    badgesPlayerCooldown[player->PlayerId][badgeIdx] = player->timers.postHitInvinc - 1;
   }
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdate_Berserker(Player* player, float strength)
+void badgesUpdate_Berserker(Player* player, int badgeIdx, float strength)
 {
   if (playerIsDead(player)) return;
   
   if (player->PlayerState == PLAYER_STATE_JUMP_ATTACK && player->PlayerMoby->AnimSeqId == 43) {
-    if (player->PlayerMoby->AnimSeqT > 12) {
+    if (player->PlayerMoby->AnimSeqT > 10 && player->PlayerMoby->AnimSeqT < 11 && player->Ground.onGood) {
           
       // spawn explosion
       u128 vPos = vector_read(player->PlayerPosition);
@@ -143,30 +146,26 @@ void badgesUpdate_Berserker(Player* player, float strength)
       // play explosion sound
       mobyPlaySoundByClass(0, 0, player->PlayerMoby, MOBY_ID_ARBITER_ROCKET0);
 
-      badgesPlayerCooldown[player->PlayerId] = 10;
+      badgesPlayerCooldown[player->PlayerId][badgeIdx] = 10;
     }
   }
 }
 
 //--------------------------------------------------------------------------
-void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, float strength)
+void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badgeIdx, float strength)
 {
   if (!player) return;
 
-  // update time last had full health
-  if (player->PlayerState == PLAYER_STATE_GET_HIT)
-    badgesPlayerTimeLastLastHit[player->PlayerId] = gameGetTime();
-
-  u32 cooldown = decTimerU32(&badgesPlayerCooldown[player->PlayerId]);
+  u32 cooldown = decTimerU32(&badgesPlayerCooldown[player->PlayerId][badgeIdx]);
   if (cooldown) return;
 
   switch (badgeType)
   {
-    case RAIDS_BADGE_TYPE_HEALTH_REGEN: badgesUpdate_HealthRegen(player, strength); break;
-    case RAIDS_BADGE_TYPE_AMMO_REGEN: badgesUpdate_AmmoRegen(player, strength); break;
+    case RAIDS_BADGE_TYPE_HEALTH_REGEN: badgesUpdate_HealthRegen(player, badgeIdx, strength); break;
+    case RAIDS_BADGE_TYPE_AMMO_REGEN: badgesUpdate_AmmoRegen(player, badgeIdx, strength); break;
     case RAIDS_BADGE_TYPE_SHARPSHOOTER: break; // handled by gamemode
-    case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, strength); break;
-    case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, strength); break;
+    case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, badgeIdx, strength); break;
+    case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, badgeIdx, strength); break;
     case RAIDS_BADGE_TYPE_HEATH_BUFF: break; // handled by gamemode
     case RAIDS_BADGE_TYPE_AMMO_BUFF: break; // handled by gamemode
     default: break;
@@ -185,16 +184,22 @@ void badgesStart(void)
     if (!playerIsValid(player))
       continue;
 
+    // update time last had full health
+    if (player->PlayerState == PLAYER_STATE_GET_HIT)
+      badgesPlayerTimeLastHit[player->PlayerId] = gameGetTime();
+    if (player->timers.gadgetRefire > 0)
+      badgesPlayerTimeLastCantShoot[player->PlayerId] = gameGetTime();
+
     RaidsInventoryItem_t* badge = &MapConfig.State->PlayerStates[i].Inventory.Badge;
     if (!badge)
       continue;
 
-    int i;
-    for (i = 0; i < BANK_BADGE_EFFECT_COUNT; ++i) {
-      int badgeType = badge->BadgeData.Effects[i];
+    int j;
+    for (j = 0; j < BANK_BADGE_EFFECT_COUNT; ++j) {
+      int badgeType = badge->BadgeData.Effects[j];
       if (!badgeType) continue;
 
-      badgesUpdatePlayer(player, badgeType, badge->BadgeData.EffectStrength[i] / 255.0);
+      badgesUpdatePlayer(player, badgeType, j, badge->BadgeData.EffectStrength[j] / 255.0);
     }
   }
 }

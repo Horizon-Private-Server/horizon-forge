@@ -54,26 +54,30 @@ void levelselectClose(void)
 //--------------------------------------------------------------------------
 void levelselectGo(LevelselectDrawState_t* drawState)
 {
-  if (hasPendingWorldHop()) return;
-  if (!gameAmIHost()) return;
-  if (!drawState) return;
-  if (!drawState->SelectedMapFilename[0]) return;
+  if (hasPendingWorldHop() || !gameAmIHost() || !drawState || !drawState->SelectedMapFilename[0]) {
+    playEquipRejectSound(playerGetFromSlot(0));
+    return;
+  }
 
 #if !DEBUG
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   int cost = drawState->SelectedMapExtraData.Cost[drawState->SelectedDifficulty];
-  if (cost > localBank->Account.Bolts) return;
-
   int level = getLevelFromXp(localBank->Account.Experience);
   int hasMinLevel = (level + 1) >= levelselectDrawState.SelectedMapExtraData.MinPlayerLevel;
-  if (!hasMinLevel) return;
+  if (cost > localBank->Account.Bolts || !hasMinLevel) {
+    playEquipRejectSound(playerGetFromSlot(0));
+    return;
+  }
+
 #else
   int cost = 0;
 #endif
 
   // hop
-  if (MapConfig.BeginWorldHopFunc)
-    MapConfig.BeginWorldHopFunc(drawState->SelectedMapFilename, drawState->SelectedDifficulty, cost, 5 * TIME_SECOND);
+  int isHub = strncmp(drawState->SelectedMapFilename, RAIDS_HUB_MAPFILENAME, sizeof(drawState->SelectedMapFilename)) == 0;
+  if (MapConfig.BeginWorldHopFunc) {
+    MapConfig.BeginWorldHopFunc(drawState->SelectedMapFilename, isHub ? 0 : drawState->SelectedDifficulty, isHub ? 0 : cost, 5 * TIME_SECOND);
+  }
   levelselectClose();
 }
 
@@ -160,7 +164,7 @@ void levelselectDrawChallengesDialog(Window_t* drawWindow, int selectedIdx)
   Window_t windowDesc;
   windowReset(drawWindow);
   windowMove(drawWindow, 0, titleHeight);
-  windowCreateFrom(&windowDesc, drawWindow, 0, 0, drawWindow->Width * 0.5, drawWindow->Height, TEXT_ALIGN_TOPRIGHT);
+  windowCreateFrom(&windowDesc, drawWindow, 0, 0, drawWindow->Width * 0.5, drawWindow->Height - titleHeight, TEXT_ALIGN_TOPRIGHT);
   windowFill(&windowDesc, 0x80080808);
   if (desc) {
     windowDrawTextWindow(&windowDesc, TEXT_ALIGN_TOPLEFT, 5, 5, 0.8, textColor, desc, -1, TEXT_ALIGN_TOPLEFT);
@@ -186,7 +190,6 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
 
   // draw box
   windowFill(drawWindow, bgColor);
-  windowMove(drawWindow, 5, 0);
 
   // init
   if (!init && MapConfig.State) {
@@ -204,26 +207,25 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
       
       CustomMapDef_t* def = PATCH_INTEROP->GetCustomMapDef(i);
       if (!def) continue;
-      if (def->HideFromMapList == 1) continue;
       if (def->ForcedCustomModeId != CUSTOM_MODE_RAIDS) continue;
       if (!(def->CustomModeExtraDataMask & (1<<CUSTOM_MODE_RAIDS))) continue;
-      if (strncmp(def->Filename, RAIDS_HUB_MAPFILENAME, sizeof(def->Filename)) == 0) continue;
+      //if (strncmp(def->Filename, RAIDS_HUB_MAPFILENAME, sizeof(def->Filename)) == 0) continue;
       if (!init && MapConfig.State && def == MapConfig.State->CurrentMapDef) levelselectDrawState.SelectedIdx = numMaps;
       if (i < drawItemsFrom) { ++numMaps; continue; }
+
+      Window_t windowLine;
+      windowCreateFrom(&windowLine, drawWindow, 0, 0, drawWindow->Width, lineHeight, TEXT_ALIGN_TOPRIGHT);
       
       // draw selection line
       if (numMaps == selectedIdx) {
         *selectedMapDef = def;
-        
-        Window_t windowHighlight;
-        windowCreateFrom(&windowHighlight, drawWindow, -5, 0, drawWindow->Width, lineHeight, TEXT_ALIGN_TOPRIGHT);
-        windowFill(&windowHighlight, selectedColor);
+        windowFill(&windowLine, selectedColor);
       }
 
       // draw map name
       char strBuf[64];
       snprintf(strBuf, sizeof(strBuf), "%s", def->Name);
-      windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 0, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
+      windowDrawText(&windowLine, TEXT_ALIGN_MIDDLELEFT, 5, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
       windowMove(drawWindow, 0, lineHeight);
       ++numMaps;
     }
@@ -257,6 +259,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
   int numMaps = 0;
   int i;
   char strBuf[128];
+  int isHub = strncmp(levelselectDrawState.SelectedMapFilename, RAIDS_HUB_MAPFILENAME, sizeof(levelselectDrawState.SelectedMapFilename)) == 0;
 
   if (levelselectDrawState.NumPlanets > 0 && levelselectDrawState.SelectedMapFilename[0]) {
 
@@ -265,7 +268,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     windowCreateFrom(&windowAuthor, drawWindow, 0, 0, drawWindow->Width, authorHeight, TEXT_ALIGN_TOPLEFT);
     windowFill(&windowAuthor, 0x70000040);
     snprintf(strBuf, sizeof(strBuf), "Author: %s", levelselectDrawState.SelectedMapExtraData.Author);
-    windowDrawText(&windowAuthor, TEXT_ALIGN_TOPLEFT, 5, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
+    windowDrawText(&windowAuthor, TEXT_ALIGN_MIDDLELEFT, 5, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
     
     // description
     Window_t windowDescription;
@@ -297,27 +300,32 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     snprintf(strBuf, sizeof(strBuf), "%.f%%", levelselectDrawState.MapStats.PercentageComplete * 100);
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPCENTER, 0, 5, 1.0, progressColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
 
-    int bestTimeMs = levelselectDrawState.MapStats.BestTimeMsPerDifficulty[levelselectDrawState.SelectedDifficulty];
-    int bestTimeSeconds = bestTimeMs / 1000;
-    int bestTimeMinutes = bestTimeSeconds / 60;
-    if (bestTimeMs > 0) {
-      snprintf(strBuf, sizeof(strBuf), "Best Time: \x0A%d:%02d.%03d", bestTimeMinutes, bestTimeSeconds % 60, bestTimeMs % 1000);
-    } else {
-      snprintf(strBuf, sizeof(strBuf), "Best Time: \x0EIncomplete");
+    // best time
+    if (!isHub) {
+      int bestTimeMs = levelselectDrawState.MapStats.BestTimeMsPerDifficulty[levelselectDrawState.SelectedDifficulty];
+      int bestTimeSeconds = bestTimeMs / 1000;
+      int bestTimeMinutes = bestTimeSeconds / 60;
+      if (bestTimeMs > 0) {
+        snprintf(strBuf, sizeof(strBuf), "Best Time: \x0A%d:%02d.%03d", bestTimeMinutes, bestTimeSeconds % 60, bestTimeMs % 1000);
+      } else {
+        snprintf(strBuf, sizeof(strBuf), "Best Time: \x0EIncomplete");
+      }
+      windowDrawText(&windowProgress, TEXT_ALIGN_BOTTOMCENTER, 0, -16, 0.9, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
     }
-    windowDrawText(&windowProgress, TEXT_ALIGN_BOTTOMCENTER, 0, -16, 0.9, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
     
     // star select
-    Window_t windowStars;
-    windowCreateFrom(&windowStars, drawWindow, 0, -difficultyCostHeight, drawWindow->Width, difficultySelectHeight, TEXT_ALIGN_BOTTOMLEFT);
-    windowFill(&windowStars, 0x30404040);
-    gfxSetupGifPaging(0);
-    windowMove(&windowStars, windowStars.Width/2 - (RAIDS_DIFFICULTY_COUNT/2.0)*(starHeight+starSpacing), 0);
-    for (i = 0; i < RAIDS_DIFFICULTY_COUNT; ++i) {
-      windowDrawSprite(&windowStars, TEXT_ALIGN_TOPLEFT, 0, 5, starHeight, starHeight, LEVELSELECT_STAR_SPRITE_ID, 32, 32, i <= levelselectDrawState.SelectedDifficulty ? starActiveColor : starInactiveColor, TEXT_ALIGN_TOPLEFT);
-      windowMove(&windowStars, starHeight + starSpacing, 0);
+    if (!isHub) {
+      Window_t windowStars;
+      windowCreateFrom(&windowStars, drawWindow, 0, -difficultyCostHeight, drawWindow->Width, difficultySelectHeight, TEXT_ALIGN_BOTTOMLEFT);
+      windowFill(&windowStars, 0x30404040);
+      gfxSetupGifPaging(0);
+      windowMove(&windowStars, windowStars.Width/2 - (RAIDS_DIFFICULTY_COUNT/2.0)*(starHeight+starSpacing), 0);
+      for (i = 0; i < RAIDS_DIFFICULTY_COUNT; ++i) {
+        windowDrawSprite(&windowStars, TEXT_ALIGN_TOPLEFT, 0, 5, starHeight, starHeight, LEVELSELECT_STAR_SPRITE_ID, 32, 32, i <= levelselectDrawState.SelectedDifficulty ? starActiveColor : starInactiveColor, TEXT_ALIGN_TOPLEFT);
+        windowMove(&windowStars, starHeight + starSpacing, 0);
+      }
+      gfxDoGifPaging();
     }
-    gfxDoGifPaging();
 
     // interact text
     Window_t windowCostText;
@@ -351,7 +359,7 @@ void levelselectDrawFooter(Window_t* drawWindow)
 
   // draw footer text
   strBuf[0] = 0;
-  if (!state->OnHubWorld) strcat(strBuf, "\x1E RETURN TO HUB    ");
+  //if (!state->OnHubWorld) strcat(strBuf, "\x1E RETURN TO HUB    ");
   if (!levelselectDrawState.MapStats.Invalid && levelselectDrawState.MapStats.ChallengesCount > 0) strcat(strBuf, "\x11 CHALLENGES    ");
   strcat(strBuf, "\x13 REFRESH    ");
   strcat(strBuf, "\x1A \x1B STARS    ");
@@ -431,7 +439,7 @@ void levelselectDraw(void)
     windowFill(&drawWindow, 0x40000000);
 
     Window_t windowChallengesDialog;
-    windowCreateFrom(&windowChallengesDialog, &drawWindow, 0, 0, 300, 200, TEXT_ALIGN_MIDDLECENTER);
+    windowCreateFrom(&windowChallengesDialog, &drawWindow, 0, 0, 400, 200, TEXT_ALIGN_MIDDLECENTER);
     levelselectDrawChallengesDialog(&windowChallengesDialog, levelselectDrawState.ChallengesDialogSelectedIdx);
   }
 }
@@ -486,19 +494,9 @@ void levelselectHandleInput(void)
   } else if (!levelselectDrawState.MapStats.Invalid && levelselectDrawState.MapStats.ChallengesCount > 0 && padGetButtonDown(0, PAD_CIRCLE) > 0) {   // CHALLENGES
     levelselectDrawState.ChallengesDialogSelectedIdx = 0;
     levelselectDrawState.ShowChallengesDialog = 1;
-  } else if (gameAmIHost() && !state->OnHubWorld && MapConfig.BeginWorldHopFunc && padGetButtonDown(0, PAD_SELECT) > 0) {           // TO HUB
-    MapConfig.BeginWorldHopFunc(RAIDS_HUB_MAPFILENAME, 0, 0, 5 * TIME_SECOND);
-    levelselectClose();
   } else if (gameAmIHost() && padGetButtonDown(0, PAD_CROSS) > 0) {                             // TRAVEL
     levelselectGo(&levelselectDrawState);
   }
-
-#if DEBUG
-  else if (gameAmIHost() && MapConfig.BeginWorldHopFunc && padGetButtonDown(0, PAD_SELECT) > 0) {           // TO HUB
-    MapConfig.BeginWorldHopFunc(RAIDS_HUB_MAPFILENAME, 0, 0, 5 * TIME_SECOND);
-    levelselectClose();
-  }
-#endif
 
   // clamp selected index
   if (levelselectDrawState.SelectedIdx >= levelselectDrawState.NumPlanets) levelselectDrawState.SelectedIdx = levelselectDrawState.NumPlanets - 1;
@@ -523,7 +521,7 @@ void levelselectStart(void)
   static int missionFailed = 0; // resets when mission is reloaded
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
-  
+
   if (gameHasEnded() || !isInGame() || gameIsAnyStartMenuOpen()) {
     levelselectClose();
     return;

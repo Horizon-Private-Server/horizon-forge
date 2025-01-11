@@ -10,7 +10,7 @@
 #define MAP_CONFIG_MAGIC                      (0xDEADBEEF)
 
 #define RAIDS_HUB_MAPFILENAME                 ("raids_hub")
-#define RAIDS_MAX_EXDATA_SIZE                 (1024)
+#define RAIDS_MAX_EXDATA_SIZE                 (2048)
 
 #define TPS																		(60)
 
@@ -105,7 +105,7 @@
 #define SNACK_ITEM_MAX_COUNT                  (16)
 #define DAMAGE_BUBBLE_MAX_COUNT               (16)
 
-#define MAX_MOB_SPAWN_PARAMS                  (32)
+#define MAX_MOB_SPAWN_PARAMS                  (16)
 #define MAX_MOB_COMPLEXITY_DRAWN              (7500)
 #define MAX_MOB_COMPLEXITY_DRAWN_DZO          (MAX_MOB_COMPLEXITY_DRAWN * 1)
 #define MOB_COMPLEXITY_SKIN_FACTOR            (500)
@@ -178,6 +178,7 @@ struct MobSpawnEventArgs;
 struct MobCreateArgs;
 
 typedef void (*PushSnack_func)(char * string, int ticksAlive, int localPlayerIdx);
+typedef void (*PushDamageBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int isCrit);
 typedef long (*GetAmmoRefillCost_func)(Player* player);
 typedef void (*BeginWorldHop_func)(char* mapFilename, int difficulty, int cost, int delayMs);
 typedef void (*PopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobConfig* config, int spawnParamsIdx, int isBaseConfig, float difficultyMult);
@@ -203,7 +204,7 @@ struct RaidsPlayerState
   float Experience;
 	int Kills;
 	int Deaths;
-	int AllKills[MOB_DAMAGE_SOURCE_COUNT-1];
+	int AllKills[MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS];
   u16 Skills[RAIDS_SKILLS_COUNT];
 };
 
@@ -288,6 +289,7 @@ struct RaidsMapConfig
 
   // mode
   PushSnack_func PushSnackFunc;
+  PushDamageBubble_func PushDamageBubbleFunc;
   GetAmmoRefillCost_func GetAmmoRefillCostFunc;
   BeginWorldHop_func BeginWorldHopFunc;
   PopulateSpawnArgs_func PopulateSpawnArgsFunc;

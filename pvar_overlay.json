@@ -3836,10 +3836,11 @@
               "Any Player": 1,
               "All Players": 2,
               "No Players": 4,
+              "Host Player (Local if No Sync)": 128,
               "Any NPC": 8,
               "All NPCs": 16,
               "No NPCs": 32,
-              "Moby": 64
+              "Any Moby": 64
             },
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "2" }
@@ -3892,7 +3893,7 @@
             "Name": "Target Player(s)",
             "DataType": "Mask",
             "DataSize": 2,
-            "Offset": 10,
+            "Offset": 8,
             "Options": {
               "Player 0": 1,
               "Player 1": 2,
@@ -3915,7 +3916,7 @@
             "DataType": "Mask",
             "DataSize": 2,
             "OptionsLookupKey": "PadMask",
-            "Offset": 8,
+            "Offset": 10,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "3" }
             ]
@@ -4008,7 +4009,7 @@
             "Name": "Trigger By Players",
             "DataType": "Enum",
             "DataSize": 1,
-            "Offset": 15,
+            "Offset": 17,
             "Options": {
               "Match Any": 0,
               "Match All": 1
@@ -4042,20 +4043,10 @@
             ]
           },
           {
-            "Name": "Condition",
-            "DataType": "Enum",
-            "DataSize": 1,
-            "Offset": 14,
-            "OptionsLookupKey": "NumberComparisons",
-            "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "11" }
-            ]
-          },
-          {
             "Name": "Trigger By Weapons",
             "DataType": "Enum",
             "DataSize": 1,
-            "Offset": 16,
+            "Offset": 18,
             "Options": {
               "Match Any": 0,
               "Match All": 1
@@ -4065,10 +4056,30 @@
             ]
           },
           {
+            "Name": "Mobs",
+            "DataType": "Mask",
+            "DataSize": 2,
+            "Offset": 12,
+            "OptionsLookupKey": "RaidsMobs",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 16,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
             "Name": "Value",
             "DataType": "Integer",
             "DataSize": 2,
-            "Offset": 12,
+            "Offset": 14,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "11" },
               { "Field": "Condition", "Op": "<=", "Value": "10" }
@@ -4079,7 +4090,7 @@
             "DataType": "Bool",
             "DataSize": 1,
             "Tooltip": "If true, will use delta from last time the condition was checked. Deltas will be summed across players & weapons.",
-            "Offset": 17,
+            "Offset": 19,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "11" },
               { "Field": "Condition", "Op": ">=", "Value": "10" }
@@ -4089,7 +4100,7 @@
             "Name": "Trigger By Players",
             "DataType": "Enum",
             "DataSize": 1,
-            "Offset": 15,
+            "Offset": 11,
             "Options": {
               "Match Any": 0,
               "Match All": 1
@@ -4102,7 +4113,7 @@
             "Name": "Condition",
             "DataType": "Enum",
             "DataSize": 1,
-            "Offset": 14,
+            "Offset": 10,
             "OptionsLookupKey": "NumberComparisons",
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "12" }
@@ -4112,7 +4123,7 @@
             "Name": "Value",
             "DataType": "Float",
             "Tooltip": "",
-            "Offset": 8,
+            "Offset": 12,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "12" },
               { "Field": "Condition", "Op": "<=", "Value": "10" }
@@ -5127,7 +5138,7 @@
     "Name": "Raids Health Proxy",
     "RCVersion": 4,
     "MobyOClass": 16397,
-    "Length": 340,
+    "Length": 348,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -5253,19 +5264,25 @@
         ]
       },
       {
-        "Name": "On Hit (Controller)",
-        "DataType": "MobyRef",
-        "Offset": 112
+        "Name": "Damage Cooldown (Seconds)",
+        "DataType": "Float",
+        "Offset": 112,
+        "Min": 0
       },
       {
-        "Name": "On Dead (Controller)",
+        "Name": "On Hit (Controller)",
         "DataType": "MobyRef",
         "Offset": 116
       },
       {
+        "Name": "On Dead (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 120
+      },
+      {
         "Name": "Values",
         "DataType": "Struct",
-        "Offset": 120,
+        "Offset": 124,
         "DataSize": 12,
         "Count": 5,
         "Labels": [

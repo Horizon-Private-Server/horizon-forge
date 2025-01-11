@@ -369,11 +369,12 @@ public static class ForgeBuilder
                 // write header
                 if (ctx.RacVersion == RCVER.DL)
                 {
+                    var subsort = (customModeDatas.FirstOrDefault(x => x is RaidsModeData) as RaidsModeData)?.MinLevelRequired ?? 0;
+
                     writer.Write(mapConfig.MapVersion);
                     writer.Write((int)mapConfig.DLBaseMap);
                     writer.Write((short)mapConfig.DLForceCustomMode); // forced custom mode id
-                    writer.Write((byte)(mapConfig.DLHideFromMapList ? 1 : 0)); // hide
-                    writer.Write((byte)0); // padding
+                    writer.Write((short)subsort); // subsort
                     writer.Write((short)(customModeDatas?.Length ?? 0)); // extra data count
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);

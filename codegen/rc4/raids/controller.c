@@ -46,7 +46,7 @@
 
 int controllerInitialized = 0;
 
-short playerKillsLast[GAME_MAX_PLAYERS][MOB_DAMAGE_SOURCE_COUNT-1] = {};
+short playerKillsLast[GAME_MAX_PLAYERS][MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS] = {};
 float playerHealthLast[GAME_MAX_PLAYERS] = {};
 
 //--------------------------------------------------------------------------
@@ -138,7 +138,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   Player** players = playerGetAll();
   int cuboidIdx = condition->Cuboid.CuboidIdx;
   SpawnPoint* triggerCuboid = spawnPointGet(cuboidIdx);
-  int pSucceeded = 0, pCount = 0;
+  int pSucceeded = 0, pCount = 0, pHostSucceeded = 0;
   int npcSucceeded = 0, npcCount = 0;
   int mobySucceeded = 0, mobyCount = 0;
 
@@ -146,16 +146,42 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   if (cuboidIdx < 0) return 0;
   if (!condition->Cuboid.TriggerBy) return 0;
 
-  // check for players
-  if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_CHECK_PLAYER) {
+  // check for all players
+  if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_CHECK_ALL_PLAYERS) {
     for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
       Player* p = players[j];
       if (!playerIsValid(p) || playerIsDead(p)) continue;
+
+      int isHost = (p->IsLocal && controllerAmIOwner(moby)) || (p->pNetPlayer->netClientIndex == gameGetHostId());
 
       // check if player is inside the cuboid
       int isInside = spawnPointIsPointInside(triggerCuboid, p->PlayerPosition, NULL);
       if (isInside != condition->Cuboid.InteractType && validPlayers[j]) {
         ++pSucceeded;
+        pvars->State.TriggeredByMoby = p->PlayerMoby;
+        if (isHost) ++pHostSucceeded;
+      } else {
+        validPlayers[j] = 0;
+      }
+
+      ++pCount;
+    }
+  }
+
+  // check for only host/local
+  else if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_HOST) {
+    for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
+      Player* p = players[j];
+      if (!playerIsValid(p) || playerIsDead(p)) continue;
+      
+      int isHost = (p->IsLocal && controllerAmIOwner(moby)) || (p->pNetPlayer->netClientIndex == gameGetHostId());
+      if (!isHost) continue;
+
+      // check if player is inside the cuboid
+      int isInside = spawnPointIsPointInside(triggerCuboid, p->PlayerPosition, NULL);
+      if (isInside != condition->Cuboid.InteractType && validPlayers[j]) {
+        ++pSucceeded;
+        ++pHostSucceeded;
         pvars->State.TriggeredByMoby = p->PlayerMoby;
       } else {
         validPlayers[j] = 0;
@@ -204,6 +230,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   int hasAnyPlayer = pSucceeded > 0 && pCount > 0;
   int hasAllPlayers = pSucceeded > 0 && pSucceeded == pCount;
   int hasNoPlayers = pSucceeded == 0 && pCount > 0;
+  int hasHostPlayer = pHostSucceeded > 0;
   int hasAnyNpc = npcSucceeded > 0 && npcCount > 0;
   int hasAllNpcs = npcSucceeded > 0 && npcSucceeded == npcCount;
   int hasNoNpcs = npcSucceeded == 0; // && npcCount > 0;
@@ -217,6 +244,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
         case CONTROLLER_CUBOID_TRIGGER_BY_ANY_PLAYER: succeeded += hasAnyPlayer; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ALL_PLAYERS: succeeded += hasAllPlayers; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_NO_PLAYERS: succeeded += hasNoPlayers; break;
+        case CONTROLLER_CUBOID_TRIGGER_BY_HOST: succeeded += hasHostPlayer; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ANY_NPC: succeeded += hasAnyNpc; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS: succeeded += hasAllNpcs; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS: succeeded += hasNoNpcs; break;
@@ -385,9 +413,10 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
 
   if (!condition->PlayerKills.PlayerMask) return 0;
   if (!condition->PlayerKills.WeaponMask) return 0;
+  if (!condition->PlayerKills.MobMask) return 0;
   
   Player** players = playerGetAll();
-  int i,j;
+  int i,j,k;
   int playerCount = 0;
   int playerMatch = 0;
   int weaponCount = 0;
@@ -407,15 +436,28 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
       for (j = 0; j < MOB_DAMAGE_SOURCE_COUNT-1; ++j) {
         int wepBit = 1 << j;
         if ((condition->PlayerKills.WeaponMask & wepBit) != 0) {
-          int value = MapConfig.State->PlayerStates[i].State.AllKills[j];
-          int delta = value - playerKillsLast[i][j];
+          
+          result = 0;
+          float mobSumKills = 0;
+          float mobSumDelta = 0;
+          for (k = 0; k < MAX_MOB_SPAWN_PARAMS; ++k) {
+            int spawnParamBit = 1 << k;
+            if ((condition->PlayerKills.MobMask & spawnParamBit) != 0) {
 
-          result = controllerConditionCompare(value, playerKillsLast[i][j], condition->PlayerKills.Value, condition->PlayerKills.CompareType);
+              int value = MapConfig.State->PlayerStates[i].State.AllKills[j][k];
+              int delta = value - playerKillsLast[i][j][k];
+
+              result |= controllerConditionCompare(value, playerKillsLast[i][j][k], condition->PlayerKills.Value, condition->PlayerKills.CompareType);
+              mobSumKills += value;
+              mobSumDelta += delta;
+            }
+          }
+
           weaponCount++;
-          sumValue += value;
+          sumValue += mobSumKills;
           if (result) {
             ++weaponMatch;
-            pvars->State.CounterValue[conditionIdx] = (condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? delta : value;
+            pvars->State.CounterValue[conditionIdx] = (condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? mobSumDelta : mobSumKills;
           }
         }
       }
@@ -1284,9 +1326,7 @@ void controllerStart(void)
     
     int j;
     if (MapConfig.State) {
-      for (j = 0; j < MOB_DAMAGE_SOURCE_COUNT-1; ++j) {
-        playerKillsLast[i][j] = MapConfig.State->PlayerStates[i].State.AllKills[j];
-      }
+      memcpy(playerKillsLast[i], MapConfig.State->PlayerStates[i].State.AllKills, sizeof(playerKillsLast[i]));
     }
 
     playerHealthLast[i] = player->Health;

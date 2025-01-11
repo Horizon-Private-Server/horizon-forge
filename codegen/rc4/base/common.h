@@ -206,11 +206,11 @@ typedef struct CustomMapDef
   int Version;
   int CustomModeExtraDataMask;
   short ShrubMinRenderDistance;
+  short Subsort;
   char BaseMapId;
   char ForcedCustomModeId;
-  char HideFromMapList;
   char Name[32];
-  char Filename[64];
+  char Filename[48];
 } CustomMapDef_t;
 
 enum CHARACTER_TWEAKER_ID

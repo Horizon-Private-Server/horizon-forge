@@ -77,8 +77,9 @@ enum ControllerCuboidTriggerBy {
 	CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS = 1 << 4,
 	CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS = 1 << 5,
 	CONTROLLER_CUBOID_TRIGGER_BY_MOBY = 1 << 6,
+	CONTROLLER_CUBOID_TRIGGER_BY_HOST = 1 << 7,
 
-	CONTROLLER_CUBOID_TRIGGER_BY_CHECK_PLAYER = CONTROLLER_CUBOID_TRIGGER_BY_ANY_PLAYER | CONTROLLER_CUBOID_TRIGGER_BY_ALL_PLAYERS | CONTROLLER_CUBOID_TRIGGER_BY_NO_PLAYERS,
+	CONTROLLER_CUBOID_TRIGGER_BY_CHECK_ALL_PLAYERS = CONTROLLER_CUBOID_TRIGGER_BY_ANY_PLAYER | CONTROLLER_CUBOID_TRIGGER_BY_ALL_PLAYERS | CONTROLLER_CUBOID_TRIGGER_BY_NO_PLAYERS,
 	CONTROLLER_CUBOID_TRIGGER_BY_CHECK_NPC = CONTROLLER_CUBOID_TRIGGER_BY_ANY_NPC | CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS | CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS,
 };
 
@@ -149,8 +150,8 @@ struct ControllerCondition
     
     // trigger if player button
     struct {
-      short PadMask;
       short PlayerMask;
+      short PadMask;
     } PlayerButtons;
     
     // trigger if delay
@@ -190,6 +191,7 @@ struct ControllerCondition
     struct {
       short PlayerMask;
       short WeaponMask;
+      short MobMask;
       short Value;
       char CompareType;
       char MatchAllPlayers;
@@ -199,10 +201,10 @@ struct ControllerCondition
 
     // trigger if player health
     struct {
-      float Value;
       short PlayerMask;
       char CompareType;
       char MatchAllPlayers;
+      float Value;
       char Normalized;
     } PlayerHealth;
 

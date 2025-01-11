@@ -846,6 +846,22 @@ public class PvarOverlayDef
 
             return options;
         }
+        else if (key == "raidsmobs")
+        {
+            var raidsData = GameObject.FindObjectOfType<RaidsModeData>();
+            var options = new Dictionary<string, long>();
+            var isMask = this.DataType?.ToLower() == "mask";
+            var maskCount = this.GetDataSize() * 8;
+            if (raidsData)
+            {
+                if (isMask)
+                    options = raidsData.Mobs.Take(maskCount).ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Mobs.IndexOf(x).ToString() : x.Name, x => (long)(1 << raidsData.Mobs.IndexOf(x)));
+                else
+                    options = raidsData.Mobs.ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Mobs.IndexOf(x).ToString() : x.Name, x => (long)raidsData.Mobs.IndexOf(x));
+            }
+
+            return options;
+        }
 
         return PvarOverlayConstants.PVAR_OPTIONS_LOOKUP.GetValueOrDefault(key) ?? new Dictionary<string, long>();
     }
