@@ -4086,14 +4086,13 @@
             ]
           },
           {
-            "Name": "Use Aggregate Delta",
+            "Name": "Use Sum",
             "DataType": "Bool",
             "DataSize": 1,
-            "Tooltip": "If true, will use delta from last time the condition was checked. Deltas will be summed across players & weapons.",
+            "Tooltip": "If true, will sum kills across Players & Weapons, and then compare from last time the condition was checked.",
             "Offset": 19,
             "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "11" },
-              { "Field": "Condition", "Op": ">=", "Value": "10" }
+              { "Field": "Type", "Op": "==", "Value": "11" }
             ]
           },
           {

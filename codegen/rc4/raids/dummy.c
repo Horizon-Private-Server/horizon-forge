@@ -40,7 +40,7 @@
 #include "game.h"
 
 #if DEBUG
-#define DLOG(moby, format, ...) if (((struct DummyPVar*)moby->PVar)->Config.Log) { DPRINTF(format, ##__VA_ARGS__); }
+#define DLOG(moby, format, ...) if (((struct DummyPVar*)moby->PVar)->Config.Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
 #else
 #define DLOG(moby, format, ...) 
 #endif

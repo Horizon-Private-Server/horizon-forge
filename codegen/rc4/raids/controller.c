@@ -42,11 +42,15 @@
 #include "mob.h"
 #include "game.h"
 
-#define DLOG(moby, format, ...) if (((struct ControllerPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG(moby, format, ...) if (((struct ControllerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG(moby, format, ...) 
+#endif
 
 int controllerInitialized = 0;
 
-short playerKillsLast[GAME_MAX_PLAYERS][MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS] = {};
+int playerKillsLast[GAME_MAX_PLAYERS][MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS] = {};
 float playerHealthLast[GAME_MAX_PLAYERS] = {};
 
 //--------------------------------------------------------------------------
@@ -450,6 +454,7 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
               result |= controllerConditionCompare(value, playerKillsLast[i][j][k], condition->PlayerKills.Value, condition->PlayerKills.CompareType);
               mobSumKills += value;
               mobSumDelta += delta;
+              DLOG(moby, "condition:%d: wep:%d mob:%d value:%d delta:%d => match:%d\n", conditionIdx, j, k, value, delta, result);
             }
           }
 
@@ -458,22 +463,29 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
           if (result) {
             ++weaponMatch;
             pvars->State.CounterValue[conditionIdx] = (condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? mobSumDelta : mobSumKills;
+            DLOG(moby, "condition:%d: wep:%d match\n", conditionIdx, j);
           }
         }
       }
 
       ++playerCount;
-      if (weaponMatch > 0 && (condition->PlayerKills.MatchAllWeapons == 0 || weaponCount == weaponMatch)) ++playerMatch;
+      if (weaponMatch > 0 && (condition->PlayerKills.MatchAllWeapons == 0 || weaponCount == weaponMatch)) {
+        ++playerMatch;
+        DLOG(moby, "condition:%d: player:%d match\n", conditionIdx, i);
+      }
     }
   }
 
-  float sumDelta = sumValue - pvars->State.LastValue[conditionIdx];
+  float sumLastValue = pvars->State.LastValue[conditionIdx];
+  float sumDelta = sumValue - sumLastValue;
   pvars->State.LastValue[conditionIdx] = sumValue;
 
   // run aggregate comparison
-  if (condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY && condition->PlayerKills.Aggregate) {
-    pvars->State.CounterValue[conditionIdx] = sumDelta;
-    return controllerConditionCompare(sumDelta, 0, condition->PlayerKills.Value, condition->PlayerKills.CompareType);
+  if (condition->PlayerKills.Aggregate) {
+    pvars->State.CounterValue[conditionIdx] = condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY ? sumDelta : sumValue;
+    result = controllerConditionCompare(sumValue, sumLastValue, condition->PlayerKills.Value, condition->PlayerKills.CompareType);
+    DLOG(moby, "condition:%d: sum %f (dt: %f) => match:%d\n", conditionIdx, sumValue, sumDelta, result);
+    return result;
   }
 
   return playerMatch > 0 && (condition->PlayerKills.MatchAllPlayers == 0 || playerCount == playerMatch);

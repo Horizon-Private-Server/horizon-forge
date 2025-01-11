@@ -26,7 +26,11 @@
 #include "maputils.h"
 #include "shared.h"
 
-#define DLOG(moby, format, ...) if (npcGetPVars(moby)->Parameters.Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG(moby, format, ...) if (npcGetPVars(moby)->Parameters.Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG(moby, format, ...) 
+#endif
 
 void npcPreUpdate(Moby* moby);
 void npcPostUpdate(Moby* moby);

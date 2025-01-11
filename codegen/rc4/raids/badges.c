@@ -68,9 +68,9 @@ void badgesOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0) {
 void badgesUpdate_HealthRegen(Player* player, int badgeIdx, float strength)
 {
   if (playerIsDead(player) || player->Health <= 0) return;
+  if ((gameGetTime() - badgesPlayerTimeLastCantShoot[player->PlayerId]) < TIME_SECOND) return;
   
   int delayMs = (TIME_SECOND * 5);
-  if ((gameGetTime() - badgesPlayerTimeLastCantShoot[player->PlayerId]) < TIME_SECOND) return;
   int timeSinceLastHitMs = gameGetTime() - (badgesPlayerTimeLastHit[player->PlayerId] + delayMs);
   if (timeSinceLastHitMs < 0) return;
 
@@ -95,7 +95,19 @@ void badgesUpdate_HealthRegen(Player* player, int badgeIdx, float strength)
 void badgesUpdate_AmmoRegen(Player* player, int badgeIdx, float strength)
 {
   if (playerIsDead(player)) return;
-  if ((gameGetTime() - badgesPlayerTimeLastCantShoot[player->PlayerId]) < TIME_SECOND) return;
+
+  int delayMs = (TIME_SECOND * 1);
+  int timeSinceLastCantShootMs = gameGetTime() - (badgesPlayerTimeLastCantShoot[player->PlayerId] + delayMs);
+  if (timeSinceLastCantShootMs < 0) return;
+
+  timeSinceLastCantShootMs *= 1 + (0.5 * powf(strength, 2) * 5);
+  int cooldown = BADGES_AMMO_REGEN_COOLDOWN_TICKS;
+  if (timeSinceLastCantShootMs < (TIME_SECOND * 1))
+    cooldown *= 5;
+  else if (timeSinceLastCantShootMs < (TIME_SECOND * 3))
+    cooldown *= 3;
+  else if (timeSinceLastCantShootMs < (TIME_SECOND * 6))
+    cooldown *= 2;
 
   int equippedGadgetId = player->WeaponHeldId;
   int gadgetSlotId = weaponIdToSlot(equippedGadgetId);
@@ -105,11 +117,11 @@ void badgesUpdate_AmmoRegen(Player* player, int badgeIdx, float strength)
     int equippedGadgetMaxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, equippedGadgetId);
     if (equippedGadgetMaxAmmo) {
       int equippedGadgetAmmo = player->GadgetBox->Gadgets[equippedGadgetId].Ammo;
-      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*powf(strength, 2)*5;
+      float newAmmo = equippedGadgetAmmo + badgesAmmoRegenAmount[gadgetSlotId]*1;
       if (newAmmo > equippedGadgetMaxAmmo) newAmmo = equippedGadgetMaxAmmo;
       if (newAmmo != equippedGadgetAmmo) {
         player->GadgetBox->Gadgets[equippedGadgetId].Ammo = newAmmo;
-        badgesPlayerCooldown[player->PlayerId][badgeIdx] = BADGES_AMMO_REGEN_COOLDOWN_TICKS;
+        badgesPlayerCooldown[player->PlayerId][badgeIdx] = cooldown;
       }
     }
   }
