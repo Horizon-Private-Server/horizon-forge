@@ -460,7 +460,7 @@ void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata)
 }
 
 //--------------------------------------------------------------------------
-void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, int weaponId)
+void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, enum MobDamageSource source)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
 
@@ -812,7 +812,7 @@ void spawnerStart(void)
 
       // verify point is walkable
       if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
-        DPRINTF("bad collision %02X\n", CollLine_Fix_GetHitCollisionId());
+        //DPRINTF("bad collision %02X\n", CollLine_Fix_GetHitCollisionId());
         continue;
       }
 

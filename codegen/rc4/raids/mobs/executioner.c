@@ -19,7 +19,7 @@ void executionerPostUpdate(Moby* moby);
 void executionerPostDraw(Moby* moby);
 void executionerMove(Moby* moby);
 void executionerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void executionerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void executionerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int executionerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void executionerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -164,7 +164,7 @@ void executionerPostUpdate(Moby* moby)
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && !executionerIsAttacking(moby))) {
+	if ((moby->DrawDist == 0 && !executionerIsAttacking(moby) && !executionerIsSpawning(pvars) && !executionerIsDying(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -214,7 +214,7 @@ void executionerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID
 }
 
 //--------------------------------------------------------------------------
-void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void executionerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -657,7 +657,7 @@ void executionerDoAction(Moby* moby)
 		{
       float dir = 0;
       if (target) {
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
+        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
       }
 
       if (!isInAirFromFlinching) {

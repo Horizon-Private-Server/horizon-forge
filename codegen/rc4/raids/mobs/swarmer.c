@@ -20,7 +20,7 @@ void swarmerPostUpdate(Moby* moby);
 void swarmerPostDraw(Moby* moby);
 void swarmerMove(Moby* moby);
 void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void swarmerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void swarmerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int swarmerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void swarmerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -166,7 +166,7 @@ void swarmerPostUpdate(Moby* moby)
     animSpeed = 1;
   }
 
-	if ((moby->DrawDist == 0 && !swarmerIsAttacking(moby))) {
+	if ((moby->DrawDist == 0 && !swarmerIsAttacking(moby) && !swarmerIsSpawning(pvars) && !swarmerIsDying(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -216,7 +216,7 @@ void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 }
 
 //--------------------------------------------------------------------------
-void swarmerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void swarmerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -570,7 +570,7 @@ void swarmerDoAction(Moby* moby)
 		{
       float dir = 0;
       if (target) {
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
+        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
       }
 
       if (!isInAirFromFlinching) {
@@ -835,7 +835,7 @@ int swarmerCanAttack(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int swarmerGetSideFlipLeftOrRight(struct MobPVar* pvars)
 {
-  int seed = pvars->MobVars.DynamicRandom + pvars->MobVars.ActionId;
+  int seed = pvars->MobVars.DynamicRandom;
   sha1(&seed, 4, &seed, 4);
   return seed % 2;
 }

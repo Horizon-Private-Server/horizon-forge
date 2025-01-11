@@ -31,15 +31,16 @@
 #include <libdl/utils.h>
 #include "mob.h"
 #include "game.h"
+#include "bank.h"
 #include "maputils.h"
 
 char LocalPlayerStrBuffer[2][64];
 extern struct RaidsMapConfig MapConfig;
 
 /* 
- * paid sound def
+ * reusable menu sound def
  */
-SoundDef PaidSoundDef =
+SoundDef MenuSoundDef =
 {
 	0.0,	// MinRange
 	20.0,	// MaxRange
@@ -49,7 +50,7 @@ SoundDef PaidSoundDef =
 	0,			// MaxPitch
 	0,			// Loop
 	0x10,		// Flags
-	32,		  // Index
+	19,		  // Index
 	3			  // Bank
 };
 
@@ -101,10 +102,31 @@ void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, fl
 }
 
 //--------------------------------------------------------------------------
+void playEquipRejectSound(Player* player)
+{	
+  MenuSoundDef.Index = 27;
+	soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
+void playEquipSound(Player* player)
+{	
+  MenuSoundDef.Index = 19;
+	soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
+void playUpgradeSound(Player* player)
+{	
+  MenuSoundDef.Index = 58;
+	soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
 void playPaidSound(Player* player)
 {
-  if (!player) return;
-  soundPlay(&PaidSoundDef, 0, player->PlayerMoby, 0, 0x400);
+  MenuSoundDef.Index = 32;
+  soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
 }
 
 //--------------------------------------------------------------------------
@@ -115,7 +137,7 @@ GuberEvent* guberCreateEvent(Moby* moby, u32 eventType)
 	// create guber object
 	Guber* guber = guberGetObjectByMoby(moby);
 	if (guber)
-		event = guberEventCreateEvent(guber, eventType, 0, 0);
+		event = guberEventCreateEventSafe(guber, eventType, 0, 0);
 
 	return event;
 }
@@ -418,11 +440,8 @@ int isOnHubWorld(void)
 //--------------------------------------------------------------------------
 int bankTryChargeLocalAccount(Player* player, u32 cost)
 {
-  if (!MapConfig.GetBankFunc) return 0;
-
-  RaidsPlayerBank_t* bank = MapConfig.GetBankFunc();
+  RaidsPlayerBank_t* bank = bankGetLocalBank();
   if (!bank) return 0;
-
   if (bank->Account.Bolts < cost) return 0;
 
   // charge
@@ -430,9 +449,7 @@ int bankTryChargeLocalAccount(Player* player, u32 cost)
   playPaidSound(player);
 
   // send new bolts to server
-  if (MapConfig.SendBankAccountToServerFunc)
-    MapConfig.SendBankAccountToServerFunc();
-
+  bankSendAccountToServer();
   return 1;
 }
 
@@ -557,4 +574,15 @@ void blowCorn(Moby* moby)
   , NULL
   , 0
   );
+}
+
+//--------------------------------------------------------------------------
+int countBits(u32 value)
+{
+  int bits = 0;
+  while (value) {
+    if (value&1) ++bits;
+    value >>= 1;
+  }
+  return bits;
 }

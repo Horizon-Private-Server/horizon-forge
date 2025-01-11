@@ -386,6 +386,25 @@ public enum DLRaidsDifficultyMask
     _5Stars = 16,
 }
 
+public enum DLRaidsNumberComparisons
+{
+    Equal_To = 0,
+    Not_Equal_To,
+    Changed_To,
+    Less_Than,
+    Less_Than_Or_Equal_To,
+    Greater_Than,
+    Greater_Than_Or_Equal_To,
+    Increased_By,
+    Decreased_By,
+    Increased_By_At_Least,
+    Decreased_By_At_Least,
+    Increased,
+    Decreased,
+    Changed,
+    Unchanged
+}
+
 public enum DLMusicTracks
 {
     OnlineLobby = 0x0,

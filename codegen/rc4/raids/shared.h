@@ -24,13 +24,15 @@ struct MobPVar;
 struct MobStateUpdateEventArgs;
 
 void mapOnMobUpdate(Moby* moby);
-void mapOnMobKilled(Moby* moby, int killedByPlayerId, int weaponId);
+void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void mapOnMobDestroyed(Moby* moby);
 void mapOnMobSpawned(Moby* moby);
 struct Guber* mapGetGuber(Moby* moby);
 void mapHandleEvent(Moby* moby, GuberEvent* event);
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);
 void mapStart(void);
+void mapTick(void);
+void mapTickEnd(void);
 void mapInit(void);
 
 int mobAmIOwner(Moby* moby);

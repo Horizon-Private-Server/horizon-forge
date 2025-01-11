@@ -20,7 +20,7 @@ void swamperPostUpdate(Moby* moby);
 void swamperPostDraw(Moby* moby);
 void swamperMove(Moby* moby);
 void swamperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void swamperOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void swamperOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void swamperOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int swamperOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void swamperOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -164,7 +164,7 @@ void swamperPostUpdate(Moby* moby)
     animSpeed = baseSpeed;
   }
 
-	if ((moby->DrawDist == 0 && !swamperIsAttacking(moby))) {
+	if ((moby->DrawDist == 0 && !swamperIsAttacking(moby) && !swamperIsSpawning(pvars) && !swamperIsDying(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -214,7 +214,7 @@ void swamperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 }
 
 //--------------------------------------------------------------------------
-void swamperOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void swamperOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -536,7 +536,7 @@ void swamperDoAction(Moby* moby)
       float dir = 0;
       if (target) {
         walkAnim = SWAMPER_ANIM_RUN;
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
+        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
       } else {
         speed *= 0.5;
       }
@@ -763,7 +763,7 @@ int swamperCanAttack(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int swamperGetSideFlipLeftOrRight(struct MobPVar* pvars)
 {
-  int seed = pvars->MobVars.DynamicRandom + pvars->MobVars.ActionId;
+  int seed = pvars->MobVars.DynamicRandom;
   sha1(&seed, 4, &seed, 4);
   return seed % 2;
 }

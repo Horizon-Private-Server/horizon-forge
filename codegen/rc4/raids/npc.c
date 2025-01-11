@@ -33,7 +33,7 @@ void npcPostUpdate(Moby* moby);
 void npcPostDraw(Moby* moby);
 void npcMove(Moby* moby);
 void npcOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void npcOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void npcOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void npcOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int npcOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void npcOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -227,7 +227,7 @@ void npcOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char r
 }
 
 //--------------------------------------------------------------------------
-void npcOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void npcOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -485,7 +485,7 @@ void npcDoAction(Moby* moby)
       int walkAnimId = pvars->Parameters.WalkAnim.Id;
       float dir = 0;
       if (target) {
-        dir = ((pvars->Mob.MobVars.ActionId + pvars->Mob.MobVars.DynamicRandom) % 3) - 1;
+        dir = (pvars->Mob.MobVars.DynamicRandom % 3) - 1;
       }
 
       // determine next position

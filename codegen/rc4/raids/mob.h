@@ -46,7 +46,7 @@ typedef void (*MobGenericCallback_func)(Moby* moby);
 typedef Moby* (*MobGetNextTarget_func)(Moby* moby);
 typedef int (*MobGetPreferredAction_func)(Moby* moby, int * delayTicks);
 typedef void (*MobOnSpawn_func)(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-typedef void (*MobOnDestroy_func)(Moby* moby, int killedByPlayerId, int weaponId);
+typedef void (*MobOnDestroy_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 typedef void (*MobOnDamage_func)(Moby* moby, struct MobDamageEventArgs* e);
 typedef int (*MobOnLocalDamage_func)(Moby* moby, struct MobLocalDamageEventArgs* e);
 typedef void (*MobOnStateUpdate_func)(Moby* moby, struct MobStateUpdateEventArgs* e);

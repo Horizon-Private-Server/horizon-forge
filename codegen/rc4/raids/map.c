@@ -26,6 +26,7 @@
 
 extern struct RaidsMapConfig MapConfig;
 
+int mapCachedRefreshInvFlag = 0;
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
 
 MobyGetGuberObject_func baseGetGuberFunc = NULL;
@@ -43,13 +44,13 @@ void mapOnMobUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void mapOnMobKilled(Moby* moby, int killedByPlayerId, int weaponId)
+void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar) return;
 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobKilled(moby->PParent, moby, pvars->MobVars.Userdata, killedByPlayerId, weaponId);
+    spawnerOnChildMobKilled(moby->PParent, moby, pvars->MobVars.Userdata, killedByPlayerId, source);
   }
 }
 
@@ -359,6 +360,21 @@ void mapStart(void)
       }
     }
   }
+}
+
+//--------------------------------------------------------------------------
+void mapTick(void)
+{
+  RaidsPlayerBank_t* localBank = bankGetLocalBank();
+  mapCachedRefreshInvFlag = localBank->Inventory.RefreshLocalInventory;
+}
+
+//--------------------------------------------------------------------------
+void mapTickEnd(void)
+{
+  RaidsPlayerBank_t* localBank = bankGetLocalBank();
+  if (mapCachedRefreshInvFlag)
+    localBank->Inventory.RefreshLocalInventory = 0;
 }
 
 //--------------------------------------------------------------------------

@@ -323,6 +323,21 @@ enum CustomMessageId
     CUSTOM_MSG_ID_RAIDS_BUY_STORE_ITEM_REQUEST = 58,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_GET_MAP_STATS_REQUEST = 59,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_SET_MAP_STATS_REQUEST = 60,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_SET_MISSION_COMPLETED_REQUEST = 61,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,
@@ -574,6 +589,8 @@ typedef struct CustomDzoCommandDrawTextWindow
   float Y;
   float TextX;
   float TextY;
+  float Width;
+  float Height;
   float Scale;
   u32 Color;
   char Alignment;

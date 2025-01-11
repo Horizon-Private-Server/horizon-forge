@@ -36,8 +36,15 @@ typedef struct LevelselectDrawState
   int SelectedIdx;
   int SelectedDifficulty;
   int NumPlanets;
+  int ShowChallengesDialog;
+  int ChallengesDialogSelectedIdx;
   char SelectedMapFilename[64];
-  struct RaidsCustomMapExtraData SelectedMapExtraData;
+  struct RaidsBankMapStats MapStats;
+  CustomMapDef_t* SelectedMapDef;
+  union {
+    struct RaidsCustomMapExtraData SelectedMapExtraData;
+    char SelectedMapExtraDataBuf[RAIDS_MAX_EXDATA_SIZE];
+  };
 } LevelselectDrawState_t;
 
 void levelselectOpen(void);

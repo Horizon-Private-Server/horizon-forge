@@ -118,6 +118,7 @@ void dummyOnStateChanged(Moby* moby)
 
       // reset on deactivated
       pvars->TargetVars.hitPoints = difficultyConfig->Health;
+      pvars->TargetVars.maxHitPoints = difficultyConfig->Health;
       break;
     }
     case DUMMY_STATE_DEACTIVATED:
@@ -125,6 +126,7 @@ void dummyOnStateChanged(Moby* moby)
     {
       // reset on deactivated
       pvars->TargetVars.hitPoints = difficultyConfig->Health;
+      pvars->TargetVars.maxHitPoints = difficultyConfig->Health;
       break;
     }
     case DUMMY_STATE_ACTIVATED:
@@ -280,6 +282,7 @@ void dummyOnGuberCreated(Moby* moby)
   pvars->TargetVarsPtr = &pvars->TargetVars;
   pvars->FlashVarsPtr = &pvars->FlashVars;
   pvars->TargetVars.hitPoints = difficultyConfig->Health;
+  pvars->TargetVars.maxHitPoints = difficultyConfig->Health;
   pvars->TargetVars.targetHeight = pvars->Config.TargetHeight;
   pvars->TargetVars.targetRadiusIn8ths = (u8)(pvars->Config.TargetRadius * 8);
   pvars->TargetVars.team = pvars->Config.IsOnEnemyTeam ? TEAM_WHITE : TEAM_BLUE;

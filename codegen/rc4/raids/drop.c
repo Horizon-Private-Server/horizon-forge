@@ -205,7 +205,7 @@ GuberEvent* dropCreateEvent(Moby* moby, u32 eventType)
 	// create guber object
 	Guber* guber = guberGetObjectByMoby(moby);
 	if (guber)
-		event = guberEventCreateEvent(guber, eventType, 0, 0);
+		event = guberEventCreateEventSafe(guber, eventType, 0, 0);
 
 	return event;
 }

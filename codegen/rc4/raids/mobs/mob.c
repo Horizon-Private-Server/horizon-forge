@@ -198,7 +198,7 @@ void mobReactToThorns(Moby* moby, float damage, int byPlayerId)
   float angle = atan2f(delta[1] / dist, delta[0] / dist);
   
   // create event
-	GuberEvent * guberEvent = guberEventCreateEvent(guber, MOB_EVENT_DAMAGE, 0, 0);
+	GuberEvent * guberEvent = guberEventCreateEventSafe(guber, MOB_EVENT_DAMAGE, 0, 0);
   if (guberEvent) {
     args.SourceUID = player->Guber.Id.UID;
     args.SourceOClass = 0;
@@ -431,18 +431,20 @@ void mobSetAction(Moby* moby, int action)
 	// 	guberEventWrite(event, &args, sizeof(struct MobActionUpdateEventArgs));
 	// }
 
-  // mark dirty if owner and mob wants state update
-  if (mobAmIOwner(moby) && pvars->VTable && pvars->VTable->ShouldForceStateUpdateOnAction && pvars->VTable->ShouldForceStateUpdateOnAction(moby, action))
-    pvars->MobVars.Dirty = 1;
-  
-  pvars->MobVars.LastActionId = pvars->MobVars.ActionId++;
-  pvars->MobVars.LastAction = pvars->MobVars.Action;
-  
+  if (mobAmIOwner(moby)) {
+
+    pvars->MobVars.LastAction = pvars->MobVars.Action;
+    pvars->MobVars.LastActionId = pvars->MobVars.ActionId++;
+    //pvars->MobVars.DynamicRandom = (char)rand(255);
+      
+    // mark dirty if owner and mob wants state update
+    if (pvars->VTable && pvars->VTable->ShouldForceStateUpdateOnAction && pvars->VTable->ShouldForceStateUpdateOnAction(moby, action))
+      pvars->MobVars.Dirty = 1;
+  }
+
   // pass to mob handler
   if (pvars->VTable && pvars->VTable->ForceLocalAction)
     pvars->VTable->ForceLocalAction(moby, action);
-
-  pvars->MobVars.DynamicRandom = (char)rand(255);
 }
 
 //--------------------------------------------------------------------------

@@ -19,7 +19,7 @@ void zombiePostUpdate(Moby* moby);
 void zombiePostDraw(Moby* moby);
 void zombieMove(Moby* moby);
 void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void zombieOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void zombieOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int zombieOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void zombieOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -156,7 +156,7 @@ void zombiePostUpdate(Moby* moby)
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && !zombieIsAttacking(moby))) {
+	if ((moby->DrawDist == 0 && !zombieIsAttacking(moby) && !zombieIsSpawning(pvars) && !zombieIsDying(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -206,7 +206,7 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 }
 
 //--------------------------------------------------------------------------
-void zombieOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void zombieOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -543,7 +543,7 @@ void zombieDoAction(Moby* moby)
 		{
       float dir = 0;
       if (target) {
-        dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
+        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
       }
 
       if (!isInAirFromFlinching) {

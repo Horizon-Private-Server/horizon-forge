@@ -67,6 +67,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     [HideInInspector] public SerializableMonoBehaviourDictionary PVarReferences;
     [HideInInspector] public string[] PVarStrings;
     [HideInInspector] public GameObject PrefabOverride;
+    [HideInInspector] public Matrix4x4 PrefabOverrideTransformation = Matrix4x4.identity;
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
@@ -232,6 +233,13 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         renderHandle.WorldLightIndex = Light1;
         renderHandle.Layer = LayerMask.NameToLayer("MOBY");
         renderHandle.Update(this.gameObject, GetPrefab());
+        if (PrefabOverride && PrefabOverrideTransformation.ValidTRS())
+        {
+            renderHandle.Offset = PrefabOverrideTransformation.GetPosition();
+            renderHandle.Rotation = PrefabOverrideTransformation.GetRotation();
+            renderHandle.Scale = PrefabOverrideTransformation.GetScale();
+        }
+
         UpdateMaterials();
 
         InitializePVarReferences();

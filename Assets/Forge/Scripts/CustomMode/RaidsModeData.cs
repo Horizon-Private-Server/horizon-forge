@@ -24,6 +24,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int PVARPOKE_OCLASS = 0x400B;
     public static readonly int BLIP_OCLASS = 0x400C;
     public static readonly int DUMMY_OCLASS = 0x400D;
+    public static readonly int GOLDBOLT_OCLASS = 0x400E;
+    public static readonly int COUNTER_OCLASS = 0x400F;
 
     public static readonly float[] DIFFICULTY_FACTORS = new float[]
     {
@@ -40,7 +42,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public bool Enabled = true;
     [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
-    [Range(1, 10), Tooltip("Estimated map difficulty, indicated to the user on a scale of 1 to 10.")] public float DifficultyApproximate = 5;
+    [Tooltip("Minimum player level required to visit planet.")] public uint MinLevelRequired = 0;
     public int Cost1Star = 0;
     public int Cost2Star = 0;
     public int Cost3Star = 0;
@@ -49,6 +51,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public string Author;
     [Multiline] public string Description;
 
+    [Header("Challenges")]
+    public List<RaidsChallenge> Challenges;
+
+    [Header("Mobs")]
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
     {
         new RaidsMobSpawnParam() { Name = "Zombie" }
@@ -88,6 +94,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/map.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gate.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
@@ -107,6 +114,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
@@ -125,6 +133,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");
+        state.Includes.Add("#include \"bank.h\"");
+        state.Includes.Add("#include \"inventory.h\"");
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"gate.h\"");
         state.Includes.Add("#include \"npc.h\"");
@@ -144,6 +154,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"hackerorb.h\"");
         state.Includes.Add("#include \"blip.h\"");
         state.Includes.Add("#include \"dummy.h\"");
+        state.Includes.Add("#include \"collectible.h\"");
         state.Includes.Add("#include \"levelselect.h\"");
 
         state.Declarations.Add("void configInit(void);");
@@ -152,11 +163,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  levelselectFrameTick();\r\n  messagerFrameUpdate();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
 
         state.InitBody.Add($"configInit();");
+        state.InitBody.Add($"bankInit();");
+        state.InitBody.Add($"inventoryInit();");
         state.InitBody.Add($"mapInit();");
         state.InitBody.Add($"mobInit();");
         state.InitBody.Add($"levelselectInit();");
@@ -175,6 +188,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"hackerorbInit();");
         state.InitBody.Add($"blipInit();");
         state.InitBody.Add($"dummyInit();");
+        state.InitBody.Add($"collectibleInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
@@ -204,9 +218,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBodyReady.Add("ammodropStart();");
         state.MainBodyReady.Add("dummyStart();");
 
+        state.MainBody.Add("mapTick();");
+        state.MainBody.Add("bankTick();");
+        state.MainBody.Add("inventoryTick();");
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
+        state.MainBody.Add("mapTickEnd();");
     }
 
     public void Configure(BuildState state)
@@ -214,6 +232,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(8309); // node base (for capture sound)
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
+        state.MobyOClasses.Add(13); // bolt (for gold bolt)
         state.MobyOClasses.Add(LASERBEAM_OCLASS);
 
         // add mob oclasses
@@ -228,6 +247,18 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             if (variant.Dependencies != null)
                 state.MobyOClasses.AddRange(variant.Dependencies.Select(x => x.OClass));
         }
+
+        // update gold bolt indices
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+        var goldBoltCount = 0;
+        foreach (var goldBoltMoby in mobys.Where(x => x.OClass == GOLDBOLT_OCLASS))
+        {
+            // set index
+            goldBoltMoby.GetPVarValues()[".Index"] = goldBoltCount.ToString();
+            ++goldBoltCount;
+        }
+
     }
 
     string GetConfigContents()
@@ -268,9 +299,15 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public override void Write(BinaryWriter writer)
     {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+        var goldBoltCount = mobys.Count(x => x.OClass == GOLDBOLT_OCLASS);
+        var baseOffset = writer.BaseStream.Position;
+
         writer.Write(RAIDS_VERSION);
-        writer.Write(DifficultyApproximate);
-        writer.Write(new byte[8]);
+        writer.Write(MinLevelRequired);
+        writer.Write(goldBoltCount);
+        writer.Write(Challenges.Count);
         writer.Write(Cost1Star);
         writer.Write(Cost2Star);
         writer.Write(Cost3Star);
@@ -280,6 +317,28 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         writer.Write((byte)0);
         writer.WriteString(BinaryHelper.StrToRatchetStr(Description), 255);
         writer.Write((byte)0);
+
+        // prewrite header
+        var offsets = new List<int>();
+        var headerOffset = writer.BaseStream.Position;
+        writer.Write(new byte[8 * Challenges.Count]);
+
+        foreach (var challenge in Challenges)
+        {
+            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Name));
+            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Description));
+        }
+
+        var endOffset = writer.BaseStream.Position;
+
+        // rewrite header
+        writer.BaseStream.Position = headerOffset;
+        foreach (var offset in offsets)
+            writer.Write(offset);
+
+        writer.BaseStream.Position = endOffset;
     }
 
 
@@ -329,6 +388,18 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.RCVersion = RCVER.DL;
         moby.UpdateDistance = 255;
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Controller");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Counter Moby", priority = 10)]
+    public static void CreateCounterMoby()
+    {
+        var go = new GameObject("Counter");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = COUNTER_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Counter");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }
@@ -466,6 +537,22 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.UpdateDistance = 255;
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Health Proxy");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Gold Bolt Moby", priority = 10)]
+    public static void CreateGoldBoltMoby()
+    {
+        var go = new GameObject("Gold Bolt Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = GOLDBOLT_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.DrawDistance = 128;
+        moby.UpdateDistance = 128;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "13", RCVER.DL, includeGlobal: true);
+        moby.PrefabOverrideTransformation = Matrix4x4.TRS(Vector3.zero, Quaternion.FromToRotation(Vector3.right, Vector3.up), Vector3.one * 3);
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }
@@ -644,4 +731,11 @@ public class RaidsMobSpawnParam
         return sb.ToString();
     }
 
+}
+
+[Serializable]
+public class RaidsChallenge
+{
+    public string Name;
+    public string Description;
 }

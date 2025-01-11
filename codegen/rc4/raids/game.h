@@ -10,10 +10,12 @@
 #define MAP_CONFIG_MAGIC                      (0xDEADBEEF)
 
 #define RAIDS_HUB_MAPFILENAME                 ("raids_hub")
+#define RAIDS_MAX_EXDATA_SIZE                 (1024)
 
 #define TPS																		(60)
 
 #define NPC_MOBY_OCLASS                       (0x4006)
+#define COUNTER_MOBY_OCLASS                   (0x400F)
 
 #define GRAVITY_MAGNITUDE                     (15 * MATH_DT)
 
@@ -121,6 +123,8 @@ enum GameNetMessage
   CUSTOM_MSG_WORLD_HOP_MISSING_MAP,
   CUSTOM_MSG_SET_PLAYER_EQUIPPED_INVENTORY,
   CUSTOM_MSG_SET_PLAYER_ACCOUNT,
+  CUSTOM_MSG_SET_MISSION_FAILED,
+  CUSTOM_MSG_USE_LIFE,
 };
 
 enum RaidsCustomMenus
@@ -149,15 +153,33 @@ enum RaidsMissionStatus
   RAIDS_MISSION_COMPLETED = 2,
 };
 
+enum MobDamageSource
+{
+  MOB_DAMAGE_SOURCE_UNKNOWN = 0,
+  MOB_DAMAGE_SOURCE_WRENCH,
+  MOB_DAMAGE_SOURCE_DUAL_VIPERS,
+  MOB_DAMAGE_SOURCE_MAGMA_CANNON,
+  MOB_DAMAGE_SOURCE_ARBITER,
+  MOB_DAMAGE_SOURCE_FUSION_RIFLE,
+  MOB_DAMAGE_SOURCE_MINE_LAUNCHER,
+  MOB_DAMAGE_SOURCE_B6_OBLITERATOR,
+  MOB_DAMAGE_SOURCE_SCORPION_FLAIL,
+  MOB_DAMAGE_SOURCE_HOLOSHIELD,
+  MOB_DAMAGE_SOURCE_PUMA,
+  MOB_DAMAGE_SOURCE_HOVERBIKE,
+  MOB_DAMAGE_SOURCE_LANDSTALKER,
+  MOB_DAMAGE_SOURCE_HOVERSHIP,
+  MOB_DAMAGE_SOURCE_COUNT
+};
+
+struct RaidsBankMapStats;
 struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobCreateArgs;
 
 typedef void (*PushSnack_func)(char * string, int ticksAlive, int localPlayerIdx);
-typedef RaidsPlayerBank_t* (*GetBank_func)(void);
 typedef long (*GetAmmoRefillCost_func)(Player* player);
 typedef void (*BeginWorldHop_func)(char* mapFilename, int difficulty, int cost, int delayMs);
-typedef void (*SendBankAccountToServer_func)(void);
 typedef void (*PopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobConfig* config, int spawnParamsIdx, int isBaseConfig, float difficultyMult);
 typedef void (*RegisterNpc_func)(Moby* moby);
 typedef int (*OnGuberEvent_func)(Moby* moby, GuberEvent* event);
@@ -170,7 +192,7 @@ typedef void (*OnMissionFail_func)(void);
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobUpdate_func)(Moby* moby);
-typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, int weaponId);
+typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 typedef void (*MapOnMobDestroyed_func)(Moby* moby);
 typedef void (*MapCreateAmmoDropAt_func)(Moby* moby);
 typedef void (*FrameTick_func)(void);
@@ -181,6 +203,7 @@ struct RaidsPlayerState
   float Experience;
 	int Kills;
 	int Deaths;
+	int AllKills[MOB_DAMAGE_SOURCE_COUNT-1];
   u16 Skills[RAIDS_SKILLS_COUNT];
 };
 
@@ -244,6 +267,7 @@ struct RaidsState
   int PendingWorldHopDifficultyStars;
   CustomMapDef_t* PendingWorldHopMapDef;
   CustomMapDef_t* CurrentMapDef;
+  struct RaidsBankMapStats CurrentMapStats;
 	char NumTeams;
   char DesiredMusicTrackSkipTransition;
   char DesiredMusicTrackForce;
@@ -260,13 +284,12 @@ struct RaidsMapConfig
   int* TrackWhitelist;
   int TrackWhitelistCount;
   int TrackWhitelistEnabled;
+  struct BankVTable* BankVTable;
 
   // mode
   PushSnack_func PushSnackFunc;
-  GetBank_func GetBankFunc;
   GetAmmoRefillCost_func GetAmmoRefillCostFunc;
   BeginWorldHop_func BeginWorldHopFunc;
-  SendBankAccountToServer_func SendBankAccountToServerFunc;
   PopulateSpawnArgs_func PopulateSpawnArgsFunc;
   RegisterNpc_func RegisterNpcFunc;
   OnGuberEvent_func OnGuberEventFunc;
@@ -289,11 +312,13 @@ struct RaidsMapConfig
 struct RaidsCustomMapExtraData
 {
   int RaidsVersion;
-  float DifficultyApproximate;
-  int UNUSED[2];
+  int MinPlayerLevel;
+  int CollectiblesCount;
+  int ChallengesCount;
   int Cost[5];
   char Author[32];
   char Description[256];
+  char* Challenges[0]; // array of char* tuples, for challenge name & description
 };
 
 struct RaidsGameData

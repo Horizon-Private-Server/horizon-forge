@@ -88,7 +88,7 @@ struct SpawnerPVar
 
 void spawnerBroadcastNewState(Moby* moby, enum SpawnerState state);
 void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata);
-void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, int weaponId);
+void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, enum MobDamageSource source);
 void spawnerOnChildMobDestroyed(Moby* moby, Moby* childMoby, u32 userdata);
 void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata);
 int spawnerOnChildIsTargetInAggroZone(Moby* moby, Moby* childMoby, u32 userdata, Moby* target);

@@ -207,12 +207,14 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
   }
 
   // pass to dzo
-  if (0 && dzoDrawType > 0 && PATCH_DZO_INTEROP_FUNCS && isInGame()) {
+  if (dzoDrawType > 0 && PATCH_DZO_INTEROP_FUNCS && isInGame()) {
     CustomDzoCommandDrawTextWindow_t textCmd;
     textCmd.X = OFFSET_TO_DZO_X(offsetX);
     textCmd.Y = OFFSET_TO_DZO_Y(offsetY);
     textCmd.TextX = OFFSET_TO_DZO_X(textOffsetX);
     textCmd.TextY = OFFSET_TO_DZO_Y(textOffsetY);
+    textCmd.Width = width / SCREEN_HEIGHT;
+    textCmd.Height = height / SCREEN_HEIGHT;
     textCmd.Scale = scale;
     textCmd.Alignment = alignment;
     textCmd.Flags = flags;
@@ -220,7 +222,7 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
     textCmd.AnchorX = anchorX / SCREEN_WIDTH;
     textCmd.AnchorY = anchorY / SCREEN_HEIGHT;
     strncpy(textCmd.Text, str, (length >= 0 && length < 256) ? length : 256);
-    //PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT_WINDOW, sizeof(textCmd), &textCmd);
+    PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT_WINDOW, sizeof(textCmd), &textCmd);
   }
 
   // draw

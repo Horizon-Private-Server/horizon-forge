@@ -182,6 +182,12 @@
     "RCVersion": 4,
     "MobyOClass": 6898,
     "Length": 256,
+    "States": {
+      "Idle": 1,
+      "Box Breaking": 2,
+      "Box Broken": 4,
+      "Orb Consumed": 6
+    },
     "Default": "500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F000000000000000000000000000000000000000000000000000007FF000000000000000000FF0000000001FF000000000A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFF0BF8B0300000000000000000000000000000000000000001E0000000000000000000000FFFFFFFF0000000001000000FFFFFFFF00000000",
     "Pointers": "0",
     "Overlay": [
@@ -3671,7 +3677,7 @@
     "Name": "Raids Controller",
     "RCVersion": 4,
     "MobyOClass": 16387,
-    "Length": 320,
+    "Length": 412,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3697,6 +3703,17 @@
         "DataSize": 1
       },
       {
+        "Name": "Sync",
+        "DataType": "Enum",
+        "Offset": 7,
+        "DataSize": 1,
+        "Tooltip": "Default behaviour of a controller is to run on the host first, and then sync each iteration with the other clients.",
+        "Options": {
+          "Host Sync to Clients" : 0,
+          "Client Only (No Sync)" : 1
+        }
+      },
+      {
         "Name": "Trigger When",
         "DataType": "Enum",
         "DataSize": 1,
@@ -3705,6 +3722,17 @@
         "Options": {
           "Any True": 0,
           "All True": 1
+        }
+      },
+      {
+        "Name": "Iterate When",
+        "DataType": "Enum",
+        "Offset": 3,
+        "DataSize": 1,
+        "Tooltip": "Whether or not the Iterations number will only be incremented when the Conditions are met.\n\nUseful if wanting to run a controller for exactly one tick, regardless if its Conditions are met and its Targets are updated.",
+        "Options": {
+          "Conditions Match (Default)": 0,
+          "Conditions Checked": 1
         }
       },
       {
@@ -3720,24 +3748,30 @@
         "Name": "Conditions",
         "DataType": "Struct",
         "Offset": 140,
-        "DataSize": 16,
+        "DataSize": 20,
         "Count": 8,
         "Fields": [
           {
             "Name": "Type",
             "DataType": "Enum",
-            "DataSize": 4,
+            "DataSize": 1,
             "Offset": 0,
             "Options": {
               "Disabled": 0,
-              "Moby State": 1,
+              "Challenge": 14,
+              "Checkpoint": 8,
+              "Counter": 13,
               "Cuboid": 2,
-              "Player Button Press": 3,
               "Delay": 4,
+              "Difficulty": 7,
+              "Moby/Health Percent": 10,
+              "Moby/State": 1,
               "Not Yet Triggered": 5,
               "NPC Target": 6,
-              "Difficulty Stars": 7,
-              "Checkpoint": 8,
+              "Player/Button Press": 3,
+              "Player/Count": 15,
+              "Player/Health": 12,
+              "Player/Kills": 11,
               "Random Chance": 9
             }
           },
@@ -3746,7 +3780,7 @@
             "DataType": "MobyRef",
             "Offset": 4,
             "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "1" }
+              { "Field": "Type", "Op": "in", "Values": [ "1", "10", "13" ] }
             ]
           },
           {
@@ -3758,18 +3792,11 @@
             ]
           },
           {
-            "Name": "State Condition",
+            "Name": "Condition",
             "DataType": "Enum",
             "DataSize": 2,
             "Offset": 8,
-            "Options": {
-              "==": 0,
-              "!=": 1,
-              "<": 2,
-              "<=": 3,
-              ">": 4,
-              ">=": 5
-            },
+            "OptionsLookupKey": "NumberComparisons",
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "1" }
             ]
@@ -3783,7 +3810,21 @@
             "Min": 0,
             "Max": 127,
             "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "1" }
+              { "Field": "Type", "Op": "==", "Value": "1" },
+              { "Field": "Condition", "Op": "<", "Value": "7" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Integer",
+            "DataSize": 2,
+            "Offset": 10,
+            "Min": 0,
+            "Max": 127,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "1" },
+              { "Field": "Condition", "Op": ">=", "Value": "7" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
             ]
           },
           {
@@ -3848,6 +3889,28 @@
             ]
           },
           {
+            "Name": "Target Player(s)",
+            "DataType": "Mask",
+            "DataSize": 2,
+            "Offset": 10,
+            "Options": {
+              "Player 0": 1,
+              "Player 1": 2,
+              "Player 2": 4,
+              "Player 3": 8,
+              "Player 4": 16,
+              "Player 5": 32,
+              "Player 6": 64,
+              "Player 7": 128,
+              "Player 8": 256,
+              "Player 9": 512,
+              "Host (Local if No Sync)": 1024
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "3", "11", "12" ] }
+            ]
+          },
+          {
             "Name": "Button Mask",
             "DataType": "Mask",
             "DataSize": 2,
@@ -3908,6 +3971,239 @@
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "9" }
             ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 12,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "Min": 0,
+            "Max": 1,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Normalize Health (0-1)",
+            "DataType": "Bool",
+            "Tooltip": "If true, will compare player health as a value between 0 (dead) and 1 (full).",
+            "Offset": 13,
+            "Default": true,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Trigger By Players",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 15,
+            "Options": {
+              "Match Any": 0,
+              "Match All": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Weapons",
+            "DataType": "Mask",
+            "DataSize": 2,
+            "Offset": 10,
+            "Options": {
+              "Wrench": 1,
+              "Dual Vipers": 2,
+              "Magma Cannon": 4,
+              "Arbiter": 8,
+              "Fusion Rifle": 16,
+              "Mine Launcher": 32,
+              "B6 Obliterator": 64,
+              "Scorpion Flail": 128,
+              "Holoshields": 256,
+              "Puma": 512,
+              "Hoverbike": 1024,
+              "Landstalker": 2048,
+              "Hovership": 4096
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 14,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Trigger By Weapons",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 16,
+            "Options": {
+              "Match Any": 0,
+              "Match All": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Integer",
+            "DataSize": 2,
+            "Offset": 12,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Use Aggregate Delta",
+            "DataType": "Bool",
+            "DataSize": 1,
+            "Tooltip": "If true, will use delta from last time the condition was checked. Deltas will be summed across players & weapons.",
+            "Offset": 17,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" },
+              { "Field": "Condition", "Op": ">=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Trigger By Players",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 15,
+            "Options": {
+              "Match Any": 0,
+              "Match All": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 14,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Tooltip": "",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Normalize Health (0-1)",
+            "DataType": "Bool",
+            "Tooltip": "If true, will compare player health as a value between 0 (dead) and 1 (full).",
+            "Offset": 16,
+            "Default": true,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 12,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "13" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "13" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Challenge",
+            "DataType": "Enum",
+            "OptionsLookupKey": "Challenges",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "14" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 12,
+            "Options": {
+              "Is Incomplete": 0,
+              "Is Complete": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "14" }
+            ]
+          },
+          {
+            "Name": "Include Where",
+            "DataType": "Mask",
+            "Offset": 10,
+            "Default": 3,
+            "Options": {
+              "Alive" : 1,
+              "Dead" : 2
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "15" }
+            ]
+          },
+          {
+            "Name": "Match",
+            "DataType": "Mask",
+            "Offset": 8,
+            "Default": 0,
+            "Options": {
+              "0 Players": 1,
+              "1 Player": 2,
+              "2 Players": 4,
+              "3 Players": 8,
+              "4 Players": 16,
+              "5 Players": 32,
+              "6 Players": 64,
+              "7 Players": 128,
+              "8 Players": 256,
+              "9 Players": 512,
+              "10 Players": 1024
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "15" }
+            ]
           }
         ]
       },
@@ -3925,22 +4221,24 @@
             "Offset": 0,
             "Options": {
               "Disabled": 0,
-              "Moby State Set": 1,
-              "Moby State Add": 5,
-              "Moby Animation Update": 2,
-              "Moby Enabled Update": 3,
-              "Move Cuboid": 4,
-              "Set Checkpoint": 12,
-              "NPC Set Target": 6,
-              "NPC Set Target To Triggered": 7,
-              "Player Give Ammo": 8,
-              "Player Give Health": 9,
-              "Player Respawn": 10,
-              "Set Raid Completed": 11,
-              "Set Raid Failed": 16,
-              "Set Ammo Drop Probability": 13,
-              "Set Refill Ammo Cost Multiplier": 14,
-              "Play Music Track": 15
+              "Ammo/Set Ammo Drop Probability": 13,
+              "Ammo/Set Refill Ammo Cost Multiplier": 14,
+              "Challenge/Set Completed": 17,
+              "Checkpoint/Set": 12,
+              "Cuboid/Move": 4,
+              "Mission/Set Completed": 11,
+              "Mission/Set Failed": 16,
+              "Moby/Set State": 1,
+              "Moby/Add to State": 5,
+              "Moby/Set Animation": 2,
+              "Moby/Set Enabled": 3,
+              "Music/Play Track": 15,
+              "NPC/Set Target": 6,
+              "NPC/Set Target To Triggered": 7,
+              "Player/Give Ammo": 8,
+              "Player/Give Health": 9,
+              "Player/Respawn": 10,
+              "Update Counter": 18
             }
           },
           {
@@ -3954,9 +4252,9 @@
           {
             "Name": "Moby",
             "DataType": "MobyRef",
-            "Offset": 8,
+            "Offset": 4,
             "DisplayIf": [
-              { "Field": "Type", "Op": "in", "Values": [ "1", "2", "3", "5" ] }
+              { "Field": "Type", "Op": "in", "Values": [ "1", "2", "3", "5", "18" ] }
             ]
           },
           {
@@ -3964,7 +4262,7 @@
             "DataType": "MobyRefState",
             "DataSize": 4,
             "Ref": "Moby",
-            "Offset": 12,
+            "Offset": 8,
             "Min": -1,
             "Max": 127,
             "DisplayIf": [
@@ -3974,7 +4272,7 @@
           {
             "Name": "Amount",
             "DataType": "Integer",
-            "Offset": 12,
+            "Offset": 8,
             "Min": -127,
             "Max": 127,
             "DisplayIf": [
@@ -3984,7 +4282,7 @@
           {
             "Name": "Animation",
             "DataType": "Integer",
-            "Offset": 12,
+            "Offset": 8,
             "Min": 0,
             "Max": 127,
             "DisplayIf": [
@@ -3994,7 +4292,7 @@
           {
             "Name": "Enabled",
             "DataType": "Bool",
-            "Offset": 12,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "3" }
             ]
@@ -4002,7 +4300,7 @@
           {
             "Name": "NPC Controller",
             "DataType": "MobyRef",
-            "Offset": 8,
+            "Offset": 4,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "6", "7" ] }
             ]
@@ -4010,7 +4308,7 @@
           {
             "Name": "Target Moby",
             "DataType": "MobyRef",
-            "Offset": 12,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "6" }
             ]
@@ -4018,7 +4316,7 @@
           {
             "Name": "Cuboid",
             "DataType": "CuboidRef",
-            "Offset": 8,
+            "Offset": 4,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "4" }
             ]
@@ -4026,7 +4324,7 @@
           {
             "Name": "Cuboid To",
             "DataType": "CuboidRef",
-            "Offset": 12,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "4" }
             ]
@@ -4035,7 +4333,7 @@
             "Name": "Target Player(s)",
             "DataType": "Mask",
             "DataSize": 4,
-            "Offset": 8,
+            "Offset": 4,
             "Options": {
               "Player 0": 1,
               "Player 1": 2,
@@ -4047,7 +4345,7 @@
               "Player 7": 128,
               "Player 8": 256,
               "Player 9": 512,
-              "Host": 1024
+              "Host (Local if No Sync)": 1024
             },
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
@@ -4056,7 +4354,7 @@
           {
             "Name": "Triggered Only",
             "DataType": "Bool",
-            "Offset": 12,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
             ]
@@ -4064,7 +4362,7 @@
           {
             "Name": "Living Only",
             "DataType": "Bool",
-            "Offset": 13,
+            "Offset": 9,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8", "9" ] }
             ]
@@ -4073,7 +4371,7 @@
             "Name": "Amount (0=MAX)",
             "DataType": "Integer",
             "DataSize": 2,
-            "Offset": 14,
+            "Offset": 10,
             "Min": -32767,
             "Max": 32767,
             "DisplayIf": [
@@ -4083,7 +4381,7 @@
           {
             "Name": "Dead Only",
             "DataType": "Bool",
-            "Offset": 13,
+            "Offset": 9,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "10" ] }
             ]
@@ -4091,7 +4389,7 @@
           {
             "Name": "Checkpoint Moby",
             "DataType": "MobyRef",
-            "Offset": 8,
+            "Offset": 4,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "12" ] }
             ]
@@ -4100,7 +4398,7 @@
             "Name": "Probability",
             "Tooltip": "Default value is 0.1.",
             "DataType": "Float",
-            "Offset": 8,
+            "Offset": 4,
             "Default": 0.1,
             "Min": 0,
             "Max": 1,
@@ -4112,7 +4410,7 @@
             "Name": "Multiplier",
             "Tooltip": "Default value is 1.",
             "DataType": "Float",
-            "Offset": 8,
+            "Offset": 4,
             "Default": 1.0,
             "Min": 0,
             "DisplayIf": [
@@ -4124,7 +4422,7 @@
             "DataType": "Enum",
             "DataSize": 2,
             "OptionsLookupKey": "MusicTracks",
-            "Offset": 8,
+            "Offset": 4,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "15" ] }
             ]
@@ -4132,7 +4430,7 @@
           {
             "Name": "Play Immediately",
             "DataType": "Bool",
-            "Offset": 10,
+            "Offset": 6,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "15" ] }
             ]
@@ -4140,7 +4438,7 @@
           {
             "Name": "Loop",
             "DataType": "Bool",
-            "Offset": 12,
+            "Offset": 8,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "15" ] }
             ]
@@ -4148,7 +4446,7 @@
           {
             "Name": "Force Track",
             "DataType": "Bool",
-            "Offset": 11,
+            "Offset": 7,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "15" ] }
             ]
@@ -4156,9 +4454,67 @@
           {
             "Name": "Spawn Loot Cuboid",
             "DataType": "CuboidRef",
-            "Offset": 8,
+            "Offset": 4,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Challenge",
+            "DataType": "Enum",
+            "DataSize": 4,
+            "OptionsLookupKey": "Challenges",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "17" ] }
+            ]
+          },
+          {
+            "Name": "Update Type",
+            "DataType": "Enum",
+            "Offset": 12,
+            "DataSize": 1,
+            "Options": {
+              "Set": 0,
+              "Add": 1,
+              "Subtract": 2,
+              "Multiply": 3,
+              "Divide": 4,
+              "Max": 5,
+              "Min": 6
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "18" }
+            ]
+          },
+          {
+            "Name": "Value Source",
+            "DataType": "Enum",
+            "Offset": 13,
+            "DataSize": 1,
+            "Default": 0,
+            "Options": {
+              "Custom Value": 0,
+              "Condition 0": 1,
+              "Condition 1": 2,
+              "Condition 2": 3,
+              "Condition 3": 4,
+              "Condition 4": 5,
+              "Condition 5": 6,
+              "Condition 6": 7,
+              "Condition 7": 8
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "18" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "18" },
+              { "Field": "Value Source", "Op": "==", "Value": "0" }
             ]
           }
         ]
@@ -4267,7 +4623,7 @@
           "Player 7": 128,
           "Player 8": 256,
           "Player 9": 512,
-          "Host": 1024
+          "Host (Local if No Sync)": 1024
         }
       },
       {
@@ -4939,6 +5295,41 @@
             "Min": 0
           }
         ]
+      }
+    ]
+  },
+  {
+    "Name": "Raids Gold Bolt",
+    "RCVersion": 4,
+    "MobyOClass": 16398,
+    "Length": 4,
+    "States": {
+      "Destroyed": -1,
+      "Active": 0,
+      "Collected": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Index",
+        "DataType": "byte",
+        "Offset": 0
+      }
+    ]
+  },
+  {
+    "Name": "Raids Counter",
+    "RCVersion": 4,
+    "MobyOClass": 16399,
+    "Length": 4,
+    "States": {
+      "Destroyed": -1,
+      "Active": 0
+    },
+    "Overlay": [
+      {
+        "Name": "Value",
+        "DataType": "Float",
+        "Offset": 0
       }
     ]
   }

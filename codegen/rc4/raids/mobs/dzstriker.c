@@ -19,7 +19,7 @@ void dzstrikerPostUpdate(Moby* moby);
 void dzstrikerPostDraw(Moby* moby);
 void dzstrikerMove(Moby* moby);
 void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void dzstrikerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int dzstrikerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void dzstrikerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -175,7 +175,7 @@ void dzstrikerPostUpdate(Moby* moby)
     animSpeed = baseSpeed;
   }
 
-	if ((moby->DrawDist == 0 && !dzstrikerIsAttacking(moby))) {
+	if ((moby->DrawDist == 0 && !dzstrikerIsAttacking(moby) && !dzstrikerIsSpawning(pvars) && !dzstrikerIsDying(moby))) {
 		moby->AnimSpeed = 0;
     torsoMoby->AnimSpeed = 0;
 	} else {
@@ -262,7 +262,7 @@ void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
 }
 
 //--------------------------------------------------------------------------
-void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -675,9 +675,8 @@ int dzstrikerDoActionMove(Moby* moby)
   // 
   VECTOR dt;
   vector_subtract(dt, targetPosition, moby->Position);
-  float dir = ((pvars->MobVars.ActionId/2 + pvars->MobVars.DynamicRandom) % 3) - 1;
-
-  float strafeDir = ((pvars->MobVars.DynamicRandom + (pvars->MobVars.ActionId/2) + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
+  float dir = (pvars->MobVars.DynamicRandom % 3) - 1;
+  float strafeDir = ((pvars->MobVars.DynamicRandom + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
   if (strafe) {
     VECTOR strafeVec, strafeFwd;
     vector_outerproduct(strafeVec, dt, moby->M2_03);

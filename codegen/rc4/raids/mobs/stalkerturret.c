@@ -19,7 +19,7 @@ void stalkerturretPostUpdate(Moby* moby);
 void stalkerturretPostDraw(Moby* moby);
 void stalkerturretMove(Moby* moby);
 void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void stalkerturretOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int stalkerturretOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void stalkerturretOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -213,6 +213,9 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   moby->JointCnt = *(char*)((u32)mobyClass + 0x08);
   moby->ModeBits &= 0xFFF0;
   ((void* (*)(Moby*))0x004fb910)(moby); // init joint cache
+ 
+  // set type to mob
+  *(char*)(mobyClass + 0x46) = 5;
 
   // colors by mob type
 	moby->GlowRGBA = STALKERTURRET_GLOW_COLOR;
@@ -241,7 +244,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
 }
 
 //--------------------------------------------------------------------------
-void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;

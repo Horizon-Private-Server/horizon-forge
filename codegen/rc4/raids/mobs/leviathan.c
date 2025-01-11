@@ -20,7 +20,7 @@ void leviathanPostUpdate(Moby* moby);
 void leviathanPostDraw(Moby* moby);
 void leviathanMove(Moby* moby);
 void leviathanOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void leviathanOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void leviathanOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void leviathanOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int leviathanOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void leviathanOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -183,7 +183,7 @@ void leviathanPostUpdate(Moby* moby)
       }
   }
 
-	if ((moby->DrawDist == 0 && !leviathanIsAttacking(moby))) {
+	if ((moby->DrawDist == 0 && !leviathanIsAttacking(moby) && !leviathanIsSpawning(pvars) && !leviathanIsDying(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -233,7 +233,7 @@ void leviathanOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
 }
 
 //--------------------------------------------------------------------------
-void leviathanOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void leviathanOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
@@ -349,12 +349,42 @@ void leviathanOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 }
 
 //--------------------------------------------------------------------------
+void leviathanComputeLaserTargets(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  LeviathanMobVars_t* leviathanVars = (LeviathanMobVars_t*)pvars->AdditionalMobVarsPtr;
+  Moby* target = pvars->MobVars.MoveVars.Target;
+
+  VECTOR offset, dir, ndir, targetPos;
+  if (target) {
+    mobGetTargetCenter(target, targetPos);
+
+    // if player, try and stay near their ground
+    Player* targetPlayer = guberMobyGetPlayerDamager(target);
+    if (targetPlayer) {
+      vector_add(targetPos, targetPlayer->Ground.point, target->M2_03);
+    }
+  } else {
+    vector_scale(dir, moby->M0_03, 25);
+    vector_add(targetPos, moby->Position, dir);
+  }
+  vector_subtract(dir, targetPos, moby->Position);
+  float dist = vector_length(dir);
+  vector_scale(ndir, dir, 1 / dist);
+  vector_outerproduct(offset, moby->M2_03, ndir);
+  vector_scale(offset, offset, sinf(30 * MATH_DEG2RAD) * dist);
+  vector_add(leviathanVars->LaserbeamTarget1, targetPos, offset);
+  vector_subtract(leviathanVars->LaserbeamTarget2, targetPos, offset);
+}
+
+//--------------------------------------------------------------------------
 enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   LeviathanMobVars_t* leviathanVars = (LeviathanMobVars_t*)pvars->AdditionalMobVarsPtr;
   Moby* target = pvars->MobVars.MoveVars.Target;
   int behavior = pvars->MobVars.Behavior;
+  int isLaserAction = pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER || pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER_LOCKON;
   if (!target)
     return -1;
 
@@ -367,7 +397,6 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
   if (distSqr > attackRadiusSqr) {
 
     // check if moby is looking at (close to) target
-    int isLaserAction = pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER || pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER_LOCKON;
     if (distSqr <= rangedAttackRadiusSqr && leviathanVars->AttackLaserCooldownTicks == 0 && (MapConfig.State ? MapConfig.State->DifficultyStars : 0) > 0) {
       float theta = acosf(vector_innerproduct(dt, moby->M0_03));
       if (!isLaserAction && fabsf(theta) < (30 * MATH_DEG2RAD))
@@ -522,7 +551,7 @@ int leviathanDoActionMove(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-  float dir = ((pvars->MobVars.ActionId + pvars->MobVars.DynamicRandom) % 3) - 1;
+  float dir = (pvars->MobVars.DynamicRandom % 3) - 1;
 
   // chase goes directly towards target, quickly
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE) {
@@ -533,7 +562,7 @@ int leviathanDoActionMove(Moby* moby)
   }
 
   pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
-  float strafeDir = ((pvars->MobVars.DynamicRandom + (pvars->MobVars.ActionId/2)) % 2) ? 1 : -1;
+  float strafeDir = (pvars->MobVars.DynamicRandom % 2) ? 1 : -1;
   if (strafe) {
     VECTOR strafeVec, strafeFwd;
     vector_scale(strafeVec, moby->M1_03, 5 * strafeDir);
@@ -821,6 +850,7 @@ void leviathanDoAction(Moby* moby)
           if (isLockOn && target) {
             mobGetTargetCenter(target, targetPos);
           } else {
+            leviathanComputeLaserTargets(moby);
             float t = (-cosf(laserForTicks / (float)LEVIATHAN_LASER_FIRE_CYCLE_TICKS) + 1) / 2;
             vector_lerp(targetPos, leviathanVars->LaserbeamTarget1, leviathanVars->LaserbeamTarget2, t);
           }
@@ -958,20 +988,7 @@ void leviathanForceLocalAction(Moby* moby, int action)
 		case LEVIATHAN_ACTION_ATTACK_SWING:
 		case LEVIATHAN_ACTION_ATTACK_STAB:
 		{
-      VECTOR offset, dir, ndir, targetPos;
-      if (pvars->MobVars.MoveVars.Target) {
-        mobGetTargetCenter(pvars->MobVars.MoveVars.Target, targetPos);
-      } else {
-        vector_scale(dir, moby->M0_03, 25);
-        vector_add(targetPos, moby->Position, dir);
-      }
-      vector_subtract(dir, targetPos, moby->Position);
-      float dist = vector_length(dir);
-      vector_scale(ndir, dir, 1 / dist);
-      vector_outerproduct(offset, moby->M2_03, ndir);
-      vector_scale(offset, offset, sinf(30 * MATH_DEG2RAD) * dist);
-      vector_add(leviathanVars->LaserbeamTarget1, targetPos, offset);
-      vector_subtract(leviathanVars->LaserbeamTarget2, targetPos, offset);
+      leviathanComputeLaserTargets(moby);
       leviathanVars->AttackLaserCooldownTicks = randRangeInt(LEVIATHAN_LASER_COOLDOWN_TICKS_MIN, LEVIATHAN_LASER_COOLDOWN_TICKS_MAX);
 			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 			break;

@@ -832,7 +832,23 @@ public class PvarOverlayDef
         }
     }
 
-    public Dictionary<string, long> GetOptions() => Options ?? PvarOverlayConstants.PVAR_OPTIONS_LOOKUP.GetValueOrDefault(OptionsLookupKey?.ToLower()) ?? new Dictionary<string, long>();
+    public Dictionary<string, long> GetOptions()
+    {
+        if (Options != null) return Options;
+
+        var key = OptionsLookupKey?.ToLower();
+        if (key == "challenges")
+        {
+            var raidsData = GameObject.FindObjectOfType<RaidsModeData>();
+            var options = new Dictionary<string, long>();
+            if (raidsData)
+                options = raidsData.Challenges.ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Challenges.IndexOf(x).ToString() : x.Name, x => (long)raidsData.Challenges.IndexOf(x));
+
+            return options;
+        }
+
+        return PvarOverlayConstants.PVAR_OPTIONS_LOOKUP.GetValueOrDefault(key) ?? new Dictionary<string, long>();
+    }
 
     public (PvarOverlayDef def, int offset) FindFieldFrom(PvarOverlay pvarOverlay, string fieldName, int offset)
     {
@@ -886,6 +902,8 @@ public class PvarOverlayDisplayRule
         var refPath = $"{basePath}.{Field}";
         var fieldDef = (def.ParentDef?.Fields ?? pvarOverlay.Overlay)?.FirstOrDefault(x => x.Name == Field);
 
+
+
         if (fieldDef != null && pvarValues != null && pvarValues.ContainsKey(refPath))
         {
             var fieldValue = pvarValues[refPath];
@@ -897,6 +915,10 @@ public class PvarOverlayDisplayRule
                 case "&=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && (a & b) == b;
                 case "&": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && (a & b) != 0;
                 case "!=": return fieldValue != Value;
+                case "<": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a < b;
+                case ">": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a > b;
+                case "<=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a <= b;
+                case ">=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a >= b;
                 case "in": return Values?.Contains(fieldValue) ?? false;
             }
         }
@@ -925,11 +947,12 @@ public static class PvarOverlayConstants
         { "fxtex", FromEnum<DLFXTextureIds>() },
         { "teams", FromEnum<DLTeamIds>() },
         { "bliptypes", FromEnum<DLBlipTypes>() },
+        { "numbercomparisons", FromEnum<DLRaidsNumberComparisons>() },
     };
 
     private static Dictionary<string, long> FromEnum<T>() where T : Enum
     {
-        return ((T[])Enum.GetValues(typeof(T))).ToDictionary(x => ObjectNames.NicifyVariableName(x.ToString()), x => Convert.ToInt64(x));
+        return ((T[])Enum.GetValues(typeof(T))).ToDictionary(x => ObjectNames.NicifyVariableName(x.ToString().Replace("_", " ")), x => Convert.ToInt64(x));
     }
 
 }
