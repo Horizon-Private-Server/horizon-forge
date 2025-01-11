@@ -156,7 +156,7 @@ void zombiePostUpdate(Moby* moby)
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && !zombieIsAttacking(moby) && !zombieIsSpawning(pvars) && !zombieIsDying(moby))) {
+	if ((moby->DrawDist == 0 && !zombieIsAttacking(moby) && !zombieIsSpawning(pvars) && !zombieIsDying(moby) && !zombieIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;

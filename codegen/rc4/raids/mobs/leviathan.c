@@ -183,7 +183,7 @@ void leviathanPostUpdate(Moby* moby)
       }
   }
 
-	if ((moby->DrawDist == 0 && !leviathanIsAttacking(moby) && !leviathanIsSpawning(pvars) && !leviathanIsDying(moby))) {
+	if ((moby->DrawDist == 0 && !leviathanIsAttacking(moby) && !leviathanIsSpawning(pvars) && !leviathanIsDying(moby) && !leviathanIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;

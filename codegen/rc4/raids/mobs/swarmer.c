@@ -166,7 +166,7 @@ void swarmerPostUpdate(Moby* moby)
     animSpeed = 1;
   }
 
-	if ((moby->DrawDist == 0 && !swarmerIsAttacking(moby) && !swarmerIsSpawning(pvars) && !swarmerIsDying(moby))) {
+	if ((moby->DrawDist == 0 && !swarmerIsAttacking(moby) && !swarmerIsSpawning(pvars) && !swarmerIsDying(moby) && !swarmerIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;

@@ -164,7 +164,7 @@ void swamperPostUpdate(Moby* moby)
     animSpeed = baseSpeed;
   }
 
-	if ((moby->DrawDist == 0 && !swamperIsAttacking(moby) && !swamperIsSpawning(pvars) && !swamperIsDying(moby))) {
+	if ((moby->DrawDist == 0 && !swamperIsAttacking(moby) && !swamperIsSpawning(pvars) && !swamperIsDying(moby) && !swamperIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;

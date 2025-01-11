@@ -461,12 +461,14 @@ int controllerPlayerHealthConditionTrue(Moby* moby, int conditionIdx)
       // get health & delta
       float value = player->Health;
       float delta = value - playerHealthLast[i];
+      float lastValue = playerHealthLast[i];
       if (condition->PlayerHealth.Normalized) {
         value /= player->MaxHealth;
         delta /= player->MaxHealth;
+        lastValue /= player->MaxHealth;
       }
   
-      result = controllerConditionCompare(value, playerHealthLast[i], condition->PlayerHealth.Value, condition->PlayerHealth.CompareType);
+      result = controllerConditionCompare(value, lastValue, condition->PlayerHealth.Value, condition->PlayerHealth.CompareType);
       ++playerCount;
       if (result) { 
         ++playerMatch;
@@ -942,7 +944,7 @@ int controllerControlUpdateCounter(Moby* moby, struct ControllerTarget* target)
     default: return 0;
   }
 
-  DLOG(moby, "set counter to %f\n", *pValue);
+  DLOG(moby, "set counter to %f (uvalue: %f)\n", *pValue, uValue);
 
   return 1;
 }

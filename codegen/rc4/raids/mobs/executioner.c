@@ -164,7 +164,7 @@ void executionerPostUpdate(Moby* moby)
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && !executionerIsAttacking(moby) && !executionerIsSpawning(pvars) && !executionerIsDying(moby))) {
+	if ((moby->DrawDist == 0 && !executionerIsAttacking(moby) && !executionerIsSpawning(pvars) && !executionerIsDying(moby) && !executionerIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;

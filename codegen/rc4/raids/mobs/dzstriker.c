@@ -175,7 +175,7 @@ void dzstrikerPostUpdate(Moby* moby)
     animSpeed = baseSpeed;
   }
 
-	if ((moby->DrawDist == 0 && !dzstrikerIsAttacking(moby) && !dzstrikerIsSpawning(pvars) && !dzstrikerIsDying(moby))) {
+	if ((moby->DrawDist == 0 && !dzstrikerIsAttacking(moby) && !dzstrikerIsSpawning(pvars) && !dzstrikerIsDying(moby) && !dzstrikerIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
     torsoMoby->AnimSpeed = 0;
 	} else {
