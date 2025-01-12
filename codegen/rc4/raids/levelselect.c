@@ -296,8 +296,9 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPRIGHT, -(5+16), 5, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
 
     // % complete
-    u32 progressColor = (levelselectDrawState.MapStats.PercentageComplete == 0) ? (redColor) : (levelselectDrawState.MapStats.PercentageComplete == 1 ? greenColor : yellowColor);
-    snprintf(strBuf, sizeof(strBuf), "%.f%%", levelselectDrawState.MapStats.PercentageComplete * 100);
+    float percentComplete = clamp(levelselectDrawState.MapStats.PercentageComplete, 0, 1);
+    u32 progressColor = (percentComplete == 0) ? (redColor) : (percentComplete == 1 ? greenColor : yellowColor);
+    snprintf(strBuf, sizeof(strBuf), "%.f%%", percentComplete * 100);
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPCENTER, 0, 5, 1.0, progressColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
 
     // best time

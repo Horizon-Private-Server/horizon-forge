@@ -696,11 +696,6 @@ void inventoryDraw(void)
     return;
   }
 
-  // reset filter when inventory changes while menu is open
-  if (localBank->Inventory.RefreshLocalInventory) {
-    inventorySetFilter(inventoryDrawState.FilterIdx);
-  }
-
   // draw frame
   gfxHelperDrawBox(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, 0, 0, INVENTORY_DRAW_FULL_W, INVENTORY_DRAW_FULL_H, bgColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
 
@@ -846,6 +841,13 @@ void inventoryTick(void)
   }
 
   if (MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_INVENTORY) {
+      
+    // reset filter when inventory changes while menu is open
+    RaidsPlayerBank_t* localBank = bankGetLocalBank();
+    if (localBank->Inventory.RefreshLocalInventory) {
+      inventorySetFilter(inventoryDrawState.FilterIdx);
+    }
+
     inventoryHandleInput();
     return;
   }

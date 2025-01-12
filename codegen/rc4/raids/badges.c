@@ -149,7 +149,7 @@ void badgesUpdate_Berserker(Player* player, int badgeIdx, float strength)
       // spawn explosion
       u128 vPos = vector_read(player->PlayerPosition);
       float damage = 50;
-      float radius = 10 + (25 * strength);
+      float radius = 10 + (25 * powf(strength, 2));
       mobySpawnExplosion
             (vPos, 1, 0x0, 0x0, 0x0, 0x10, 0x10, 0x0, 0, 0, 0, 0,
             1, 0, 0x80080840, 0, 0x801040C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0, 0x801010C0,

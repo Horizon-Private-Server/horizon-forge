@@ -32,6 +32,8 @@
 #define DLOG(moby, format, ...) 
 #endif
 
+int npcInitialized = 0;
+
 void npcPreUpdate(Moby* moby);
 void npcPostUpdate(Moby* moby);
 void npcPostDraw(Moby* moby);
@@ -702,17 +704,26 @@ void npcOnGuberCreated(Moby* moby)
     vector_subtract(pvars->Parameters.AttachedCuboidOffset, &sp->M0[12], moby->Position);
   }
 
-  // register
-  if (MapConfig.RegisterNpcFunc)
-    MapConfig.RegisterNpcFunc(moby);
-
   mobySetState(moby, pvars->Parameters.DefaultState, -1);
 }
 
 //--------------------------------------------------------------------------
 void npcStart(void)
 {
-  //npcInitialized = 1;
+  if (npcInitialized || !MapConfig.RegisterNpcFunc) return;
+  
+  Moby* moby = mobyListGetStart();
+	while ((moby = mobyFindNextByOClass(moby, NPC_MOBY_OCLASS)))
+	{
+		if (!mobyIsDestroyed(moby) && moby->PVar) {
+      MapConfig.RegisterNpcFunc(moby);
+      DLOG(moby, "registered npc with mode\n");
+    }
+
+		++moby;
+	}
+
+  npcInitialized = 1;
 }
 
 //--------------------------------------------------------------------------
