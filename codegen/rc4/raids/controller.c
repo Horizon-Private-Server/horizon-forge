@@ -418,6 +418,7 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
   if (!condition->PlayerKills.PlayerMask) return 0;
   if (!condition->PlayerKills.WeaponMask) return 0;
   if (!condition->PlayerKills.MobMask) return 0;
+  if (!MapConfig.State) return 0;
   
   Player** players = playerGetAll();
   int i,j,k;
@@ -430,7 +431,7 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
   float sumValue = 0;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = players[i];
-    if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
+    if (!playerIsValid(player)) continue;
 
     int bit = 1 << i;
     if ((condition->PlayerKills.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
