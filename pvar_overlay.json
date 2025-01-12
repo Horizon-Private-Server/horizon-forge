@@ -3494,7 +3494,7 @@
     "Name": "Raids Mover",
     "RCVersion": 4,
     "MobyOClass": 16386,
-    "Length": 224,
+    "Length": 256,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3600,46 +3600,82 @@
         }
       },
       {
-        "Name": "Move Along Spline",
+        "Name": "Linked Movement",
         "DataType": "Label",
         "Order": 30
+      },
+      {
+        "Name": "Attached Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Order": 30,
+        "Offset": 128,
+        "Options": {
+          "None": 0,
+          "Spline": 1,
+          "Moby": 2
+        }
       },
       {
         "Name": "Spline",
         "DataType": "SplineRef",
         "Order": 30,
-        "Offset": 120
+        "Offset": 120,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Moby",
+        "DataType": "MobyRef",
+        "Order": 30,
+        "Offset": 124,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "2" }
+        ]
       },
       {
         "Name": "Snap Targets To",
         "DataType": "Bool",
         "Order": 31,
-        "Offset": 124
+        "Offset": 129,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "!=", "Value": "0" }
+        ]
       },
       {
         "Name": "Align Targets",
         "DataType": "Bool",
         "Order": 31,
-        "Offset": 125
+        "Offset": 130,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "!=", "Value": "0" }
+        ]
       },
       {
         "Name": "Spline Speed",
         "DataType": "float",
         "Order": 32,
         "Min": 0,
-        "Offset": 128
+        "Offset": 132,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
       },
       {
         "Name": "Loop",
         "DataType": "Enum",
         "Order": 33,
-        "Offset": 132,
+        "Offset": 136,
         "DataSize": 4,
         "Options": {
           "Stop": 0,
           "Loop": 1,
           "Ping Pong": 2
-        }
+        },
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
       },
       {
         "DataType": "Space",
@@ -3650,7 +3686,7 @@
         "DataType": "float",
         "Order": 1,
         "Min": 0,
-        "Offset": 136
+        "Offset": 140
       },
       {
         "Name": "Targets",
@@ -3661,14 +3697,14 @@
         "Name": "Mobys",
         "DataType": "MobyRef",
         "Order": 51,
-        "Offset": 140,
+        "Offset": 144,
         "Count": 4
       },
       {
         "Name": "Cuboids",
         "DataType": "CuboidRef",
         "Order": 52,
-        "Offset": 156,
+        "Offset": 160,
         "Count": 4
       }
     ]
@@ -4685,14 +4721,15 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 1008,
+    "Length": 1088,
     "States": {
       "Destroyed": -1,
       "Off": 0,
       "Idle": 1,
       "Roam": 2,
       "Walk To Target": 3,
-      "Look At Target": 4
+      "Look At Target": 4,
+      "Cycle Animations": 5
     },
     "Overlay": [
       {
@@ -4705,13 +4742,18 @@
           "Idle": 1,
           "Roam": 2,
           "Walk To Target": 3,
-          "Look At Target": 4
+          "Look At Target": 4,
+          "Cycle Animations": 5
         }
       },
       {
         "Name": "Log (DEBUG)",
         "DataType": "Bool",
         "Offset": 97
+      },
+      {
+        "Name": "Mobys & Cuboids",
+        "DataType": "Label"
       },
       {
         "Name": "Puppet Moby",
@@ -4734,14 +4776,13 @@
         "Offset": 108
       },
       {
+        "Name": "Movement",
+        "DataType": "Label"
+      },
+      {
         "Name": "Path Graph",
         "DataType": "PathGraphRef",
         "Offset": 112
-      },
-      {
-        "Name": "Health",
-        "DataType": "Float",
-        "Offset": 116
       },
       {
         "Name": "Interact Range",
@@ -4774,20 +4815,16 @@
         "Offset": 140
       },
       {
-        "Name": "Animation Speed",
-        "DataType": "Float",
-        "Offset": 144
-      },
-      {
-        "Name": "Team",
+        "Name": "Radar Team",
         "DataType": "Enum",
         "OptionsLookupKey": "Teams",
         "DataSize": 1,
         "Offset": 148
       },
       {
-        "Name": "Blip Type",
-        "DataType": "Integer",
+        "Name": "Radar Blip Type",
+        "DataType": "Enum",
+        "OptionsLookupKey": "BlipTypes",
         "Offset": 152
       },
       {
@@ -4814,79 +4851,193 @@
         }
       },
       {
-        "Name": "Idle Animation",
+        "Name": "Targeting",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Team",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 98,
+        "Options": {
+          "Friendly": 0,
+          "Enemy": 1
+        }
+      },
+      {
+        "Name": "Mob Aggro Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 192,
+        "Options": {
+          "Ignore": 0,
+          "When In Range": 1,
+          "Always Aggro": 2
+        },
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" }
+        ]
+      },
+      {
+        "Name": "Mob Aggro Distance",
+        "DataType": "Float",
+        "Offset": 184,
+        "Default": 15,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" },
+          { "Field": "Mob Aggro Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Targetable",
+        "DataType": "Bool",
+        "DataSize": 1,
+        "Offset": 194,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Targeting Height",
+        "DataType": "Float",
+        "Offset": 172,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Targeting Radius",
+        "DataType": "Float",
+        "Offset": 176,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Health",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Base Health",
+        "DataType": "Float",
+        "Offset": 116,
+        "Default": 100
+      },
+      {
+        "Name": "Healthbar",
+        "DataType": "Bool",
+        "Offset": 99
+      },
+      {
+        "Name": "Healthbar Offset",
+        "DataType": "Float",
+        "Offset": 188,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Healthbar", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Damage",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Damage Cooldown (Seconds)",
+        "DataType": "Float",
+        "Offset": 180,
+        "Min": 0
+      },
+      {
+        "Name": "Death Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 162,
+        "Options": {
+          "None": 0,
+          "Delete": 1,
+          "Delete and Blow Corn": 2
+        }
+      },
+      {
+        "Name": "Death Targets",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 163,
+        "Options": {
+          "Puppet Moby": 0,
+          "Puppet and Attached Moby": 1
+        }
+      },
+      {
+        "Name": "On Hit (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 164
+      },
+      {
+        "Name": "On Dead (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 168
+      },
+      {
+        "DataType": "Space"
+      },
+      {
+        "Name": "Per Difficulty Scalars",
+        "DataType": "Struct",
+        "Offset": 196,
+        "DataSize": 8,
+        "Count": 5,
+        "Labels": [
+          "1 Star",
+          "2 Stars",
+          "3 Stars",
+          "4 Stars",
+          "5 Stars"
+        ],
+        "Fields": [
+          {
+            "Name": "Health Multiplier",
+            "DataType": "Float",
+            "Offset": 0,
+            "Min": 0,
+            "Default": 1
+          },
+          {
+            "Name": "Speed Multiplier",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0,
+            "Default": 1
+          }
+        ]
+      },
+      {
+        "Name": "Animation",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Base Animation Speed",
+        "DataType": "Float",
+        "Offset": 144,
+        "Default": 1
+      },
+      {
+        "Name": "Animations",
         "DataType": "Struct",
         "Offset": 0,
         "DataSize": 12,
-        "Fields": [
-          {
-            "Name": "Animation Id",
-            "DataType": "Integer",
-            "Offset": 0
-          },
-          {
-            "Name": "Speed",
-            "DataType": "Float",
-            "Offset": 4
-          },
-          {
-            "Name": "Duration",
-            "DataType": "Float",
-            "Offset": 8
-          }
-        ]
-      },
-      {
-        "Name": "Walk Animation",
-        "DataType": "Struct",
-        "Offset": 12,
-        "DataSize": 12,
-        "Fields": [
-          {
-            "Name": "Animation Id",
-            "DataType": "Integer",
-            "Offset": 0
-          },
-          {
-            "Name": "Speed",
-            "DataType": "Float",
-            "Offset": 4
-          },
-          {
-            "Name": "Duration",
-            "DataType": "Float",
-            "Offset": 8
-          }
-        ]
-      },
-      {
-        "Name": "Jump Animation",
-        "DataType": "Struct",
-        "Offset": 24,
-        "DataSize": 12,
-        "Fields": [
-          {
-            "Name": "Animation Id",
-            "DataType": "Integer",
-            "Offset": 0
-          },
-          {
-            "Name": "Speed",
-            "DataType": "Float",
-            "Offset": 4
-          },
-          {
-            "Name": "Duration",
-            "DataType": "Float",
-            "Offset": 8
-          }
-        ]
-      },
-      {
-        "Name": "Look At Animation",
-        "DataType": "Struct",
-        "Offset": 36,
-        "DataSize": 12,
+        "Labels": [
+          "Idle",
+          "Walk",
+          "Jump",
+          "Look At Player",
+          "Death"
+        ],
+        "Count": 5,
         "Fields": [
           {
             "Name": "Animation Id",
@@ -5199,19 +5350,30 @@
         "Name": "Targetable",
         "DataType": "Bool",
         "DataSize": 1,
-        "Offset": 98
+        "Offset": 98,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" }
+        ]
       },
       {
         "Name": "Targeting Height",
         "DataType": "Float",
         "Offset": 88,
-        "Default": 1
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
       },
       {
         "Name": "Targeting Radius",
         "DataType": "Float",
         "Offset": 92,
-        "Default": 1
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
       },
       {
         "Name": "Healthbar",

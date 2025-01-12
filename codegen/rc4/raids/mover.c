@@ -72,15 +72,16 @@ void moverInitSpline(Moby* moby)
   int i;
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
-  if (pvars->SplineIdx < 0) return;
-  Spline3D_t* spline = splineGetSpline(pvars->SplineIdx);
+  if (pvars->AttachedType != MOVER_ATTACHED_SPLINE) return;
+  if (pvars->AttachedToSplineIdx < 0) return;
+  Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
   if (!spline || spline->Count <= 0) return;
 
   // reset direction
   pvars->State.CurrentSplineDir = 1;
 
   // snap to  
-  if (pvars->SplineInitSnapTo) {
+  if (pvars->AttachedInitSnapTo) {
     for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
       if (pvars->MobyTargets[i]) {
         vector_copy(pvars->MobyTargets[i]->Position, spline->Points[0]);
@@ -101,7 +102,9 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   float t = moverGetT(moby);
 
-  Spline3D_t* spline = splineGetSpline(pvars->SplineIdx);
+  if (pvars->AttachedType != MOVER_ATTACHED_SPLINE) return;
+
+  Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
   if (!spline || spline->Count <= 0) return;
 
   // determine direction
@@ -158,6 +161,58 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
 }
 
 //--------------------------------------------------------------------------
+void moverInitMoby(Moby* moby)
+{
+  int i;
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+
+  if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
+  if (!pvars->AttachedToMoby || mobyIsDestroyed(pvars->AttachedToMoby)) {
+    pvars->AttachedToMoby = NULL;
+    return;
+  }
+
+  // snap to  
+  if (pvars->AttachedInitSnapTo) {
+    for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
+      if (pvars->MobyTargets[i]) {
+        vector_copy(pvars->MobyTargets[i]->Position, pvars->AttachedToMoby->Position);
+      }
+      if (pvars->CuboidTargets[i] >= 0) {
+        vector_copy(&spawnPointGet(pvars->CuboidTargets[i])->M0[12], pvars->AttachedToMoby->Position);
+      }
+    }
+  }
+
+  vector_copy(pvars->State.MobyLastPosition, pvars->AttachedToMoby->Position);
+  vector_copy(pvars->State.MobyLastRotation, pvars->AttachedToMoby->Rotation);
+}
+
+//--------------------------------------------------------------------------
+void moverMoveMoby(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
+{
+  VECTOR dt;
+  VECTOR up = {0,0,1,0};
+  int i;
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+
+  if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
+
+  Moby* attachedToMoby = pvars->AttachedToMoby;
+  if (!attachedToMoby || mobyIsDestroyed(attachedToMoby)) {
+    pvars->AttachedToMoby = NULL;
+    return;
+  }
+
+  vector_subtract(outPosDelta, attachedToMoby->Position, pvars->State.MobyLastPosition);
+  vector_add(outPosDelta, outPosDelta, pvars->State.LastAppliedPositionDelta);
+  vector_subtract(outRotDelta, attachedToMoby->Rotation, pvars->State.MobyLastRotation);
+  vector_add(outRotDelta, outRotDelta, pvars->State.LastAppliedRotationDelta);
+  vector_copy(pvars->State.MobyLastPosition, attachedToMoby->Position);
+  vector_copy(pvars->State.MobyLastRotation, attachedToMoby->Rotation);
+}
+
+//--------------------------------------------------------------------------
 void moverMove(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
 {
   VECTOR velocity, acceleration, delta, tvec;
@@ -165,12 +220,17 @@ void moverMove(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
   // spline
-  if (pvars->SplineIdx >= 0) {
+  if (pvars->AttachedType == MOVER_ATTACHED_SPLINE && pvars->AttachedToSplineIdx >= 0) {
     moverMoveSpline(moby, splinePosDelta, splineRotDelta);
   }
 
+  // moby
+  if (pvars->AttachedType == MOVER_ATTACHED_MOBY && pvars->AttachedToMoby) {
+    moverMoveMoby(moby, splinePosDelta, splineRotDelta);
+  }
+
   // don't rotate if not align
-  if (!pvars->SplineAlign) {
+  if (!pvars->AttachedAlign) {
     vector_write(splineRotDelta, 0);
   }
 
@@ -389,23 +449,12 @@ void moverOnGuberCreated(Moby* moby)
   pvars->State.TimeStarted = -1;
   
   // update pvars target references
-  Moby* mobyStart = mobyListGetStart();
   for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
-    int mobyIdx = (int)pvars->MobyTargets[i];
-    if (mobyIdx < 0) {
-      pvars->MobyTargets[i] = NULL;
-      continue;
-    }
-
-    Moby* targetMoby = mobyStart + mobyIdx;
-    if (mobyIsDestroyed(targetMoby)) {
-      pvars->MobyTargets[i] = NULL;
-      continue;
-    }
-
-    DLOG(moby, "mover %08X found target %d %08X\n", (u32)moby, i, (u32)targetMoby);
-    pvars->MobyTargets[i] = targetMoby;
+    pvars->MobyTargets[i] = mobyGetFromIdxOrNull((int)pvars->MobyTargets[i]);
+    DLOG(moby, "mover %08X found target %d %08X\n", (u32)moby, i, (u32)pvars->MobyTargets[i]);
   }
+
+  pvars->AttachedToMoby = mobyGetFromIdxOrNull((int)pvars->AttachedToMoby);
 }
 
 //--------------------------------------------------------------------------
@@ -431,6 +480,7 @@ int moverHandleEvent_SetState(Moby* moby, GuberEvent* event)
   } else if (moby->State == MOVER_STATE_ACTIVATED) {
     pvars->State.TimeStarted = time;
     moverInitSpline(moby);
+    moverInitMoby(moby);
   } else if (moby->State == MOVER_STATE_PAUSED) {
     pvars->State.TimePausedT = moverT;
   }

@@ -75,7 +75,7 @@
 #define MOB_POSTFX_ACID_FREQ_TICKS            ((int)(TPS * 0.5))
 #define MOB_POSTFX_ACID_DMG_PERC              (0.05)
 #define MOB_POSTFX_FREEZE_DUR_TICKS           (TPS * 5)
-#define MOB_POSTFX_FREEZE_FACTOR              (0.5)
+#define MOB_POSTFX_FREEZE_FACTOR              (0.75)
 #define MOB_POSTFX_NAPALM_DMG_PERC            (0.05)
 #define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.15)
 
