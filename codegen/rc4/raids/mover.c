@@ -103,6 +103,7 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   float t = moverGetT(moby);
 
   if (pvars->AttachedType != MOVER_ATTACHED_SPLINE) return;
+  if (pvars->AttachedToSplineIdx < 0) return;
 
   Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
   if (!spline || spline->Count <= 0) return;
@@ -153,11 +154,13 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
       vector_scale(dt, dt, dist / seglen);
       vector_add(dt, dt, spline->Points[idx]);
       vector_subtract(outPosDelta, dt, spline->Points[0]);
+      vector_copy(moby->Position, dt);
       break;
     }
 
     dist -= seglen;
   }
+  
 }
 
 //--------------------------------------------------------------------------
@@ -210,6 +213,7 @@ void moverMoveMoby(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   vector_add(outRotDelta, outRotDelta, pvars->State.LastAppliedRotationDelta);
   vector_copy(pvars->State.MobyLastPosition, attachedToMoby->Position);
   vector_copy(pvars->State.MobyLastRotation, attachedToMoby->Rotation);
+  vector_copy(moby->Position, attachedToMoby->Position);
 }
 
 //--------------------------------------------------------------------------
@@ -219,14 +223,17 @@ void moverMove(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   VECTOR splinePosDelta={0,0,0,0}, splineRotDelta={0,0,0,0};
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
-  // spline
-  if (pvars->AttachedType == MOVER_ATTACHED_SPLINE && pvars->AttachedToSplineIdx >= 0) {
-    moverMoveSpline(moby, splinePosDelta, splineRotDelta);
-  }
-
-  // moby
-  if (pvars->AttachedType == MOVER_ATTACHED_MOBY && pvars->AttachedToMoby) {
-    moverMoveMoby(moby, splinePosDelta, splineRotDelta);
+  switch (pvars->AttachedType) {
+    case MOVER_ATTACHED_SPLINE:
+    {
+      moverMoveSpline(moby, splinePosDelta, splineRotDelta);
+      break;
+    }
+    case MOVER_ATTACHED_MOBY:
+    {
+      moverMoveMoby(moby, splinePosDelta, splineRotDelta);
+      break;
+    }
   }
 
   // don't rotate if not align
@@ -275,14 +282,14 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   if (!target) return;
 
+  vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
+  vector_add(rotation, rotation, rotDelta);
+  vector_clampeuler(rotation, rotation);
+
   // remove last applied position delta, and apply our newly calculated one
   // this lets the target moby move independently (ie we aren't forcing its position)
   vector_subtract(position, target->Position, pvars->State.LastAppliedPositionDelta);
   vector_add(position, position, posDelta);
-
-  vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
-  vector_add(rotation, rotation, rotDelta);
-  vector_clampeuler(rotation, rotation);
 
   // since MP doesn't have proper support for ground moby tracking
   // ie Ratchet won't stick to a moving platform like in Singleplayer
@@ -297,7 +304,7 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
     // apply new transformation
     // transform back to world space
     MATRIX w2l, l2w;
-    VECTOR pos;
+    VECTOR pos, dt;
     matrix_unit(w2l);
     memcpy(w2l, target->M0_03, 3 * sizeof(VECTOR));
     matrix_transpose(w2l, w2l);
@@ -311,9 +318,21 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
     vector_apply(pos, pos, l2w);
     vector_add(pos, pos, position);
 
+    int j;
+    vector_subtract(dt, pos, p->PlayerPosition);
+    for (j = 0; j < 6; ++j) {
+      if (p->Gadgets[j].pMoby) {
+        vector_add(p->Gadgets[j].pMoby->Position, p->Gadgets[j].pMoby->Position, dt);
+      }
+      if (p->Gadgets[j].pMoby2) {
+        vector_add(p->Gadgets[j].pMoby2->Position, p->Gadgets[j].pMoby2->Position, dt);
+      }
+    }
+    
     vector_copy(p->PlayerPosition, pos);
     vector_copy(p->PlayerMoby->Position, pos);
     vector_copy(p->Ground.point, pos);
+
     p->Ground.stickLanding = 5;
   }
 
@@ -432,6 +451,7 @@ void moverUpdate(Moby* moby)
 
   vector_copy(pvars->State.LastAppliedPositionDelta, posDelta);
   vector_copy(pvars->State.LastAppliedRotationDelta, rotDelta);
+  vector_copy(pvars->State.MoverLastPosition, moby->Position);
 }
 
 //--------------------------------------------------------------------------

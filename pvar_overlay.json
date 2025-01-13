@@ -3494,7 +3494,7 @@
     "Name": "Raids Mover",
     "RCVersion": 4,
     "MobyOClass": 16386,
-    "Length": 256,
+    "Length": 272,
     "States": {
       "Destroyed": -1,
       "Off": 0,

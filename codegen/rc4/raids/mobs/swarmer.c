@@ -587,7 +587,7 @@ void swarmerDoAction(Moby* moby)
         swarmerForceLocalAction(moby, SWARMER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, SWARMER_ANIM_WALK, 0);
-      } else if (moby->AnimSeqId != SWARMER_ANIM_WALK || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, SWARMER_ANIM_IDLE, 0);
       }
 			break;

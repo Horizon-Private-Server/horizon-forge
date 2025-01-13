@@ -834,7 +834,7 @@ void dzstrikerDoAction(Moby* moby)
         dzstrikerForceLocalAction(moby, DZSTRIKER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
         dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_WALK_FORWARD, DZSTRIKER_TORSO_ANIM_IDLE, 0);
-      } else if (moby->AnimSeqId != DZSTRIKER_LEGS_ANIM_WALK_FORWARD || pvars->MobVars.AnimationLooped) {
+      } else {
         dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, DZSTRIKER_TORSO_ANIM_IDLE, 0);
       }
       break;
@@ -854,7 +854,7 @@ void dzstrikerDoAction(Moby* moby)
         dzstrikerForceLocalAction(moby, DZSTRIKER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
         dzstrikerTransAnim(moby, walkAnimId, DZSTRIKER_TORSO_ANIM_IDLE, 0);
-      } else if (moby->AnimSeqId != walkAnimId || pvars->MobVars.AnimationLooped) {
+      } else {
         dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_IDLE, DZSTRIKER_TORSO_ANIM_IDLE, 0);
       }
 			break;

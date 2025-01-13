@@ -534,7 +534,7 @@ void zombieDoAction(Moby* moby)
         zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, ZOMBIE_ANIM_WALK, 0);
-      } else if (moby->AnimSeqId != ZOMBIE_ANIM_WALK || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
       }
       break;
@@ -559,7 +559,7 @@ void zombieDoAction(Moby* moby)
         zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, ZOMBIE_ANIM_RUN, 0);
-      } else if (moby->AnimSeqId != ZOMBIE_ANIM_RUN || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
       }
 			break;

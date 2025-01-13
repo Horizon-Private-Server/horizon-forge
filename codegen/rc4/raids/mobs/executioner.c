@@ -648,7 +648,7 @@ void executionerDoAction(Moby* moby)
         executionerForceLocalAction(moby, EXECUTIONER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, EXECUTIONER_ANIM_WALK, 0);
-      } else if (moby->AnimSeqId != EXECUTIONER_ANIM_WALK || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, EXECUTIONER_ANIM_IDLE, 0);
       }
       break;
@@ -673,7 +673,7 @@ void executionerDoAction(Moby* moby)
         executionerForceLocalAction(moby, EXECUTIONER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, EXECUTIONER_ANIM_RUN, 0);
-      } else if (moby->AnimSeqId != EXECUTIONER_ANIM_RUN || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, EXECUTIONER_ANIM_IDLE, 0);
       }
 			break;

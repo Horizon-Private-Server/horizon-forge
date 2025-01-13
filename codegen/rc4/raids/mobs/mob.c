@@ -198,7 +198,7 @@ void mobReactToThorns(Moby* moby, float damage, int byPlayerId)
   float angle = atan2f(delta[1] / dist, delta[0] / dist);
   
   // create event
-	GuberEvent * guberEvent = guberEventCreateEventSafe(guber, MOB_EVENT_DAMAGE, 0, 0);
+	GuberEvent * guberEvent = guberEventCreateEvent(guber, MOB_EVENT_DAMAGE, 0, 0);
   if (guberEvent) {
     args.SourceUID = player->Guber.Id.UID;
     args.SourceOClass = 0;
@@ -333,8 +333,13 @@ int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, fl
         if (vector_sqrmag(delta) > firstPassSqrRadius)
           continue;
 
-        if (mobDoDamageTryHit(mobMoby, sourceMoby, player->PlayerMoby, p, isAoE, radius, damageFlags, amount)) {
-          result |= mobMobyProcessHitFlags(mobMoby, player->PlayerMoby, amount, reactToThorns);
+        Moby* playerMoby = player->PlayerMoby;
+        if (player->InVehicle && player->Vehicle) {
+          playerMoby = player->Vehicle->pMoby;
+        }
+
+        if (mobDoDamageTryHit(mobMoby, sourceMoby, playerMoby, p, isAoE, radius, damageFlags, amount)) {
+          result |= mobMobyProcessHitFlags(mobMoby, playerMoby, amount, reactToThorns);
         }
       }
     } else if (CollMobysSphere_Fix(p, COLLISION_FLAG_IGNORE_NONE, sourceMoby, NULL, 5 + radius) > 0) {
@@ -394,8 +399,13 @@ int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int
       if (vector_sqrmag(delta) > firstPassSqrRadius)
         continue;
 
-      if (mobDoDamageTryHit(mobMoby, sourceMoby, player->PlayerMoby, p, isAoE, radius, damageFlags, amount)) {
-        result |= mobMobyProcessHitFlags(mobMoby, player->PlayerMoby, amount, reactToThorns);
+      Moby* playerMoby = player->PlayerMoby;
+      if (player->InVehicle && player->Vehicle) {
+        playerMoby = player->Vehicle->pMoby;
+      }
+
+      if (mobDoDamageTryHit(mobMoby, sourceMoby, playerMoby, p, isAoE, radius, damageFlags, amount)) {
+        result |= mobMobyProcessHitFlags(mobMoby, playerMoby, amount, reactToThorns);
       }
     }
   } else if (CollMobysSphere_Fix(p, COLLISION_FLAG_IGNORE_NONE, sourceMoby, NULL, 5 + radius) > 0) {
@@ -705,8 +715,9 @@ void mobMove(Moby* moby)
 
     // reset move step
     moveStep = pvars->MobVars.MoveVars.MoveStep;
-    if (!isOwner && !moby->Drawn)
-      moveStep += 3;
+    int rotatingDt = fabsf((mobMoveCheckCollideWithOtherMobsRotatingIndex - pvars->MobVars.Order) % MAX_MOBS_ALIVE) < 15;
+    if (!isOwner || !rotatingDt)
+      moveStep = MOB_MOVE_SKIP_TICKS_LOWPRIORITY;
     
 #if GATE
     gateSetCollision(0);
@@ -768,7 +779,8 @@ void mobMove(Moby* moby)
     if (isFlying) {
       
       // check height
-      vector_normalize(ledgePos, lastVelocity);
+      vector_projectonhorizontal(ledgePos, lastVelocity);
+      vector_normalize(ledgePos, ledgePos);
       vector_add(ledgePos, moby->Position, ledgePos);
       vector_copy(groundCheckFrom, ledgePos);
       groundCheckFrom[2] = maxf(moby->Position[2], ledgePos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
@@ -787,8 +799,9 @@ void mobMove(Moby* moby)
     } else {
 
       // check ledge
-      if (!pvars->MobVars.MoveVars.IsStuck) {
-        vector_normalize(ledgePos, lastVelocity);
+      if (1) {
+        vector_projectonhorizontal(ledgePos, lastVelocity);
+        vector_normalize(ledgePos, ledgePos);
         //vector_fromyaw(ledgePos, moby->Rotation[2]);
         vector_add(ledgePos, moby->Position, ledgePos);
         vector_copy(groundCheckFrom, ledgePos);
@@ -797,7 +810,7 @@ void mobMove(Moby* moby)
         groundCheckTo[2] = gameGetDeathHeight();
         if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
           currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
-          if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
+          if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId()) || mobCollisionIdIsLethal(CollLine_Fix_GetHitCollisionId())) {
             nextPosHasSafeGround = 0;
           }
         } else {
@@ -873,8 +886,10 @@ void mobMove(Moby* moby)
 
     // detect ledge
     if (!nextPosHasSafeGround) {
+      //pvars->MobVars.MoveVars.IsStuck = 1;
       nextPos[0] = moby->Position[0];
       nextPos[1] = moby->Position[1];
+      //nextPos[2] = moby->Position[2];
     }
 
     // set position
@@ -998,6 +1013,7 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
   VECTOR temp;
   VECTOR targetPosition;
   float targetSpeed = speed * MATH_DT;
+  float targetRadius = PLAYER_COLL_RADIUS;
 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   if (!pvars)
@@ -1008,6 +1024,11 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
     vector_copy(targetPosition, pvars->MobVars.MoveVars.Target->Position);
   } else {
     vector_copy(targetPosition, pvars->MobVars.MoveVars.TargetPosition);
+  }
+
+  Moby* target = pvars->MobVars.MoveVars.Target;
+  if (target) {
+    targetRadius = (target->BSphere[3] / 1024) * 0.5;
   }
 
   // target velocity from rotation
@@ -1035,8 +1056,8 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
     vector_projectonhorizontal(nextToTarget, nextToTarget);
     float distNextToTarget = vector_length(nextToTarget);
     
-    float min = pvars->MobVars.Config.CollRadius + PLAYER_COLL_RADIUS;
-    float max = min + PLAYER_COLL_RADIUS; //(pvars->MobVars.Config.AttackRadius + PLAYER_COLL_RADIUS) + (targetSpeed * 0.2);
+    float min = pvars->MobVars.Config.CollRadius + targetRadius;
+    float max = min + targetRadius; //(pvars->MobVars.Config.AttackRadius + PLAYER_COLL_RADIUS) + (targetSpeed * 0.2);
 
     // if too close to target, stop
     if (max > min && distNextToTarget < max && distNextToTarget > min) {

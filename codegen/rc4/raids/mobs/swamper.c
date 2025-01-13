@@ -555,7 +555,7 @@ void swamperDoAction(Moby* moby)
         swamperForceLocalAction(moby, SWAMPER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, walkAnim, 0);
-      } else if (moby->AnimSeqId != walkAnim || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, SWAMPER_ANIM_IDLE, 0);
       }
 			break;

@@ -735,7 +735,7 @@ void leviathanDoAction(Moby* moby)
         leviathanForceLocalAction(moby, LEVIATHAN_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, LEVIATHAN_ANIM_WALK, 0);
-      } else if (moby->AnimSeqId != LEVIATHAN_ANIM_WALK || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, LEVIATHAN_ANIM_IDLE, 0);
       }
       break;
@@ -756,7 +756,7 @@ void leviathanDoAction(Moby* moby)
         leviathanForceLocalAction(moby, LEVIATHAN_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				mobTransAnim(moby, walkAnimId, 0);
-      } else if (moby->AnimSeqId != walkAnimId || pvars->MobVars.AnimationLooped) {
+      } else {
 				mobTransAnim(moby, LEVIATHAN_ANIM_IDLE, 0);
       }
 			break;

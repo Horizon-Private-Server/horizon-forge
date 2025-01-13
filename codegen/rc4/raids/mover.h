@@ -37,6 +37,7 @@ enum MoverAttachedType {
 
 struct MoverRuntimeState
 {
+  VECTOR MoverLastPosition;
   VECTOR LastAppliedPositionDelta;
   VECTOR LastAppliedRotationDelta;
   VECTOR MobyLastPosition;
