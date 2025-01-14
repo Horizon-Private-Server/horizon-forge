@@ -24,6 +24,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
+#include <libdl/moby.h>
 ##INCLUDES##
 
 ##DECLARATIONS##
@@ -46,7 +47,7 @@ void initialize(void)
 int main(void)
 {
   int i;
-  if (!isInGame())
+  if (!isInGame() && !isSceneLoadedNotYetInGame())
     return 0;
 
   dlPreUpdate();

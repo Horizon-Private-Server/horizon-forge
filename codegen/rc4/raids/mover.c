@@ -474,7 +474,9 @@ void moverOnGuberCreated(Moby* moby)
     DLOG(moby, "mover %08X found target %d %08X\n", (u32)moby, i, (u32)pvars->MobyTargets[i]);
   }
 
-  pvars->AttachedToMoby = mobyGetFromIdxOrNull((int)pvars->AttachedToMoby);
+  if (pvars->AttachedType == MOVER_ATTACHED_MOBY) {
+    pvars->AttachedToMoby = mobyGetFromIdxOrNull((int)pvars->AttachedToMoby);
+  }
 }
 
 //--------------------------------------------------------------------------

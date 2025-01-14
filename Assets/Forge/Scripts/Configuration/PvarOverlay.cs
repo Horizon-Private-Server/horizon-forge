@@ -539,6 +539,7 @@ public class PvarOverlayDef
     public List<PvarOverlayDef> Fields { get; set; }
     public List<PvarOverlayDisplayRule> DisplayIf { get; set; }
     public int? Order { get; set; }
+    public bool Hidden { get; set; }
 
     public PvarOverlayDef ParentDef { get; set; }
 

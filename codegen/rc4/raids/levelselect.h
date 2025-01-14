@@ -31,8 +31,11 @@
 #define LEVELSELECT_STAR_H                            (LEVELSELECT_STAR_W)
 #define LEVELSELECT_STAR_SPRITE_ID                    (88)
 
+#define LEVELSELECT_INPUT_COOLDOWN                    (30)
+
 typedef struct LevelselectDrawState
 {
+  int InputCooldownTicks;
   int SelectedIdx;
   int SelectedDifficulty;
   int NumPlanets;

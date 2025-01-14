@@ -655,7 +655,7 @@ public static class UnityHelper
         var pvarValues = pvarObject.GetPVarValues();
         var pvarRefs = pvarObject.GetPVarReferences();
         var pvarData = pvarObject.GetPVarData();
-        var display = def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, basePath));
+        var display = !def.Hidden && (def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, basePath)));
         var path = basePath + $".{def.Name}";
         if (!display) return;
 

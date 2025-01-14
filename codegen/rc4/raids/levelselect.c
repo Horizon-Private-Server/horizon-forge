@@ -23,7 +23,8 @@ extern struct RaidsState State;
 LevelselectDrawState_t levelselectDrawState = {
   .SelectedIdx = 0,
   .SelectedDifficulty = 0,
-  .NumPlanets = 0
+  .NumPlanets = 0,
+  .InputCooldownTicks = 10
 };
 
 //--------------------------------------------------------------------------
@@ -450,6 +451,7 @@ void levelselectHandleInput(void)
 {
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
+  if (levelselectDrawState.InputCooldownTicks > 0) return;
 
   RaidsPlayerBank_t* bank = bankGetLocalBank();
   if (!bank) return;
@@ -459,6 +461,7 @@ void levelselectHandleInput(void)
     // handle close input
     if (padGetButtonDown(0, PAD_TRIANGLE) > 0) {
       levelselectDrawState.ShowChallengesDialog = 0;
+      levelselectDrawState.InputCooldownTicks = LEVELSELECT_INPUT_COOLDOWN;
       return;
     }
 
@@ -492,6 +495,7 @@ void levelselectHandleInput(void)
     if (levelselectDrawState.SelectedIdx < 0) levelselectDrawState.SelectedIdx = levelselectDrawState.NumPlanets - 1;
   } else if (PATCH_INTEROP && PATCH_INTEROP->RefreshCustomMapDefs && padGetButtonDown(0, PAD_SQUARE) > 0) {   // REFRESH
     PATCH_INTEROP->RefreshCustomMapDefs();
+    levelselectDrawState.InputCooldownTicks = LEVELSELECT_INPUT_COOLDOWN;
   } else if (!levelselectDrawState.MapStats.Invalid && levelselectDrawState.MapStats.ChallengesCount > 0 && padGetButtonDown(0, PAD_CIRCLE) > 0) {   // CHALLENGES
     levelselectDrawState.ChallengesDialogSelectedIdx = 0;
     levelselectDrawState.ShowChallengesDialog = 1;
@@ -522,6 +526,8 @@ void levelselectStart(void)
   static int missionFailed = 0; // resets when mission is reloaded
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
+
+  decTimerU32(&levelselectDrawState.InputCooldownTicks);
 
   if (gameHasEnded() || !isInGame() || gameIsAnyStartMenuOpen()) {
     levelselectClose();
