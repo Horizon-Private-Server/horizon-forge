@@ -428,9 +428,9 @@ public class LevelImporterWindow : EditorWindow
         root.BuildRow("World Lighting", (container) =>
         {
             var field = new DropdownField();
-            field.choices = AssetLimitedImportOptions;
+            field.choices = AssetImportOptions;
             field.index = importWorldConfig;
-            field.RegisterValueChangedCallback((e) => importWorldConfig = AssetLimitedImportOptions.IndexOf(e.newValue));
+            field.RegisterValueChangedCallback((e) => importWorldConfig = AssetImportOptions.IndexOf(e.newValue));
             container.Add(field);
         });
 
@@ -1028,12 +1028,12 @@ public class LevelImporterWindow : EditorWindow
             if (importMobys > 0) ImportMobyInstances(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importMisc == 1) ImportCuboids(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importMisc == 1) ImportSplines(tempMapBinFolder, destMapFolder, postActions, rootGo);
-            if (importMisc == 1) ImportCameras(destMapBinFolder, destMapFolder, postActions, rootGo);
-            if (importMisc == 1) ImportAmbientSounds(destMapBinFolder, destMapFolder, postActions, rootGo);
+            if (importMisc == 1) ImportCameras(tempMapBinFolder, destMapFolder, postActions, rootGo);
+            if (importMisc == 1) ImportAmbientSounds(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importMisc == 1 && ImportSourceIsDL()) ImportAreas(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importTfrags == 1) ImportTfrags(destMapBinFolder, destMapFolder, assetImports, rootGo);
-            if (reimportOcclusion) ImportOcclusion(destMapBinFolder, destMapFolder, assetImports, rootGo);
-            if (importWorldConfig == 1) ImportWorldConfig(destMapBinFolder, destMapFolder, assetImports, rootGo);
+            if (reimportOcclusion) ImportOcclusion(tempMapBinFolder, destMapFolder, assetImports, rootGo);
+            if (importWorldConfig == 1) ImportWorldConfig(tempMapBinFolder, destMapFolder, assetImports, rootGo);
 
             if (ImportSourceIsIso())
             {
@@ -1227,7 +1227,7 @@ public class LevelImporterWindow : EditorWindow
         var unpackAssets = importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
         var unpackGameplay = importMobys > 0 || importWorldConfig > 0 || importMisc > 0;
         var unpackOcclusion = importTies > 0 || importTfrags > 0 || importMobys > 0;
-        var unpackWorldInstances = importTies > 0 || importShrubs > 0 || unpackOcclusion;
+        var unpackWorldInstances = importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
         var unpackCollision = importCollision > 0;
 
         // decompress and unpack level wad
