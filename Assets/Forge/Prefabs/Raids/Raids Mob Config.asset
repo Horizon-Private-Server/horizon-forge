@@ -24,6 +24,13 @@ MonoBehaviour:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
+    - Name: Test
+      OClass: 8438
+      Bangles: 33
+      Dependencies:
+      - OClass: 8438
+        SourceMapId: 2
+        SourceMissionId: -1
     Behaviors: []
     Xp: 5
     Bolts: 100
