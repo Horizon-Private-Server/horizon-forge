@@ -933,7 +933,8 @@
     "States": {
       "Capture In Progress": 1,
       "Captured": 4,
-      "Uncaptured": 5
+      "Uncaptured": 5,
+      "Disabled": 6
     },
     "Overlay": [
       {

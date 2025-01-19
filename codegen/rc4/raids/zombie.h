@@ -34,7 +34,7 @@
 #define ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR  (0.1)
 
 #define ZOMBIE_PRIMARY_COLOR                  (0x00464443)
-#define ZOMBIE_GLOW_COLOR                     (0x80202020)
+#define ZOMBIE_GLOW_COLOR                     (0x80808080)
 #define ZOMBIE_LOD_COLOR                      (0x00808080)
 
 enum ZombieAnimId

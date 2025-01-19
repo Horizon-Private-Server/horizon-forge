@@ -808,7 +808,7 @@ void spawnerStart(void)
       //  continue;
 
       // check for walkable ground
-      VECTOR spawnFrom, spawnTo, up={0,0,0.1,0}, down = {0,0,-30,0};
+      VECTOR spawnFrom, spawnTo, up={0,0,0.01,0}, down = {0,0,-30,0};
       vector_add(spawnFrom, request->SpawnArgs.Position, up);
       vector_add(spawnTo, request->SpawnArgs.Position, down);
       if (!CollLine_Fix(spawnFrom, spawnTo, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL))
