@@ -618,6 +618,9 @@ public static class UnityHelper
                         if (count > 1) iPath += $"[{i}]";
                         var iOffset = offset + (dataSize * i);
 
+                        if (pvarOverlay.ForceDefaults)
+                            Array.Copy(pvarOverlay.DefaultBytes, iOffset, pvars, iOffset, def.GetDataSize());
+
                         if (def.IsReferenceType() && pvarRefs != null && !pvarRefs.ContainsKey(iPath))
                         {
                             MonoBehaviour refValue = null;

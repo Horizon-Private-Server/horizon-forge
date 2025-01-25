@@ -21,6 +21,7 @@ public class PvarOverlay
     public int? AmbientSoundType { get; set; }
     public int? CameraType { get; set; }
     public bool ShowRawEditor { get; set; }
+    public bool ForceDefaults { get; set; }
     public int Length { get; set; }
     public string Default { get; set; }
     public string Pointers { get; set; }

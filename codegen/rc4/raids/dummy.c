@@ -93,6 +93,12 @@ void dummyOnStateChanged(Moby* moby)
   {
     case DUMMY_STATE_DEAD:
     {
+      // trigger OnKilled
+      Moby* onKilledMoby = pvars->Config.OnKilledControllerMoby;
+      if (onKilledMoby && !mobyIsDestroyed(onKilledMoby) && controllerAmIOwner(onKilledMoby)) {
+        controllerBroadcastNewState(onKilledMoby, CONTROLLER_STATE_ACTIVATED);
+      }
+      
       // handle death event
       if (pvars->Config.OnDeathType != DUMMY_ON_DEATH_NONE) {
         
@@ -251,16 +257,17 @@ void dummyUpdate(Moby* moby)
         dummyBroadcastState(moby, DUMMY_STATE_DEAD, 0);
         if (pvars->Config.OnKilledControllerMoby && !mobyIsDestroyed(pvars->Config.OnKilledControllerMoby)) {
           controllerSetTriggerMoby(pvars->Config.OnKilledControllerMoby, colDamage->Damager);
-          controllerBroadcastNewState(pvars->Config.OnKilledControllerMoby, CONTROLLER_STATE_ACTIVATED);
+          //controllerBroadcastNewState(pvars->Config.OnKilledControllerMoby, CONTROLLER_STATE_ACTIVATED);
         }
       } else {
         dummyBroadcastHealth(moby, newHealth);
       }
 
       // hit
-      if (pvars->Config.OnHitControllerMoby && !mobyIsDestroyed(pvars->Config.OnHitControllerMoby)) {
-        controllerSetTriggerMoby(pvars->Config.OnHitControllerMoby, colDamage->Damager);
-        controllerBroadcastNewState(pvars->Config.OnHitControllerMoby, CONTROLLER_STATE_ACTIVATED);
+      Moby* onHitMoby = pvars->Config.OnHitControllerMoby;
+      if (onHitMoby && !mobyIsDestroyed(onHitMoby) && controllerAmIOwner(onHitMoby)) {
+        controllerSetTriggerMoby(onHitMoby, colDamage->Damager);
+        controllerBroadcastNewState(onHitMoby, CONTROLLER_STATE_ACTIVATED);
       }
 
       // bubble

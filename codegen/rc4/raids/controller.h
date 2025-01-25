@@ -322,6 +322,7 @@ struct ControllerPVar
   struct ControllerRuntimeState State;
 };
 
+int controllerAmIOwner(Moby* moby);
 void controllerSetTriggerMoby(Moby* moby, Moby* triggerMoby);
 void controllerBroadcastNewState(Moby* moby, enum ControllerState state);
 struct Guber* controllerGetGuber(Moby* moby);

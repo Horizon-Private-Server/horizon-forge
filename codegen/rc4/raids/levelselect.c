@@ -79,6 +79,7 @@ void levelselectGo(LevelselectDrawState_t* drawState)
   if (MapConfig.BeginWorldHopFunc) {
     MapConfig.BeginWorldHopFunc(drawState->SelectedMapFilename, isHub ? 0 : drawState->SelectedDifficulty, isHub ? 0 : cost, 5 * TIME_SECOND);
   }
+
   levelselectClose();
 }
 
