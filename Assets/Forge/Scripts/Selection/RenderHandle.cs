@@ -54,6 +54,11 @@ public class RenderHandle
         _changed = false;
     }
 
+    public void DrawGizmos()
+    {
+        _assetInstanceHandle?.DrawGizmos();
+    }
+
     #region PS2 Asset
 
     public void Update(GameObject parent, GameObject prefab)
@@ -196,4 +201,5 @@ public class RenderHandle
 public interface IRenderHandlePrefab
 {
     void UpdateMaterials();
+    void DrawGizmos();
 }

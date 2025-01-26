@@ -127,4 +127,10 @@ public class RaidsLaserMoby : MonoBehaviour, IRenderHandlePrefab
         m_Moby.transform.localScale = Vector3.one;
         this.transform.localScale = Vector3.one;
     }
+
+    public void DrawGizmos()
+    {
+
+    }
+
 }

@@ -70,6 +70,14 @@ struct SpawnerRuntimeState
   int NumKilled[SPAWNER_MAX_MOB_TYPES];
 };
 
+struct SpawnerEmitConfig
+{
+  float YawRandomMin;
+  float YawRandomMax;
+  int YawFaceCuboidIdx;
+  char InvertRotation;
+};
+
 struct SpawnerPVar
 {
   int Init;
@@ -81,6 +89,7 @@ struct SpawnerPVar
   int RoamableCuboidIds[SPAWNER_MAX_ROAMABLE_CUBOIDS];
   int PathGraphIdx;
   float LimitDespawnPercent;
+  struct SpawnerEmitConfig Emission;
   struct SpawnerSpawnConfig Config[RAIDS_DIFFICULTY_COUNT];
   struct SpawnerMobParams SpawnableMobParam[SPAWNER_MAX_MOB_TYPES];
   struct SpawnerRuntimeState State;

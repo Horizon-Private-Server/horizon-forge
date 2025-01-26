@@ -80,6 +80,9 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
         if (!RenderOctants) return;
         if (Selection.activeGameObject != this.gameObject) return;
 
+        // draw render handle gizmos
+        renderHandle?.DrawGizmos();
+
         if (Octants != null)
         {
             Gizmos.matrix = Matrix4x4.identity;

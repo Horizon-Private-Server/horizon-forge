@@ -51,6 +51,12 @@ public class Shrub : RenderSelectionBase, IAsset, IInstancedCollider
         collisionRenderHandle?.DestroyAsset();
     }
 
+    private void OnDrawGizmosSelected()
+    {
+        // draw render handle gizmos
+        renderHandle?.DrawGizmos();
+    }
+
     public void UpdateAsset()
     {
         if (renderHandle == null) renderHandle = new RenderHandle(OnRenderHandleRender);

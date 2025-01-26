@@ -118,4 +118,10 @@ public class WaterTriStripGroupMoby : MonoBehaviour, IRenderHandlePrefab
 
         m_Filter.sharedMesh = mesh;
     }
+
+    public void DrawGizmos()
+    {
+
+    }
+
 }

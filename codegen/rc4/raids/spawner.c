@@ -132,14 +132,24 @@ void spawnerGetRandomPointInCuboid(SpawnPoint* cuboid, VECTOR outPos)
 int spawnerGetRandomSpawnPoint(Moby* moby, int mobParamsIdx, VECTOR outPos, float* outYaw)
 {
   VECTOR pos = {0,0,3,0};
+  VECTOR dt;
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+
+  // compute random yaw
+  float randYaw = randRange(pvars->Emission.YawRandomMin, pvars->Emission.YawRandomMax) * MATH_PI;
+  float yawOff = pvars->Emission.InvertRotation ? MATH_PI : 0;
 
   // try and get random spawn cuboid
   // if none exist, return position/yaw of the spawner itself
   int selSpawnIdx = selectRandomIndex(SPAWNER_MAX_SPAWN_CUBOIDS, moby, spawnerIsValidCuboidSpawnIdx);
   if (selSpawnIdx < 0) {
     vector_copy(outPos, moby->Position);
-    *outYaw = moby->Rotation[2];
+    *outYaw = clampAngle((moby->Rotation[2] + randYaw) + yawOff);
+    if (pvars->Emission.YawFaceCuboidIdx >= 0) {
+      SpawnPoint* faceCuboid = spawnPointGet(pvars->Emission.YawFaceCuboidIdx);
+      vector_subtract(dt, &faceCuboid->M0[12], outPos);
+      *outYaw = clampAngle(atan2f(dt[1], dt[0]) + randYaw + yawOff);
+    }
     return 1;
   }
 
@@ -153,7 +163,17 @@ int spawnerGetRandomSpawnPoint(Moby* moby, int mobParamsIdx, VECTOR outPos, floa
   spawnerGetRandomPointInCuboid(cuboid, pos);
 
   if (outPos) vector_copy(outPos, pos);
-  if (outYaw) *outYaw = cuboid->M1[14] + randRadian();
+  if (outYaw) {
+    *outYaw = clampAngle((cuboid->M1[14] + randYaw) + yawOff);
+    
+    // consider getting closest point in cuboid to outPos
+    if (pvars->Emission.YawFaceCuboidIdx >= 0) {
+      SpawnPoint* faceCuboid = spawnPointGet(pvars->Emission.YawFaceCuboidIdx);
+      vector_subtract(dt, &faceCuboid->M0[12], outPos);
+      *outYaw = clampAngle(atan2f(dt[1], dt[0]) + randYaw + yawOff);
+    }
+  }
+
   return 1;
 }
 

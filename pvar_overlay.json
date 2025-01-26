@@ -3351,7 +3351,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 512,
+    "Length": 528,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3389,10 +3389,48 @@
         "Max": 1
       },
       {
+        "Name": "Emission",
+        "DataType": "Struct",
+        "DataSize": 16,
+        "Offset": 80,
+        "Fields": [
+          {
+            "Name": "Random Rotation Min",
+            "DataType": "Float",
+            "Offset": 0,
+            "Min": -1,
+            "Max": 1,
+            "Default": -1
+          },
+          {
+            "Name": "Random Rotation Max",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": -1,
+            "Max": 1,
+            "Default": 1
+          },
+          {
+            "Name": "Rotation Face Cuboid",
+            "DataType": "CuboidRef",
+            "Offset": 8
+          },
+          {
+            "Name": "Rotation Invert",
+            "DataType": "Bool",
+            "Offset": 12,
+            "Default": 0
+          }
+        ]
+      },
+      {
+        "DataType": "Space"
+      },
+      {
         "Name": "Spawn Config (Per Difficulty)",
         "DataType": "Struct",
         "DataSize": 12,
-        "Offset": 80,
+        "Offset": 96,
         "Count": 5,
         "Labels": [
           "1 Star",
@@ -3455,7 +3493,7 @@
       {
         "Name": "Mob Parameters",
         "DataType": "Struct",
-        "Offset": 140,
+        "Offset": 156,
         "DataSize": 28,
         "Count": 8,
         "Fields": [
@@ -3768,6 +3806,7 @@
     "RCVersion": 4,
     "MobyOClass": 16387,
     "Length": 412,
+    "ForceDefaults": true,
     "States": {
       "Destroyed": -1,
       "Off": 0,

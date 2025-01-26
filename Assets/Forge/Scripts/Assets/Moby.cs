@@ -128,6 +128,9 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         if (Selection.gameObjects == null) return;
         if (!Selection.gameObjects.Contains(this.gameObject)) return;
 
+        // draw render handle gizmos
+        renderHandle?.DrawGizmos();
+
         if (DrawPVarMobyLines)
         {
 
