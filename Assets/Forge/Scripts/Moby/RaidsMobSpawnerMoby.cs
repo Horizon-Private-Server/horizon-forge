@@ -51,21 +51,47 @@ public class RaidsMobSpawnerMoby : MonoBehaviour, IRenderHandlePrefab
         if (!m_Moby) return;
         if (m_Moby.OClass != RaidsModeData.MOB_SPAWNER_OCLASS) return;
 
-        var startYaw = (-m_YawMin * 180f) + (m_YawInvert ? 180f : 0);
-
+        var m = Gizmos.matrix;
         Gizmos.color = Color.red;
         //Handles.color = Color.red;
         //Handles.Label(this.transform.position + this.transform.up, "Mob Rotation");
+
+        var hasSpawnCuboid = false;
+        for (int i = 0; i < 4; ++i)
+        {
+            var cuboid = m_Moby.PVarReferences[$".Spawn Zones[{i}]"] as Cuboid;
+            if (cuboid)
+            {
+                Gizmos.matrix = cuboid.transform.localToWorldMatrix;
+                Gizmos.DrawWireCube(Vector3.zero, Vector3.one * 2f);
+                Gizmos.matrix = m;
+                DrawSpawnZone(cuboid.transform.position, cuboid.transform.rotation);
+                hasSpawnCuboid = true;
+            }
+        }
+
+        if (!hasSpawnCuboid)
+        {
+            DrawSpawnZone(this.transform.position, this.transform.rotation);
+        }
+    }
+
+    private void DrawSpawnZone(Vector3 position, Quaternion rotation)
+    {
+        var up = rotation * Vector3.up;
+        var right = rotation * Vector3.right;
+        var startYaw = (-m_YawMin * 180f) + (m_YawInvert ? 180f : 0);
+
         if (m_YawFaceCuboid)
         {
-            var dir = (m_YawFaceCuboid.transform.position - this.transform.position).normalized * 5f;
-            var startDir = Quaternion.AngleAxis(startYaw, m_Moby.transform.up) * dir;
-            GizmosHelper.DrawWireArc(this.transform.position, startDir, (m_YawMax - m_YawMin) * 180f, 5f);
+            var dir = (m_YawFaceCuboid.transform.position - position).normalized * 5f;
+            var startDir = Quaternion.AngleAxis(startYaw, up) * dir;
+            GizmosHelper.DrawWireArc(position, startDir, (m_YawMax - m_YawMin) * 180f, 5f);
         }
         else
         {
-            var startDir = Quaternion.AngleAxis(startYaw, m_Moby.transform.up) * this.transform.right;
-            GizmosHelper.DrawWireArc(this.transform.position, startDir, (m_YawMax - m_YawMin) * 180f, 5f);
+            var startDir = Quaternion.AngleAxis(startYaw, up) * right;
+            GizmosHelper.DrawWireArc(position, startDir, (m_YawMax - m_YawMin) * 180f, 5f);
         }
     }
 }
