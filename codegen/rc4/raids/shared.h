@@ -45,6 +45,7 @@ void mobSetAction(Moby* moby, int action);
 void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff, char* animationReset, char* animationLooped);
 void mobTransAnim(Moby* moby, int animId, float startOff);
 void mobUpdateAnim(Moby* moby);
+int mobGetAnimIf(Moby* moby, int animIdFalse, int animIdTrue, int condition, int maxLoops);
 int mobHasVelocity(struct MobPVar* pvars);
 void mobGetKnockbackVelocity(Moby* moby, VECTOR out);
 void mobStand(Moby* moby);
@@ -57,8 +58,10 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
 void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
 void mobGetVelocityToTargetSimple(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
 float mobGetCurrentMoveSpeed(Moby* moby);
+float mobGetCurrentWalkAngle(Moby* moby);
 void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir);
 void mobJumpTowards(Moby* moby, VECTOR targetPosition);
+int mobHitWallShouldJump(Moby* moby, float maxSlope);
 void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId);
 void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
 void mobPreUpdate(Moby* moby);

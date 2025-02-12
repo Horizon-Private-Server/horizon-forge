@@ -143,6 +143,7 @@ void npcTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff)
 //--------------------------------------------------------------------------
 void npcTransAnim(Moby* moby, int animId, float startOff)
 {
+  //DLOG(moby, "npc trans anim %08X => %d\n", (u32)moby, animId);
 	npcTransAnimLerp(moby, animId, 10, startOff);
 }
 
@@ -627,10 +628,7 @@ void npcDoAction(Moby* moby)
     case NPC_ACTION_WALK:
 		{
       int walkAnimId = pvars->Parameters.WalkAnim.Id;
-      float dir = 0;
-      if (target) {
-        dir = (pvars->Mob.MobVars.DynamicRandom % 3) - 1;
-      }
+      float dir = mobGetCurrentWalkAngle(moby);
 
       // determine next position
       if (pathGetTargetPos(path, t, moby, &pvars->Mob.MobVars.MoveVars) && mobAmIOwner(moby))
@@ -798,6 +796,7 @@ void npcOnGuberCreated(Moby* moby)
   
   // initialize mobvars
   pvars->Mob.MobVars.Config.Damage = 0;
+  pvars->Mob.MobVars.Config.TurnSpeed = 0;
   pvars->Mob.MobVars.Config.AttackRadius = pvars->Parameters.InteractRange;
   pvars->Mob.MobVars.Config.HitRadius = 1;
   pvars->Mob.MobVars.Config.CollRadius = pvars->Parameters.CollRadius;

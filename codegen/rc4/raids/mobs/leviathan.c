@@ -447,7 +447,7 @@ int leviathanGetPreferredAction(Moby* moby, int * delayTicks)
   }
 
   // jump if we've hit a slope and are grounded
-  if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > LEVIATHAN_MAX_WALKABLE_SLOPE) {
+  if (mobHitWallShouldJump(moby, LEVIATHAN_MAX_WALKABLE_SLOPE)) {
     return LEVIATHAN_ACTION_JUMP;
   }
 
@@ -551,7 +551,7 @@ int leviathanDoActionMove(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-  float dir = (pvars->MobVars.DynamicRandom % 3) - 1;
+  float dir = mobGetCurrentWalkAngle(moby);
 
   // chase goes directly towards target, quickly
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_CHASE) {
@@ -607,7 +607,7 @@ void leviathanDoAction(Moby* moby)
   int behavior = pvars->MobVars.Behavior;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_TURN_RADIANS_PER_SEC : LEVIATHAN_TURN_AIR_RADIANS_PER_SEC;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_TURN_RADIANS_PER_SEC : LEVIATHAN_TURN_AIR_RADIANS_PER_SEC);
   float acceleration = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_MOVE_ACCELERATION : LEVIATHAN_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
                       && (pvars->MobVars.LastAction == LEVIATHAN_ACTION_FLINCH || pvars->MobVars.LastAction == LEVIATHAN_ACTION_BIG_FLINCH);
@@ -688,7 +688,7 @@ void leviathanDoAction(Moby* moby)
         // handle jumping
         if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, LEVIATHAN_ANIM_JUMP, 5);
-          mobResetSoundTrigger(moby);
+          //mobResetSoundTrigger(moby);
 
           // check if we're near last jump pos
           // if so increment StuckJumpCount

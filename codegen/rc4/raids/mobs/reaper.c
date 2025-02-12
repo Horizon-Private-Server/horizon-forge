@@ -14,54 +14,55 @@
 #include "maputils.h"
 #include "shared.h"
 
-void zombiePreUpdate(Moby* moby);
-void zombiePostUpdate(Moby* moby);
-void zombiePostDraw(Moby* moby);
-void zombieMove(Moby* moby);
-void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void zombieOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
-void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e);
-int zombieOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
-void zombieOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-int zombieGetPreferredAction(Moby* moby, int * delayTicks);
-void zombieDoAction(Moby* moby);
-void zombieDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
-void zombieForceLocalAction(Moby* moby, int action);
-short zombieGetArmor(Moby* moby);
-int zombieIsAttacking(Moby* moby);
-int zombieCanNonOwnerTransitionToAction(Moby* moby, int action);
-int zombieShouldForceStateUpdateOnAction(Moby* moby, int action);
+void reaperPreUpdate(Moby* moby);
+void reaperPostUpdate(Moby* moby);
+void reaperPostDraw(Moby* moby);
+void reaperMove(Moby* moby);
+void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
+void reaperOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
+void reaperOnDamage(Moby* moby, struct MobDamageEventArgs* e);
+int reaperOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
+void reaperOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
+Moby* reaperGetNextTarget(Moby* moby);
+int reaperGetPreferredAction(Moby* moby, int * delayTicks);
+void reaperDoAction(Moby* moby);
+void reaperDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
+void reaperForceLocalAction(Moby* moby, int action);
+short reaperGetArmor(Moby* moby);
+int reaperIsAttacking(Moby* moby);
+int reaperCanNonOwnerTransitionToAction(Moby* moby, int action);
+int reaperShouldForceStateUpdateOnAction(Moby* moby, int action);
 
-int zombieIsSpawning(struct MobPVar* pvars);
-int zombieIsRoaming(struct MobPVar* pvars);
-int zombieIsIdling(struct MobPVar* pvars);
-int zombieCanAttack(struct MobPVar* pvars);
-int zombieIsFlinching(Moby* moby);
-int zombieIsDying(Moby* moby);
+int reaperIsSpawning(struct MobPVar* pvars);
+int reaperIsRoaming(struct MobPVar* pvars);
+int reaperIsIdling(struct MobPVar* pvars);
+int reaperCanAttack(struct MobPVar* pvars);
+int reaperIsFlinching(Moby* moby);
+int reaperIsDying(Moby* moby);
 
-struct MobVTable ZombieVTable = {
-  .PreUpdate = &zombiePreUpdate,
-  .PostUpdate = &zombiePostUpdate,
-  .PostDraw = &zombiePostDraw,
-  .Move = &zombieMove,
-  .OnSpawn = &zombieOnSpawn,
-  .OnDestroy = &zombieOnDestroy,
-  .OnDamage = &zombieOnDamage,
-  .OnLocalDamage = &zombieOnLocalDamage,
-  .OnStateUpdate = &zombieOnStateUpdate,
-  .GetNextTarget = &mobGetNextTarget,
-  .GetPreferredAction = &zombieGetPreferredAction,
-  .ForceLocalAction = &zombieForceLocalAction,
-  .DoAction = &zombieDoAction,
-  .DoDamage = &zombieDoDamage,
-  .GetArmor = &zombieGetArmor,
-  .IsAttacking = &zombieIsAttacking,
-  .CanNonOwnerTransitionToAction = &zombieCanNonOwnerTransitionToAction,
-  .ShouldForceStateUpdateOnAction = &zombieShouldForceStateUpdateOnAction,
+struct MobVTable ReaperVTable = {
+  .PreUpdate = &reaperPreUpdate,
+  .PostUpdate = &reaperPostUpdate,
+  .PostDraw = &reaperPostDraw,
+  .Move = &reaperMove,
+  .OnSpawn = &reaperOnSpawn,
+  .OnDestroy = &reaperOnDestroy,
+  .OnDamage = &reaperOnDamage,
+  .OnLocalDamage = &reaperOnLocalDamage,
+  .OnStateUpdate = &reaperOnStateUpdate,
+  .GetNextTarget = &reaperGetNextTarget,
+  .GetPreferredAction = &reaperGetPreferredAction,
+  .ForceLocalAction = &reaperForceLocalAction,
+  .DoAction = &reaperDoAction,
+  .DoDamage = &reaperDoDamage,
+  .GetArmor = &reaperGetArmor,
+  .IsAttacking = &reaperIsAttacking,
+  .CanNonOwnerTransitionToAction = &reaperCanNonOwnerTransitionToAction,
+  .ShouldForceStateUpdateOnAction = &reaperShouldForceStateUpdateOnAction,
 };
 
 //--------------------------------------------------------------------------
-int zombieCreate(struct MobCreateArgs* args)
+int reaperCreate(struct MobCreateArgs* args)
 {
   VECTOR position = {0,0,1,0};
 	struct MobSpawnEventArgs spawnArgs;
@@ -70,7 +71,7 @@ int zombieCreate(struct MobCreateArgs* args)
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(ReaperMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -105,7 +106,7 @@ int zombieCreate(struct MobCreateArgs* args)
 }
 
 //--------------------------------------------------------------------------
-void zombiePreUpdate(Moby* moby)
+void reaperPreUpdate(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
@@ -122,7 +123,7 @@ void zombiePreUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void zombiePostUpdate(Moby* moby)
+void reaperPostUpdate(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
@@ -132,31 +133,28 @@ void zombiePostUpdate(Moby* moby)
 
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(ZOMBIE_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
+    moby->PrimaryColor = colorLerp(REAPER_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
   } else if (pvars->MobVars.FreezeEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(ZOMBIE_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
+    moby->PrimaryColor = colorLerp(REAPER_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
   } else {
-    moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+    moby->PrimaryColor = REAPER_PRIMARY_COLOR;
   }
 
   // adjust animSpeed by speed and by animation
-  float baseSpeed = 0.7;
+  float baseSpeed = 1.0;
 	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
-  if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP) {
-    animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
-    if (pvars->MobVars.MoveVars.Grounded) {
-      animSpeed = baseSpeed;
-    }
-  } else if (zombieIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
+  if (reaperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
-  } else if (zombieIsDying(moby)) {
+  } else if (reaperIsDying(moby)) {
     animSpeed = baseSpeed;
-  } else if (moby->AnimSeqId == ZOMBIE_ANIM_RUN || moby->AnimSeqId == ZOMBIE_ANIM_WALK) {
+  } else if (moby->AnimSeqId == REAPER_ANIM_RUN) {
+    animSpeed *= mobGetCurrentMoveSpeed(moby) * 0.5;
+  } else if (moby->AnimSeqId == REAPER_ANIM_WALK) {
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && !zombieIsAttacking(moby) && !zombieIsSpawning(pvars) && !zombieIsDying(moby) && !zombieIsFlinching(moby))) {
+	if ((moby->DrawDist == 0 && !reaperIsAttacking(moby) && !reaperIsSpawning(pvars) && !reaperIsDying(moby) && !reaperIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -164,23 +162,23 @@ void zombiePostUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void zombiePostDraw(Moby* moby)
+void reaperPostDraw(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
     
-  u32 color = ZOMBIE_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, ZOMBIE_SUBSKELETON_JOINT_HEAD);
+  u32 color = REAPER_LOD_COLOR | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 127, color, REAPER_SUBSKELETON_HEAD);
 }
 
 //--------------------------------------------------------------------------
-void zombieMove(Moby* moby)
+void reaperMove(Moby* moby)
 {
   mobMove(moby);
 }
 
 //--------------------------------------------------------------------------
-void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
+void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
   
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -190,8 +188,8 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = ZOMBIE_GLOW_COLOR;
-	moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+	moby->GlowRGBA = REAPER_GLOW_COLOR;
+	moby->PrimaryColor = REAPER_PRIMARY_COLOR;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
@@ -206,27 +204,28 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 }
 
 //--------------------------------------------------------------------------
-void zombieOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
+void reaperOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
     
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+	moby->PrimaryColor = REAPER_PRIMARY_COLOR;
   
   // spawn corn
   mobBlowCorn(moby);
 }
 
 //--------------------------------------------------------------------------
-void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
+void reaperOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  ReaperMobVars_t* reaperVars = (ReaperMobVars_t*)pvars->AdditionalMobVarsPtr;
 	float damage = e->DamageQuarters / 4.0;
   float newHp = pvars->MobVars.Health - damage;
 
-	int canFlinch = pvars->MobVars.Action != ZOMBIE_ACTION_FLINCH 
-            && pvars->MobVars.Action != ZOMBIE_ACTION_BIG_FLINCH
+	int canFlinch = pvars->MobVars.Action != REAPER_ACTION_FLINCH 
+            && pvars->MobVars.Action != REAPER_ACTION_BIG_FLINCH
             && pvars->MobVars.FlinchCooldownTicks == 0;
 
 #if ALWAYS_FLINCH
@@ -238,7 +237,7 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
 	// destroy
 	if (newHp <= 0) {
-    zombieForceLocalAction(moby, ZOMBIE_ACTION_DIE);
+    reaperForceLocalAction(moby, REAPER_ACTION_DIE);
 	}
 
 	// knockback
@@ -247,12 +246,23 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
 	}
 
+  // trigger aggro
+  Player* sourcePlayer = playerGetFromUID(e->SourceUID);
+  if (!reaperVars->AggroTriggered && sourcePlayer) {
+    reaperVars->AggroTriggered = 1;
+    reaperVars->AggroRoarTriggered = 1;
+    reaperVars->AggroTriggeredBy = sourcePlayer;
+    pvars->MobVars.MoveVars.Target = playerGetTargetMoby(sourcePlayer);
+    DPRINTF("aggro triggered by %d\n", sourcePlayer->PlayerId);
+  }
+
   // flinch
 	if (mobAmIOwner(moby))
 	{
 		float damageRatio = damage / pvars->MobVars.Config.Health;
-    float powerFactor = ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-    float probability = clamp((damageRatio * ZOMBIE_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
+    float pFactor = reaperVars->AggroTriggered ? 0.5 : 1;
+    float powerFactor = REAPER_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+    float probability = clamp((pFactor * damageRatio * REAPER_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
 
 #if ALWAYS_FLINCH
     probability = 2;
@@ -261,14 +271,14 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
     if (canFlinch) {
       if (e->Knockback.Force) {
-        mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
+        mobSetAction(moby, REAPER_ACTION_BIG_FLINCH);
       } else if (isShock) {
-        mobSetAction(moby, ZOMBIE_ACTION_FLINCH);
+        mobSetAction(moby, REAPER_ACTION_FLINCH);
       } else if (randRange(0, 1) < probability) {
         if (randRange(0, 1) < powerFactor) {
-          mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
+          mobSetAction(moby, REAPER_ACTION_BIG_FLINCH);
         } else {
-          mobSetAction(moby, ZOMBIE_ACTION_FLINCH);
+          mobSetAction(moby, REAPER_ACTION_FLINCH);
         }
       }
     }
@@ -296,49 +306,76 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 }
 
 //--------------------------------------------------------------------------
-int zombieOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
+int reaperOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
   // don't filter local damage
   return 1;
 }
 
 //--------------------------------------------------------------------------
-void zombieOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
+void reaperOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 {
   mobOnStateUpdate(moby, e);
 }
 
 //--------------------------------------------------------------------------
-int zombieGetPreferredAction(Moby* moby, int * delayTicks)
+Moby* reaperGetNextTarget(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  ReaperMobVars_t* reaperVars = (ReaperMobVars_t*)pvars->AdditionalMobVarsPtr;
+	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
+
+  // target player who hit us
+  Moby* aggroTriggeredByTarget = playerGetTargetMoby(reaperVars->AggroTriggeredBy);
+  if (reaperVars->AggroTriggered && aggroTriggeredByTarget) {
+    reaperVars->AggroTriggeredBy = NULL;
+    return aggroTriggeredByTarget;
+  }
+
+  // don't change target when aggro
+  if (pvars->MobVars.Action == REAPER_ACTION_AGGRO && currentTarget) {
+    Player* currentPlayerTarget = guberMobyGetPlayerDamager(currentTarget);
+    if (currentPlayerTarget && !playerIsDead(currentPlayerTarget)) {
+      return currentTarget;
+    }
+  }
+
+  // defer to default
+  return mobGetNextTarget(moby);
+}
+
+//--------------------------------------------------------------------------
+int reaperGetPreferredAction(Moby* moby, int * delayTicks)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  ReaperMobVars_t* reaperVars = (ReaperMobVars_t*)pvars->AdditionalMobVarsPtr;
 	VECTOR t;
 
 	// no preferred action
-	if (zombieIsAttacking(moby))
+	if (reaperIsAttacking(moby))
 		return -1;
 
-	if (zombieIsSpawning(pvars))
+	if (reaperIsSpawning(pvars))
 		return -1;
 
-  if (zombieIsFlinching(moby))
+  if (reaperIsFlinching(moby))
     return -1;
 
-  if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
+  if (pvars->MobVars.Action == REAPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
     return -1;
 
-	if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
-		return ZOMBIE_ACTION_WALK;
+	if (pvars->MobVars.Action == REAPER_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
+		return reaperVars->AggroTriggered ? REAPER_ACTION_AGGRO : REAPER_ACTION_WALK;
   }
 
   // jump if we've hit a slope and are grounded
-  if (mobHitWallShouldJump(moby, ZOMBIE_MAX_WALKABLE_SLOPE)) {
-    return ZOMBIE_ACTION_JUMP;
+  if (mobHitWallShouldJump(moby, REAPER_MAX_WALKABLE_SLOPE)) {
+    return REAPER_ACTION_JUMP;
   }
 
   // jump if we've hit a jump point on the path
   if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-    return ZOMBIE_ACTION_JUMP;
+    return REAPER_ACTION_JUMP;
   }
 
 	// prevent action changing too quickly
@@ -354,18 +391,28 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
 		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
 
 		if (distSqr <= attackRadiusSqr) {
-			if (zombieCanAttack(pvars)) {
+			if (reaperCanAttack(pvars)) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return ZOMBIE_ACTION_ATTACK;
+				return REAPER_ACTION_ATTACK;
       }
-			return ZOMBIE_ACTION_WALK;
+      
+      // wait for sprint to finish
+      if (pvars->MobVars.Action == REAPER_ACTION_AGGRO)
+        return -1;
+
+			return reaperVars->AggroTriggered ? REAPER_ACTION_AGGRO : REAPER_ACTION_WALK;
 		} else {
-			return ZOMBIE_ACTION_WALK;
+
+      // wait for sprint to finish
+      if (pvars->MobVars.Action == REAPER_ACTION_AGGRO)
+        return -1;
+
+			return reaperVars->AggroTriggered ? REAPER_ACTION_AGGRO : REAPER_ACTION_WALK;
 		}
 	}
 
   // if roaming, then we want to periodically stop or reroute
-  if (zombieIsRoaming(pvars)) {
+  if (reaperIsRoaming(pvars)) {
 
     // check how close we are to target
     vector_subtract(t, pvars->MobVars.MoveVars.TargetPosition, moby->Position);
@@ -375,21 +422,21 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
     
     // idle if near target or randomly
     if (distSqr < (radius*radius) || rand(10007) == 0) {
-      return ZOMBIE_ACTION_IDLE;
+      return REAPER_ACTION_IDLE;
     }
   }
 
   // idle for 3 seconds
-  if (zombieIsIdling(pvars) && pvars->MobVars.CurrentActionForTicks < TPS*3) {
-    return ZOMBIE_ACTION_IDLE;
+  if (reaperIsIdling(pvars) && pvars->MobVars.CurrentActionForTicks < TPS*3) {
+    return REAPER_ACTION_IDLE;
   }
 	
-	return ZOMBIE_ACTION_ROAM;
+	return REAPER_ACTION_ROAM;
 }
 
 //--------------------------------------------------------------------------
 #if DEBUGPATH
-void zombieRenderPath(Moby* moby)
+void reaperRenderPath(Moby* moby)
 {
   int x,y;
   int i;
@@ -418,44 +465,45 @@ void zombieRenderPath(Moby* moby)
 #endif
 
 //--------------------------------------------------------------------------
-void zombieDoAction(Moby* moby)
+void reaperDoAction(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  ReaperMobVars_t* reaperVars = (ReaperMobVars_t*)pvars->AdditionalMobVarsPtr;
   struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
 	Moby* target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? ZOMBIE_TURN_RADIANS_PER_SEC : ZOMBIE_TURN_AIR_RADIANS_PER_SEC);
-  float acceleration = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_MOVE_ACCELERATION : ZOMBIE_MOVE_AIR_ACCELERATION;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? REAPER_TURN_RADIANS_PER_SEC : REAPER_TURN_AIR_RADIANS_PER_SEC);
+  float acceleration = pvars->MobVars.MoveVars.Grounded ? REAPER_MOVE_ACCELERATION : REAPER_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
-                      && (pvars->MobVars.LastAction == ZOMBIE_ACTION_FLINCH || pvars->MobVars.LastAction == ZOMBIE_ACTION_BIG_FLINCH);
+                      && (pvars->MobVars.LastAction == REAPER_ACTION_FLINCH || pvars->MobVars.LastAction == REAPER_ACTION_BIG_FLINCH);
 
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
-  gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&zombieRenderPath, moby);
+  gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&reaperRenderPath, moby);
 #endif
 
 	switch (pvars->MobVars.Action)
 	{
-		case ZOMBIE_ACTION_SPAWN:
+		case REAPER_ACTION_SPAWN:
 		{
-      mobTransAnim(moby, ZOMBIE_ANIM_CRAWL_OUT_OF_GROUND, 0);
+      mobTransAnim(moby, REAPER_ANIM_SPAWN, 0);
       mobStand(moby);
 			break;
 		}
-		case ZOMBIE_ACTION_FLINCH:
-		case ZOMBIE_ACTION_BIG_FLINCH:
+		case REAPER_ACTION_FLINCH:
+		case REAPER_ACTION_BIG_FLINCH:
 		{
-      int animFlinchId = pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH ? ZOMBIE_ANIM_BIG_FLINCH : ZOMBIE_ANIM_BIG_FLINCH;
+      int animFlinchId = pvars->MobVars.Action == REAPER_ACTION_BIG_FLINCH ? REAPER_ANIM_FLINCH_KNOCKBACK : REAPER_ANIM_FLINCH;
 
       mobTransAnim(moby, animFlinchId, 0);
       
-			if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH) {
+			if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.Action == REAPER_ACTION_BIG_FLINCH) {
         mobGetKnockbackVelocity(moby, t);
-				vector_scale(t, t, ZOMBIE_KNOCKBACK_MULTIPLIER);
+				vector_scale(t, t, REAPER_KNOCKBACK_MULTIPLIER);
 				vector_add(pvars->MobVars.MoveVars.AddVelocity, pvars->MobVars.MoveVars.AddVelocity, t);
 			} else if (pvars->MobVars.MoveVars.Grounded) {
         mobStand(moby);
@@ -464,18 +512,13 @@ void zombieDoAction(Moby* moby)
       }
 			break;
 		}
-		case ZOMBIE_ACTION_IDLE:
+		case REAPER_ACTION_IDLE:
 		{
-      if (pvars->MobVars.AnimationLooped || (moby->AnimSeqId != ZOMBIE_ANIM_IDLE && moby->AnimSeqId != ZOMBIE_ANIM_IDLE_2)) {
-			  mobTransAnim(moby, (rand(1000) == 1) ? ZOMBIE_ANIM_IDLE : ZOMBIE_ANIM_IDLE_2, 0);
-      } else {
-        mobTransAnim(moby, moby->AnimSeqId, 0);
-      }
+			mobTransAnim(moby, REAPER_ANIM_IDLE, 0);
       mobStand(moby);
-      //mobResetSoundTrigger(moby);
 			break;
 		}
-		case ZOMBIE_ACTION_JUMP:
+		case REAPER_ACTION_JUMP:
 			{
         // move
         if (!isInAirFromFlinching) {
@@ -486,8 +529,8 @@ void zombieDoAction(Moby* moby)
 
         // handle jumping
         if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
-			    mobTransAnim(moby, ZOMBIE_ANIM_JUMP, 5);
-          mobResetSoundTrigger(moby);
+			    //mobTransAnim(moby, REAPER_ANIM_JUMP, 5);
+          //mobResetSoundTrigger(moby);
 
           // check if we're near last jump pos
           // if so increment StuckJumpCount
@@ -512,14 +555,14 @@ void zombieDoAction(Moby* moby)
         }
 				break;
 			}
-		case ZOMBIE_ACTION_LOOK_AT_TARGET:
+		case REAPER_ACTION_LOOK_AT_TARGET:
     {
       mobStand(moby);
       if (target)
         mobTurnTowards(moby, target->Position, turnSpeed);
       break;
     }
-    case ZOMBIE_ACTION_ROAM:
+    case REAPER_ACTION_ROAM:
     {
       if (!isInAirFromFlinching) {
         if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
@@ -528,19 +571,54 @@ void zombieDoAction(Moby* moby)
       }
 
 			// 
-      if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP && !pvars->MobVars.MoveVars.Grounded) {
-        // wait for jump to land
-      } else if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-        zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
+      if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
+        reaperForceLocalAction(moby, REAPER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
-				mobTransAnim(moby, ZOMBIE_ANIM_WALK, 0);
+				mobTransAnim(moby, REAPER_ANIM_WALK, 0);
       } else {
-				mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
+				mobTransAnim(moby, REAPER_ANIM_IDLE, 0);
       }
       break;
     }
-    case ZOMBIE_ACTION_WALK:
+    case REAPER_ACTION_AGGRO:
 		{
+      int nextAnimId = moby->AnimSeqId;
+      switch (moby->AnimSeqId)
+      {
+        case REAPER_ANIM_AGGRO_ROAR:
+        {
+          if (pvars->MobVars.AnimationLooped) {
+            nextAnimId = REAPER_ANIM_RUN;
+          }
+          break;
+        }
+      }
+      
+      // trigger roar
+      if (!pvars->MobVars.CurrentActionForTicks && reaperVars->AggroRoarTriggered) {
+        nextAnimId = REAPER_ANIM_AGGRO_ROAR;
+        reaperVars->AggroRoarTriggered = 0;
+      }
+
+      mobTransAnim(moby, nextAnimId, 0);
+
+      // let aggro roar finish before moving
+      if (nextAnimId == REAPER_ANIM_AGGRO_ROAR) {
+        if (target) {
+          mobTurnTowards(moby, target->Position, turnSpeed);
+        }
+
+        mobStand(moby);
+        break;
+      }
+      
+      // fall through to move
+      speed = clamp(speed * REAPER_AGGRO_SPEED_MULTIPLIER, 0, MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].Config.MaxSpeed);
+      goto walk;
+		}
+    case REAPER_ACTION_WALK:
+		{
+      walk:;
       float dir = mobGetCurrentWalkAngle(moby);
 
       if (!isInAirFromFlinching) {
@@ -550,30 +628,34 @@ void zombieDoAction(Moby* moby)
       }
 
 			// 
-      if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP && !pvars->MobVars.MoveVars.Grounded) {
-        // wait for jump to land
-      } else if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-        zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
+      if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
+        reaperForceLocalAction(moby, REAPER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
-				mobTransAnim(moby, ZOMBIE_ANIM_RUN, 0);
+				mobTransAnim(moby, REAPER_ANIM_RUN, 0);
       } else {
-				mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
+				mobTransAnim(moby, REAPER_ANIM_IDLE, 0);
       }
 			break;
 		}
-    case ZOMBIE_ACTION_DIE:
+    case REAPER_ACTION_DIE:
     {
+      mobTransAnim(moby, REAPER_ANIM_FALL_AND_DIE, 0);
+      if (moby->AnimSeqId == REAPER_ANIM_FALL_AND_DIE && pvars->MobVars.AnimationLooped) {
+        pvars->MobVars.Destroy = 1;
+      }
+
       mobStand(moby);
       break;
     }
-		case ZOMBIE_ACTION_ATTACK:
+		case REAPER_ACTION_ATTACK:
 		{
-      int attack1AnimId = ZOMBIE_ANIM_SLAP;
-      int nextAnimId = mobGetAnimIf(moby, ZOMBIE_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
+      int attack1AnimId = REAPER_ANIM_SWING;
+      int nextAnimId = mobGetAnimIf(moby, REAPER_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
 			mobTransAnim(moby, nextAnimId, 0);
 
+      float damageMult = ((pvars->MobVars.LastAction == REAPER_ACTION_AGGRO) ? REAPER_AGGRO_DAMAGE_MULTIPLIER : 1);
 			float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1, 1, 5);
-			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 11 && moby->AnimSeqT < 12;
+			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 14 && moby->AnimSeqT < 17;
 			u32 damageFlags = 0x00081801;
 
       if (!isInAirFromFlinching) {
@@ -587,7 +669,7 @@ void zombieDoAction(Moby* moby)
       }
 
 			if (swingAttackReady && damageFlags) {
-				zombieDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
+				reaperDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * damageMult, damageFlags, 0);
 			}
 			break;
 		}
@@ -597,13 +679,21 @@ void zombieDoAction(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void zombieDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
+void reaperDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
 {
-  mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, ZOMBIE_SUBSKELETON_JOINT_LEFT_HAND, 1, 0);
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  ReaperMobVars_t* reaperVars = (ReaperMobVars_t*)pvars->AdditionalMobVarsPtr;
+
+  int hitFlags = mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, REAPER_SUBSKELETON_LEFT_HAND, 1, 0);
+  
+  // aggro ends when we finally hit our target
+  if (hitFlags & MOB_DO_DAMAGE_HIT_FLAG_HIT_TARGET) {
+    reaperVars->AggroTriggered = 0;
+  }
 }
 
 //--------------------------------------------------------------------------
-void zombieForceLocalAction(Moby* moby, int action)
+void reaperForceLocalAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   float difficulty = 1;
@@ -614,18 +704,18 @@ void zombieForceLocalAction(Moby* moby, int action)
 	// from
 	switch (pvars->MobVars.Action)
 	{
-		case ZOMBIE_ACTION_SPAWN:
+		case REAPER_ACTION_SPAWN:
 		{
 			// enable collision
 			moby->CollActive = 0;
 			break;
 		}
-    case ZOMBIE_ACTION_DIE:
+    case REAPER_ACTION_DIE:
     {
       // can't undie
       return;
     }
-    case ZOMBIE_ACTION_JUMP:
+    case REAPER_ACTION_JUMP:
     {
       pvars->MobVars.MoveVars.JumpedThisAction = 0;
       break;
@@ -635,13 +725,13 @@ void zombieForceLocalAction(Moby* moby, int action)
 	// to
 	switch (action)
 	{
-		case ZOMBIE_ACTION_SPAWN:
+		case REAPER_ACTION_SPAWN:
 		{
 			// disable collision
 			moby->CollActive = 1;
 			break;
 		}
-    case ZOMBIE_ACTION_ROAM:
+    case REAPER_ACTION_ROAM:
     {
       // if we're in a spawner
       // then let it determine where we roam
@@ -650,25 +740,26 @@ void zombieForceLocalAction(Moby* moby, int action)
       }
       break;
     }
-		case ZOMBIE_ACTION_WALK:
+		case REAPER_ACTION_WALK:
 		{
 			
 			break;
 		}
-		case ZOMBIE_ACTION_DIE:
+		case REAPER_ACTION_DIE:
 		{
-      pvars->MobVars.Destroy = 1;
+			// disable collision
+			moby->CollActive = 1;
 			break;
 		}
-		case ZOMBIE_ACTION_ATTACK:
+		case REAPER_ACTION_ATTACK:
 		{
 			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 			break;
 		}
-		case ZOMBIE_ACTION_FLINCH:
-		case ZOMBIE_ACTION_BIG_FLINCH:
+		case REAPER_ACTION_FLINCH:
+		case REAPER_ACTION_BIG_FLINCH:
 		{
-			pvars->MobVars.FlinchCooldownTicks = ZOMBIE_FLINCH_COOLDOWN_TICKS;
+			pvars->MobVars.FlinchCooldownTicks = REAPER_FLINCH_COOLDOWN_TICKS;
 			break;
 		}
 		default:
@@ -683,11 +774,11 @@ void zombieForceLocalAction(Moby* moby, int action)
 
 	pvars->MobVars.Action = action;
 	pvars->MobVars.NextAction = -1;
-	pvars->MobVars.ActionCooldownTicks = ZOMBIE_ACTION_COOLDOWN_TICKS;
+	pvars->MobVars.ActionCooldownTicks = REAPER_ACTION_COOLDOWN_TICKS;
 }
 
 //--------------------------------------------------------------------------
-short zombieGetArmor(Moby* moby)
+short reaperGetArmor(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	float t = pvars->MobVars.Health / pvars->MobVars.Config.Health;
@@ -702,68 +793,68 @@ short zombieGetArmor(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-int zombieIsAttacking(Moby* moby)
+int reaperIsAttacking(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.Action == REAPER_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int zombieCanNonOwnerTransitionToAction(Moby* moby, int action)
+int reaperCanNonOwnerTransitionToAction(Moby* moby, int action)
 {
   // always let non-owners simulate an action unless its the death action
-  if (action == ZOMBIE_ACTION_DIE) return 0;
+  if (action == REAPER_ACTION_DIE) return 0;
 
   return 1;
 }
 
 //--------------------------------------------------------------------------
-int zombieShouldForceStateUpdateOnAction(Moby* moby, int action)
+int reaperShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
   // only send state updates at regular intervals, unless dying
   // or if we're entering/leaving the roaming state
-  if (action == ZOMBIE_ACTION_DIE) return 1;
-  if (pvars->MobVars.Action == ZOMBIE_ACTION_ROAM || action == ZOMBIE_ACTION_ROAM) return 1;
+  if (action == REAPER_ACTION_DIE) return 1;
+  if (pvars->MobVars.Action == REAPER_ACTION_ROAM || action == REAPER_ACTION_ROAM) return 1;
 
   return 0;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsSpawning(struct MobPVar* pvars)
+int reaperIsSpawning(struct MobPVar* pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.Action == REAPER_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsRoaming(struct MobPVar* pvars)
+int reaperIsRoaming(struct MobPVar* pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_ROAM;
+	return pvars->MobVars.Action == REAPER_ACTION_ROAM;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsIdling(struct MobPVar* pvars)
+int reaperIsIdling(struct MobPVar* pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_IDLE;
+	return pvars->MobVars.Action == REAPER_ACTION_IDLE;
 }
 
 //--------------------------------------------------------------------------
-int zombieCanAttack(struct MobPVar* pvars)
+int reaperCanAttack(struct MobPVar* pvars)
 {
 	return pvars->MobVars.AttackCooldownTicks == 0;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsFlinching(Moby* moby)
+int reaperIsFlinching(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return (moby->AnimSeqId == ZOMBIE_ANIM_FLINCH || moby->AnimSeqId == ZOMBIE_ANIM_BIG_FLINCH) && !pvars->MobVars.AnimationLooped;
+	return (moby->AnimSeqId == REAPER_ANIM_FLINCH || moby->AnimSeqId == REAPER_ANIM_FLINCH_KNOCKBACK) && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsDying(Moby* moby)
+int reaperIsDying(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == ZOMBIE_ACTION_DIE;
+	return pvars->MobVars.Action == REAPER_ACTION_DIE;
 }

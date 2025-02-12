@@ -481,6 +481,20 @@ void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff, ch
 }
 
 //--------------------------------------------------------------------------
+int mobGetAnimIf(Moby* moby, int animIdFalse, int animIdTrue, int condition, int maxLoops)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // either the condition is true
+  // or the animation is running and hasn't reached maxLoops
+  if (condition || (maxLoops > 0 && pvars->MobVars.AnimationLooped < maxLoops && moby->AnimSeqId == animIdTrue)) {
+    return animIdTrue;
+  }
+
+  return animIdFalse;
+}
+
+//--------------------------------------------------------------------------
 void mobTransAnim(Moby* moby, int animId, float startOff)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -1133,6 +1147,25 @@ float mobGetCurrentMoveSpeed(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+float mobGetCurrentWalkAngle(Moby* moby)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	Moby* target = pvars->MobVars.MoveVars.Target;
+  float dir = 0;
+
+  // if we have a target
+  // we're near the target
+  // and we're walking towards the target
+  // walk at an angle
+  if (target && vector_sqrdistance(target->Position, moby->Position) < (20*20) && vector_sqrdistance(pvars->MobVars.MoveVars.LastTargetPos, target->Position) < 1) {
+    dir = ((u8)pvars->MobVars.DynamicRandom % 3) - 1;
+  }
+
+  //DPRINTF("td:%f wd:%f dir:%d=>%f\n", vector_sqrdistance(target->Position, moby->Position), vector_sqrdistance(target->Position, pvars->MobVars.MoveVars.LastTargetPos), (u8)pvars->MobVars.DynamicRandom, dir);
+  return dir;
+}
+
+//--------------------------------------------------------------------------
 void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir)
 {
   VECTOR t, t2;
@@ -1159,10 +1192,14 @@ void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSp
     deltaYaw = mobTurnTowards(moby, t, turnSpeed);
   }
 
+  // DYAW > 0DEG
   float yawLerpT = fabsf(deltaYaw) / MATH_PI;
-  if (yawLerpT > 0.25) {
-    float yt = clamp(yawLerpT+0.25, 0, 1);
-    speed *= lerpf(1, 0, yt);
+  if (yawLerpT > 0) {
+    float v = (yawLerpT+0.0) * 1.0;
+    //v = powf(v, 1 / speed);
+    v = 1 - powf(clamp(v, 0, 1), 2);
+    //printf("v:%f speed:%f\n", v, speed);
+    speed *= v;
   }
   
   mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, speed, acceleration);
@@ -1178,6 +1215,21 @@ void mobJumpTowards(Moby* moby, VECTOR targetPosition)
   } else {
     mobMoveTowards(moby, targetPosition, MOB_JUMP_MOVE_SPEED, 180 * MATH_DEG2RAD, 10 * speedCurve, 0);
   }
+}
+
+//--------------------------------------------------------------------------
+int mobHitWallShouldJump(Moby* moby, float maxSlope)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // must be grounded
+  // must hit wall steeper than max slope
+  // ignore case where we hit the target (since we want to reach the target)
+  return pvars->MobVars.MoveVars.Grounded
+      && pvars->MobVars.MoveVars.HitWall
+      && pvars->MobVars.MoveVars.WallSlope > maxSlope
+      && (!pvars->MobVars.MoveVars.HitWallMoby || pvars->MobVars.MoveVars.HitWallMoby != pvars->MobVars.MoveVars.Target)
+      ;
 }
 
 //--------------------------------------------------------------------------

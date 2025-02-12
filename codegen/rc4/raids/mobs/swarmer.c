@@ -348,7 +348,7 @@ int swarmerGetPreferredAction(Moby* moby, int * delayTicks)
   }
 
   // jump if we've hit a slope and are grounded
-  if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > SWARMER_MAX_WALKABLE_SLOPE) {
+  if (mobHitWallShouldJump(moby, SWARMER_MAX_WALKABLE_SLOPE)) {
     return SWARMER_ACTION_JUMP;
   }
 
@@ -477,7 +477,7 @@ void swarmerDoAction(Moby* moby)
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.MoveVars.Grounded ? SWARMER_TURN_RADIANS_PER_SEC : SWARMER_TURN_AIR_RADIANS_PER_SEC;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? SWARMER_TURN_RADIANS_PER_SEC : SWARMER_TURN_AIR_RADIANS_PER_SEC);
   float acceleration = pvars->MobVars.MoveVars.Grounded ? SWARMER_MOVE_ACCELERATION : SWARMER_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
                       && (pvars->MobVars.LastAction == SWARMER_ACTION_FLINCH || pvars->MobVars.LastAction == SWARMER_ACTION_BIG_FLINCH);
@@ -568,10 +568,7 @@ void swarmerDoAction(Moby* moby)
     case SWARMER_ACTION_ROAM:
     case SWARMER_ACTION_WALK:
 		{
-      float dir = 0;
-      if (target) {
-        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
-      }
+      float dir = mobGetCurrentWalkAngle(moby);
 
       if (!isInAirFromFlinching) {
         if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))

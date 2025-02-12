@@ -450,7 +450,7 @@ int dzstrikerGetPreferredAction(Moby* moby, int * delayTicks)
   }
 
   // jump if we've hit a slope and are grounded
-  if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > DZSTRIKER_MAX_WALKABLE_SLOPE) {
+  if (mobHitWallShouldJump(moby, DZSTRIKER_MAX_WALKABLE_SLOPE)) {
     return DZSTRIKER_ACTION_JUMP;
   }
 
@@ -655,7 +655,7 @@ int dzstrikerDoActionMove(Moby* moby)
   int behavior = pvars->MobVars.Behavior;
   int strafe = pvars->MobVars.Action == DZSTRIKER_ACTION_STRAFE;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_TURN_RADIANS_PER_SEC : DZSTRIKER_TURN_AIR_RADIANS_PER_SEC;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_TURN_RADIANS_PER_SEC : DZSTRIKER_TURN_AIR_RADIANS_PER_SEC);
   float acceleration = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_MOVE_ACCELERATION : DZSTRIKER_MOVE_AIR_ACCELERATION;
 
   pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
@@ -675,8 +675,8 @@ int dzstrikerDoActionMove(Moby* moby)
   // 
   VECTOR dt;
   vector_subtract(dt, targetPosition, moby->Position);
-  float dir = (pvars->MobVars.DynamicRandom % 3) - 1;
-  float strafeDir = ((pvars->MobVars.DynamicRandom + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
+  float dir = ((u8)pvars->MobVars.DynamicRandom % 3) - 1;
+  float strafeDir = (((u8)pvars->MobVars.DynamicRandom + (pvars->MobVars.CurrentActionForTicks/1000)) % 2) ? 1 : -1;
   if (strafe) {
     VECTOR strafeVec, strafeFwd;
     vector_outerproduct(strafeVec, dt, moby->M2_03);

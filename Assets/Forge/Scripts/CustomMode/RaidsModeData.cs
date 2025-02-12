@@ -631,7 +631,9 @@ public enum RaidsMob
     StalkerTurret,
     Leviathan,
     DZStriker,
-    Executioner
+    Executioner,
+    Reaper,
+    Tremor
 }
 
 [Flags]
@@ -678,6 +680,7 @@ public class RaidsMobSpawnParam
     [Min(0)] public float HealthMultiplier = 1;
     [Min(0), Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
 
+    [Min(0), Tooltip("Increase or decrease turn speed.")] public float TurnSpeedMultiplier = 1;
     [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public float RangedAttackDistance = 50;
     [Min(0), Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
     [Min(0), Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
@@ -716,6 +719,7 @@ public class RaidsMobSpawnParam
         sb.AppendLine($"      .Health = {defaults.Health * HealthMultiplier},");
         sb.AppendLine($"      .MaxHealth = {defaults.HealthMax},");
         sb.AppendLine($"      .HealthScale = {defaults.HealthScale * HealthDifficultyRateMultiplier},");
+        sb.AppendLine($"      .TurnSpeed = {defaults.TurnSpeed * TurnSpeedMultiplier},");
         sb.AppendLine($"      .AttackRadius = {defaults.AttackRadius * SizeMultiplier},");
         sb.AppendLine($"      .HitRadius = {defaults.HitRadius * SizeMultiplier},");
         sb.AppendLine($"      .CollRadius = {defaults.CollRadius * SizeMultiplier},");

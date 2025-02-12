@@ -41,6 +41,7 @@ public class RaidsMobSpawnParamPropertyDrawer : PropertyDrawer
         var healthProperty = property.FindPropertyRelative("HealthMultiplier");
         var healthScaleProperty = property.FindPropertyRelative("HealthDifficultyRateMultiplier");
 
+        var turnSpeedProperty = property.FindPropertyRelative("TurnSpeedMultiplier");
         var rangedAttackDistProperty = property.FindPropertyRelative("RangedAttackDistance");
         var visionRangeProperty = property.FindPropertyRelative("VisionRange");
         var peripheralVisionDegreesProperty = property.FindPropertyRelative("PeripheralVisionDegrees");
@@ -87,6 +88,7 @@ public class RaidsMobSpawnParamPropertyDrawer : PropertyDrawer
 
             lineRect.y += LINE_HEIGHT;
             EditorGUI.LabelField(lineRect, "Interaction", boldLabel); lineRect.y += LINE_HEIGHT;
+            EditorGUI.PropertyField(lineRect, turnSpeedProperty); lineRect.y += LINE_HEIGHT;
             EditorGUI.PropertyField(lineRect, rangedAttackDistProperty); lineRect.y += LINE_HEIGHT;
             EditorGUI.PropertyField(lineRect, visionRangeProperty); lineRect.y += LINE_HEIGHT;
             EditorGUI.PropertyField(lineRect, peripheralVisionDegreesProperty); lineRect.y += LINE_HEIGHT;

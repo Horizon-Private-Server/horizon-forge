@@ -342,7 +342,7 @@ int swamperGetPreferredAction(Moby* moby, int * delayTicks)
   }
 
   // jump if we've hit a slope and are grounded
-  if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > SWAMPER_MAX_WALKABLE_SLOPE) {
+  if (mobHitWallShouldJump(moby, SWAMPER_MAX_WALKABLE_SLOPE)) {
     return SWAMPER_ACTION_JUMP;
   }
 
@@ -441,7 +441,7 @@ void swamperDoAction(Moby* moby)
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.MoveVars.Grounded ? SWAMPER_TURN_RADIANS_PER_SEC : SWAMPER_TURN_AIR_RADIANS_PER_SEC;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? SWAMPER_TURN_RADIANS_PER_SEC : SWAMPER_TURN_AIR_RADIANS_PER_SEC);
   float acceleration = pvars->MobVars.MoveVars.Grounded ? SWAMPER_MOVE_ACCELERATION : SWAMPER_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
                       && (pvars->MobVars.LastAction == SWAMPER_ACTION_FLINCH || pvars->MobVars.LastAction == SWAMPER_ACTION_BIG_FLINCH);
@@ -533,10 +533,9 @@ void swamperDoAction(Moby* moby)
     case SWAMPER_ACTION_WALK:
 		{
       int walkAnim = SWAMPER_ANIM_WALK;
-      float dir = 0;
+      float dir = mobGetCurrentWalkAngle(moby);
       if (target) {
         walkAnim = SWAMPER_ANIM_RUN;
-        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
       } else {
         speed *= 0.5;
       }

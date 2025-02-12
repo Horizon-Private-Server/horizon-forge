@@ -11,12 +11,12 @@
 #include "stalkerturret.h"
 #include "executioner.h"
 //#include "reactor.h"
-//#include "tremor.h"
+#include "tremor.h"
 #include "swarmer.h"
 #include "swamper.h"
 #include "leviathan.h"
 #include "dzstriker.h"
-//#include "reaper.h"
+#include "reaper.h"
 #include "game.h"
 
 #define MOB_MAX_OTHER_TARGETS       (32)
@@ -95,6 +95,7 @@ struct MobConfig {
 	float Health;
 	float MaxHealth;
   float HealthScale;
+	float TurnSpeed;
 	float AttackRadius;
 	float HitRadius;
   float CollRadius;
@@ -115,6 +116,7 @@ struct MobSpawnedConfig {
 	float Scale;
 	float Damage;
 	float Speed;
+  float TurnSpeed;
 	float Health;
 
 	float AttackRadius;

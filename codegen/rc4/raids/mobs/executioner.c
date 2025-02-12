@@ -390,7 +390,7 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
   }
 
   // jump if we've hit a slope and are grounded
-  if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > EXECUTIONER_MAX_WALKABLE_SLOPE) {
+  if (mobHitWallShouldJump(moby, EXECUTIONER_MAX_WALKABLE_SLOPE)) {
     return EXECUTIONER_ACTION_JUMP;
   }
 
@@ -539,7 +539,7 @@ void executionerDoAction(Moby* moby)
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.MoveVars.Grounded ? EXECUTIONER_TURN_RADIANS_PER_SEC : EXECUTIONER_TURN_AIR_RADIANS_PER_SEC;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? EXECUTIONER_TURN_RADIANS_PER_SEC : EXECUTIONER_TURN_AIR_RADIANS_PER_SEC);
   float acceleration = pvars->MobVars.MoveVars.Grounded ? EXECUTIONER_MOVE_ACCELERATION : EXECUTIONER_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
                       && (pvars->MobVars.LastAction == EXECUTIONER_ACTION_FLINCH || pvars->MobVars.LastAction == EXECUTIONER_ACTION_BIG_FLINCH);
@@ -600,7 +600,7 @@ void executionerDoAction(Moby* moby)
         // handle jumping
         if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
 			    mobTransAnim(moby, EXECUTIONER_ANIM_JUMP, 5);
-          mobResetSoundTrigger(moby);
+          //mobResetSoundTrigger(moby);
 
           // check if we're near last jump pos
           // if so increment StuckJumpCount
@@ -655,10 +655,7 @@ void executionerDoAction(Moby* moby)
     }
     case EXECUTIONER_ACTION_WALK:
 		{
-      float dir = 0;
-      if (target) {
-        dir = (pvars->MobVars.DynamicRandom % 3) - 1;
-      }
+      float dir = mobGetCurrentWalkAngle(moby);
 
       if (!isInAirFromFlinching) {
         if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))

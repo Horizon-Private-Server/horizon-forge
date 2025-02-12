@@ -283,3 +283,59 @@ MonoBehaviour:
     CollRadius: 1.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 7
+  - Mob: 7
+    BlipType: 4
+    BlipTeam: 1
+    Variants:
+    - Name: Normal
+      OClass: 9584
+      Bangles: 3
+      Dependencies:
+      - OClass: 9584
+        SourceMapId: 13
+        SourceMissionId: 0
+    Behaviors: []
+    Xp: 15
+    Bolts: 200
+    Damage: 15
+    DamageMax: 0
+    DamageScale: 1
+    Speed: 3
+    SpeedMax: 15
+    SpeedScale: 0.2
+    Health: 80
+    HealthMax: 0
+    HealthScale: 1
+    AttackRadius: 5
+    HitRadius: 1
+    CollRadius: 1.25
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2
+  - Mob: 8
+    BlipType: 4
+    BlipTeam: 1
+    Variants:
+    - Name: Normal
+      OClass: 9427
+      Bangles: 21
+      Dependencies:
+      - OClass: 9427
+        SourceMapId: 5
+        SourceMissionId: -1
+    Behaviors: []
+    Xp: 10
+    Bolts: 75
+    Damage: 10
+    DamageMax: 0
+    DamageScale: 0.2
+    Speed: 10
+    SpeedMax: 35
+    SpeedScale: 0.1
+    Health: 15
+    HealthMax: 0
+    HealthScale: 0.75
+    AttackRadius: 5
+    HitRadius: 1
+    CollRadius: 1
+    ReactionDelaySeconds: 0.25
+    AttackCooldownSeconds: 2

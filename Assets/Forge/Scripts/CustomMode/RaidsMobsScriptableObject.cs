@@ -43,6 +43,7 @@ public class RaidsMobsScriptableObject : ScriptableObject
         public float HealthMax = 0;
         public float HealthScale = 1;
 
+        public float TurnSpeed = 1;
         public float AttackRadius = 5;
         public float HitRadius = 0.5f;
         public float CollRadius = 0.5f;

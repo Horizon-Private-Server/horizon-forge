@@ -14,54 +14,54 @@
 #include "maputils.h"
 #include "shared.h"
 
-void zombiePreUpdate(Moby* moby);
-void zombiePostUpdate(Moby* moby);
-void zombiePostDraw(Moby* moby);
-void zombieMove(Moby* moby);
-void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void zombieOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
-void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e);
-int zombieOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
-void zombieOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-int zombieGetPreferredAction(Moby* moby, int * delayTicks);
-void zombieDoAction(Moby* moby);
-void zombieDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
-void zombieForceLocalAction(Moby* moby, int action);
-short zombieGetArmor(Moby* moby);
-int zombieIsAttacking(Moby* moby);
-int zombieCanNonOwnerTransitionToAction(Moby* moby, int action);
-int zombieShouldForceStateUpdateOnAction(Moby* moby, int action);
+void tremorPreUpdate(Moby* moby);
+void tremorPostUpdate(Moby* moby);
+void tremorPostDraw(Moby* moby);
+void tremorMove(Moby* moby);
+void tremorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
+void tremorOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
+void tremorOnDamage(Moby* moby, struct MobDamageEventArgs* e);
+int tremorOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
+void tremorOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
+int tremorGetPreferredAction(Moby* moby, int * delayTicks);
+void tremorDoAction(Moby* moby);
+void tremorDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
+void tremorForceLocalAction(Moby* moby, int action);
+short tremorGetArmor(Moby* moby);
+int tremorIsAttacking(Moby* moby);
+int tremorCanNonOwnerTransitionToAction(Moby* moby, int action);
+int tremorShouldForceStateUpdateOnAction(Moby* moby, int action);
 
-int zombieIsSpawning(struct MobPVar* pvars);
-int zombieIsRoaming(struct MobPVar* pvars);
-int zombieIsIdling(struct MobPVar* pvars);
-int zombieCanAttack(struct MobPVar* pvars);
-int zombieIsFlinching(Moby* moby);
-int zombieIsDying(Moby* moby);
+int tremorIsSpawning(struct MobPVar* pvars);
+int tremorIsRoaming(struct MobPVar* pvars);
+int tremorIsIdling(struct MobPVar* pvars);
+int tremorCanAttack(struct MobPVar* pvars);
+int tremorIsFlinching(Moby* moby);
+int tremorIsDying(Moby* moby);
 
-struct MobVTable ZombieVTable = {
-  .PreUpdate = &zombiePreUpdate,
-  .PostUpdate = &zombiePostUpdate,
-  .PostDraw = &zombiePostDraw,
-  .Move = &zombieMove,
-  .OnSpawn = &zombieOnSpawn,
-  .OnDestroy = &zombieOnDestroy,
-  .OnDamage = &zombieOnDamage,
-  .OnLocalDamage = &zombieOnLocalDamage,
-  .OnStateUpdate = &zombieOnStateUpdate,
+struct MobVTable TremorVTable = {
+  .PreUpdate = &tremorPreUpdate,
+  .PostUpdate = &tremorPostUpdate,
+  .PostDraw = &tremorPostDraw,
+  .Move = &tremorMove,
+  .OnSpawn = &tremorOnSpawn,
+  .OnDestroy = &tremorOnDestroy,
+  .OnDamage = &tremorOnDamage,
+  .OnLocalDamage = &tremorOnLocalDamage,
+  .OnStateUpdate = &tremorOnStateUpdate,
   .GetNextTarget = &mobGetNextTarget,
-  .GetPreferredAction = &zombieGetPreferredAction,
-  .ForceLocalAction = &zombieForceLocalAction,
-  .DoAction = &zombieDoAction,
-  .DoDamage = &zombieDoDamage,
-  .GetArmor = &zombieGetArmor,
-  .IsAttacking = &zombieIsAttacking,
-  .CanNonOwnerTransitionToAction = &zombieCanNonOwnerTransitionToAction,
-  .ShouldForceStateUpdateOnAction = &zombieShouldForceStateUpdateOnAction,
+  .GetPreferredAction = &tremorGetPreferredAction,
+  .ForceLocalAction = &tremorForceLocalAction,
+  .DoAction = &tremorDoAction,
+  .DoDamage = &tremorDoDamage,
+  .GetArmor = &tremorGetArmor,
+  .IsAttacking = &tremorIsAttacking,
+  .CanNonOwnerTransitionToAction = &tremorCanNonOwnerTransitionToAction,
+  .ShouldForceStateUpdateOnAction = &tremorShouldForceStateUpdateOnAction,
 };
 
 //--------------------------------------------------------------------------
-int zombieCreate(struct MobCreateArgs* args)
+int tremorCreate(struct MobCreateArgs* args)
 {
   VECTOR position = {0,0,1,0};
 	struct MobSpawnEventArgs spawnArgs;
@@ -105,7 +105,7 @@ int zombieCreate(struct MobCreateArgs* args)
 }
 
 //--------------------------------------------------------------------------
-void zombiePreUpdate(Moby* moby)
+void tremorPreUpdate(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
@@ -122,7 +122,7 @@ void zombiePreUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void zombiePostUpdate(Moby* moby)
+void tremorPostUpdate(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
@@ -132,31 +132,31 @@ void zombiePostUpdate(Moby* moby)
 
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(ZOMBIE_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
+    moby->PrimaryColor = colorLerp(TREMOR_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
   } else if (pvars->MobVars.FreezeEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(ZOMBIE_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
+    moby->PrimaryColor = colorLerp(TREMOR_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
   } else {
-    moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+    moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
   }
 
   // adjust animSpeed by speed and by animation
-  float baseSpeed = 0.7;
+  float baseSpeed = 0.5;
 	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
-  if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP) {
-    animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
+  if (moby->AnimSeqId == TREMOR_ANIM_JUMP) {
+    animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 21, 2));
     if (pvars->MobVars.MoveVars.Grounded) {
       animSpeed = baseSpeed;
     }
-  } else if (zombieIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
+  } else if (tremorIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
-  } else if (zombieIsDying(moby)) {
-    animSpeed = baseSpeed;
-  } else if (moby->AnimSeqId == ZOMBIE_ANIM_RUN || moby->AnimSeqId == ZOMBIE_ANIM_WALK) {
+  } else if (tremorIsDying(moby)) {
+    animSpeed = 1.0;
+  } else if (moby->AnimSeqId == TREMOR_ANIM_RUN || moby->AnimSeqId == TREMOR_ANIM_WALK) {
     animSpeed *= mobGetCurrentMoveSpeed(moby);
   }
 
-	if ((moby->DrawDist == 0 && !zombieIsAttacking(moby) && !zombieIsSpawning(pvars) && !zombieIsDying(moby) && !zombieIsFlinching(moby))) {
+	if ((moby->DrawDist == 0 && !tremorIsAttacking(moby) && !tremorIsSpawning(pvars) && !tremorIsDying(moby) && !tremorIsFlinching(moby))) {
 		moby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
@@ -164,23 +164,23 @@ void zombiePostUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void zombiePostDraw(Moby* moby)
+void tremorPostDraw(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
     
-  u32 color = ZOMBIE_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, ZOMBIE_SUBSKELETON_JOINT_HEAD);
+  u32 color = TREMOR_LOD_COLOR | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 127, color, TREMOR_SUBSKELETON_JOINT_RIGHT_SHOULDER); // todo
 }
 
 //--------------------------------------------------------------------------
-void zombieMove(Moby* moby)
+void tremorMove(Moby* moby)
 {
   mobMove(moby);
 }
 
 //--------------------------------------------------------------------------
-void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
+void tremorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
   
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -190,8 +190,8 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = ZOMBIE_GLOW_COLOR;
-	moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+	moby->GlowRGBA = TREMOR_GLOW_COLOR;
+	moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
@@ -206,27 +206,27 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 }
 
 //--------------------------------------------------------------------------
-void zombieOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
+void tremorOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
     
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+	moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
   
   // spawn corn
   mobBlowCorn(moby);
 }
 
 //--------------------------------------------------------------------------
-void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
+void tremorOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	float damage = e->DamageQuarters / 4.0;
   float newHp = pvars->MobVars.Health - damage;
 
-	int canFlinch = pvars->MobVars.Action != ZOMBIE_ACTION_FLINCH 
-            && pvars->MobVars.Action != ZOMBIE_ACTION_BIG_FLINCH
+	int canFlinch = pvars->MobVars.Action != TREMOR_ACTION_FLINCH 
+            && pvars->MobVars.Action != TREMOR_ACTION_BIG_FLINCH
             && pvars->MobVars.FlinchCooldownTicks == 0;
 
 #if ALWAYS_FLINCH
@@ -238,7 +238,7 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
 	// destroy
 	if (newHp <= 0) {
-    zombieForceLocalAction(moby, ZOMBIE_ACTION_DIE);
+    tremorForceLocalAction(moby, TREMOR_ACTION_DIE);
 	}
 
 	// knockback
@@ -251,8 +251,8 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 	if (mobAmIOwner(moby))
 	{
 		float damageRatio = damage / pvars->MobVars.Config.Health;
-    float powerFactor = ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-    float probability = clamp((damageRatio * ZOMBIE_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
+    float powerFactor = TREMOR_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+    float probability = clamp((damageRatio * TREMOR_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
 
 #if ALWAYS_FLINCH
     probability = 2;
@@ -261,14 +261,14 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
     if (canFlinch) {
       if (e->Knockback.Force) {
-        mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
+        mobSetAction(moby, TREMOR_ACTION_BIG_FLINCH);
       } else if (isShock) {
-        mobSetAction(moby, ZOMBIE_ACTION_FLINCH);
+        mobSetAction(moby, TREMOR_ACTION_FLINCH);
       } else if (randRange(0, 1) < probability) {
         if (randRange(0, 1) < powerFactor) {
-          mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
+          mobSetAction(moby, TREMOR_ACTION_BIG_FLINCH);
         } else {
-          mobSetAction(moby, ZOMBIE_ACTION_FLINCH);
+          mobSetAction(moby, TREMOR_ACTION_FLINCH);
         }
       }
     }
@@ -296,49 +296,49 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 }
 
 //--------------------------------------------------------------------------
-int zombieOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
+int tremorOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
   // don't filter local damage
   return 1;
 }
 
 //--------------------------------------------------------------------------
-void zombieOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
+void tremorOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 {
   mobOnStateUpdate(moby, e);
 }
 
 //--------------------------------------------------------------------------
-int zombieGetPreferredAction(Moby* moby, int * delayTicks)
+int tremorGetPreferredAction(Moby* moby, int * delayTicks)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	VECTOR t;
 
 	// no preferred action
-	if (zombieIsAttacking(moby))
+	if (tremorIsAttacking(moby))
 		return -1;
 
-	if (zombieIsSpawning(pvars))
+	if (tremorIsSpawning(pvars))
 		return -1;
 
-  if (zombieIsFlinching(moby))
+  if (tremorIsFlinching(moby))
     return -1;
 
-  if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
+  if (pvars->MobVars.Action == TREMOR_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
     return -1;
 
-	if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
-		return ZOMBIE_ACTION_WALK;
+	if (pvars->MobVars.Action == TREMOR_ACTION_JUMP && pvars->MobVars.MoveVars.JumpedThisAction && pvars->MobVars.MoveVars.Grounded) {
+		return TREMOR_ACTION_WALK;
   }
 
   // jump if we've hit a slope and are grounded
-  if (mobHitWallShouldJump(moby, ZOMBIE_MAX_WALKABLE_SLOPE)) {
-    return ZOMBIE_ACTION_JUMP;
+  if (mobHitWallShouldJump(moby, TREMOR_MAX_WALKABLE_SLOPE)) {
+    return TREMOR_ACTION_JUMP;
   }
 
   // jump if we've hit a jump point on the path
   if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-    return ZOMBIE_ACTION_JUMP;
+    return TREMOR_ACTION_JUMP;
   }
 
 	// prevent action changing too quickly
@@ -354,18 +354,18 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
 		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
 
 		if (distSqr <= attackRadiusSqr) {
-			if (zombieCanAttack(pvars)) {
+			if (tremorCanAttack(pvars)) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return ZOMBIE_ACTION_ATTACK;
+				return TREMOR_ACTION_ATTACK;
       }
-			return ZOMBIE_ACTION_WALK;
+			return TREMOR_ACTION_WALK;
 		} else {
-			return ZOMBIE_ACTION_WALK;
+			return TREMOR_ACTION_WALK;
 		}
 	}
 
   // if roaming, then we want to periodically stop or reroute
-  if (zombieIsRoaming(pvars)) {
+  if (tremorIsRoaming(pvars)) {
 
     // check how close we are to target
     vector_subtract(t, pvars->MobVars.MoveVars.TargetPosition, moby->Position);
@@ -375,21 +375,21 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
     
     // idle if near target or randomly
     if (distSqr < (radius*radius) || rand(10007) == 0) {
-      return ZOMBIE_ACTION_IDLE;
+      return TREMOR_ACTION_IDLE;
     }
   }
 
   // idle for 3 seconds
-  if (zombieIsIdling(pvars) && pvars->MobVars.CurrentActionForTicks < TPS*3) {
-    return ZOMBIE_ACTION_IDLE;
+  if (tremorIsIdling(pvars) && pvars->MobVars.CurrentActionForTicks < TPS*3) {
+    return TREMOR_ACTION_IDLE;
   }
 	
-	return ZOMBIE_ACTION_ROAM;
+	return TREMOR_ACTION_ROAM;
 }
 
 //--------------------------------------------------------------------------
 #if DEBUGPATH
-void zombieRenderPath(Moby* moby)
+void tremorRenderPath(Moby* moby)
 {
   int x,y;
   int i;
@@ -418,7 +418,7 @@ void zombieRenderPath(Moby* moby)
 #endif
 
 //--------------------------------------------------------------------------
-void zombieDoAction(Moby* moby)
+void tremorDoAction(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
@@ -426,36 +426,36 @@ void zombieDoAction(Moby* moby)
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? ZOMBIE_TURN_RADIANS_PER_SEC : ZOMBIE_TURN_AIR_RADIANS_PER_SEC);
-  float acceleration = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_MOVE_ACCELERATION : ZOMBIE_MOVE_AIR_ACCELERATION;
+  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? TREMOR_TURN_RADIANS_PER_SEC : TREMOR_TURN_AIR_RADIANS_PER_SEC);
+  float acceleration = pvars->MobVars.MoveVars.Grounded ? TREMOR_MOVE_ACCELERATION : TREMOR_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
-                      && (pvars->MobVars.LastAction == ZOMBIE_ACTION_FLINCH || pvars->MobVars.LastAction == ZOMBIE_ACTION_BIG_FLINCH);
+                      && (pvars->MobVars.LastAction == TREMOR_ACTION_FLINCH || pvars->MobVars.LastAction == TREMOR_ACTION_BIG_FLINCH);
 
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
-  gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&zombieRenderPath, moby);
+  gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&tremorRenderPath, moby);
 #endif
 
 	switch (pvars->MobVars.Action)
 	{
-		case ZOMBIE_ACTION_SPAWN:
+		case TREMOR_ACTION_SPAWN:
 		{
-      mobTransAnim(moby, ZOMBIE_ANIM_CRAWL_OUT_OF_GROUND, 0);
+      mobTransAnim(moby, TREMOR_ANIM_IDLE, 0);
       mobStand(moby);
 			break;
 		}
-		case ZOMBIE_ACTION_FLINCH:
-		case ZOMBIE_ACTION_BIG_FLINCH:
+		case TREMOR_ACTION_FLINCH:
+		case TREMOR_ACTION_BIG_FLINCH:
 		{
-      int animFlinchId = pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH ? ZOMBIE_ANIM_BIG_FLINCH : ZOMBIE_ANIM_BIG_FLINCH;
+      int animFlinchId = pvars->MobVars.Action == TREMOR_ACTION_BIG_FLINCH ? TREMOR_ANIM_FLINCH_FALL_GET_UP : TREMOR_ANIM_FLINCH;
 
       mobTransAnim(moby, animFlinchId, 0);
       
-			if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH) {
+			if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.Action == TREMOR_ACTION_BIG_FLINCH) {
         mobGetKnockbackVelocity(moby, t);
-				vector_scale(t, t, ZOMBIE_KNOCKBACK_MULTIPLIER);
+				vector_scale(t, t, TREMOR_KNOCKBACK_MULTIPLIER);
 				vector_add(pvars->MobVars.MoveVars.AddVelocity, pvars->MobVars.MoveVars.AddVelocity, t);
 			} else if (pvars->MobVars.MoveVars.Grounded) {
         mobStand(moby);
@@ -464,18 +464,17 @@ void zombieDoAction(Moby* moby)
       }
 			break;
 		}
-		case ZOMBIE_ACTION_IDLE:
+		case TREMOR_ACTION_IDLE:
 		{
-      if (pvars->MobVars.AnimationLooped || (moby->AnimSeqId != ZOMBIE_ANIM_IDLE && moby->AnimSeqId != ZOMBIE_ANIM_IDLE_2)) {
-			  mobTransAnim(moby, (rand(1000) == 1) ? ZOMBIE_ANIM_IDLE : ZOMBIE_ANIM_IDLE_2, 0);
+      if (pvars->MobVars.AnimationLooped || (moby->AnimSeqId != TREMOR_ANIM_IDLE && moby->AnimSeqId != TREMOR_ANIM_IDLE_LOOK_AROUND)) {
+			  mobTransAnim(moby, (rand(1000) != 1) ? TREMOR_ANIM_IDLE : TREMOR_ANIM_IDLE_LOOK_AROUND, 0);
       } else {
         mobTransAnim(moby, moby->AnimSeqId, 0);
       }
       mobStand(moby);
-      //mobResetSoundTrigger(moby);
 			break;
 		}
-		case ZOMBIE_ACTION_JUMP:
+		case TREMOR_ACTION_JUMP:
 			{
         // move
         if (!isInAirFromFlinching) {
@@ -486,8 +485,7 @@ void zombieDoAction(Moby* moby)
 
         // handle jumping
         if (pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.JumpedThisAction) {
-			    mobTransAnim(moby, ZOMBIE_ANIM_JUMP, 5);
-          mobResetSoundTrigger(moby);
+			    mobTransAnim(moby, TREMOR_ANIM_JUMP, 5);
 
           // check if we're near last jump pos
           // if so increment StuckJumpCount
@@ -512,14 +510,14 @@ void zombieDoAction(Moby* moby)
         }
 				break;
 			}
-		case ZOMBIE_ACTION_LOOK_AT_TARGET:
+		case TREMOR_ACTION_LOOK_AT_TARGET:
     {
       mobStand(moby);
       if (target)
         mobTurnTowards(moby, target->Position, turnSpeed);
       break;
     }
-    case ZOMBIE_ACTION_ROAM:
+    case TREMOR_ACTION_ROAM:
     {
       if (!isInAirFromFlinching) {
         if (pathGetTargetPos(path, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
@@ -528,18 +526,18 @@ void zombieDoAction(Moby* moby)
       }
 
 			// 
-      if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP && !pvars->MobVars.MoveVars.Grounded) {
+      if (moby->AnimSeqId == TREMOR_ANIM_JUMP && !pvars->MobVars.MoveVars.Grounded) {
         // wait for jump to land
       } else if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-        zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
+        tremorForceLocalAction(moby, TREMOR_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
-				mobTransAnim(moby, ZOMBIE_ANIM_WALK, 0);
+				mobTransAnim(moby, TREMOR_ANIM_WALK, 0);
       } else {
-				mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
+				mobTransAnim(moby, TREMOR_ANIM_IDLE, 0);
       }
       break;
     }
-    case ZOMBIE_ACTION_WALK:
+    case TREMOR_ACTION_WALK:
 		{
       float dir = mobGetCurrentWalkAngle(moby);
 
@@ -550,30 +548,36 @@ void zombieDoAction(Moby* moby)
       }
 
 			// 
-      if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP && !pvars->MobVars.MoveVars.Grounded) {
+      if (moby->AnimSeqId == TREMOR_ANIM_JUMP && !pvars->MobVars.MoveVars.Grounded) {
         // wait for jump to land
       } else if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-        zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
+        tremorForceLocalAction(moby, TREMOR_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
-				mobTransAnim(moby, ZOMBIE_ANIM_RUN, 0);
+				mobTransAnim(moby, TREMOR_ANIM_RUN, 0);
       } else {
-				mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
+				mobTransAnim(moby, TREMOR_ANIM_IDLE, 0);
       }
 			break;
 		}
-    case ZOMBIE_ACTION_DIE:
+    case TREMOR_ACTION_DIE:
     {
+			mobTransAnim(moby, TREMOR_ANIM_FLINCH_BACK_FLIP_FALL, 0);
+
+      if (moby->AnimSeqId == TREMOR_ANIM_FLINCH_BACK_FLIP_FALL && moby->AnimSeqT > 15) {
+        pvars->MobVars.Destroy = 1;
+      }
+
       mobStand(moby);
       break;
     }
-		case ZOMBIE_ACTION_ATTACK:
+		case TREMOR_ACTION_ATTACK:
 		{
-      int attack1AnimId = ZOMBIE_ANIM_SLAP;
-      int nextAnimId = mobGetAnimIf(moby, ZOMBIE_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
+      int attack1AnimId = TREMOR_ANIM_SWING;
+      int nextAnimId = mobGetAnimIf(moby, TREMOR_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
 			mobTransAnim(moby, nextAnimId, 0);
 
-			float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1, 1, 5);
-			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 11 && moby->AnimSeqT < 12;
+			float speedMult = 0;
+			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 4 && moby->AnimSeqT < 8;
 			u32 damageFlags = 0x00081801;
 
       if (!isInAirFromFlinching) {
@@ -587,7 +591,7 @@ void zombieDoAction(Moby* moby)
       }
 
 			if (swingAttackReady && damageFlags) {
-				zombieDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
+				tremorDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
 			}
 			break;
 		}
@@ -597,13 +601,13 @@ void zombieDoAction(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void zombieDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
+void tremorDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
 {
-  mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, ZOMBIE_SUBSKELETON_JOINT_LEFT_HAND, 1, 0);
+  mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, TREMOR_SUBSKELETON_JOINT_RIGHT_HAND_CLAW, 1, 0);
 }
 
 //--------------------------------------------------------------------------
-void zombieForceLocalAction(Moby* moby, int action)
+void tremorForceLocalAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   float difficulty = 1;
@@ -614,18 +618,18 @@ void zombieForceLocalAction(Moby* moby, int action)
 	// from
 	switch (pvars->MobVars.Action)
 	{
-		case ZOMBIE_ACTION_SPAWN:
+		case TREMOR_ACTION_SPAWN:
 		{
 			// enable collision
 			moby->CollActive = 0;
 			break;
 		}
-    case ZOMBIE_ACTION_DIE:
+    case TREMOR_ACTION_DIE:
     {
       // can't undie
       return;
     }
-    case ZOMBIE_ACTION_JUMP:
+    case TREMOR_ACTION_JUMP:
     {
       pvars->MobVars.MoveVars.JumpedThisAction = 0;
       break;
@@ -635,13 +639,13 @@ void zombieForceLocalAction(Moby* moby, int action)
 	// to
 	switch (action)
 	{
-		case ZOMBIE_ACTION_SPAWN:
+		case TREMOR_ACTION_SPAWN:
 		{
 			// disable collision
 			moby->CollActive = 1;
 			break;
 		}
-    case ZOMBIE_ACTION_ROAM:
+    case TREMOR_ACTION_ROAM:
     {
       // if we're in a spawner
       // then let it determine where we roam
@@ -650,25 +654,26 @@ void zombieForceLocalAction(Moby* moby, int action)
       }
       break;
     }
-		case ZOMBIE_ACTION_WALK:
+		case TREMOR_ACTION_WALK:
 		{
 			
 			break;
 		}
-		case ZOMBIE_ACTION_DIE:
+		case TREMOR_ACTION_DIE:
 		{
-      pvars->MobVars.Destroy = 1;
+			// disable collision
+			moby->CollActive = 1;
 			break;
 		}
-		case ZOMBIE_ACTION_ATTACK:
+		case TREMOR_ACTION_ATTACK:
 		{
 			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 			break;
 		}
-		case ZOMBIE_ACTION_FLINCH:
-		case ZOMBIE_ACTION_BIG_FLINCH:
+		case TREMOR_ACTION_FLINCH:
+		case TREMOR_ACTION_BIG_FLINCH:
 		{
-			pvars->MobVars.FlinchCooldownTicks = ZOMBIE_FLINCH_COOLDOWN_TICKS;
+			pvars->MobVars.FlinchCooldownTicks = TREMOR_FLINCH_COOLDOWN_TICKS;
 			break;
 		}
 		default:
@@ -683,11 +688,11 @@ void zombieForceLocalAction(Moby* moby, int action)
 
 	pvars->MobVars.Action = action;
 	pvars->MobVars.NextAction = -1;
-	pvars->MobVars.ActionCooldownTicks = ZOMBIE_ACTION_COOLDOWN_TICKS;
+	pvars->MobVars.ActionCooldownTicks = TREMOR_ACTION_COOLDOWN_TICKS;
 }
 
 //--------------------------------------------------------------------------
-short zombieGetArmor(Moby* moby)
+short tremorGetArmor(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	float t = pvars->MobVars.Health / pvars->MobVars.Config.Health;
@@ -702,68 +707,68 @@ short zombieGetArmor(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-int zombieIsAttacking(Moby* moby)
+int tremorIsAttacking(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.Action == TREMOR_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int zombieCanNonOwnerTransitionToAction(Moby* moby, int action)
+int tremorCanNonOwnerTransitionToAction(Moby* moby, int action)
 {
   // always let non-owners simulate an action unless its the death action
-  if (action == ZOMBIE_ACTION_DIE) return 0;
+  if (action == TREMOR_ACTION_DIE) return 0;
 
   return 1;
 }
 
 //--------------------------------------------------------------------------
-int zombieShouldForceStateUpdateOnAction(Moby* moby, int action)
+int tremorShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
   // only send state updates at regular intervals, unless dying
   // or if we're entering/leaving the roaming state
-  if (action == ZOMBIE_ACTION_DIE) return 1;
-  if (pvars->MobVars.Action == ZOMBIE_ACTION_ROAM || action == ZOMBIE_ACTION_ROAM) return 1;
+  if (action == TREMOR_ACTION_DIE) return 1;
+  if (pvars->MobVars.Action == TREMOR_ACTION_ROAM || action == TREMOR_ACTION_ROAM) return 1;
 
   return 0;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsSpawning(struct MobPVar* pvars)
+int tremorIsSpawning(struct MobPVar* pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.Action == TREMOR_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsRoaming(struct MobPVar* pvars)
+int tremorIsRoaming(struct MobPVar* pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_ROAM;
+	return pvars->MobVars.Action == TREMOR_ACTION_ROAM;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsIdling(struct MobPVar* pvars)
+int tremorIsIdling(struct MobPVar* pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_IDLE;
+	return pvars->MobVars.Action == TREMOR_ACTION_IDLE;
 }
 
 //--------------------------------------------------------------------------
-int zombieCanAttack(struct MobPVar* pvars)
+int tremorCanAttack(struct MobPVar* pvars)
 {
 	return pvars->MobVars.AttackCooldownTicks == 0;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsFlinching(Moby* moby)
+int tremorIsFlinching(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return (moby->AnimSeqId == ZOMBIE_ANIM_FLINCH || moby->AnimSeqId == ZOMBIE_ANIM_BIG_FLINCH) && !pvars->MobVars.AnimationLooped;
+	return (moby->AnimSeqId == TREMOR_ANIM_FLINCH || moby->AnimSeqId == TREMOR_ANIM_FLINCH_FALL_GET_UP) && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int zombieIsDying(Moby* moby)
+int tremorIsDying(Moby* moby)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == ZOMBIE_ACTION_DIE;
+	return pvars->MobVars.Action == TREMOR_ACTION_DIE;
 }

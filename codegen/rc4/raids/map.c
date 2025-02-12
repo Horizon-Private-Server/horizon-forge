@@ -298,7 +298,7 @@ void mapOnV10VipersHitSurface(Moby* moby)
 int mapOnMobyPlayDesiredSound(int sound, int a1, Moby* moby)
 {
   // catch mobs
-  if (mobyIsMob(moby)) {
+  if (mobyIsMob(moby) && moby->PVar) {
     int midx = ((struct MobPVar*)moby->PVar)->MobVars.SpawnParamsIdx;
     if (midx >= 0) {
       int sidx = sound % MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS;
