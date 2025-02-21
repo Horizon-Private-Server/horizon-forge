@@ -5,13 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using DotNet.Testcontainers.Images;
-
 
 #if DOCKER
 
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
 
 [ExecuteInEditMode]
 public class DockerManager : MonoBehaviour
