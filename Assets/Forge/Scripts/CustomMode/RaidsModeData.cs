@@ -9,6 +9,8 @@ using UnityEngine;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
+    public static readonly int RAIDS_VERSION = 0;
+
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int MOVER_OCLASS = 0x4002;
     public static readonly int CONTROLLER_OCLASS = 0x4003;
@@ -17,12 +19,30 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int NPC_OCLASS = 0x4006;
     public static readonly int CHECKPOINT_MANAGER_OCLASS = 0x4007;
     public static readonly int CHECKPOINT_OCLASS = 0x4008;
+    public static readonly int LASERBEAM_OCLASS = 0x4009;
+    public static readonly int LASER_OCLASS = 0x400A;
+    public static readonly int PVARPOKE_OCLASS = 0x400B;
+    public static readonly int BLIP_OCLASS = 0x400C;
+    public static readonly int DUMMY_OCLASS = 0x400D;
+    public static readonly int GOLDBOLT_OCLASS = 0x400E;
+    public static readonly int COUNTER_OCLASS = 0x400F;
+
+    public static readonly float[] DIFFICULTY_FACTORS = new float[]
+    {
+        0,
+        25,
+        150,
+        500,
+        1250
+    };
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
+    public int CodeGenOrder => 99999999;
 
     public bool Enabled = true;
     [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
+    [Tooltip("Minimum player level required to visit planet.")] public uint MinLevelRequired = 0;
     public int Cost1Star = 0;
     public int Cost2Star = 0;
     public int Cost3Star = 0;
@@ -31,21 +51,37 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public string Author;
     [Multiline] public string Description;
 
+    [Header("Challenges")]
+    public List<RaidsChallenge> Challenges;
+
+    [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 16.")]
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
     {
-        new RaidsMobSpawnParam() { Name = "Zombie", Bangles = RaidsMobBangle.BANGLE_0001 | RaidsMobBangle.BANGLE_0020 }
+        new RaidsMobSpawnParam() { Name = "Zombie" }
     };
+
+    [Header("Debug")]
+    public bool DebugPath;
+    public bool DebugMove;
+
+    [Header("Music")]
+    public bool OverrideTrackList = false;
+    public List<DLMusicTracks> TrackWhitelist = new List<DLMusicTracks>();
 
     private void OnValidate()
     {
         if (Author != null && Author.Length > 32) Author = Author.Substring(0, 32);
         if (Description != null && Description.Length > 256) Description = Description.Substring(0, 256);
+        while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
     }
 
     public void Configure(string buildFolder, CodeGenState state)
     {
         var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
         var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
+        var enabledMobs = Mobs.Where(x => !x.Disabled);
+
+        state.SeparateCodeFile = true;
 
         // copy raids base code
         CodeManager.CopySourceFilesIntoWorkingDirectory(FolderNames.GetCodeGenFolder(RCVER.DL, "raids"), buildFolder);
@@ -58,6 +94,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/map.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gate.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
@@ -65,41 +103,77 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mover.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laser.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pvarpoke.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
         state.LDFlags.Add("-DGATE");
-        var mobTypes = Mobs.Select(x => x.Mob).Distinct();
+        var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
 
+        if (state.Debug)
+        {
+            if (DebugPath)
+                state.LDFlags.Add("-DDEBUGPATH");
+            if (DebugMove)
+                state.LDFlags.Add("-DDEBUGMOVE");
+        }
+
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");
+        state.Includes.Add("#include \"bank.h\"");
+        state.Includes.Add("#include \"inventory.h\"");
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"gate.h\"");
         state.Includes.Add("#include \"npc.h\"");
         state.Includes.Add("#include \"messager.h\"");
         state.Includes.Add("#include \"spawner.h\"");
         state.Includes.Add("#include \"checkpoint.h\"");
+        state.Includes.Add("#include \"laser.h\"");
         state.Includes.Add("#include \"controller.h\"");
+        state.Includes.Add("#include \"pvarpoke.h\"");
         state.Includes.Add("#include \"mover.h\"");
         state.Includes.Add("#include \"mob.h\"");
         state.Includes.Add("#include \"shared.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
+        state.Includes.Add("#include \"vendor.h\"");
+        state.Includes.Add("#include \"badges.h\"");
+        state.Includes.Add("#include \"ammodrop.h\"");
+        state.Includes.Add("#include \"hackerorb.h\"");
+        state.Includes.Add("#include \"blip.h\"");
+        state.Includes.Add("#include \"dummy.h\"");
+        state.Includes.Add("#include \"collectible.h\"");
+        state.Includes.Add("#include \"levelselect.h\"");
 
         state.Declarations.Add("void configInit(void);");
-        state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,\r\n};");
+        state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,  .TrackWhitelist = NULL,\r\n};");
 
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
 
-        state.InitBody.Add($"mobInit();");
         state.InitBody.Add($"configInit();");
+        state.InitBody.Add($"bankInit();");
+        state.InitBody.Add($"inventoryInit();");
+        state.InitBody.Add($"mapInit();");
+        state.InitBody.Add($"mobInit();");
+        state.InitBody.Add($"levelselectInit();");
         state.InitBody.Add($"spawnerInit();");
         state.InitBody.Add($"moverInit();");
         state.InitBody.Add($"controllerInit();");
@@ -107,10 +181,23 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"npcInit();");
         state.InitBody.Add($"messagerInit();");
         state.InitBody.Add($"checkpointInit();");
+        state.InitBody.Add($"laserInit();");
+        state.InitBody.Add($"pvarpokeInit();");
+        state.InitBody.Add($"vendorInit();");
+        state.InitBody.Add($"badgesInit();");
+        state.InitBody.Add($"ammodropInit();");
+        state.InitBody.Add($"hackerorbInit();");
+        state.InitBody.Add($"blipInit();");
+        state.InitBody.Add($"dummyInit();");
+        state.InitBody.Add($"collectibleInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
+        state.InitBody.Add($"MapConfig.OnMobDamagedFunc = &mapOnMobDamaged;");
         state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
+        state.InitBody.Add($"MapConfig.OnMobDestroyedFunc = &mapOnMobDestroyed;");
+        state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
+        state.InitBody.Add($"MapConfig.CreateAmmoDropAtFunc = &ammodropCreateAt;");
         state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
 
         state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
@@ -118,16 +205,28 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.InitBody.Add("respawnAllPlayers();");
 
+        state.MainBodyReady.Add("mapStart();");
+        state.MainBodyReady.Add("levelselectStart();");
         state.MainBodyReady.Add("spawnerStart();");
         state.MainBodyReady.Add("moverStart();");
         state.MainBodyReady.Add("controllerStart();");
         state.MainBodyReady.Add("gateStart();");
         state.MainBodyReady.Add("npcStart();");
         state.MainBodyReady.Add("checkpointStart();");
+        state.MainBodyReady.Add("laserStart();");
+        state.MainBodyReady.Add("pvarpokeStart();");
+        state.MainBodyReady.Add("vendorStart();");
+        state.MainBodyReady.Add("badgesStart();");
+        state.MainBodyReady.Add("ammodropStart();");
+        state.MainBodyReady.Add("dummyStart();");
 
+        state.MainBody.Add("mapTick();");
+        state.MainBody.Add("bankTick();");
+        state.MainBody.Add("inventoryTick();");
         state.MainBody.Add("mobTick();");
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
+        state.MainBody.Add("mapTickEnd();");
     }
 
     public void Configure(BuildState state)
@@ -135,10 +234,12 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(8309); // node base (for capture sound)
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
+        state.MobyOClasses.Add(13); // bolt (for gold bolt)
+        state.MobyOClasses.Add(LASERBEAM_OCLASS);
 
         // add mob oclasses
         var mobConfig = RaidsMobsScriptableObject.Load();
-        foreach (var mob in this.Mobs)
+        foreach (var mob in this.Mobs.Where(x => !x.Disabled))
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -148,6 +249,18 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             if (variant.Dependencies != null)
                 state.MobyOClasses.AddRange(variant.Dependencies.Select(x => x.OClass));
         }
+
+        // update gold bolt indices
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+        var goldBoltCount = 0;
+        foreach (var goldBoltMoby in mobys.Where(x => x.OClass == GOLDBOLT_OCLASS))
+        {
+            // set index
+            goldBoltMoby.GetPVarValues()[".Index"] = goldBoltCount.ToString();
+            ++goldBoltCount;
+        }
+
     }
 
     string GetConfigContents()
@@ -163,12 +276,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("");
 
         sb.AppendLine("struct MobSpawnParams mobSpawnParams[] = {");
-        foreach (var mob in Mobs)
+        foreach (var mob in Mobs.Where(x => !x.Disabled))
             sb.AppendLine(mob.GetDef());
         sb.AppendLine("};");
         sb.AppendLine("");
 
-        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n}\r\n");
+        sb.AppendLine($"int musicTrackWhitelistEnabled = {(OverrideTrackList ? 1 : 0)};");
+        sb.AppendLine($"int musicTrackWhitelistCount = {TrackWhitelist.Count};");
+        sb.AppendLine("int musicTrackWhitelist[] = {");
+        foreach (var track in TrackWhitelist)
+            sb.AppendLine($"  {(int)track},");
+        sb.AppendLine("};");
+        sb.AppendLine("");
+
+        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n  MapConfig.TrackWhitelist = musicTrackWhitelist;\r\n  MapConfig.TrackWhitelistCount = musicTrackWhitelistCount;\r\n  MapConfig.TrackWhitelistEnabled = musicTrackWhitelistEnabled;\r\n}\r\n");
 
         return sb.ToString();
     }
@@ -180,6 +301,15 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public override void Write(BinaryWriter writer)
     {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+        var goldBoltCount = mobys.Count(x => x.OClass == GOLDBOLT_OCLASS);
+        var baseOffset = writer.BaseStream.Position;
+
+        writer.Write(RAIDS_VERSION);
+        writer.Write(MinLevelRequired);
+        writer.Write(goldBoltCount);
+        writer.Write(Challenges.Count);
         writer.Write(Cost1Star);
         writer.Write(Cost2Star);
         writer.Write(Cost3Star);
@@ -189,6 +319,28 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         writer.Write((byte)0);
         writer.WriteString(BinaryHelper.StrToRatchetStr(Description), 255);
         writer.Write((byte)0);
+
+        // prewrite header
+        var offsets = new List<int>();
+        var headerOffset = writer.BaseStream.Position;
+        writer.Write(new byte[8 * Challenges.Count]);
+
+        foreach (var challenge in Challenges)
+        {
+            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Name));
+            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Description));
+        }
+
+        var endOffset = writer.BaseStream.Position;
+
+        // rewrite header
+        writer.BaseStream.Position = headerOffset;
+        foreach (var offset in offsets)
+            writer.Write(offset);
+
+        writer.BaseStream.Position = endOffset;
     }
 
 
@@ -238,6 +390,31 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.RCVersion = RCVER.DL;
         moby.UpdateDistance = 255;
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Controller");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Counter Moby", priority = 10)]
+    public static void CreateCounterMoby()
+    {
+        var go = new GameObject("Counter");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = COUNTER_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Counter");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/PVar Poke Moby", priority = 10)]
+    public static void CreatePVarPokeMoby()
+    {
+        var go = new GameObject("PVar Poke");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = PVARPOKE_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("PVarPoke");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }
@@ -324,6 +501,64 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
+    [MenuItem("GameObject/Forge/Raids/Laser (Tripwire) Moby", priority = 10)]
+    public static void CreateLaserMoby()
+    {
+        var go = new GameObject("Laser (Tripwire)");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = LASER_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Laser");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Radar Blip Moby", priority = 10)]
+    public static void CreateRadarBlipMoby()
+    {
+        var go = new GameObject("Radar Blip Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = BLIP_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Radar Blip");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Health Proxy Moby", priority = 10)]
+    public static void CreateHealthProxyMoby()
+    {
+        var go = new GameObject("Health Proxy Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = DUMMY_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Health Proxy");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Gold Bolt Moby", priority = 10)]
+    public static void CreateGoldBoltMoby()
+    {
+        var go = new GameObject("Gold Bolt Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = GOLDBOLT_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.DrawDistance = 128;
+        moby.UpdateDistance = 128;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "13", RCVER.DL, includeGlobal: true);
+        moby.PrefabOverrideTransformation = Matrix4x4.TRS(Vector3.zero, Quaternion.FromToRotation(Vector3.right, Vector3.up), Vector3.one * 3);
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
     [MenuItem("GameObject/Forge/Raids/PathGraph", priority = 10)]
     public static void CreatePathGraph()
     {
@@ -352,6 +587,41 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     #endregion
 
+
+    #region Helpers
+
+    public static float ScaleDamage(float baseDamage, float maxDamage, float scale, int difficulty)
+    {
+        var dfactor = DIFFICULTY_FACTORS[difficulty];
+        var damage = baseDamage * (1 + (0.03f * scale * dfactor));
+        if (maxDamage > 0 && damage > maxDamage)
+            damage = maxDamage;
+
+        return damage;
+    }
+
+    public static float ScaleSpeed(float baseSpeed, float maxSpeed, float scale, int difficulty)
+    {
+        var dfactor = DIFFICULTY_FACTORS[difficulty];
+        float speed = baseSpeed * (1 + (0.03f * scale * dfactor));
+        if (maxSpeed > 0 && speed > maxSpeed)
+            speed = maxSpeed;
+
+        return speed;
+    }
+
+    public static float ScaleHealth(float baseHealth, float maxHealth, float scale, int difficulty)
+    {
+        var dfactor = DIFFICULTY_FACTORS[difficulty];
+        var health = baseHealth * Mathf.Pow(1 + (0.05f * scale * dfactor), 2);
+        if (maxHealth > 0 && health > maxHealth)
+            health = maxHealth;
+
+        return health;
+    }
+
+    #endregion
+
 }
 
 public enum RaidsMob
@@ -359,7 +629,12 @@ public enum RaidsMob
     Zombie,
     Swarmer,
     Swamper,
-    StalkerTurret
+    StalkerTurret,
+    Leviathan,
+    DZStriker,
+    Executioner,
+    Reaper,
+    Tremor
 }
 
 [Flags]
@@ -386,34 +661,32 @@ public enum RaidsMobBangle
 public class RaidsMobSpawnParam
 {
     public string Name;
+    public bool Disabled;
     public RaidsMob Mob;
     public int Variant;
-    public RaidsMobBangle Bangles;
+    [Tooltip("For Mobs with team textures only.")]
+    public DLTeamIds TexturePalette = DLTeamIds.Blue;
 
-    [Header("General")]
-    public float SizeMultiplier = 1;
+    [Min(0)] public float SizeMultiplier = 1;
 
-    [Header("Stats")]
-    public float XpMultiplier = 1;
-    public float BoltsMultiplier = 1;
+    [Min(0)] public float XpMultiplier = 1;
+    [Min(0)] public float BoltsMultiplier = 1;
 
-    [Header("Damage")]
-    public float DamageMultiplier = 1;
-    [Tooltip("Adjusts the rate at which the mob's damage will scale with respect to the difficulty. A larger value will result in stronger mobs in higher difficulties.")] public float DamageDifficultyRateMultiplier = 1;
+    [Min(0)] public float DamageMultiplier = 1;
+    [Min(0), Tooltip("Adjusts the rate at which the mob's damage will scale with respect to the difficulty. A larger value will result in stronger mobs in higher difficulties.")] public float DamageDifficultyRateMultiplier = 1;
 
-    [Header("Speed")]
-    public float SpeedMultiplier = 1;
-    [Tooltip("Adjusts the rate at which the mob's speed will scale with respect to the difficulty. A larger value will result in faster mobs in higher difficulties.")] public float SpeedDifficultyRateMultiplier = 1;
+    [Min(0)] public float SpeedMultiplier = 1;
+    [Min(0), Tooltip("Adjusts the rate at which the mob's speed will scale with respect to the difficulty. A larger value will result in faster mobs in higher difficulties.")] public float SpeedDifficultyRateMultiplier = 1;
 
-    [Header("Health")]
-    public float HealthMultiplier = 1;
-    [Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
+    [Min(0)] public float HealthMultiplier = 1;
+    [Min(0), Tooltip("Adjusts the rate at which the mob's health will scale with respect to the difficulty. A larger value will result in tougher mobs in higher difficulties.")] public float HealthDifficultyRateMultiplier = 1;
 
-    [Header("Interaction")]
-    [Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
-    [Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
-    [Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
-    [Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 5;
+    [Min(0), Tooltip("Increase or decrease turn speed.")] public float TurnSpeedMultiplier = 1;
+    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public float RangedAttackDistance = 50;
+    [Min(0), Tooltip("How far out a mob can lock onto a target from.")] public float VisionRange = 50;
+    [Min(0), Tooltip("How narrow or wide the mob's vision is."), Range(0, 360)] public float PeripheralVisionDegrees = 135;
+    [Min(0), Tooltip("Range that a mob will always aggro a target, regardless of their peripheral vision.")] public float ForceAggroRange = 10;
+    [Min(0), Tooltip("In seconds, how long after the mob loses sight of its target before it will exit the Aggro state.")] public float OutOfSightDeAggroTime = 60;
 
     public string GetDef()
     {
@@ -422,18 +695,22 @@ public class RaidsMobSpawnParam
         var mobPrefix = this.Mob.ToString().ToLower();
         var mobConfig = RaidsMobsScriptableObject.Load();
         var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new RaidsMobsScriptableObject.RaidsMobsConfig();
+        var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
 
         sb.AppendLine("  {");
         sb.AppendLine($"    .MobCreate = &{mobPrefix}Create,");
-        sb.AppendLine($"    .MobVTable = &{mobPrefix.ToTitleCase()}VTable,");
+        sb.AppendLine($"    .MobVTable = &{this.Mob}VTable,");
         sb.AppendLine($"    .RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
         sb.AppendLine($"    .Scale = {SizeMultiplier},");
-        sb.AppendLine($"    .OClass = {defaults.Variants[this.Variant].OClass},");
+        sb.AppendLine($"    .OClass = {variant.OClass},");
+        sb.AppendLine($"    .BlipType = {(int)defaults.BlipType},");
+        sb.AppendLine($"    .BlipTeam = {(int)defaults.BlipTeam},");
+        sb.AppendLine($"    .TeamPalette = {(int)TexturePalette},");
         //sb.AppendLine($"    .Name = \"{Name?.Replace("\"", "")}\",");
         sb.AppendLine($"    .Config = {{");
         sb.AppendLine($"      .Xp = {(int)(defaults.Xp * XpMultiplier)},");
         sb.AppendLine($"      .Bolts = {(int)(defaults.Bolts * BoltsMultiplier)},");
-        sb.AppendLine($"      .Bangles = 0x{(int)Bangles:X4},");
+        sb.AppendLine($"      .Bangles = 0x{(int)variant.Bangles:X4},");
         sb.AppendLine($"      .Damage = {defaults.Damage * DamageMultiplier},");
         sb.AppendLine($"      .MaxDamage = {defaults.DamageMax},");
         sb.AppendLine($"      .DamageScale = {defaults.DamageScale * DamageDifficultyRateMultiplier},");
@@ -443,11 +720,13 @@ public class RaidsMobSpawnParam
         sb.AppendLine($"      .Health = {defaults.Health * HealthMultiplier},");
         sb.AppendLine($"      .MaxHealth = {defaults.HealthMax},");
         sb.AppendLine($"      .HealthScale = {defaults.HealthScale * HealthDifficultyRateMultiplier},");
+        sb.AppendLine($"      .TurnSpeed = {defaults.TurnSpeed * TurnSpeedMultiplier},");
         sb.AppendLine($"      .AttackRadius = {defaults.AttackRadius * SizeMultiplier},");
         sb.AppendLine($"      .HitRadius = {defaults.HitRadius * SizeMultiplier},");
         sb.AppendLine($"      .CollRadius = {defaults.CollRadius * SizeMultiplier},");
         sb.AppendLine($"      .AutoAggroMaxRange = {ForceAggroRange},");
         sb.AppendLine($"      .VisionRange = {VisionRange},");
+        sb.AppendLine($"      .RangedMaxDistanceToTarget = {RangedAttackDistance},");
         sb.AppendLine($"      .PeripheryRangeTheta = {PeripheralVisionDegrees * 0.5f * Mathf.Deg2Rad},");
         sb.AppendLine($"      .OutOfSightDeAggroTickCount = {(int)(OutOfSightDeAggroTime * 60)},");
         sb.AppendLine($"      .ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
@@ -458,4 +737,11 @@ public class RaidsMobSpawnParam
         return sb.ToString();
     }
 
+}
+
+[Serializable]
+public class RaidsChallenge
+{
+    public string Name;
+    public string Description;
 }

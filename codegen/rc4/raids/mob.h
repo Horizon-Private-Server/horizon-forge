@@ -9,13 +9,17 @@
 #include <libdl/sound.h>
 #include "zombie.h"
 #include "stalkerturret.h"
-//#include "executioner.h"
+#include "executioner.h"
 //#include "reactor.h"
-//#include "tremor.h"
+#include "tremor.h"
 #include "swarmer.h"
 #include "swamper.h"
-//#include "reaper.h"
+#include "leviathan.h"
+#include "dzstriker.h"
+#include "reaper.h"
 #include "game.h"
+
+#define MOB_MAX_OTHER_TARGETS       (32)
 
 enum MobEvent
 {
@@ -42,7 +46,7 @@ typedef void (*MobGenericCallback_func)(Moby* moby);
 typedef Moby* (*MobGetNextTarget_func)(Moby* moby);
 typedef int (*MobGetPreferredAction_func)(Moby* moby, int * delayTicks);
 typedef void (*MobOnSpawn_func)(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-typedef void (*MobOnDestroy_func)(Moby* moby, int killedByPlayerId, int weaponId);
+typedef void (*MobOnDestroy_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 typedef void (*MobOnDamage_func)(Moby* moby, struct MobDamageEventArgs* e);
 typedef int (*MobOnLocalDamage_func)(Moby* moby, struct MobLocalDamageEventArgs* e);
 typedef void (*MobOnStateUpdate_func)(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -54,6 +58,7 @@ typedef short (*MobGetArmor_func)(Moby* moby);
 typedef int (*MobIsAttacking_func)(Moby* moby);
 typedef int (*MobCanNonOwnerTransitionToAction_func)(Moby* moby, int action);
 typedef int (*MobShouldForceStateUpdateOnAction_func)(Moby* moby, int action);
+typedef int (*MobGetSeeFromPosition_func)(Moby* moby, VECTOR out);
 
 struct MobVTable {
   MobGenericCallback_func PreUpdate;
@@ -76,6 +81,7 @@ struct MobVTable {
   MobIsAttacking_func IsAttacking;
   MobCanNonOwnerTransitionToAction_func CanNonOwnerTransitionToAction;
   MobShouldForceStateUpdateOnAction_func ShouldForceStateUpdateOnAction;
+  MobGetSeeFromPosition_func GetSeeFromPosition;
 };
 
 struct MobConfig {
@@ -89,17 +95,19 @@ struct MobConfig {
 	float Health;
 	float MaxHealth;
   float HealthScale;
+	float TurnSpeed;
 	float AttackRadius;
 	float HitRadius;
   float CollRadius;
   float AutoAggroMaxRange;
   float VisionRange;
+  float RangedMaxDistanceToTarget;
   float PeripheryRangeTheta;
 	u16 Bangles;
 	u16 Xp;
+	u16 AttackCooldownTickCount;
   u16 OutOfSightDeAggroTickCount;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobSpawnedConfig {
@@ -108,6 +116,7 @@ struct MobSpawnedConfig {
 	float Scale;
 	float Damage;
 	float Speed;
+  float TurnSpeed;
 	float Health;
 
 	float AttackRadius;
@@ -116,14 +125,15 @@ struct MobSpawnedConfig {
 
   float AutoAggroMaxRange;
   float VisionRange;
+  float RangedMaxDistanceToTarget;
   float PeripheryRangeTheta;
 
 	u16 Bangles;
 	u16 Xp;
+	u16 AttackCooldownTickCount;
 
   u16 OutOfSightDeAggroTickCount;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobSpawnParams {
@@ -133,6 +143,9 @@ struct MobSpawnParams {
   float Scale;
   int OClass;
 	struct MobConfig Config;
+  char BlipType;
+  char BlipTeam;
+  char TeamPalette;
 };
 
 struct Knockback {
@@ -157,13 +170,19 @@ struct MobMoveVars {
   float PathEdgeAlpha;
   float LastPathEdgeAlphaForJump;
   float CollRadius;
+  float DistFromGround;
+  float PreferredHeight;
+  float CurrentHeightLimit;
 	u16 StuckCounter;
   char Grounded;
+  char JumpedThisAction;
   char HitWall;
   char IsStuck;
   char MoveStep;
   char LastMoveStep;
   char PathGraphIdx;
+  char ForceUseTargetPosition;
+  char IsOwner;
   u8 WasStuckTicks;
   u8 StuckCheckTicks;
   u8 StuckJumpCount;
@@ -191,12 +210,14 @@ struct MobVars {
 	int NextAction;
 	int LastAction;
 	float Health;
-	float ClosestDist;
+	float ClosestDistToLocal;
+	float ClosestDistToPlayer;
   u32 Userdata;
 	int LastAcidBy;
   float LastAcidByDamage;
 	int LastHitBy;
-	u16 LastHitByOClass;
+	float LastHitByDamage;
+  u16 LastHitByOClass;
 	u16 NextCheckActionDelayTicks;
 	u16 NextActionDelayTicks;
 	u16 ActionCooldownTicks;
@@ -225,6 +246,7 @@ struct MobVars {
 	char DynamicRandom;
   char BlipType;
   char BlipTeam;
+  char Behavior;
 };
 
 // warning: multiple differing types with the same name, only one recovered
@@ -338,12 +360,12 @@ struct MobSpawnEventArgs
 	u16 SpeedEighths;
 	u16 Damage;
 	u16 AttackRadiusEighths;
+	u16 AttackCooldownTickCount;
   u8 SpawnParamsIdx;
 	u8 Xp;
 	u8 HitRadiusEighths;
   u8 CollRadiusEighths;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobCreateArgs
@@ -356,6 +378,7 @@ struct MobCreateArgs
   int SpawnFromUID;
   float DifficultyMult;
   struct MobConfig *Config;
+  char Behavior;
 };
 
 struct MobUnreliableBaseMsgArgs
@@ -370,6 +393,7 @@ struct MobUnreliableMsgStateUpdateArgs
   struct MobStateUpdateEventArgs StateUpdate;
 };
 
+void mobRegisterTarget(Moby* moby);
 int mobOnUnreliableMsgRemote(void* connection, void* data);
 void mobReactToExplosionAt(int byPlayerId, VECTOR position, float damage, float radius);
 void mobNuke(int killedByPlayerId);

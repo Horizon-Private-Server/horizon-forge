@@ -10,6 +10,7 @@ using UnityEngine;
 
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
 
 [ExecuteInEditMode]
 public class DockerManager : MonoBehaviour
@@ -53,6 +54,21 @@ public class DockerManager : MonoBehaviour
         }
     }
 
+    public async void Validate()
+    {
+        if (container == null) return;
+
+        try
+        {
+            await container.GetExitCodeAsync();
+        }
+        catch
+        {
+            // bad container
+            container = null;
+        }
+    }
+
     public TestcontainersStates? GetStatus()
     {
         return container?.State;
@@ -72,7 +88,7 @@ public class DockerManager : MonoBehaviour
     {
         if (container != null)
         {
-            await container.StopAsync();
+            //await container.StopAsync();
             await container.DisposeAsync();
             container = null;
         }
@@ -80,6 +96,7 @@ public class DockerManager : MonoBehaviour
         ContainerBuilder builder = new ContainerBuilder()
               // use particular version always 
               .WithImage("dnawrkshp/ps2dev-libdl:latest")
+              .WithImagePullPolicy(PullPolicy.Always)
               // name it nicely
               .WithName("FORGE_PS2DEV")
               .WithBindMount(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, FolderNames.BinaryFolder)), "/levels")
@@ -87,6 +104,8 @@ public class DockerManager : MonoBehaviour
               //.WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")
               //.WithWaitStrategy(Wait.ForUnixContainer())
               //.WithReuse(true)
+              .WithCleanUp(true)
+              .WithReuse(true)
               .WithEntrypoint(SleepInfinity)
               .WithOutputConsumer(Consume.RedirectStdoutAndStderrToConsole());
 

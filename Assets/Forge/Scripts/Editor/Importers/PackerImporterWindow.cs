@@ -193,6 +193,13 @@ public class PackerImporterWindow : EditorWindow
                             continue;
                         }
 
+                        // count high lod tex.#.png
+                        if (filename.StartsWith("tex.") && filename.Count(x => x == '.') == 1 && int.TryParse(filename.Split('.')[1], out texId))
+                        {
+                            if (texId >= texCount) texCount = texId + 1;
+                            continue;
+                        }
+
                         // count high lod or gs stash textures tex.#.0.png or tex.#.3.png
                         if (filename.StartsWith("tex.") && (filename.EndsWith(".0") || filename.EndsWith(".3")) && int.TryParse(filename.Split('.')[1], out texId))
                         {
@@ -219,6 +226,10 @@ public class PackerImporterWindow : EditorWindow
                                     if (parts.Length == 1)
                                     {
                                         idx = parts[0];
+                                    }
+                                    else if (parts.Length == 2)
+                                    {
+                                        idx = parts[1];
                                     }
                                     else if (parts.Length == 3)
                                     {

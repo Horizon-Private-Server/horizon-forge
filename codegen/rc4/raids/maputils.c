@@ -31,15 +31,16 @@
 #include <libdl/utils.h>
 #include "mob.h"
 #include "game.h"
+#include "bank.h"
 #include "maputils.h"
 
-extern char LocalPlayerStrBuffer[2][64];
+char LocalPlayerStrBuffer[2][64];
 extern struct RaidsMapConfig MapConfig;
 
 /* 
- * paid sound def
+ * reusable menu sound def
  */
-SoundDef PaidSoundDef =
+SoundDef MenuSoundDef =
 {
 	0.0,	// MinRange
 	20.0,	// MaxRange
@@ -49,7 +50,7 @@ SoundDef PaidSoundDef =
 	0,			// MaxPitch
 	0,			// Loop
 	0x10,		// Flags
-	32,		  // Index
+	19,		  // Index
 	3			  // Bank
 };
 
@@ -61,6 +62,21 @@ Moby * spawnExplosion(VECTOR position, float size, u32 color)
     vector_read(position), 0, 0, 0, 0, 16, 0, 16, 0, 1, 0, 0, 0, 0,
     0, 0, color, color, color, color, color, color, color, color,
     0, 0, 0, 0, 0, size / 2.5, 0, 0, 0
+  );
+  
+  mobyPlaySoundByClass(0, 0, moby, MOBY_ID_ARBITER_ROCKET0);
+
+	return moby;
+}
+
+//--------------------------------------------------------------------------
+Moby * spawnExplosionDamage(VECTOR position, float size, u32 color, Moby* damager, float damage, u32 damageFlags)
+{
+	// SpawnMoby_5025
+  Moby* moby = mobySpawnExplosion(
+    vector_read(position), 0, 0, 0, 0, 16, 0, 16, 0, 1, 0, 0, 0, 0,
+    damageFlags, 0, color, color, color, color, color, color, color, color,
+    0, 0, damager, 0, 0, size / 2.5, 0, damage, size
   );
   
   mobyPlaySoundByClass(0, 0, moby, MOBY_ID_ARBITER_ROCKET0);
@@ -86,10 +102,31 @@ void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, fl
 }
 
 //--------------------------------------------------------------------------
+void playEquipRejectSound(Player* player)
+{	
+  MenuSoundDef.Index = 27;
+	soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
+void playEquipSound(Player* player)
+{	
+  MenuSoundDef.Index = 19;
+	soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
+void playUpgradeSound(Player* player)
+{	
+  MenuSoundDef.Index = 58;
+	soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
 void playPaidSound(Player* player)
 {
-  if (!player) return;
-  soundPlay(&PaidSoundDef, 0, player->PlayerMoby, 0, 0x400);
+  MenuSoundDef.Index = 32;
+  soundPlay(&MenuSoundDef, 0, player->PlayerMoby, 0, 0x400);
 }
 
 //--------------------------------------------------------------------------
@@ -271,6 +308,9 @@ Player* mobyGetPlayer(Moby* moby)
 Moby* playerGetTargetMoby(Player* player)
 {
   if (!player) return NULL;
+  if (player->InVehicle && player->Vehicle && player->Vehicle->pMoby)
+    return player->Vehicle->pMoby;
+
   return player->SkinMoby;
 }
 
@@ -374,26 +414,118 @@ int hasPendingWorldHop(void)
 }
 
 //--------------------------------------------------------------------------
+int missionIsFailed(void)
+{
+  return MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_FAILED;
+}
+
+//--------------------------------------------------------------------------
+int missionIsComplete(void)
+{
+  return MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_COMPLETED;
+}
+
+//--------------------------------------------------------------------------
+int missionIsActive(void)
+{
+  return !isOnHubWorld() && !hasPendingWorldHop() && MapConfig.State && MapConfig.State->MissionStatus == RAIDS_MISSION_ACTIVE;
+}
+
+//--------------------------------------------------------------------------
 int isOnHubWorld(void)
 {
   return MapConfig.State && MapConfig.State->OnHubWorld;
 }
 
 //--------------------------------------------------------------------------
-void replenishAmmo(void)
+int bankTryChargeLocalAccount(Player* player, u32 cost)
+{
+  RaidsPlayerBank_t* bank = bankGetLocalBank();
+  if (!bank) return 0;
+  if (bank->Account.Bolts < cost) return 0;
+
+  // charge
+  bank->Account.Bolts -= cost;
+  playPaidSound(player);
+
+  // send new bolts to server
+  bankSendAccountToServer();
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int getLevelFromXp(u32 xp)
+{
+  if (xp < 0) return 0;
+
+  int level = 0;
+  while (getXpForLevel(level+1) < xp)
+    ++level;
+
+  return level;
+
+  //int level = (int)xp / LEVELUP_PLAYER_LINEAR_FACTOR;
+  //if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
+  //if (level < 0) return 0;
+  //return level;
+}
+
+//--------------------------------------------------------------------------
+u32 getXpForLevel(int level)
+{
+  if (level > LEVELUP_MAX_LEVEL) level = LEVELUP_MAX_LEVEL;
+  if (level <= 0) return 0;
+  
+  int i = 0;
+  u32 xp = 0;
+  while (i < level) {
+    i++;
+    xp += LEVELUP_PLAYER_LINEAR_FACTOR + floorf(i / (float)LEVELUP_PLAYER_STEP_EVERY)*LEVELUP_PLAYER_STEP_FACTOR;
+  }
+
+  return xp;
+}
+
+//--------------------------------------------------------------------------
+int getProficiencyFromXp(double xp)
+{
+  // 1/5 (-10 + sqrt(x + 100))
+  double level = (sqrt(xp + (double)100.0) - (double)10.0) / (double)5.0;
+  
+  if (level < 0) return 0;
+  if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
+  return (int)level;
+}
+
+//--------------------------------------------------------------------------
+double getXpForProficiency(int proficiency)
+{
+  if (proficiency > LEVELUP_MAX_LEVEL) proficiency = LEVELUP_MAX_LEVEL;
+  if (proficiency <= 0) return 0;
+  return (double)powf(5*proficiency, 2) + 100*proficiency;
+}
+
+//--------------------------------------------------------------------------
+int getAmmoRefillCost(Player* player)
+{
+  if (!player || !player->GadgetBox) return -1;
+  if (!MapConfig.GetAmmoRefillCostFunc) return -1;
+
+  return MapConfig.GetAmmoRefillCostFunc(player);
+}
+
+//--------------------------------------------------------------------------
+void replenishAmmo(Player* player)
 {
   // if any weapon ran out of ammo, return back to max
-  int i;
-  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
-    Player* player = playerGetFromSlot(i);
-    if (!player || !player->GadgetBox) continue;
+  if (!player || !player->GadgetBox) return;
 
-    int j;
-    for (j = WEAPON_SLOT_VIPERS; j < WEAPON_SLOT_COUNT; ++j) {
-      int gadgetId = weaponSlotToId(j);
-      if (player->GadgetBox->Gadgets[gadgetId].Level >= 0 && player->GadgetBox->Gadgets[gadgetId].Ammo <= 0) {
-        player->GadgetBox->Gadgets[gadgetId].Ammo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
-      }
+  int j;
+  for (j = WEAPON_SLOT_VIPERS; j < WEAPON_SLOT_COUNT; ++j) {
+    int gadgetId = weaponSlotToId(j);
+    int maxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
+    if (player->GadgetBox->Gadgets[gadgetId].Level >= 0 && player->GadgetBox->Gadgets[gadgetId].Ammo < maxAmmo) {
+      player->GadgetBox->Gadgets[gadgetId].Ammo = maxAmmo;
     }
   }
 }
@@ -423,4 +555,47 @@ void * mobyGetClassPtr(int oClass)
 {
   int mClass = *(u8*)(0x0024a110 + oClass);
   return *(u32*)(0x002495c0 + mClass*4);
+}
+
+//--------------------------------------------------------------------------
+void blowCorn(Moby* moby)
+{
+  if (!moby || !moby->PClass) return;
+
+  int cornCob = *(short*)(moby->PClass + 0x2e);
+  if (!cornCob) return;
+
+  mobyBlowCorn(
+    moby
+  , cornCob
+  , 0
+  , 3.0
+  , 6.0
+  , 3.0
+  , 6.0
+  , -1
+  , -1.0
+  , -1.0
+  , 255
+  , 1
+  , 0
+  , 1
+  , 1.0
+  , 0x23
+  , 3
+  , 1.0
+  , NULL
+  , 0
+  );
+}
+
+//--------------------------------------------------------------------------
+int countBits(u32 value)
+{
+  int bits = 0;
+  while (value) {
+    if (value&1) ++bits;
+    value >>= 1;
+  }
+  return bits;
 }

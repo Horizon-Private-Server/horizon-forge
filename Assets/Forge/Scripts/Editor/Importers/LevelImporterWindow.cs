@@ -88,7 +88,7 @@ public class LevelImporterWindow : EditorWindow
     string mapName = "New Map";
     string wadPath = "";
 
-    bool ImportMergeRequireUnpack => importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0 || importMobys > 0 || importMisc > 0 || importWorldConfig > 0;
+    bool ImportMergeRequireUnpack => importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0 || importMobys > 0 || importMisc > 0 || importWorldConfig > 0 || importMinimap > 0;
 
     [MenuItem("Forge/Tools/Importers/Open Level Importer")]
     public static void CreateNewWindow()
@@ -428,9 +428,9 @@ public class LevelImporterWindow : EditorWindow
         root.BuildRow("World Lighting", (container) =>
         {
             var field = new DropdownField();
-            field.choices = AssetLimitedImportOptions;
+            field.choices = AssetImportOptions;
             field.index = importWorldConfig;
-            field.RegisterValueChangedCallback((e) => importWorldConfig = AssetLimitedImportOptions.IndexOf(e.newValue));
+            field.RegisterValueChangedCallback((e) => importWorldConfig = AssetImportOptions.IndexOf(e.newValue));
             container.Add(field);
         });
 
@@ -853,7 +853,7 @@ public class LevelImporterWindow : EditorWindow
             FindAndSetHillCuboidTypes(destMapBinFolder, destMapFolder, assetImports, rootGo);
 
             // create map render object
-            CreateMapRenderObject(destMapBinFolder, destMapFolder);
+            CreateMapRenderObject(destMapBinFolder, GetLevelId());
 
             // create dzo object
             CreateDZOObject(destMapBinFolder, destMapFolder);
@@ -941,6 +941,7 @@ public class LevelImporterWindow : EditorWindow
         var destMapHUDFolder = Path.Combine(destMapFolder, FolderNames.HUDFolder);
         var destMinimapPath = Path.Combine(destMapHUDFolder, $"minimap-rc{ImportSourceRacVersion()}-{GetSelectedLevelName()}.png");
         var destLoadingScreenPath = Path.Combine(destMapHUDFolder, $"loadingscreen-rc{ImportSourceRacVersion()}-{GetSelectedLevelName()}.png");
+        var selectedLevelId = GetLevelId();
 
         var rootGo = new GameObject(GetInputLevelName());
         rootGo.transform.SetAsFirstSibling();
@@ -970,7 +971,7 @@ public class LevelImporterWindow : EditorWindow
             UpdateImportProgressBar(ImportStage.Preparing_Level_WAD);
             if (ImportSourceIsIso())
             {
-                ExtractWadFromISO(GetSelectedIsoPath(), GetLevelId(), destMapWadFile);
+                ExtractWadFromISO(GetSelectedIsoPath(), selectedLevelId, destMapWadFile);
             }
             else if (ImportSourceIsWad())
             {
@@ -978,10 +979,19 @@ public class LevelImporterWindow : EditorWindow
                 var worldWadPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".world");
                 var soundWadPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".sound");
 
+                // use base map of selected map, if there is a match .version file
+                var versionPath = Path.Combine(Path.GetDirectoryName(wadPath), Path.GetFileNameWithoutExtension(wadPath) + ".version");
+                if (File.Exists(versionPath))
+                {
+                    var versionBytes = File.ReadAllBytes(versionPath);
+                    if (versionBytes != null && versionBytes.Length > 5)
+                        selectedLevelId = versionBytes[4]; // version is always at +4 in .version file
+                }
+
                 chunkId = 0;
-                ExtractWadFromISO(GetSelectedIsoPath(), GetLevelId(), destMapWadFile);
+                ExtractWadFromISO(GetSelectedIsoPath(), selectedLevelId, destMapWadFile);
                 File.Copy(wadPath, destMapWadFile, true);
-                if (File.Exists(worldWadPath)) File.Copy(worldWadPath, Path.Combine(Path.GetDirectoryName(destMapWadFile), $"level{GetLevelId()}.2.wad"), true);
+                if (File.Exists(worldWadPath)) File.Copy(worldWadPath, Path.Combine(Path.GetDirectoryName(destMapWadFile), $"level{selectedLevelId}.2.wad"), true);
                 if (File.Exists(soundWadPath)) File.Copy(soundWadPath, Path.Combine(Path.GetDirectoryName(destMapWadFile), "sound.bnk"), true);
             }
 
@@ -1018,23 +1028,23 @@ public class LevelImporterWindow : EditorWindow
             if (importMobys > 0) ImportMobyInstances(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importMisc == 1) ImportCuboids(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importMisc == 1) ImportSplines(tempMapBinFolder, destMapFolder, postActions, rootGo);
-            if (importMisc == 1) ImportCameras(destMapBinFolder, destMapFolder, postActions, rootGo);
-            if (importMisc == 1) ImportAmbientSounds(destMapBinFolder, destMapFolder, postActions, rootGo);
+            if (importMisc == 1) ImportCameras(tempMapBinFolder, destMapFolder, postActions, rootGo);
+            if (importMisc == 1) ImportAmbientSounds(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importMisc == 1 && ImportSourceIsDL()) ImportAreas(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importTfrags == 1) ImportTfrags(destMapBinFolder, destMapFolder, assetImports, rootGo);
-            if (reimportOcclusion) ImportOcclusion(destMapBinFolder, destMapFolder, assetImports, rootGo);
-            if (importWorldConfig == 1) ImportWorldConfig(destMapBinFolder, destMapFolder, assetImports, rootGo);
+            if (reimportOcclusion) ImportOcclusion(tempMapBinFolder, destMapFolder, assetImports, rootGo);
+            if (importWorldConfig == 1) ImportWorldConfig(tempMapBinFolder, destMapFolder, assetImports, rootGo);
 
             if (ImportSourceIsIso())
             {
                 if (importMinimap == 1)
                 {
-                    PackerHelper.ExtractMinimap(GetSelectedIsoPath(), destMinimapPath, GetLevelId(), ImportSourceRacVersion());
+                    PackerHelper.ExtractMinimap(GetSelectedIsoPath(), destMinimapPath, selectedLevelId, ImportSourceRacVersion());
                 }
 
                 if (importLoadingScreen == 1)
                 {
-                    PackerHelper.ExtractTransitionBackground(GetSelectedIsoPath(), destLoadingScreenPath, GetLevelId(), ImportSourceRacVersion());
+                    PackerHelper.ExtractTransitionBackground(GetSelectedIsoPath(), destLoadingScreenPath, selectedLevelId, ImportSourceRacVersion());
                 }
             }
             else
@@ -1055,6 +1065,16 @@ public class LevelImporterWindow : EditorWindow
                 {
                     if (ImportSourceRacVersion() == RCVER.DL)
                         PackerHelper.ConvertLoadingScreenToPng(bgPath, destLoadingScreenPath);
+                }
+            }
+
+            if (importMinimap == 1)
+            {
+                // create map render object
+                var mapRenderGo = CreateMapRenderObject(tempMapBinFolder, selectedLevelId);
+                if (mapRenderGo)
+                {
+                    mapRenderGo.transform.SetParent(rootGo.transform, true);
                 }
             }
 
@@ -1203,80 +1223,99 @@ public class LevelImporterWindow : EditorWindow
         var levelId = GetLevelId();
         var bResult = false;
 
+        var unpackSounds = importMobys > 0;
+        var unpackAssets = importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
+        var unpackGameplay = importMobys > 0 || importWorldConfig > 0 || importMisc > 0;
+        var unpackOcclusion = importTies > 0 || importTfrags > 0 || importMobys > 0;
+        var unpackWorldInstances = importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
+        var unpackCollision = importCollision > 0;
+
         // decompress and unpack level wad
         UpdateImportProgressBar(ImportStage.Unpacking_Level_WAD);
         var scResult = PackerHelper.DecompressAndUnpackLevelWad(wadPath, workingDir);
         if (!CheckResult(scResult, $"Failed to unpack level wad: {scResult}.")) return false;
 
         // unpack sounds
-        if (racVersion == RCVER.DL || racVersion == RCVER.UYA)
+        if (unpackSounds)
         {
-            UpdateImportProgressBar(ImportStage.Unpacking_Sounds);
-            scResult = PackerHelper.UnpackSounds(Path.Combine(workingDir, "sound.bnk"), soundsFolder, racVersion);
-            if (!CheckResult(scResult, $"Failed to unpack sounds: {scResult}.")) return false;
+            if (racVersion == RCVER.DL || racVersion == RCVER.UYA)
+            {
+                UpdateImportProgressBar(ImportStage.Unpacking_Sounds);
+                scResult = PackerHelper.UnpackSounds(Path.Combine(workingDir, "sound.bnk"), soundsFolder, racVersion);
+                if (!CheckResult(scResult, $"Failed to unpack sounds: {scResult}.")) return false;
+            }
         }
 
         // unpack assets
-        UpdateImportProgressBar(ImportStage.Unpacking_Assets);
-        scResult = PackerHelper.UnpackAssets(workingDir, assetsFolder, racVersion);
-        if (!CheckResult(scResult, $"Failed to unpack assets: {scResult}.")) return false;
-
-        // unpack chunk
-        if (chunkId > 0)
+        if (unpackAssets)
         {
-            UpdateImportProgressBar(ImportStage.Unpacking_Chunk);
-            scResult = PackerHelper.UnpackChunk(Path.Combine(workingDir, $"chunk{chunkId}.wad"), assetsFolder);
-            if (!CheckResult(scResult, $"Failed to unpack chunk: {scResult}.")) return false;
+            UpdateImportProgressBar(ImportStage.Unpacking_Assets);
+            scResult = PackerHelper.UnpackAssets(workingDir, assetsFolder, racVersion);
+            if (!CheckResult(scResult, $"Failed to unpack assets: {scResult}.")) return false;
 
-            // move unpacked chunk terrain.bin into terrain folder
-            var outTerrainBin = Path.Combine(workingDir, FolderNames.BinaryTerrainBinFile);
-            var chunkTerrainBin = Path.Combine(assetsFolder, FolderNames.BinaryChunkTerrainBinFile);
-            if (File.Exists(outTerrainBin)) File.Delete(outTerrainBin);
-            if (File.Exists(chunkTerrainBin)) File.Move(chunkTerrainBin, outTerrainBin);
-        }
+            // unpack chunk
+            if (chunkId > 0)
+            {
+                UpdateImportProgressBar(ImportStage.Unpacking_Chunk);
+                scResult = PackerHelper.UnpackChunk(Path.Combine(workingDir, $"chunk{chunkId}.wad"), assetsFolder);
+                if (!CheckResult(scResult, $"Failed to unpack chunk: {scResult}.")) return false;
 
-        // unpack sky
-        UpdateImportProgressBar(ImportStage.Unpacking_Sky);
-        var skyBinFile = Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyBinFile);
-        if (File.Exists(skyBinFile))
-        {
-            bResult = WrenchHelper.ExportSky(Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyBinFile), Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyFolder), racVersion);
-            if (!CheckResult(bResult, $"Failed to unpack sky.")) return false;
+                // move unpacked chunk terrain.bin into terrain folder
+                var outTerrainBin = Path.Combine(workingDir, FolderNames.BinaryTerrainBinFile);
+                var chunkTerrainBin = Path.Combine(assetsFolder, FolderNames.BinaryChunkTerrainBinFile);
+                if (File.Exists(outTerrainBin)) File.Delete(outTerrainBin);
+                if (File.Exists(chunkTerrainBin)) File.Move(chunkTerrainBin, outTerrainBin);
+            }
+
+            // unpack sky
+            UpdateImportProgressBar(ImportStage.Unpacking_Sky);
+            var skyBinFile = Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyBinFile);
+            if (File.Exists(skyBinFile))
+            {
+                bResult = WrenchHelper.ExportSky(Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyBinFile), Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyFolder), racVersion);
+                if (!CheckResult(bResult, $"Failed to unpack sky.")) return false;
+            }
         }
 
         // unpack gameplay
-        UpdateImportProgressBar(ImportStage.Unpacking_Gameplay);
-        scResult = PackerHelper.UnpackGameplay(workingDir, Path.Combine(workingDir, FolderNames.BinaryGameplayFolder), levelId, racVersion);
-        if (!CheckResult(scResult, $"Failed to unpack gameplay: {scResult}.")) return false;
+        if (unpackGameplay)
+        {
+            UpdateImportProgressBar(ImportStage.Unpacking_Gameplay);
+            scResult = PackerHelper.UnpackGameplay(workingDir, Path.Combine(workingDir, FolderNames.BinaryGameplayFolder), levelId, racVersion);
+            if (!CheckResult(scResult, $"Failed to unpack gameplay: {scResult}.")) return false;
+        }
 
         // unpack world instances
-        if (racVersion == RCVER.DL)
+        if (unpackWorldInstances)
         {
-            UpdateImportProgressBar(ImportStage.Unpacking_World_Instances);
-            scResult = PackerHelper.UnpackWorldInstances(workingDir, worldInstanceFolder, racVersion);
-            if (!CheckResult(scResult, $"Failed to unpack world instances: {scResult}.")) return false;
+            if (racVersion == RCVER.DL)
+            {
+                UpdateImportProgressBar(ImportStage.Unpacking_World_Instances);
+                scResult = PackerHelper.UnpackWorldInstances(workingDir, worldInstanceFolder, racVersion);
+                if (!CheckResult(scResult, $"Failed to unpack world instances: {scResult}.")) return false;
 
-            // unpack world instances ties
-            UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Ties);
-            scResult = PackerHelper.UnpackWorldInstanceTies(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceTiesFolder(racVersion)), racVersion);
-            if (!CheckResult(scResult, $"Failed to unpack world instance ties: {scResult}.")) return false;
+                // unpack world instances ties
+                UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Ties);
+                scResult = PackerHelper.UnpackWorldInstanceTies(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceTiesFolder(racVersion)), racVersion);
+                if (!CheckResult(scResult, $"Failed to unpack world instance ties: {scResult}.")) return false;
 
-            // unpack world instances shrubs
-            UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Shrubs);
-            scResult = PackerHelper.UnpackWorldInstanceShrubs(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceShrubsFolder(racVersion)), racVersion);
-            if (!CheckResult(scResult, $"Failed to unpack world instance shrubs: {scResult}.")) return false;
-        }
-        else
-        {
-            // unpack world instances ties
-            UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Ties);
-            scResult = PackerHelper.UnpackWorldInstanceTies(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceTiesFolder(racVersion)), racVersion);
-            if (!CheckResult(scResult, $"Failed to unpack world instance ties: {scResult}.")) return false;
+                // unpack world instances shrubs
+                UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Shrubs);
+                scResult = PackerHelper.UnpackWorldInstanceShrubs(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceShrubsFolder(racVersion)), racVersion);
+                if (!CheckResult(scResult, $"Failed to unpack world instance shrubs: {scResult}.")) return false;
+            }
+            else
+            {
+                // unpack world instances ties
+                UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Ties);
+                scResult = PackerHelper.UnpackWorldInstanceTies(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceTiesFolder(racVersion)), racVersion);
+                if (!CheckResult(scResult, $"Failed to unpack world instance ties: {scResult}.")) return false;
 
-            // unpack world instances shrubs
-            UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Shrubs);
-            scResult = PackerHelper.UnpackWorldInstanceShrubs(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceShrubsFolder(racVersion)), racVersion);
-            if (!CheckResult(scResult, $"Failed to unpack world instance shrubs: {scResult}.")) return false;
+                // unpack world instances shrubs
+                UpdateImportProgressBar(ImportStage.Unpacking_World_Instance_Shrubs);
+                scResult = PackerHelper.UnpackWorldInstanceShrubs(worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceShrubsFolder(racVersion)), racVersion);
+                if (!CheckResult(scResult, $"Failed to unpack world instance shrubs: {scResult}.")) return false;
+            }
         }
 
         // unpack code
@@ -1285,17 +1324,23 @@ public class LevelImporterWindow : EditorWindow
         if (!CheckResult(scResult, $"Failed to unpack code: {scResult}.")) return false;
 
         // unpack occlusion
-        UpdateImportProgressBar(ImportStage.Unpacking_Occlusion);
-        scResult = PackerHelper.UnpackOcclusion(Path.Combine(workingDir, FolderNames.BinaryOcclusionFile), worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceOcclusionFolder(racVersion)), racVersion);
-        if (!CheckResult(scResult, $"Failed to unpack occlusion: {scResult}.")) return false;
+        if (unpackOcclusion)
+        {
+            UpdateImportProgressBar(ImportStage.Unpacking_Occlusion);
+            scResult = PackerHelper.UnpackOcclusion(Path.Combine(workingDir, FolderNames.BinaryOcclusionFile), worldInstanceFolder, Path.Combine(workingDir, FolderNames.GetWorldInstanceOcclusionFolder(racVersion)), racVersion);
+            if (!CheckResult(scResult, $"Failed to unpack occlusion: {scResult}.")) return false;
+        }
 
         // unpack collision
-        UpdateImportProgressBar(ImportStage.Unpacking_Collision);
-        var collisionBinFile = Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinaryCollisionBinFile);
-        scResult = PackerHelper.ConvertCollision(collisionBinFile, collisionBinFile, racVersion, 4);
-        if (!CheckResult(scResult, $"Failed to convert collision: {scResult}.")) return false;
-        bResult = WrenchHelper.ExportCollision(collisionBinFile, Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinaryAssetsFolder));
-        if (!CheckResult(bResult, $"Failed to unpack collision.")) return false;
+        if (unpackCollision)
+        {
+            UpdateImportProgressBar(ImportStage.Unpacking_Collision);
+            var collisionBinFile = Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinaryCollisionBinFile);
+            scResult = PackerHelper.ConvertCollision(collisionBinFile, collisionBinFile, racVersion, 4);
+            if (!CheckResult(scResult, $"Failed to convert collision: {scResult}.")) return false;
+            bResult = WrenchHelper.ExportCollision(collisionBinFile, Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinaryAssetsFolder));
+            if (!CheckResult(bResult, $"Failed to unpack collision.")) return false;
+        }
 
         return true;
     }
@@ -2742,19 +2787,19 @@ public class LevelImporterWindow : EditorWindow
 
     #endregion
 
-    void CreateMapRenderObject(string mapBinFolder, string mapResourcesFolder)
+    GameObject CreateMapRenderObject(string mapBinFolder, int levelId)
     {
         var prefab = UnityHelper.GetMiscPrefab("Map Render");
-        if (!prefab) return;
+        if (!prefab) return null;
 
         var mapRenderGo = Instantiate(prefab);
-        if (!mapRenderGo) return;
+        if (!mapRenderGo) return null;
 
         mapRenderGo.name = "Map Render";
         mapRenderGo.transform.SetSiblingIndex(2);
         var mapRender = mapRenderGo.GetComponent<MapRender>();
         var mapConfig = FindObjectOfType<MapConfig>();
-        if (!mapConfig) return;
+        if (!mapConfig) return null;
 
         var codeSegBinFile = Path.Combine(mapBinFolder, FolderNames.BinaryCodeFolder, "code.0002.bin");
         if (File.Exists(codeSegBinFile))
@@ -2763,10 +2808,12 @@ public class LevelImporterWindow : EditorWindow
             {
                 using (var reader = new BinaryReader(fs))
                 {
-                    mapRender.Read(reader, ImportSourceIsDL() ? (int)mapConfig.DLBaseMap : (int)mapConfig.UYABaseMap, ImportSourceRacVersion(), GameRegion.NTSC);
+                    mapRender.Read(reader, levelId, ImportSourceRacVersion(), GameRegion.NTSC);
                 }
             }
         }
+
+        return mapRenderGo;
     }
 
     void CreateDZOObject(string mapBinFolder, string mapResourcesFolder)

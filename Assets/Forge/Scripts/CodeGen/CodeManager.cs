@@ -10,7 +10,6 @@ using UnityEngine.SceneManagement;
 public class CodeManager : MonoBehaviour
 {
     public bool Enabled = false;
-    public bool DebugBuild = true;
 
     public async Task<bool> Build(string map, int racVersion)
     {
@@ -20,6 +19,7 @@ public class CodeManager : MonoBehaviour
 #if DOCKER
         var manager = DockerManager.GetOrCreate();
         if (!manager) return false;
+        manager.Validate();
         if (!manager.ContainerStarting() && !manager.ContainerReady()) await manager.Run();
 
         // waiting on docker container
@@ -44,7 +44,7 @@ public class CodeManager : MonoBehaviour
 #endif
     }
 
-    public bool Generate()
+    public bool Generate(ForgeBuilder.RebuildContext ctx, CodeGenState state)
     {
         var scene = SceneManager.GetActiveScene();
         if (scene == null) return false;
@@ -53,9 +53,8 @@ public class CodeManager : MonoBehaviour
         if (!mapConfig) return false;
 
         // only DL is supported atm
-        if (mapConfig.FirstRacVersion != RCVER.DL && mapConfig.SecondRacVersion != RCVER.DL) return false;
+        if (ctx.RacVersion != RCVER.DL) return false;
 
-        var state = new CodeGenState();
         state.Includes.Add($"#include \"common.h\"");
         state.ObjectFiles.Add("src/main.o");
         state.ObjectFiles.Add("src/common.o");
@@ -65,14 +64,13 @@ public class CodeManager : MonoBehaviour
         var outIncludeDir = Path.Combine(outDir, FolderNames.CodeBuildIncludeFolder);
         var outSrcDir = Path.Combine(outDir, FolderNames.CodeBuildSrcFolder);
         var cMainPath = Path.Combine(outSrcDir, "main.c");
-        var makefilePath = Path.Combine(outDir, "Makefile");
 
         // build src dir
         if (!Directory.Exists(outIncludeDir)) Directory.CreateDirectory(outIncludeDir);
         if (!Directory.Exists(outSrcDir)) Directory.CreateDirectory(outSrcDir);
 
         // pass to generators
-        var generators = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<ICodeGen>()).Where(x => x != null).ToArray();
+        var generators = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<ICodeGen>()).Where(x => x != null).OrderBy(x => x.CodeGenOrder).ToArray();
         foreach (var generator in generators)
         {
             if (!generator.IsEnabled) continue;
@@ -93,17 +91,34 @@ public class CodeManager : MonoBehaviour
             ;
         File.WriteAllText(cMainPath, cMainContent);
 
+        // update linkfile
+        var linkfilePath = Path.Combine(outDir, "linkfile");
+        var linkfileContent = File.ReadAllText(linkfilePath)
+            .Replace("##ADDRESS##", state.SeparateCodeFile ? "0x01B80000" : "0x01EF0000")
+            ;
+        File.WriteAllText(linkfilePath, linkfileContent);
+
+
         // update makefile
-        var makefileContent = File.ReadAllText(makefilePath)
+        var makefileInPath = Path.Combine(outDir, state.SeparateCodeFile ? "Makefile.code" : "Makefile");
+        var makefileOutPath = Path.Combine(outDir, "Makefile");
+        var makefileContent = File.ReadAllText(makefileInPath)
             .Replace("##EEOBJS##", string.Join(" ", state.ObjectFiles))
             .Replace("##EELDFLAGS##", string.Join(" ", state.LDFlags))
-            .Replace("##EEBUILD##", this.DebugBuild ? "DEBUG" : "RELEASE")
+            .Replace("##EEBUILD##", state.Debug ? "DEBUG" : "RELEASE")
+            .Replace("##MAPNAME##", mapConfig.MapFilename)
             ;
-        File.WriteAllText(makefilePath, makefileContent);
+        File.WriteAllText(makefileOutPath, makefileContent);
 
         // write hook
         File.WriteAllBytes(Path.Combine(outDir, "hook.bin"), BitConverter.GetBytes(0x08000000 | (0x01EF0000 >> 2)));
+
         return true;
+    }
+
+    public void PostBuild(CodeGenState state)
+    {
+
     }
 
     string Indent(string str, int indent)
@@ -161,6 +176,9 @@ public class CodeManager : MonoBehaviour
 
 public class CodeGenState
 {
+    public bool Debug { get; set; } = false;
+    public bool SeparateCodeFile { get; set; } = false;
+
     // main.c
     public List<string> Includes { get; set; } = new List<string>();
     public List<string> Declarations { get; set; } = new List<string>();
@@ -172,4 +190,7 @@ public class CodeGenState
     // makefile
     public List<string> ObjectFiles { get; set; } = new List<string>();
     public List<string> LDFlags { get; set; } = new List<string>();
+
+    // extra
+    public Dictionary<string, List<string>> Meta { get; set; } = new Dictionary<string, List<string>>();
 }

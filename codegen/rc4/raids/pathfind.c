@@ -10,6 +10,7 @@
 #include "pathfind.h"
 
 #define PATH_EDGE_IS_EMPTY(x)               (x == 255)
+#define PATH_GET_JUMP_AT(x)                 (x / 65535.0)
 #define CLOSEST_NODES_COLL_CHECK_SIZE       (3)
 
 #if GATE
@@ -17,6 +18,12 @@ void gateSetCollision(int collActive);
 #endif
 
 int mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby);
+
+//--------------------------------------------------------------------------
+int pathUseTargetMoby(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
+{
+  return moveVars->Target && !moveVars->ForceUseTargetPosition;
+}
 
 //--------------------------------------------------------------------------
 struct PathGraph* pathGetMobyPathGraph(Moby* moby, struct MobMoveVars* moveVars)
@@ -31,12 +38,35 @@ struct PathGraph* pathGetMobyPathGraph(Moby* moby, struct MobMoveVars* moveVars)
 }
 
 //--------------------------------------------------------------------------
+void pathGetNodePosition(struct PathGraph* path, int nodeIdx, float preferredHeight, VECTOR output)
+{
+  vector_write(output, 0);
+  if (!path || nodeIdx < 0 || nodeIdx >= path->NumNodes) return;
+
+  vector_copy(output, path->Nodes[nodeIdx]);
+  output[3] = 0;
+  output[2] += minf(preferredHeight, path->Heights[nodeIdx]);
+}
+
+//--------------------------------------------------------------------------
 u8* pathGetPathAt(struct PathGraph* path, int fromNodeIdx, int toNodeIdx)
 {
   int pathIdx = (fromNodeIdx * path->NumNodes) + toNodeIdx;
   u32 addr = (u32)path->Paths;
 
   return (u8*)(addr + pathIdx * path->MaxPathNodeCount);
+}
+
+//--------------------------------------------------------------------------
+u8* pathGetEdge(struct PathGraph* path, u8 edge)
+{
+  if (!path)
+    return NULL;
+
+  if (PATH_EDGE_IS_EMPTY(edge))
+    return NULL;
+
+  return (u8*)path->Edges[edge];
 }
 
 //--------------------------------------------------------------------------
@@ -51,22 +81,32 @@ void pathGetSegment(struct PathGraph* path, u8* currentEdge, VECTOR fromNodePos,
 }
 
 //--------------------------------------------------------------------------
-float pathGetSegmentAlpha(struct PathGraph* path, Moby* moby, u8* currentEdge)
+float pathGetSegmentAlpha(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, u8* currentEdge, float* outHeightLimit)
 {
   VECTOR startNodeToEndNode, startNodeToMoby;
 
   if (!moby || !currentEdge || !path) return 0;
 
   // get vectors from start node to end node and moby
-  vector_subtract(startNodeToEndNode, path->Nodes[currentEdge[0]], path->Nodes[currentEdge[1]]);
+  vector_subtract(startNodeToEndNode, path->Nodes[currentEdge[1]], path->Nodes[currentEdge[0]]);
+  vector_subtract(startNodeToMoby, moby->Position, path->Nodes[currentEdge[0]]);
   startNodeToEndNode[3] = 0;
-  vector_subtract(startNodeToMoby, path->Nodes[currentEdge[0]], moby->Position);
   startNodeToMoby[3] = 0;
 
   // project startToMoby on startToEnd
   float edgeLen = vector_length(startNodeToEndNode);
   float distOnEdge = vector_length(startNodeToMoby) * vector_innerproduct(startNodeToEndNode, startNodeToMoby);
-  return clamp(distOnEdge / edgeLen, 0, 1);
+  float alpha = clamp(distOnEdge / edgeLen, 0, 1);
+
+  if (outHeightLimit) {
+    float heightAlpha = clamp((distOnEdge+path->Nodes[currentEdge[1]][3]) / edgeLen, 0, 1);
+    float fromHeight = minf(path->Heights[currentEdge[0]] / 256.0, moveVars->PreferredHeight);
+    float toHeight = minf(path->Heights[currentEdge[1]] / 256.0, moveVars->PreferredHeight);
+    float limit = lerpf(fromHeight, toHeight, clamp(heightAlpha + 0.25, 0, 1));
+    *outHeightLimit = maxf(0, limit - 1); // need to factor in mob height, so that this limit is the ceiling, not the floor of the mob
+    //DPRINTF("%d=>%d (%f) -> %f\n", currentEdge[0], currentEdge[1], alpha, limit);
+  }
+  return alpha;
 }
 
 //--------------------------------------------------------------------------
@@ -83,8 +123,8 @@ int pathCanStartNodeBeSkipped(struct PathGraph* path, Moby* moby, struct MobMove
   // AND we're not after that jump
   // then circle back, we failed the jump
   // otherwise allow skipping
-  float alpha = pathGetSegmentAlpha(path, moby, startEdge);
-  float jumpAt = path->EdgesJumpAt[startEdgeIdx] / 255.0;
+  float alpha = pathGetSegmentAlpha(path, moby, moveVars, startEdge, NULL);
+  float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[startEdgeIdx]);
   if (path->EdgesJumpSpeed[startEdgeIdx] > 0 && alpha >= jumpAt)
     return 0;
 
@@ -118,7 +158,7 @@ int pathSegmentCanBeSkipped(struct PathGraph* path, Moby* moby, struct MobMoveVa
 
   // check if current edge is required or there is a jump we haven't reached
   edge = moveVars->CurrentPath[segmentStartEdgeIdx];
-  float jumpAt = path->EdgesJumpAt[edge] / 255.0;
+  float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edge]);
   float requiredAt = path->EdgesRequired[edge] / 255.0;
   if ((requiredAt > 0 && segmentStartAlpha <= requiredAt) || (path->EdgesJumpSpeed[edge] > 0 && segmentStartAlpha <= jumpAt))
     return 0;
@@ -164,7 +204,7 @@ int pathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby, struct MobMove
 
   // check if current edge is required or there is a jump we haven't reached
   edge = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
-  float jumpAt = path->EdgesJumpAt[edge] / 255.0;
+  float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edge]);
   float requiredAt = path->EdgesRequired[edge] / 255.0;
   if ((requiredAt > 0 && moveVars->PathEdgeAlpha <= requiredAt) || (path->EdgesJumpSpeed[edge] > 0 && moveVars->LastPathEdgeAlphaForJump <= jumpAt))
     return 0;
@@ -176,7 +216,7 @@ int pathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby, struct MobMove
 
     if (path->EdgesRequired[edge] > 0 || path->EdgesJumpSpeed[edge] > 0) {
 #if DEBUGPATH
-      DPRINTF("CANNOT SKIP PATH WITH JUMP %d=>%d\n", path->Edges[edge][0], path->Edges[edge][1]);
+      DPRINTF("CANNOT SKIP PATH WITH REQUIRED/JUMP %d=>%d\n", path->Edges[edge][0], path->Edges[edge][1]);
 #endif
       return 0;
     }
@@ -369,7 +409,7 @@ int pathShouldFindNewPath(struct PathGraph* path, Moby* moby, struct MobMoveVars
   }
 
   int closestNodeIdxToTarget = 0;
-  if (moveVars->Target) {
+  if (pathUseTargetMoby(path, moby, moveVars)) {
     closestNodeIdxToTarget = pathTargetCacheGetClosestNodeIdx(path, moveVars->Target);
   } else {
     closestNodeIdxToTarget = pathGetClosestNodeIdx(path, moveVars->TargetPosition);
@@ -383,16 +423,91 @@ int pathShouldFindNewPath(struct PathGraph* path, Moby* moby, struct MobMoveVars
 }
 
 //--------------------------------------------------------------------------
-int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
+int pathBuildPath(struct PathGraph* path, int fromNodeIdx, int toNodeIdx, u8* outPath, int maxLength)
+{
+  // aggregate path by connecting segments from start to end
+  int currentNodeIdx = fromNodeIdx;
+  int lastCurrentNodeIdx = -1;
+  int i = 0;
+  int j = 0;
+  memset(outPath, -1, maxLength);
+  while (currentNodeIdx != toNodeIdx) {
+    if (j >= maxLength) break;
+    if (lastCurrentNodeIdx == currentNodeIdx) break; // prevent inf loop
+
+    lastCurrentNodeIdx = currentNodeIdx;
+    u8* pathSegment = pathGetPathAt(path, currentNodeIdx, toNodeIdx);
+    for (i = 0; j < maxLength && i < path->MaxPathNodeCount; ++i) {
+      u8 edge = pathSegment[i];
+      if (PATH_EDGE_IS_EMPTY(edge))
+        break;
+
+      outPath[j++] = edge;
+      u8* segment = pathGetEdge(path, edge);
+      currentNodeIdx = segment[1];
+    }
+  }
+
+  return j;
+}
+
+//--------------------------------------------------------------------------
+void pathSetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd)
 {
   int i;
+  if (!moby || !moveVars || !path)
+    return;
+
+  int maxLength = sizeof(moveVars->CurrentPath) / sizeof(u8);
+  moveVars->PathEdgeCount = pathBuildPath(path, fromNodeIdx, toNodeIdx, moveVars->CurrentPath, maxLength);
+  //memcpy(moveVars->CurrentPath, pathGetPathAt(path, fromNodeIdx, toNodeIdx), sizeof(u8) * path->MaxPathNodeCount);
+  if (moveVars->PathEdgeCurrent != currentOnPath) {
+    moveVars->PathEdgeAlpha = 0;
+  }
+  
+  moveVars->PathEdgeCurrent = currentOnPath;
+  moveVars->PathHasReachedStart = hasReachedStart;
+  moveVars->PathHasReachedEnd = hasReachedEnd;
+  moveVars->PathStartEndNodes[0] = toNodeIdx;
+  moveVars->PathStartEndNodes[1] = fromNodeIdx;
+  moveVars->PathTicks = 0;
+  moveVars->WasStuckTicks = moveVars->IsStuck ? (TPS * 4) : 0;
+  
+  // update height
+  moveVars->CurrentHeightLimit = moveVars->PreferredHeight;
+  u8* currentEdge = pathGetCurrentEdge(path, moby, moveVars);
+  if (currentEdge) {
+    moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, currentEdge, &moveVars->CurrentHeightLimit);
+  }
+
+#if DEBUGPATH && DEBUG
+  DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
+  DPRINTF("\tFROM NODE %d (skip:%d,%d)\n", fromNodeIdx, moveVars->PathHasReachedStart, moveVars->IsStuck);
+  DPRINTF("\tTO NODE %d\n", toNodeIdx);
+  DPRINTF("\tNODES: ");
+  
+  // count path length
+  for (i = 0; i < moveVars->PathEdgeCount; ++i) {
+    int edgeIdx = moveVars->CurrentPath[i];
+    u8 * edge = path->Edges[edgeIdx];
+    DPRINTF("%d->%d, ", edge[0], edge[1]);
+  }
+  DPRINTF("\n");
+#endif
+
+}
+
+//--------------------------------------------------------------------------
+int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
+{
+  int i,j;
   int inSight = 0;
   if (!moby || !moveVars || !path)
     return 0;
 
   // target closest node should be calculated and cached per frame in pathTick
   int closestNodeIdxToTarget = 0;
-  if (moveVars->Target) {
+  if (pathUseTargetMoby(path, moby, moveVars)) {
     closestNodeIdxToTarget = pathTargetCacheGetClosestNodeIdx(path, moveVars->Target);
   } else {
     closestNodeIdxToTarget = pathGetClosestNodeIdx(path, moveVars->TargetPosition);
@@ -410,7 +525,9 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
       lastEdgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent - 1];
   }
 
-  memcpy(moveVars->CurrentPath, pathGetPathAt(path, closestNodeIdxToMob, closestNodeIdxToTarget), sizeof(u8) * path->MaxPathNodeCount);
+  // aggregate path by connecting segments from start to end
+  int maxLength = sizeof(moveVars->CurrentPath) / sizeof(u8);
+  moveVars->PathEdgeCount = pathBuildPath(path, closestNodeIdxToMob, closestNodeIdxToTarget, moveVars->CurrentPath, maxLength);
   moveVars->PathEdgeCurrent = 0;
   moveVars->PathEdgeAlpha = 0;
   moveVars->PathHasReachedStart = 0;
@@ -419,13 +536,6 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   moveVars->PathStartEndNodes[1] = closestNodeIdxToMob;
   moveVars->WasStuckTicks = moveVars->IsStuck ? (TPS * 4) : 0;
    
-  // count path length
-  for (i = 0; i < path->MaxPathNodeCount; ++i) {
-    if (PATH_EDGE_IS_EMPTY(moveVars->CurrentPath[i]))
-      break;
-  }
-  moveVars->PathEdgeCount = i;
-
   // check if we're on same segment as last
   int isOnSameSegment = 0;
   if (!PATH_EDGE_IS_EMPTY(lastEdgeIdx)) {
@@ -460,12 +570,19 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
     moveVars->PathHasReachedStart = 1;
   }
 
-  // mark mob dirty to send path to others
-  //if (pvars->MobVars.Owner == gameGetMyClientId()) {
-  //  pvars->MobVars.Dirty = 1;
-  //}
+  // update height
+  moveVars->CurrentHeightLimit = moveVars->PreferredHeight;
+  u8* currentEdge = pathGetCurrentEdge(path, moby, moveVars);
+  if (currentEdge) {
+    moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, currentEdge, &moveVars->CurrentHeightLimit);
+  }
 
-#if DEBUGPATH
+  // mark mob dirty to send path to others
+  // if (pvars->MobVars.Owner == gameGetMyClientId()) {
+  //   pvars->MobVars.Dirty = 1;
+  // }
+
+#if DEBUGPATH && DEBUG
   DPRINTF("NEW PATH GENERATED: (%d) for %08X\n", gameGetTime(), (u32)moby);
   DPRINTF("\tFROM NODE %d (skip:%d,%d,%d,%d)\n", closestNodeIdxToMob, moveVars->PathHasReachedStart, canBeSkipped, isOnSameSegment, moveVars->IsStuck);
   DPRINTF("\tTO NODE %d\n", closestNodeIdxToTarget);
@@ -482,31 +599,6 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
 #endif
 
   return 1;
-}
-
-//--------------------------------------------------------------------------
-void pathSetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd)
-{
-  int i;
-  if (!moby || !moveVars || !path)
-    return;
-
-  memcpy(moveVars->CurrentPath, pathGetPathAt(path, fromNodeIdx, toNodeIdx), sizeof(u8) * path->MaxPathNodeCount);
-  if (moveVars->PathEdgeCurrent != currentOnPath) {
-    moveVars->PathEdgeAlpha = 0;
-  }
-  moveVars->PathEdgeCurrent = currentOnPath;
-  moveVars->PathHasReachedStart = hasReachedStart;
-  moveVars->PathHasReachedEnd = hasReachedEnd;
-  moveVars->PathStartEndNodes[0] = toNodeIdx;
-  moveVars->PathStartEndNodes[1] = fromNodeIdx;
-  
-  // count path length
-  for (i = 0; i < path->MaxPathNodeCount; ++i) {
-    if (PATH_EDGE_IS_EMPTY(moveVars->CurrentPath[i]))
-      break;
-  }
-  moveVars->PathEdgeCount = i;
 }
 
 //--------------------------------------------------------------------------
@@ -600,8 +692,20 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
   VECTOR up = {0,0,1,0};
   VECTOR targetNodePos, delta;
   VECTOR from, to, edgeDir;
-  if (!moby || !path || !moveVars)
+  if (!moby || !moveVars)
     return 0;
+
+  // no path, go straight to target
+  if (!path) {
+    if (moveVars->Target && !moveVars->ForceUseTargetPosition) {
+      vector_copy(output, moveVars->Target->Position);
+    } else {
+      vector_copy(output, moveVars->TargetPosition);
+    }
+    vector_copy(moveVars->LastTargetPos, output);
+    moveVars->CurrentHeightLimit = PATHGRAPH_MAX_HEIGHT_LIMIT;
+    return 0;
+  }
 
   int isStuck = (moveVars->IsStuck && moveVars->StuckCounter > 1) || moveVars->WasStuckTicks;
 
@@ -623,16 +727,16 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
 
   // delay next getTargetPos until next tick
   moveVars->PathTicks = 1;
-  moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, pathGetCurrentEdge(path, moby, moveVars));
+  moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, pathGetCurrentEdge(path, moby, moveVars), &moveVars->CurrentHeightLimit);
 
   // new path
-  if (moveVars->PathNewTicks == 0 && pathShouldFindNewPath(path, moby, moveVars)) {
+  if (moveVars->PathNewTicks == 0 && moveVars->IsOwner && pathShouldFindNewPath(path, moby, moveVars)) {
     newPath = pathGetPath(path, moby, moveVars);
     moveVars->PathNewTicks = 255;
   }
 
   // set default output
-  if (moveVars->Target) {
+  if (pathUseTargetMoby(path, moby, moveVars)) {
     vector_copy(moveVars->TargetPosition, moveVars->Target->Position);
   }
   
@@ -643,6 +747,14 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     vector_copy(moveVars->LastTargetPos, output);
     return newPath;
   }
+
+  // jump from
+  // VECTOR jumpFromPos, jumpFromRot;
+  // if (pathGetJumpFromPosition(path, moby, moveVars, jumpFromPos, jumpFromRot)) {
+  //   vector_copy(output, jumpFromPos);
+  //   vector_copy(moveVars->LastTargetPos, output);
+  //   return newPath;
+  // }
 
   // check if we can just go straight to the target
   if (!isStuck && moveVars->PathEdgeCount > 0 && !moveVars->PathCheckNearAndSeeTargetTicks && !moveVars->PathHasReachedEnd) {
@@ -673,6 +785,7 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
       
       if (lockOntoPlayer && pathCanBeSkippedForTarget(path, moby, moveVars)) {
         moveVars->PathEdgeCurrent = moveVars->PathEdgeCount;
+        //moveVars->CurrentHeightLimit = minf(moveVars->PreferredHeight, path->Heights[moveVars->PathStartEndNodes[0]]/256.0);
       }
     } else if (moveVars->PathEdgeCurrent && moveVars->PathEdgeCurrent == moveVars->PathEdgeCount) {
       newPath = pathGetPath(path, moby, moveVars);
@@ -696,9 +809,17 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     vector_projectonhorizontal(delta, delta);
     float tDist = vector_length(delta);
 
+
+    int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
+    float jumpSpeed = path->EdgesJumpSpeed[edgeIdx];
+    float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edgeIdx]);
+    if (jumpSpeed > 0 && !moveVars->PathHasReachedStart && moveVars->PathEdgeAlpha > jumpAt && !moveVars->QueueJumpSpeed) {
+      // prevent counting reached node until we've reset the jump at
+    }
+
     // reached target node
     //DPRINTF("r:%f dist:%f 3:%f\n", radius, hDist, delta[3]);
-    if (hDist < (radius + 0.5) && tDist < (0.5 + moveVars->CollRadius)) {
+    else if (hDist < (radius + 0.5) && tDist < (0.5 + moveVars->CollRadius)) {
       if (moveVars->PathEdgeCurrent == 0 && !moveVars->PathHasReachedStart) {
         moveVars->PathHasReachedStart = 1;
       //} else if (moveVars->PathEdgeCurrent == (moveVars->PathEdgeCount-1) && !moveVars->PathHasReachedEnd) {
@@ -740,10 +861,15 @@ int pathGetTargetPos(struct PathGraph* path, VECTOR output, Moby* moby, struct M
     return newPath;
   }
 
+  // lerp height
+  //float fromHeight = path->Heights[targetNodeIdx]/256.0;
+  //float toHeight = path->Heights[moveVars->CurrentPath[moveVars->PathEdgeCurrent+1]]/256.0;
+  //moveVars->CurrentHeightLimit = lerpf(fromHeight, toHeight, moveVars->PathEdgeAlpha);
+  //vector_scale(heightOffset, up, minf(moveVars->PreferredHeight, moveVars->CurrentHeightLimit));
+
   // get point
   pathGetClosestPointOnNode(path, output, moby->Position, moveVars->TargetPosition, targetNodeIdx, moveVars->CurrentPath[moveVars->PathEdgeCurrent+1], moveVars->CollRadius);
   vector_copy(moveVars->LastTargetPos, output);
-
   return newPath;
 }
 
@@ -805,6 +931,55 @@ float pathGetJumpSpeed(struct PathGraph* path, Moby* moby, struct MobMoveVars* m
 }
 
 //--------------------------------------------------------------------------
+int pathGetJumpFromPosition(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars, VECTOR outPos, VECTOR outRot)
+{
+  if (!moby || !moveVars || !path)
+    return 0;
+
+  // no path
+  if (!moveVars->PathEdgeCount) {
+    return 0;
+  }
+
+  // reached end
+  if (moveVars->PathHasReachedEnd) {
+    return 0;
+  }
+
+  u8* currentEdge = pathGetCurrentEdge(path, moby, moveVars);
+  if (currentEdge) {
+
+    // check if edge has jump
+    int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
+    float jumpSpeed = path->EdgesJumpSpeed[edgeIdx];
+    float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edgeIdx]);
+
+    if (jumpSpeed <= 0 || moveVars->LastPathEdgeAlphaForJump > jumpAt)
+      return 0;
+
+    VECTOR delta;
+    vector_subtract(delta, path->Nodes[currentEdge[1]], path->Nodes[currentEdge[0]]);
+    delta[3] = 0;
+
+    // compute position along edge to jump at
+    if (outPos) {
+      vector_scale(delta, delta, jumpAt);
+      vector_add(outPos, path->Nodes[currentEdge[0]], delta);
+      outPos[3] = 0;
+    }
+
+    // get rotation of edge (yaw)
+    if (outRot) {
+      vector_write(outRot, 0);
+      outRot[2] = atan2f(delta[1], delta[0]);
+    }
+    return 1;
+  }
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 int pathShouldJump(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars)
 {
   if (!moby || !moveVars || !path)
@@ -826,15 +1001,21 @@ int pathShouldJump(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveV
     // check if edge has jump
     int edgeIdx = moveVars->CurrentPath[moveVars->PathEdgeCurrent];
     float jumpSpeed = path->EdgesJumpSpeed[edgeIdx];
-    float jumpAt = path->EdgesJumpAt[edgeIdx] / 255.0;
+    float jumpAt = PATH_GET_JUMP_AT(path->EdgesJumpAt[edgeIdx]);
     float lastDistOnEdge = moveVars->LastPathEdgeAlphaForJump;
     
     // get segment alpha if we haven't refreshed the path this tick
-    if (!moveVars->PathTicks)
-      moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, currentEdge);
+    //if (!moveVars->PathTicks)
+    moveVars->PathEdgeAlpha = pathGetSegmentAlpha(path, moby, moveVars, currentEdge, &moveVars->CurrentHeightLimit);
 
     // update
     moveVars->LastPathEdgeAlphaForJump = moveVars->PathEdgeAlpha;
+    
+#if DEBUG && DEBUGPATH && 0
+    if (jumpSpeed > 0 && lastDistOnEdge < jumpAt) {
+      printf("jump alpha %f/%f\n", moveVars->PathEdgeAlpha, jumpAt);
+    }
+#endif
 
     // we've stepped over threshold for when to jump in the last frame
     if (jumpSpeed > 0 && lastDistOnEdge <= jumpAt && moveVars->PathEdgeAlpha > jumpAt) {

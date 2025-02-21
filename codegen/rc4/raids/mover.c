@@ -36,7 +36,11 @@
 #include "mob.h"
 #include "game.h"
 
-#define DLOG(moby, format, ...) if (((struct MoverPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG(moby, format, ...) if (((struct MoverPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG(moby, format, ...) 
+#endif
 
 int moverInitialized = 0;
 
@@ -44,7 +48,83 @@ int moverInitialized = 0;
 float moverGetT(Moby* moby)
 {
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
-  return (gameGetTime() - pvars->State.TimeStarted) / 1000.0;
+  if (moby->State == MOVER_STATE_PAUSED) return pvars->State.TimePausedT;
+  return pvars->State.TimeOffset + ((gameGetTime() - pvars->State.TimeStarted) / 1000.0);
+}
+
+//--------------------------------------------------------------------------
+int moverWrapSplineIdx(Moby* moby, int idx, int dir)
+{
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  
+  if (pvars->AttachedType != MOVER_ATTACHED_SPLINE) return idx;
+  if (pvars->AttachedToSplineIdx < 0) return idx;
+
+  Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
+  if (!spline || spline->Count <= 0) return idx;
+
+  int nextIdx = idx + dir;
+  if (nextIdx < 0 && pvars->SplineLoop == MOVER_MOTION_PING_PONG) nextIdx = -nextIdx;
+  else if (nextIdx < 0) nextIdx += spline->Count;
+
+  return nextIdx % spline->Count;
+}
+
+//--------------------------------------------------------------------------
+float moverGetTurnEase(VECTOR outRot, Moby* moby, int currIdx, int dir, float dist, float seglen)
+{
+  VECTOR dtCurr, dtLast, dtNext, r0, r1, up = {0,0,1,0};
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
+
+  int lastIdx = moverWrapSplineIdx(moby, currIdx, -dir);
+  int nextIdx = moverWrapSplineIdx(moby, currIdx, dir);
+  int nextIdx2 = moverWrapSplineIdx(moby, nextIdx, dir);
+
+  vector_subtract(dtCurr, spline->Points[nextIdx], spline->Points[currIdx]);
+  vector_subtract(dtNext, spline->Points[nextIdx2], spline->Points[nextIdx]);
+  vector_subtract(dtLast, spline->Points[currIdx], spline->Points[lastIdx]);
+
+  // handle case where spline loops with duplicate start & end nodes
+  if (vector_sqrmag(dtNext) < 0.00001) {
+    nextIdx2 = moverWrapSplineIdx(moby, nextIdx2, dir);
+    vector_subtract(dtNext, spline->Points[nextIdx2], spline->Points[nextIdx]);
+  }
+
+  // handle case where spline loops with duplicate start & end nodes
+  if (vector_sqrmag(dtLast) < 0.00001) {
+    lastIdx = moverWrapSplineIdx(moby, lastIdx, -dir);
+    vector_subtract(dtLast, spline->Points[currIdx], spline->Points[lastIdx]);
+  }
+
+  float lastSegLen = vector_length(dtLast);
+  float segT = (dist / seglen);
+  float rDist = dist + 0.5;
+  float rTotalDist = (lastSegLen*0.5) + (seglen*0.5);
+  if (segT < 0.5) {
+    vector_fromforwardup(r0, dtLast, up);
+    vector_fromforwardup(r1, dtCurr, up);
+
+    rDist = dist;
+  } else {
+    vector_fromforwardup(r0, dtCurr, up);
+    vector_fromforwardup(r1, dtNext, up);
+    rDist = dist - seglen;
+  }
+
+  // cubic ease in&out
+  float rT = clamp(0.5 + (rDist * pvars->SplineTurnSpeed * (1/60.0)), 0, 1);
+  if (rT < 0.5) {
+    rT = 4 * rT * rT * rT;
+  } else {
+    float f = (2*rT) - 2;
+    rT = 0.5 * f * f * f + 1;
+  }
+
+  // lerp
+  outRot[0] = lerpfAngle(r0[0], r1[0], rT);
+  outRot[1] = lerpfAngle(r0[1], r1[1], rT);
+  outRot[2] = lerpfAngle(r0[2], r1[2], rT);
 }
 
 //--------------------------------------------------------------------------
@@ -67,21 +147,65 @@ void moverInitSpline(Moby* moby)
   int i;
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
-  if (pvars->SplineIdx < 0) return;
-  Spline3D_t* spline = splineGetSpline(pvars->SplineIdx);
+  if (pvars->AttachedType != MOVER_ATTACHED_SPLINE) return;
+  if (pvars->AttachedToSplineIdx < 0) return;
+  Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
   if (!spline || spline->Count <= 0) return;
 
   // reset direction
   pvars->State.CurrentSplineDir = 1;
+  pvars->State.TimeOffset = 0;
 
-  // snap to  
-  if (pvars->SplineInitSnapTo) {
+  // snap to pos
+  VECTOR snapToPos;
+  vector_copy(snapToPos, spline->Points[0]);
+
+  // randomize start point
+  int startIdx = 0;
+  float startEdgeT = 0;
+  if (pvars->SplineRandomizeStart) {
+    GameSettings* gs = gameGetSettings();
+    randSeed(gs->GameLoadStartTime);
+    startIdx = rand(spline->Count);
+    startEdgeT = pvars->SplineRandomizeStart == MOVER_RANDSPLINE_VERTEX ? 0 : randRange(0, 1);
+
+    // not using spline movement, just snap to point on spline
+    if (pvars->SplineSpeed == 0) {
+      // handle edge case where random point is after end node on non-looping spline
+      // just clamp to end node
+      if (startIdx == (spline->Count-1) && pvars->SplineLoop != MOVER_MOTION_LOOP)
+        startEdgeT = 0;
+
+      vector_lerp(snapToPos, spline->Points[startIdx], spline->Points[(startIdx+1) % spline->Count], startEdgeT);
+    }
+  }
+
+  // calculate length of spline
+  VECTOR dt;
+  for (i = 0; i < (spline->Count-1); ++i) {
+    if (i == startIdx && pvars->SplineRandomizeStart && pvars->SplineSpeed != 0) {
+      pvars->State.TimeOffset = pvars->State.CurrentSplineLen / pvars->SplineSpeed;
+    }
+
+    vector_subtract(dt, spline->Points[i], spline->Points[i+1]);
+    pvars->State.CurrentSplineLen += vector_length(dt);
+  }
+
+  // handle case where start idx is last node
+  if (startIdx == (spline->Count-1) && pvars->SplineRandomizeStart && pvars->SplineSpeed != 0) {
+    pvars->State.TimeOffset = pvars->State.CurrentSplineLen / pvars->SplineSpeed;
+  }
+
+  DLOG(moby, "start idx:%d edgeT:%f (t:%f len:%f)\n", startIdx, startEdgeT, pvars->State.TimeOffset, pvars->State.CurrentSplineLen);
+
+  // snap to
+  if (pvars->AttachedInitSnapTo) {
     for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
       if (pvars->MobyTargets[i]) {
-        vector_copy(pvars->MobyTargets[i]->Position, spline->Points[0]);
+        vector_copy(pvars->MobyTargets[i]->Position, snapToPos);
       }
       if (pvars->CuboidTargets[i] >= 0) {
-        vector_copy(&spawnPointGet(pvars->CuboidTargets[i])->M0[12], spline->Points[0]);
+        vector_copy(&spawnPointGet(pvars->CuboidTargets[i])->M0[12], snapToPos);
       }
     }
   }
@@ -96,8 +220,14 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   float t = moverGetT(moby);
 
-  Spline3D_t* spline = splineGetSpline(pvars->SplineIdx);
+  if (pvars->AttachedType != MOVER_ATTACHED_SPLINE) return;
+  if (pvars->AttachedToSplineIdx < 0) return;
+
+  Spline3D_t* spline = splineGetSpline(pvars->AttachedToSplineIdx);
   if (!spline || spline->Count <= 0) return;
+
+  int startIdx = 0;
+  int endIdx = spline->Count - 1;
 
   // determine direction
   if (!pvars->State.CurrentSplineDir) {
@@ -120,8 +250,8 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   // handle special looping rules
   if (pvars->SplineLoop == MOVER_MOTION_NONE && iter > 0) {
     if (dir > 0) { // stop at cap node (or start node, 0,0,0 rel)
-      vector_subtract(outPosDelta, spline->Points[spline->Count - 1], spline->Points[0]);
-      vector_subtract(dt, spline->Points[spline->Count - 1], spline->Points[spline->Count - 2]);
+      vector_subtract(outPosDelta, spline->Points[endIdx], spline->Points[startIdx]);
+      vector_subtract(dt, spline->Points[endIdx], spline->Points[endIdx - 1]);
       vector_fromforwardup(outRotDelta, dt, up);
     }
 
@@ -138,18 +268,85 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   dist = dist - (iter * pvars->State.CurrentSplineLen);
   for (i = 0; i < (spline->Count-1); ++i) {
     int idx = (dir < 0) ? (spline->Count - i - 1) : i;
-    vector_subtract(dt, spline->Points[idx+dir], spline->Points[idx]);
+    int nextIdx = idx + dir;
+    int lastIdx = idx - dir;
+    if (lastIdx < 0 && pvars->SplineLoop == MOVER_MOTION_PING_PONG) lastIdx = -lastIdx;
+    else if (lastIdx < 0) lastIdx += spline->Count;
+    vector_subtract(dt, spline->Points[nextIdx], spline->Points[idx]);
     float seglen = vector_length(dt);
     if (seglen > dist) {
-      vector_fromforwardup(outRotDelta, dt, up);
+
+      // compute last rotation, lerp from last to current
+      VECTOR r0, r1, dt2;
+      if (pvars->SplineTurnSpeed > 0) {
+        moverGetTurnEase(outRotDelta, moby, idx, dir, dist, seglen);
+      } else {
+        vector_fromforwardup(outRotDelta, dt, up);
+      }
+
       vector_scale(dt, dt, dist / seglen);
       vector_add(dt, dt, spline->Points[idx]);
-      vector_subtract(outPosDelta, dt, spline->Points[0]);
+      vector_subtract(outPosDelta, dt, spline->Points[startIdx]);
+      vector_copy(moby->Position, dt);
       break;
     }
 
     dist -= seglen;
   }
+  
+}
+
+//--------------------------------------------------------------------------
+void moverInitMoby(Moby* moby)
+{
+  int i;
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+
+  if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
+  if (!pvars->AttachedToMoby || mobyIsDestroyed(pvars->AttachedToMoby)) {
+    pvars->AttachedToMoby = NULL;
+    return;
+  }
+
+  // snap to  
+  if (pvars->AttachedInitSnapTo) {
+    for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
+      if (pvars->MobyTargets[i]) {
+        vector_copy(pvars->MobyTargets[i]->Position, pvars->AttachedToMoby->Position);
+      }
+      if (pvars->CuboidTargets[i] >= 0) {
+        vector_copy(&spawnPointGet(pvars->CuboidTargets[i])->M0[12], pvars->AttachedToMoby->Position);
+      }
+    }
+  }
+
+  vector_copy(pvars->State.MobyLastPosition, pvars->AttachedToMoby->Position);
+  vector_copy(pvars->State.MobyLastRotation, pvars->AttachedToMoby->Rotation);
+}
+
+//--------------------------------------------------------------------------
+void moverMoveMoby(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
+{
+  VECTOR dt;
+  VECTOR up = {0,0,1,0};
+  int i;
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+
+  if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
+
+  Moby* attachedToMoby = pvars->AttachedToMoby;
+  if (!attachedToMoby || mobyIsDestroyed(attachedToMoby)) {
+    pvars->AttachedToMoby = NULL;
+    return;
+  }
+
+  vector_subtract(outPosDelta, attachedToMoby->Position, pvars->State.MobyLastPosition);
+  vector_add(outPosDelta, outPosDelta, pvars->State.LastAppliedPositionDelta);
+  vector_subtract(outRotDelta, attachedToMoby->Rotation, pvars->State.MobyLastRotation);
+  vector_add(outRotDelta, outRotDelta, pvars->State.LastAppliedRotationDelta);
+  vector_copy(pvars->State.MobyLastPosition, attachedToMoby->Position);
+  vector_copy(pvars->State.MobyLastRotation, attachedToMoby->Rotation);
+  vector_copy(moby->Position, attachedToMoby->Position);
 }
 
 //--------------------------------------------------------------------------
@@ -159,13 +356,21 @@ void moverMove(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   VECTOR splinePosDelta={0,0,0,0}, splineRotDelta={0,0,0,0};
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
-  // spline
-  if (pvars->SplineIdx >= 0) {
-    moverMoveSpline(moby, splinePosDelta, splineRotDelta);
+  switch (pvars->AttachedType) {
+    case MOVER_ATTACHED_SPLINE:
+    {
+      moverMoveSpline(moby, splinePosDelta, splineRotDelta);
+      break;
+    }
+    case MOVER_ATTACHED_MOBY:
+    {
+      moverMoveMoby(moby, splinePosDelta, splineRotDelta);
+      break;
+    }
   }
 
   // don't rotate if not align
-  if (!pvars->SplineAlign) {
+  if (!pvars->AttachedAlign) {
     vector_write(splineRotDelta, 0);
   }
 
@@ -210,14 +415,14 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   if (!target) return;
 
+  vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
+  vector_add(rotation, rotation, rotDelta);
+  vector_clampeuler(rotation, rotation);
+
   // remove last applied position delta, and apply our newly calculated one
   // this lets the target moby move independently (ie we aren't forcing its position)
   vector_subtract(position, target->Position, pvars->State.LastAppliedPositionDelta);
   vector_add(position, position, posDelta);
-
-  vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
-  vector_add(rotation, rotation, rotDelta);
-  vector_clampeuler(rotation, rotation);
 
   // since MP doesn't have proper support for ground moby tracking
   // ie Ratchet won't stick to a moving platform like in Singleplayer
@@ -226,12 +431,13 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* p = players[i];
     if (!p || !p->SkinMoby || !p->PlayerMoby || p->Ground.pMoby != target) continue;
+    if (p->Ground.dist > 0.1) continue;
 
     // transform player position to target local space
     // apply new transformation
     // transform back to world space
     MATRIX w2l, l2w;
-    VECTOR pos;
+    VECTOR pos, dt;
     matrix_unit(w2l);
     memcpy(w2l, target->M0_03, 3 * sizeof(VECTOR));
     matrix_transpose(w2l, w2l);
@@ -245,15 +451,29 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
     vector_apply(pos, pos, l2w);
     vector_add(pos, pos, position);
 
+    int j;
+    vector_subtract(dt, pos, p->PlayerPosition);
+    for (j = 0; j < 6; ++j) {
+      if (p->Gadgets[j].pMoby) {
+        vector_add(p->Gadgets[j].pMoby->Position, p->Gadgets[j].pMoby->Position, dt);
+      }
+      if (p->Gadgets[j].pMoby2) {
+        vector_add(p->Gadgets[j].pMoby2->Position, p->Gadgets[j].pMoby2->Position, dt);
+      }
+    }
+    
     vector_copy(p->PlayerPosition, pos);
     vector_copy(p->PlayerMoby->Position, pos);
     vector_copy(p->Ground.point, pos);
+
     p->Ground.stickLanding = 5;
   }
 
   vector_copy(target->Position, position);
   vector_copy(target->Rotation, rotation);
-  mobyUpdateTransform(target);
+  if ((target->ModeBits & MOBY_MODE_BIT_NO_POST_UPDATE) == 0) {
+    mobyUpdateTransform(target);
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -283,7 +503,9 @@ void moverOnStateChanged(Moby* moby)
   
   if (moby->State == MOVER_STATE_ACTIVATED) {
     //pvars->State.TimeStarted = time;
-    moverInitSpline(moby);
+    //moverInitSpline(moby);
+  } else if (moby->State == MOVER_STATE_PAUSED) {
+
   } else {
     memset(&pvars->State, 0, sizeof(pvars->State));
     pvars->State.TimeStarted = -1;
@@ -362,6 +584,7 @@ void moverUpdate(Moby* moby)
 
   vector_copy(pvars->State.LastAppliedPositionDelta, posDelta);
   vector_copy(pvars->State.LastAppliedRotationDelta, rotDelta);
+  vector_copy(pvars->State.MoverLastPosition, moby->Position);
 }
 
 //--------------------------------------------------------------------------
@@ -379,22 +602,13 @@ void moverOnGuberCreated(Moby* moby)
   pvars->State.TimeStarted = -1;
   
   // update pvars target references
-  Moby* mobyStart = mobyListGetStart();
   for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
-    int mobyIdx = (int)pvars->MobyTargets[i];
-    if (mobyIdx < 0) {
-      pvars->MobyTargets[i] = NULL;
-      continue;
-    }
+    pvars->MobyTargets[i] = mobyGetFromIdxOrNull((int)pvars->MobyTargets[i]);
+    DLOG(moby, "mover %08X found target %d %08X\n", (u32)moby, i, (u32)pvars->MobyTargets[i]);
+  }
 
-    Moby* targetMoby = mobyStart + mobyIdx;
-    if (mobyIsDestroyed(targetMoby)) {
-      pvars->MobyTargets[i] = NULL;
-      continue;
-    }
-
-    DLOG(moby, "mover %08X found target %d %08X\n", (u32)moby, i, (u32)targetMoby);
-    pvars->MobyTargets[i] = targetMoby;
+  if (pvars->AttachedType == MOVER_ATTACHED_MOBY) {
+    pvars->AttachedToMoby = mobyGetFromIdxOrNull((int)pvars->AttachedToMoby);
   }
 }
 
@@ -405,15 +619,25 @@ int moverHandleEvent_SetState(Moby* moby, GuberEvent* event)
   if (!moby || !moby->PVar)
     return 0;
 
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  int lastState = moby->State;
+  float moverT = moverGetT(moby);
+
 	// read event
 	guberEventRead(event, &state, 4);
 	guberEventRead(event, &time, 4);
   mobySetState(moby, state, -1);
-
-  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   pvars->Init = 1;
-  if (moby->State == MOVER_STATE_ACTIVATED) {
+  
+  // resume
+  if (lastState == MOVER_STATE_PAUSED && state == MOVER_STATE_ACTIVATED) {
+    pvars->State.TimeStarted = time - (int)(moverT * 1000);
+  } else if (moby->State == MOVER_STATE_ACTIVATED) {
     pvars->State.TimeStarted = time;
+    moverInitSpline(moby);
+    moverInitMoby(moby);
+  } else if (moby->State == MOVER_STATE_PAUSED) {
+    pvars->State.TimePausedT = moverT;
   }
 
   return 0;

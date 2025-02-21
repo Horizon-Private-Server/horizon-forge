@@ -43,4 +43,10 @@ public class RaidsGateMoby : MonoBehaviour, IRenderHandlePrefab
         m_Moby.transform.localScale = Vector3.one;
         this.transform.localScale = new Vector3(1, m_Height, m_Length);
     }
+
+    public void DrawGizmos()
+    {
+
+    }
+
 }

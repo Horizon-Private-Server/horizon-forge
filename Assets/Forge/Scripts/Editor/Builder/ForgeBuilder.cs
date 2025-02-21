@@ -49,7 +49,7 @@ public static class ForgeBuilder
     [MenuItem("Forge/Builder/Build DZO Files")]
     public static void CommandBuildDZOFiles()
     {
-        BuildDZOFiles(EditorSceneManager.GetActiveScene());
+        _ = BuildDZOFiles(EditorSceneManager.GetActiveScene());
     }
 
     static bool RebuildLevelProgress(RebuildContext ctx, string info, float progress)
@@ -224,6 +224,11 @@ public static class ForgeBuilder
                     Region = region
                 };
 
+                // reset build dir
+                var buildPath = FolderNames.GetMapBuildFolder(ctx.MapSceneName, ctx.RacVersion);
+                if (Directory.Exists(buildPath)) Directory.Delete(buildPath, true);
+                Directory.CreateDirectory(buildPath);
+
                 // run generators
                 UnityHelper.RunGeneratorsPreBake(BakeType.BUILD);
 
@@ -350,23 +355,26 @@ public static class ForgeBuilder
         if (!Directory.Exists(buildPath)) Directory.CreateDirectory(buildPath);
 
         // copy files
-        if (File.Exists(wadPath)) File.Copy(wadPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.wad"), true);
-        if (!string.IsNullOrEmpty(worldPath) && File.Exists(worldPath)) File.Copy(worldPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.world"), true);
-        if (File.Exists(soundPath)) File.Copy(soundPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.sound"), true);
+        if (File.Exists(wadPath)) IOHelper.CopyFile(wadPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.wad"));
+        if (!string.IsNullOrEmpty(worldPath) && File.Exists(worldPath)) IOHelper.CopyFile(worldPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.world"));
+        if (File.Exists(soundPath)) IOHelper.CopyFile(soundPath, Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.sound"));
 
         // build version file
-        using (var fs = File.Create(Path.Combine(buildPath, $"{mapConfig.MapFilename}.version")))
+        var versionPath = Path.Combine(buildPath, $"{mapConfig.MapFilename}.version");
+        if (File.Exists(versionPath)) File.Delete(versionPath);
+        using (var fs = File.Create(versionPath))
         {
             using (var writer = new BinaryWriter(fs))
             {
                 // write header
                 if (ctx.RacVersion == RCVER.DL)
                 {
+                    var subsort = (customModeDatas.FirstOrDefault(x => x is RaidsModeData) as RaidsModeData)?.MinLevelRequired ?? 0;
+
                     writer.Write(mapConfig.MapVersion);
                     writer.Write((int)mapConfig.DLBaseMap);
                     writer.Write((short)mapConfig.DLForceCustomMode); // forced custom mode id
-                    writer.Write((byte)(mapConfig.DLHideFromMapList ? 1 : 0)); // hide
-                    writer.Write((byte)0); // padding
+                    writer.Write((short)subsort); // subsort
                     writer.Write((short)(customModeDatas?.Length ?? 0)); // extra data count
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);
@@ -454,6 +462,7 @@ public static class ForgeBuilder
                 System.IO.File.WriteAllBytes(tempPngPath, bytes);
 
                 var outBgFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.bg");
+                if (File.Exists(outBgFile)) File.Delete(outBgFile);
                 var result = PackerHelper.ConvertPngToLoadingScreen(tempPngPath, outBgFile);
                 if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                 {
@@ -1764,7 +1773,7 @@ public static class ForgeBuilder
 
     }
 
-    public static async Task RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder, bool buildCodeGen = true)
+    public static async Task RebuildCode(RebuildContext ctx, string resourcesFolder, string binFolder, bool buildCodeGen = true, bool codeGenBuildDebug = false)
     {
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var mapRender = GameObject.FindObjectOfType<MapRender>();
@@ -1772,6 +1781,9 @@ public static class ForgeBuilder
 
         if (!mapRender) return;
         if (!mapConfig) return;
+
+        if (RebuildLevelProgress(ctx, $"Rebuilding Code", 0.5f))
+            return;
 
         // copy code
         var codeFolder = Path.Combine(resourcesFolder, FolderNames.GetMapCodeFolder(ctx.RacVersion, ctx.Region));
@@ -1803,9 +1815,17 @@ public static class ForgeBuilder
             var codeManager = GameObject.FindObjectOfType<CodeManager>();
             if (codeManager && codeManager.Enabled)
             {
-                if (codeManager.Generate())
+                var state = new CodeGenState() { Debug = codeGenBuildDebug };
+                if (codeManager.Generate(ctx, state))
                 {
-                    await codeManager.Build(ctx.MapSceneName, ctx.RacVersion);
+                    if (await codeManager.Build(ctx.MapSceneName, ctx.RacVersion))
+                    {
+                        codeManager.PostBuild(state);
+                    }
+                    else
+                    {
+                        Debug.LogError("Failed to build. Make sure that Docker is running.");
+                    }
                 }
             }
         }
@@ -1889,7 +1909,7 @@ public static class ForgeBuilder
         }
     }
 
-    public static async void BuildDZOFiles(UnityEngine.SceneManagement.Scene scene)
+    public static async Task BuildDZOFiles(UnityEngine.SceneManagement.Scene scene)
     {
         // dzo is DL (rc4) only
         var binFolder = FolderNames.GetMapBinFolder(scene.name, 4);
@@ -1907,6 +1927,8 @@ public static class ForgeBuilder
         var outGlbFile = Path.Combine(buildFolder, $"{mapConfig.MapFilename}.dzo.glb");
         var outMetadataFile = Path.Combine(buildFolder, $"{mapConfig.MapFilename}.dzo.json");
         if (!Directory.Exists(buildFolder)) Directory.CreateDirectory(buildFolder);
+        if (File.Exists(outGlbFile)) File.Delete(outGlbFile);
+        if (File.Exists(outMetadataFile)) File.Delete(outMetadataFile);
 
         // export glb
         // export metadata on success

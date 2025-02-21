@@ -266,7 +266,7 @@ public class ForgeStartupWindow : EditorWindow
             var racVersion = racVersions[i];
             if (string.IsNullOrEmpty(iso)) continue;
 
-            ISOImporterWindow.ImportISO(iso, racVersion, true, true, true, true);
+            ISOImporterWindow.ImportISO(iso, racVersion, true, true, true, true, false);
         }
 
         // complete

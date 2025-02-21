@@ -56,6 +56,13 @@ public class DzoMapMetadata
         public float ShadowStrength;
     }
 
+    [Serializable]
+    public class StaticMeshMetadata
+    {
+        public string Name;
+        public float EmissiveIntensity;
+    }
+
     public string TieShrubTfragCombinedName;
     public string SkymeshName;
     public SkymeshShellMetadata[] SkymeshShells;
@@ -69,4 +76,5 @@ public class DzoMapMetadata
     public float FogFarDistance;
     public Color PostColorFilter;
     public float PostExposure;
+    public List<StaticMeshMetadata> Meshes = new List<StaticMeshMetadata>();
 }

@@ -290,7 +290,7 @@ enum CustomMessageId
     /*
      * 
      */
-    CUSTOM_MSG_ID_UPDATE_RAIDS_BANK_INVENTORY_REQUEST = 52,
+    CUSTOM_MSG_ID_UPDATE_RAIDS_BANK_INVENTORY_ITEM_REQUEST = 52,
 
     /*
      * 
@@ -311,6 +311,36 @@ enum CustomMessageId
      * 
      */
     CUSTOM_MSG_ID_GENERATE_RAIDS_LOOT_RESPONSE = 56,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_STORE_REQUEST = 57,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_BUY_STORE_ITEM_REQUEST = 58,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_GET_MAP_STATS_REQUEST = 59,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_SET_MAP_STATS_REQUEST = 60,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_SET_MISSION_COMPLETED_REQUEST = 61,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_BANK_EQUIPPED_INVENTORY_REQUEST = 62,
 
     /*
      * Start of custom message ids reserved for custom game modes.
@@ -564,6 +594,8 @@ typedef struct CustomDzoCommandDrawTextWindow
   float Y;
   float TextX;
   float TextY;
+  float Width;
+  float Height;
   float Scale;
   u32 Color;
   char Alignment;

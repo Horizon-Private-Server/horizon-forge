@@ -5,7 +5,7 @@
 #include "common.h"
 #include "messageid.h"
 
-#define OFFSET_TO_DZO_X(x) (x * (1080.0 / SCREEN_WIDTH));
+#define OFFSET_TO_DZO_X(x) (x * (1080.0 / SCREEN_HEIGHT));
 #define OFFSET_TO_DZO_Y(y) (y * (1080.0 / SCREEN_HEIGHT));
 
 //------------------------------------------------------------------------------
@@ -28,6 +28,33 @@ void helperAlign(float* pX, float* pY, float w, float h, enum TextAlign alignmen
     case TEXT_ALIGN_BOTTOMLEFT: y -= h; break;
     case TEXT_ALIGN_BOTTOMCENTER: x -= w * 0.5; y -= h; break;
     case TEXT_ALIGN_BOTTOMRIGHT: x -= w; y -= h; break;
+  }
+
+  if (pX) *pX = x;
+  if (pY) *pY = y;
+}
+
+//------------------------------------------------------------------------------
+void helperRealign(float* pX, float* pY, float w, float h, enum TextAlign fromAlignment, enum TextAlign toAlignment)
+{
+  if (fromAlignment == toAlignment) return;
+
+  float x = 0, y = 0;
+  if (pX) x = *pX;
+  if (pY) y = *pY;
+
+  helperAlign(&x, &y, w, h, fromAlignment);
+  switch (toAlignment)
+  {
+    case TEXT_ALIGN_TOPLEFT: break;
+    case TEXT_ALIGN_TOPCENTER: x += w * 0.5; break;
+    case TEXT_ALIGN_TOPRIGHT: x += w; break;
+    case TEXT_ALIGN_MIDDLELEFT: y += h * 0.5; break;
+    case TEXT_ALIGN_MIDDLECENTER: x += w * 0.5; y += h * 0.5; break;
+    case TEXT_ALIGN_MIDDLERIGHT: x += w; y += h * 0.5; break;
+    case TEXT_ALIGN_BOTTOMLEFT: y += h; break;
+    case TEXT_ALIGN_BOTTOMCENTER: x += w * 0.5; y += h; break;
+    case TEXT_ALIGN_BOTTOMRIGHT: x += w; y += h; break;
   }
 
   if (pX) *pX = x;
@@ -59,7 +86,7 @@ void gfxHelperDrawBox(float anchorX, float anchorY, float offsetX, float offsetY
     float x = anchorX + offsetX;
     float y = anchorY + offsetY;
     helperAlign(&x, &y, w, h, alignment);
-    gfxPixelSpaceBox(x, y, w, h, color);
+    gfxPixelSpaceBox(x, y, w, h+1, color);
   }
 }
 
@@ -85,7 +112,7 @@ void gfxHelperDrawBox_WS(VECTOR worldPosition, float w, float h, u32 color, enum
     if (dzoDrawType != COMMON_DZO_DRAW_ONLY) {
       float fx = x, fy = y;
       helperAlign(&fx, &fy, w, h, alignment);
-      gfxPixelSpaceBox(fx, fy, w, h, color);
+      gfxPixelSpaceBox(fx, fy, w, h+1, color);
     }
   }
 }
@@ -103,6 +130,7 @@ void gfxHelperDrawText(float anchorX, float anchorY, float offsetX, float offset
     textCmd.Color = color;
     textCmd.AnchorX = anchorX / SCREEN_WIDTH;
     textCmd.AnchorY = anchorY / SCREEN_HEIGHT;
+    memset(textCmd.Text, 0, sizeof(textCmd.Text));
     strncpy(textCmd.Text, str, (length >= 0 && length < 64) ? length : 64);
     PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT, sizeof(textCmd), &textCmd);
   }
@@ -127,6 +155,7 @@ void gfxHelperDrawText_WS(VECTOR worldPosition, float scale, u32 color, char* st
       textCmd.Scale = scale;
       textCmd.Alignment = alignment;
       textCmd.Color = color;
+      memset(textCmd.Text, 0, sizeof(textCmd.Text));
       strncpy(textCmd.Text, str, (length >= 0 && length < 64) ? length : 64);
       PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_WS_TEXT, sizeof(textCmd), &textCmd);
     }
@@ -143,7 +172,12 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
 {
   float fx = anchorX + offsetX;
   float fy = anchorY + offsetY;
-  helperAlign(&fx, &fy, width, height, alignment);
+  //helperAlign(&fx, &fy, width, height, alignment);
+
+  if (alignment >= TEXT_ALIGN_MIDDLELEFT && alignment <= TEXT_ALIGN_MIDDLERIGHT)
+    flags |= FONT_WINDOW_FLAGS_V_ALIGN_CENTER;
+  if ((alignment % 3) == 1)
+    flags |= FONT_WINDOW_FLAGS_H_ALIGN_CENTER;
 
   struct FontWindow fontWindow = {
     .windowLeft = fx,
@@ -156,17 +190,31 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
     .maxHeight = height,
     .lineSpacing = 16 * scale,
     .flags = flags,
+    //.subPixelX = (short)((fx + textOffsetX)*2) % 2,
+    //.subPixelY = (short)((fy + textOffsetY)*2) % 2,
     .shadowOffsetX = 1,
     .shadowOffsetY = 1
   };
 
+  if ((flags & FONT_WINDOW_FLAGS_V_ALIGN_CENTER)) {
+    fontWindow.windowTop = fy - height*0.5;
+    fontWindow.windowBottom = fy + height*0.5;
+  }
+
+  if ((flags & FONT_WINDOW_FLAGS_H_ALIGN_CENTER)) {
+    fontWindow.windowLeft = fx - width*0.5;
+    fontWindow.windowRight = fx + width*0.5;
+  }
+
   // pass to dzo
-  if (0 && dzoDrawType > 0 && PATCH_DZO_INTEROP_FUNCS && isInGame()) {
+  if (dzoDrawType > 0 && PATCH_DZO_INTEROP_FUNCS && isInGame()) {
     CustomDzoCommandDrawTextWindow_t textCmd;
     textCmd.X = OFFSET_TO_DZO_X(offsetX);
     textCmd.Y = OFFSET_TO_DZO_Y(offsetY);
     textCmd.TextX = OFFSET_TO_DZO_X(textOffsetX);
     textCmd.TextY = OFFSET_TO_DZO_Y(textOffsetY);
+    textCmd.Width = width / SCREEN_HEIGHT;
+    textCmd.Height = height / SCREEN_HEIGHT;
     textCmd.Scale = scale;
     textCmd.Alignment = alignment;
     textCmd.Flags = flags;
@@ -174,7 +222,7 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
     textCmd.AnchorX = anchorX / SCREEN_WIDTH;
     textCmd.AnchorY = anchorY / SCREEN_HEIGHT;
     strncpy(textCmd.Text, str, (length >= 0 && length < 256) ? length : 256);
-    //PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT_WINDOW, sizeof(textCmd), &textCmd);
+    PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT_WINDOW, sizeof(textCmd), &textCmd);
   }
 
   // draw

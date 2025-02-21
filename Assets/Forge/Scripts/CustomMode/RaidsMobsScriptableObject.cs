@@ -23,7 +23,10 @@ public class RaidsMobsScriptableObject : ScriptableObject
     public class RaidsMobsConfig
     {
         [ReadOnly] public RaidsMob Mob;
+        public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
+        public DLTeamIds BlipTeam = DLTeamIds.Red;
         public List<RaidsMobVariant> Variants;
+        public List<string> Behaviors;
 
         public int Xp = BASE_XP;
         public int Bolts = BASE_BOLTS;
@@ -40,6 +43,7 @@ public class RaidsMobsScriptableObject : ScriptableObject
         public float HealthMax = 0;
         public float HealthScale = 1;
 
+        public float TurnSpeed = 1;
         public float AttackRadius = 5;
         public float HitRadius = 0.5f;
         public float CollRadius = 0.5f;
@@ -53,7 +57,8 @@ public class RaidsMobsScriptableObject : ScriptableObject
     {
         public string Name;
         public int OClass;
-        public List<RaidsMobDependency> Dependencies;
+        public RaidsMobBangle Bangles;
+        public List<RaidsMobDependency> Dependencies = new List<RaidsMobDependency>();
 
         public RaidsMobVariant() { }
         public RaidsMobVariant(string name, int oClass, DLMapIds sourceMapId, int sourceMissionId)

@@ -20,20 +20,27 @@
 
 #include "game.h"
 #include "mob.h"
+#include "controller.h"
 #include "npc.h"
 #include "pathfind.h"
 #include "spawner.h"
 #include "maputils.h"
 #include "shared.h"
 
-#define DLOG(moby, format, ...) if (npcGetPVars(moby)->Parameters.Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG(moby, format, ...) if (npcGetPVars(moby)->Parameters.Log) { DPRINTF("%08X:%d " format, (u32)(moby), (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG(moby, format, ...) 
+#endif
+
+int npcInitialized = 0;
 
 void npcPreUpdate(Moby* moby);
 void npcPostUpdate(Moby* moby);
 void npcPostDraw(Moby* moby);
 void npcMove(Moby* moby);
 void npcOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
-void npcOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
+void npcOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void npcOnDamage(Moby* moby, struct MobDamageEventArgs* e);
 int npcOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
 void npcOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
@@ -78,6 +85,37 @@ struct NpcPVar* npcGetPVars(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+struct NpcDifficultyConfig* npcGetDifficultyConfig(Moby* moby)
+{
+  struct NpcPVar* pvars = npcGetPVars(moby);
+  int stars = MapConfig.State ? MapConfig.State->DifficultyStars : 0;
+
+  return &pvars->Parameters.DifficultyConfigs[stars];
+}
+
+//--------------------------------------------------------------------------
+void npcDrawHealthbar(Moby* moby)
+{
+  struct NpcPVar* pvars = npcGetPVars(moby);
+  struct NpcDifficultyConfig* difficultyConfig = npcGetDifficultyConfig(moby);
+  float scale = 1;
+  float maxHp = difficultyConfig->HealthMult * pvars->Parameters.Health;
+  float hp = clamp(pvars->Mob.TargetVars.hitPoints / maxHp, 0, 1);
+  u32 bgColor = 0x80000000;
+  u32 frColor = 0x80101010;
+  u32 fgColor = hudGetTeamColor(pvars->Parameters.IsOnEnemyTeam ? TEAM_RED : TEAM_BLUE, 1);
+
+  gfxResetGsRegisters();
+
+  VECTOR pos = {0,0,1,0};
+  vector_scale(pos, pos, pvars->Parameters.HealthbarOffset);
+  vector_add(pos, pos, moby->Position);
+  gfxHelperDrawBox_WS(pos, 50 * scale + 2, 2 + 5 * scale, frColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawBox_WS(pos, 50 * scale, 5 * scale, bgColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+  gfxHelperDrawBox_WS(pos, 50 * scale * hp, 5 * scale, fgColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+}
+
+//--------------------------------------------------------------------------
 void npcTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff)
 {
   struct NpcPVar* pvars = npcGetPVars(moby);
@@ -105,6 +143,7 @@ void npcTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff)
 //--------------------------------------------------------------------------
 void npcTransAnim(Moby* moby, int animId, float startOff)
 {
+  //DLOG(moby, "npc trans anim %08X => %d\n", (u32)moby, animId);
 	npcTransAnimLerp(moby, animId, 10, startOff);
 }
 
@@ -129,6 +168,22 @@ void npcPreUpdate(Moby* moby)
   decTimerU8(&pvars->Mob.MobVars.MoveVars.PathCheckSkipEndTicks);
   decTimerU8(&pvars->Mob.MobVars.MoveVars.PathNewTicks);
   pvars->Mob.MobVars.ScoutCooldownTicks = 0;
+  
+  // update bangles
+  Moby* targetMoby = pvars->Parameters.NpcMoby;
+  if (targetMoby) {
+    targetMoby->Bangles = npcGetArmor(moby);
+  }
+
+  // register target if friendly and targetable
+  if (!pvars->Parameters.IsOnEnemyTeam && pvars->Parameters.MobTargetType != NPC_MOB_AGGRO_IGNORE) {
+    mobRegisterTarget(moby);
+  }
+
+  // healthbar
+  if (pvars->Parameters.Healthbar) {
+    gfxRegisterDrawFunction((void**)0x0022251C, &npcDrawHealthbar, moby);
+  }
 
   mobPreUpdate(moby);
 }
@@ -141,6 +196,9 @@ void npcPostUpdate(Moby* moby)
     
   struct NpcPVar* pvars = npcGetPVars(moby);
   Moby* targetMoby = pvars->Parameters.NpcMoby;
+
+  // increment
+  ++pvars->Parameters.TicksSinceLastDamage;
 
   // reset to start
   if (pvars->Mob.MobVars.Respawn && gameAmIHost()) {
@@ -165,6 +223,10 @@ void npcPostUpdate(Moby* moby)
     }
   } else if (npcIsIdling(pvars)) {
     animSpeed = baseAnimSpeed * pvars->Parameters.IdleAnim.Speed;
+  } else if (pvars->Mob.MobVars.Action == NPC_ACTION_CYCLE_ANIMATIONS) {
+    animSpeed = baseAnimSpeed;
+  } else if (pvars->Mob.MobVars.Action == NPC_ACTION_DIE) {
+    animSpeed = pvars->Parameters.DeathAnim.Speed;
   }
 
   targetMoby->AnimSpeed = animSpeed;
@@ -214,12 +276,20 @@ void npcMove(Moby* moby)
 void npcOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
 	struct NpcPVar* pvars = npcGetPVars(moby);
+  struct NpcDifficultyConfig* difficultyConfig = npcGetDifficultyConfig(moby);
 
   // targeting
-	pvars->Mob.TargetVars.targetHeight = 1 + (moby->Scale * 0.25);
-	pvars->Mob.TargetVars.team = pvars->Parameters.Team;
+	pvars->Mob.TargetVars.targetHeight = pvars->Parameters.TargetHeight;
+	pvars->Mob.TargetVars.team = pvars->Parameters.IsOnEnemyTeam ? TEAM_WHITE : TEAM_BLUE;
+  pvars->Mob.TargetVars.targetRadiusIn8ths = (u8)(pvars->Parameters.TargetRadius * 8);
+  pvars->Mob.TargetVars.hitPoints = pvars->Parameters.Health * difficultyConfig->HealthMult;
+  pvars->Mob.TargetVars.maxHitPoints = pvars->Mob.TargetVars.hitPoints;
   pvars->Mob.MobVars.BlipType = pvars->Parameters.BlipType;
   pvars->Mob.MobVars.BlipTeam = pvars->Parameters.Team;
+
+  // 
+  struct Guber* guber = guberGetObjectByMoby(moby);
+  ((GuberMoby*)guber)->TeamNum = pvars->Mob.TargetVars.team;
 
   // default move step
   pvars->Mob.MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
@@ -227,10 +297,49 @@ void npcOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char r
 }
 
 //--------------------------------------------------------------------------
-void npcOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
+void npcOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar)
     return;
+
+  struct NpcPVar* pvars = npcGetPVars(moby);
+
+  // trigger killed controller
+  if (pvars->Parameters.OnKilledControllerMoby && !mobyIsDestroyed(pvars->Parameters.OnKilledControllerMoby)) {
+    Guber* lastHitByGuber = guberGetObjectByUID(pvars->Mob.MobVars.LastHitBy);
+    Moby* lastHitByMoby = NULL;
+    if (lastHitByGuber)
+      lastHitByMoby = lastHitByGuber->VTable->GetMoby(lastHitByGuber);
+
+    controllerSetTriggerMoby(pvars->Parameters.OnKilledControllerMoby, lastHitByMoby);
+    controllerBroadcastNewState(pvars->Parameters.OnKilledControllerMoby, CONTROLLER_STATE_ACTIVATED);
+  }
+
+  // handle death event
+  Moby* npcMoby = pvars->Parameters.NpcMoby;
+  Moby* attachedMoby = pvars->Parameters.AttachedMoby;
+  if (pvars->Parameters.OnDeathType != NPC_ON_DEATH_NONE) {
+
+    if (npcMoby && !mobyIsDestroyed(npcMoby)) {
+
+      // blow corn
+      if (npcMoby->PClass && pvars->Parameters.OnDeathType == NPC_ON_DEATH_BLOW_CORN) {
+        blowCorn(npcMoby);
+      }
+
+      guberMobyDestroy(npcMoby);
+    }
+    
+    if (pvars->Parameters.DeathToAttachedMoby && attachedMoby && !mobyIsDestroyed(attachedMoby)) {
+
+      // blow corn
+      if (attachedMoby->PClass && pvars->Parameters.OnDeathType == NPC_ON_DEATH_BLOW_CORN) {
+        blowCorn(attachedMoby);
+      }
+
+      guberMobyDestroy(attachedMoby);
+    }
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -248,6 +357,17 @@ void npcOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
   //int isShock = e->DamageFlags & 0x40;
   int isShortFreeze = e->DamageFlags & 0x40000000;
+
+  // trigger hit controller
+  if (pvars->Parameters.OnHitControllerMoby && !mobyIsDestroyed(pvars->Parameters.OnHitControllerMoby)) {
+    Guber* lastHitByGuber = guberGetObjectByUID(e->SourceUID);
+    Moby* lastHitByMoby = NULL;
+    if (lastHitByGuber)
+      lastHitByMoby = lastHitByGuber->VTable->GetMoby(lastHitByGuber);
+
+    controllerSetTriggerMoby(pvars->Parameters.OnHitControllerMoby, lastHitByMoby);
+    controllerBroadcastNewState(pvars->Parameters.OnHitControllerMoby, CONTROLLER_STATE_ACTIVATED);
+  }
 
 	// destroy
 	if (newHp <= 0) {
@@ -293,7 +413,14 @@ void npcOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int npcOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
+  struct NpcPVar* pvars = npcGetPVars(moby);
+
+  int damageCooldownTicks = (int)(pvars->Parameters.DamageCooldownSeconds * TPS);
+  if (pvars->Parameters.TicksSinceLastDamage < damageCooldownTicks) {
+    return 0;
+  }
+
+  pvars->Parameters.TicksSinceLastDamage = 0;
   return 1;
 }
 
@@ -327,6 +454,7 @@ int npcGetPreferredAction(Moby* moby, int * delayTicks)
     case NPC_STATE_OFF: return -1;
     case NPC_STATE_IDLE: return NPC_ACTION_IDLE;
     case NPC_STATE_LOOK_AT_TARGET: return NPC_ACTION_LOOK_AT_TARGET;
+    case NPC_STATE_CYCLE_ANIMATIONS: return NPC_ACTION_CYCLE_ANIMATIONS;
   }
 
 	if (pvars->Mob.MobVars.Action == NPC_ACTION_JUMP && pvars->Mob.MobVars.CurrentActionForTicks > 1 && pvars->Mob.MobVars.MoveVars.Grounded) {
@@ -417,6 +545,7 @@ void npcDoAction(Moby* moby)
   struct NpcPVar* pvars = npcGetPVars(moby);
   struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->Mob.MobVars.MoveVars);
 	Moby* target = pvars->Mob.MobVars.MoveVars.Target;
+  Moby* npcMoby = pvars->Parameters.NpcMoby;
 	VECTOR t;
   float difficulty = 1;
   float turnSpeed = pvars->Parameters.TurnSpeed * (pvars->Mob.MobVars.MoveVars.Grounded ? NPC_TURN_RADIANS_PER_SEC : NPC_TURN_AIR_RADIANS_PER_SEC);
@@ -438,11 +567,27 @@ void npcDoAction(Moby* moby)
       mobStand(moby);
 			break;
 		}
+    case NPC_ACTION_CYCLE_ANIMATIONS:
+    {
+      int animId = npcMoby->AnimSeqId;
+      int animCount = *(char*)(npcMoby->PClass + 0xc);
+      if (pvars->Mob.MobVars.AnimationLooped) {
+        ++animId;
+        if (animId >= animCount) animId = 0;
+        DLOG(moby, "change animation %d\n", animId);
+      }
+
+      DLOG(moby, "animation:%d t:%f\n", animId, npcMoby->AnimSeqT);
+      npcTransAnim(moby, animId, 0);
+      mobStand(moby);
+      break;
+    }
 		case NPC_ACTION_LOOK_AT_TARGET:
     {
       mobStand(moby);
       if (target)
         mobTurnTowards(moby, target->Position, turnSpeed);
+      
       npcTransAnim(moby, pvars->Parameters.LookAtPlayerAnim.Id, 0);
       break;
     }
@@ -483,10 +628,7 @@ void npcDoAction(Moby* moby)
     case NPC_ACTION_WALK:
 		{
       int walkAnimId = pvars->Parameters.WalkAnim.Id;
-      float dir = 0;
-      if (target) {
-        dir = ((pvars->Mob.MobVars.ActionId + pvars->Mob.MobVars.Random) % 3) - 1;
-      }
+      float dir = mobGetCurrentWalkAngle(moby);
 
       // determine next position
       if (pathGetTargetPos(path, t, moby, &pvars->Mob.MobVars.MoveVars) && mobAmIOwner(moby))
@@ -507,7 +649,12 @@ void npcDoAction(Moby* moby)
 		}
     case NPC_ACTION_DIE:
     {
+      npcTransAnim(moby, pvars->Parameters.DeathAnim.Id, 0);
       mobStand(moby);
+      
+      if (pvars->Mob.MobVars.CurrentActionForTicks >= (pvars->Parameters.DeathAnim.Length * TPS)) {
+        pvars->Mob.MobVars.Destroy = 1;
+      }
       break;
     }
 	}
@@ -518,7 +665,7 @@ void npcDoAction(Moby* moby)
 //--------------------------------------------------------------------------
 void npcDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
 {
-  //mobDoDamage(moby, radius, amount, damageFlags, friendlyFire, NPC_SUBSKELETON_JOINT_JAW, 1, 0);
+  //mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, NPC_SUBSKELETON_JOINT_JAW, 1, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -645,12 +792,11 @@ void npcOnGuberCreated(Moby* moby)
 
   // move pvars up for mob handler
   moby->PVar = &pvars->Mob;
-  moby->ModeBits = MOBY_MODE_BIT_HIDDEN | MOBY_MODE_BIT_NO_POST_UPDATE;
+  moby->ModeBits = MOBY_MODE_BIT_HIDDEN;
   
   // initialize mobvars
   pvars->Mob.MobVars.Config.Damage = 0;
-  pvars->Mob.MobVars.Config.Speed = pvars->Parameters.Speed;
-  pvars->Mob.MobVars.Config.Health = pvars->Parameters.Health;
+  pvars->Mob.MobVars.Config.TurnSpeed = 0;
   pvars->Mob.MobVars.Config.AttackRadius = pvars->Parameters.InteractRange;
   pvars->Mob.MobVars.Config.HitRadius = 1;
   pvars->Mob.MobVars.Config.CollRadius = pvars->Parameters.CollRadius;
@@ -666,20 +812,37 @@ void npcOnGuberCreated(Moby* moby)
   pvars->Mob.MobVars.MoveVars.PathGraphIdx = pvars->Parameters.PathGraphIdx;
   pvars->Mob.VTable = &NpcVTable;
   pvars->Mob.MobVars.Action = NPC_ACTION_ROAM;
-  
+
   // update pvars target references
   pvars->Parameters.NpcMoby = mobyGetFromIdxOrNull((int)pvars->Parameters.NpcMoby);
   pvars->Parameters.TargetMoby = mobyGetFromIdxOrNull((int)pvars->Parameters.TargetMoby);
   pvars->Parameters.AttachedMoby = mobyGetFromIdxOrNull((int)pvars->Parameters.AttachedMoby);
+  pvars->Parameters.OnHitControllerMoby = mobyGetFromIdxOrNull((int)pvars->Parameters.OnHitControllerMoby);
+  pvars->Parameters.OnKilledControllerMoby = mobyGetFromIdxOrNull((int)pvars->Parameters.OnKilledControllerMoby);
   DLOG(moby, "npc %08X found npc moby %08X\n", (u32)moby, (u32)pvars->Parameters.NpcMoby);
   DLOG(moby, "npc %08X found target moby %08X\n", (u32)moby, (u32)pvars->Parameters.TargetMoby);
   DLOG(moby, "npc %08X found attached moby %08X\n", (u32)moby, (u32)pvars->Parameters.AttachedMoby);
+  DLOG(moby, "npc %08X found onhit controller moby %08X\n", (u32)moby, (u32)pvars->Parameters.OnHitControllerMoby);
+  DLOG(moby, "npc %08X found onkilled controller moby %08X\n", (u32)moby, (u32)pvars->Parameters.OnKilledControllerMoby);
 
   // no npc moby, destroy
   if (!pvars->Parameters.NpcMoby) {
     guberMobyDestroy(moby);
     return;
   }
+
+  //
+  Moby* npcMoby = pvars->Parameters.NpcMoby;
+  moby->PClass = npcMoby->PClass;
+  moby->MClass = npcMoby->MClass;
+  moby->CollData = npcMoby->CollData;
+  moby->AnimSeq = npcMoby->AnimSeq;
+  moby->Scale = npcMoby->Scale;
+  npcMoby->CollActive = -1;
+
+  // 
+  if (!moby->AnimSeq)
+    moby->ModeBits |= MOBY_MODE_BIT_NO_POST_UPDATE;
 
   // move to target
   vector_copy(moby->Position, pvars->Parameters.NpcMoby->Position);
@@ -698,17 +861,31 @@ void npcOnGuberCreated(Moby* moby)
     vector_subtract(pvars->Parameters.AttachedCuboidOffset, &sp->M0[12], moby->Position);
   }
 
-  // register
-  if (MapConfig.RegisterNpcFunc)
-    MapConfig.RegisterNpcFunc(moby);
-
   mobySetState(moby, pvars->Parameters.DefaultState, -1);
 }
 
 //--------------------------------------------------------------------------
 void npcStart(void)
 {
-  //npcInitialized = 1;
+  if (npcInitialized || !MapConfig.RegisterNpcFunc) return;
+  
+  
+  Moby* moby = mobyListGetStart();
+	while ((moby = mobyFindNextByOClass(moby, NPC_MOBY_OCLASS)))
+	{
+		if (!mobyIsDestroyed(moby) && moby->PVar) {
+      struct NpcPVar* pvars = npcGetPVars(moby);
+      struct NpcDifficultyConfig* difficultyConfig = npcGetDifficultyConfig(moby);
+      pvars->Mob.MobVars.Config.Speed = pvars->Parameters.Speed * difficultyConfig->SpeedMult;
+      pvars->Mob.MobVars.Config.Health = pvars->Parameters.Health * difficultyConfig->HealthMult;
+      MapConfig.RegisterNpcFunc(moby);
+      DLOG(moby, "registered npc with mode\n");
+    }
+
+		++moby;
+	}
+
+  npcInitialized = 1;
 }
 
 //--------------------------------------------------------------------------

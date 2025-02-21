@@ -128,6 +128,10 @@
     "MobyOClass": 8306,
     "Length": 496,
     "Default": "0000F04100000000FFFFFFFF000000000000000000000000FFFFFFFF000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "States": {
+      "On": 0,
+      "Off": 1
+    },
     "Overlay": [
       {
         "Name": "Height",
@@ -150,7 +154,9 @@
     "Overlay": [
       {
         "Name": "Team",
-        "DataType": "Team",
+        "DataType": "Enum",
+        "OptionsLookupKey": "Teams",
+        "DataSize": 1,
         "Offset": 0,
         "Min": 0,
         "Max": 3
@@ -176,6 +182,12 @@
     "RCVersion": 4,
     "MobyOClass": 6898,
     "Length": 256,
+    "States": {
+      "Idle": 1,
+      "Box Breaking": 2,
+      "Box Broken": 4,
+      "Orb Consumed": 6
+    },
     "Default": "500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F000000000000000000000000000000000000000000000000000007FF000000000000000000FF0000000001FF000000000A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFF0BF8B0300000000000000000000000000000000000000001E0000000000000000000000FFFFFFFF0000000001000000FFFFFFFF00000000",
     "Pointers": "0",
     "Overlay": [
@@ -287,12 +299,14 @@
     "Overlay": [
       {
         "Name": "Overlay FX Texture",
-        "DataType": "LevelFXTex",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 0
       },
       {
         "Name": "Underlay FX Texture",
-        "DataType": "LevelFXTex",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 4
       },
       {
@@ -450,7 +464,7 @@
     "MobyOClass": 8292,
     "Length": 1856,
     "Default": "50000000000000000000000000000000F00000000000000000000000000000000000000000000000000000000000000000000000E00000000000000000000000000000000000000000000000000000000000164396000000020F010100000000000000000000003F000000000000000000000000000000000000000000000000000007FF000000000000000000FF0000000001FF000000000A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFF0BF8B03000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000FFFFFF0000000000000000CDCC4C3E0000403F000000009A99993E1A2800000000000000000000CDCCCC3D000000000000000001000000FFFFFFFF0000000000000000000000000000FFFF000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Pointers": "0,16,56",
+    "Pointers": "0,16,52,56",
     "Overlay": []
   },
   {
@@ -459,7 +473,7 @@
     "MobyOClass": 8276,
     "Length": 1568,
     "Default": "50000000000000000000000000000000F00000000000000000000000000000000000000000000000000000000000000000000000E000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F000000000000000000000000000000000000000000000000000007FF000000000000000000FF0000000001FF000000000A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFF0BF8B03000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000FFFFFF0000000000000000CDCC4C3E0000403F000000009A99993E1A2800000000000000000000CDCCCC3D000000000000000001000000FFFFFFFF0000000000000000000000000000FFFF0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "Pointers": "0,16,56",
+    "Pointers": "0,16,52,56",
     "Overlay": []
   },
   {
@@ -476,7 +490,8 @@
       },
       {
         "Name": "Overlay FX Texture",
-        "DataType": "LevelFXTex",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 4
       },
       {
@@ -525,7 +540,8 @@
       },
       {
         "Name": "Overlay FX Texture",
-        "DataType": "LevelFXTex",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 528
       },
       {
@@ -678,7 +694,14 @@
     "RCVersion": 4,
     "MobyOClass": 9266,
     "Length": 144,
-    "Default": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    "Default": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "Overlay": [
+      {
+        "Name": "Closed (Runtime Only)",
+        "DataType": "Bool",
+        "Offset": 136
+      }
+    ]
   },
   {
     "Name": "Hill (KOTH)",
@@ -907,11 +930,19 @@
     "Length": 304,
     "Default": "5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000E000000000000000F400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F000000000000000000000000000000000000000000000000000007FF000000000000000000FF0000000001FF000000000A00000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFF0BF8B030000000000000000000000000000000000000000000000000000000000000000FFFFFFFF00000000000000000000000000000000000000000400000000000000FFFFFFFF4000000000000000000000000000000000000000FFFFFFFF0000000000000000",
     "Pointers": "0",
+    "States": {
+      "Destroyed": -1,
+      "Capture In Progress": 1,
+      "Captured": 4,
+      "Uncaptured": 5,
+      "Disabled": 6
+    },
     "Overlay": [
       {
-        "Name": "Some Value",
+        "Name": "Seconds to Hack",
         "DataType": "Integer",
-        "Offset": 260
+        "Offset": 260,
+        "Min": 1
       }
     ]
   },
@@ -923,6 +954,7 @@
     "States": {
       "Destroyed": -1,
       "Uncaptured": 1,
+      "Capture In Progress": 3,
       "Captured": 5
     },
     "Default": "0000003F00000000000000000000000000000000000000000000000000000000FFFFFFFF000000000000803F00000000000080400000000014000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -995,12 +1027,14 @@
     "Overlay": [
       {
         "Name": "Overlay FX Texture",
-        "DataType": "LevelFXTex",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 0
       },
       {
         "Name": "Underlay FX Texture",
-        "DataType": "LevelFXTex",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 4
       },
       {
@@ -1131,80 +1165,108 @@
   },
   {
     "Name": "Water Tristrip",
-    "RCVersion": 3,
-    "MobyOClass": 2366,
+    "RCVersion": 4,
+    "MobyOClass": 6576,
     "Length": 112,
-    "Default": "0B120E6C0B120E6020202460202024200100000002000000000000420000000000506B44000080C200001644000000000AD7A33C00000000FFFFFFFFFFFFFFFF0000803F0000000000000000000000000000000001000000FFFFFFFF0000000000000000000000000000000000000000",
+    "Default": "FFFFFFFF050000001912057D2D1E190F010000009A99993E6F12033A6F12033A000000000000000000000000CDCCCC3ECDCCCC3E000000000000000078000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     "Overlay": [
       {
-        "Name": "Underlay Color 1",
-        "DataType": "ColorRGBA",
+        "Name": "Spline",
+        "DataType": "SplineRef",
         "Offset": 0
       },
       {
-        "Name": "Underlay Color 2",
-        "DataType": "ColorRGBA",
+        "Name": "Overlay FX Texture",
+        "DataType": "Enum",
+        "OptionsLookupKey": "LevelFXTex",
         "Offset": 4
       },
       {
-        "Name": "Overlay Color 1",
+        "Name": "Underlay Color",
         "DataType": "ColorRGBA",
         "Offset": 8
       },
       {
-        "Name": "Overlay Color 2",
+        "Name": "Overlay Color",
         "DataType": "ColorRGBA",
         "Offset": 12
       },
       {
-        "Name": "Overlay FX Texture",
-        "DataType": "LevelFXTex",
+        "Name": "Invert Overlay Color",
+        "DataType": "Bool",
         "Offset": 16
-      },
-      {
-        "Name": "Underlay FX Texture",
-        "DataType": "LevelFXTex",
-        "Offset": 20
-      },
-      {
-        "Name": "Tiling Density",
-        "DataType": "Float",
-        "Offset": 24
-      },
-      {
-        "Name": "Z Position",
-        "DataType": "Float",
-        "Offset": 32
-      },
-      {
-        "Name": "Fog Far Distance",
-        "DataType": "Float",
-        "Offset": 40
-      },
-      {
-        "Name": "Wave Surge",
-        "DataType": "Float",
-        "Offset": 48
       },
       {
         "Name": "Overlay Speed",
         "DataType": "Float",
-        "Offset": 64
+        "Offset": 20
       },
       {
-        "Name": "Underlay Speed",
+        "Name": "Overlay Direction",
+        "DataType": "Vector2",
+        "Offset": 24
+      },
+      {
+        "Name": "Overlay Direction 2",
+        "DataType": "Vector2",
+        "Offset": 28
+      },
+      {
+        "Name": "Directional Fade 1",
+        "DataType": "Integer",
+        "Offset": 32,
+        "Min": 0,
+        "Max": 255
+      },
+      {
+        "Name": "Directional Fade 2",
+        "DataType": "Integer",
+        "Offset": 33,
+        "Min": 0,
+        "Max": 255
+      },
+      {
+        "Name": "Glow",
+        "DataType": "Integer",
+        "Offset": 34,
+        "Min": 0,
+        "Max": 255,
+        "Tooltip": "Values below 128 have no effect."
+      },
+      {
+        "Name": "Circular Rotation Speed",
         "DataType": "Float",
-        "Offset": 68
+        "Offset": 36,
+        "Tooltip": "Changing this makes the overlay texture rotate in a circle. Use negative values to invert direction."
       },
       {
-        "Name": "Underlay Direction Variance",
-        "DataType": "Float",
-        "Offset": 72
-      },
-      {
-        "Name": "Overlay Additive",
+        "Name": "Rotate at Moby Origin",
         "DataType": "Bool",
-        "Offset": 80
+        "Offset": 40,
+        "Tooltip": "Enabling this makes the center of the rotation circle equal to the Water Tripstrip coordinates."
+      },
+      {
+        "Name": "Tiling X",
+        "DataType": "Float",
+        "Offset": 44,
+        "Min": 0
+      },
+      {
+        "Name": "Tiling Y",
+        "DataType": "Float",
+        "Offset": 48,
+        "Min": 0
+      },
+      {
+        "Name": "Oscillation Speed",
+        "DataType": "Float",
+        "Offset": 56
+      },
+      {
+        "Name": "Oscillation Distance",
+        "DataType": "Integer",
+        "Offset": 60,
+        "Min": 0
       }
     ]
   },
@@ -3289,7 +3351,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 408,
+    "Length": 528,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3319,10 +3381,90 @@
         "Offset": 72
       },
       {
-        "Name": "Number of Mobs to Spawn",
-        "DataType": "Integer",
+        "Name": "Limit Despawn Percent",
+        "DataType": "Float",
+        "Tooltip": "Limits despawn logic to never despawn more than this percent of mobs.",
         "Offset": 76,
-        "Min": 0
+        "Min": 0,
+        "Max": 1
+      },
+      {
+        "Name": "Emission",
+        "DataType": "Struct",
+        "DataSize": 16,
+        "Offset": 80,
+        "Fields": [
+          {
+            "Name": "Random Rotation Min",
+            "DataType": "Float",
+            "Offset": 0,
+            "Min": -1,
+            "Max": 1,
+            "Default": -1
+          },
+          {
+            "Name": "Random Rotation Max",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": -1,
+            "Max": 1,
+            "Default": 1
+          },
+          {
+            "Name": "Rotation Face Cuboid",
+            "DataType": "CuboidRef",
+            "Offset": 8
+          },
+          {
+            "Name": "Rotation Invert",
+            "DataType": "Bool",
+            "Offset": 12,
+            "Default": 0
+          }
+        ]
+      },
+      {
+        "DataType": "Space"
+      },
+      {
+        "Name": "Spawn Config (Per Difficulty)",
+        "DataType": "Struct",
+        "DataSize": 12,
+        "Offset": 96,
+        "Count": 5,
+        "Labels": [
+          "1 Star",
+          "2 Stars",
+          "3 Stars",
+          "4 Stars",
+          "5 Stars"
+        ],
+        "Fields": [
+          {
+            "Name": "Number of Mobs to Spawn",
+            "Tooltip": "If you want the spawner to run forever, set this to a very large number.",
+            "DataType": "Integer",
+            "Offset": 0,
+            "Min": 0
+          },
+          {
+            "Name": "Spawn Rate Multiplier",
+            "Tooltip": "Adjusts the cooldown of the configured mobs.",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0,
+            "Default": 1.0
+          },
+          {
+            "Name": "Max Alive At Once (0=MAX)",
+            "DataType": "Integer",
+            "Offset": 8,
+            "DataSize": 1,
+            "Min": 0,
+            "Max": 50,
+            "Default": 0
+          }
+        ]
       },
       {
         "Name": "Spawn Zones",
@@ -3351,7 +3493,7 @@
       {
         "Name": "Mob Parameters",
         "DataType": "Struct",
-        "Offset": 80,
+        "Offset": 156,
         "DataSize": 28,
         "Count": 8,
         "Fields": [
@@ -3359,7 +3501,16 @@
             "Name": "Mob Param Id",
             "DataType": "RaidsMobId",
             "DataSize": 4,
+            "Default": -1,
             "Offset": 0
+          },
+          {
+            "Name": "Mob Behavior",
+            "DataType": "RaidsMobBehavior",
+            "DataSize": 1,
+            "Default": 0,
+            "Offset": 25,
+            "Ref": "Mob Param Id"
           },
           {
             "Name": "Probability",
@@ -3390,11 +3541,13 @@
             "Name": "Spawn Cooldown (Ticks)",
             "DataType": "Integer",
             "Offset": 20,
-            "Min": 0
+            "Min": 0,
+            "Default": 60
           },
           {
             "Name": "Stars",
-            "DataType": "RaidsDifficultyMask",
+            "DataType": "Mask",
+            "OptionsLookupKey": "RaidsDifficultyMask",
             "DataSize": 1,
             "Default": 63,
             "Offset": 24
@@ -3407,11 +3560,13 @@
     "Name": "Raids Mover",
     "RCVersion": 4,
     "MobyOClass": 16386,
-    "Length": 224,
+    "Length": 304,
+    "ForceDefaults": true,
     "States": {
       "Destroyed": -1,
       "Off": 0,
       "On": 1,
+      "Paused": 2,
       "Complete": 127
     },
     "Overlay": [
@@ -3512,46 +3667,107 @@
         }
       },
       {
-        "Name": "Move Along Spline",
+        "Name": "Linked Movement",
         "DataType": "Label",
         "Order": 30
+      },
+      {
+        "Name": "Attached Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Order": 30,
+        "Offset": 128,
+        "Options": {
+          "None": 0,
+          "Spline": 1,
+          "Moby": 2
+        }
       },
       {
         "Name": "Spline",
         "DataType": "SplineRef",
         "Order": 30,
-        "Offset": 120
+        "Offset": 120,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Moby",
+        "DataType": "MobyRef",
+        "Order": 30,
+        "Offset": 124,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "2" }
+        ]
       },
       {
         "Name": "Snap Targets To",
         "DataType": "Bool",
         "Order": 31,
-        "Offset": 124
+        "Offset": 129,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "!=", "Value": "0" }
+        ]
       },
       {
         "Name": "Align Targets",
         "DataType": "Bool",
         "Order": 31,
-        "Offset": 125
+        "Offset": 130,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "!=", "Value": "0" }
+        ]
+      },
+      {
+        "Name": "Spline Randomize Start",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Order": 32,
+        "Offset": 131,
+        "Options": {
+          "Off": 0,
+          "Random Vertex On Spline": 1,
+          "Random Point On Spline": 2
+        },
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
       },
       {
         "Name": "Spline Speed",
         "DataType": "float",
         "Order": 32,
         "Min": 0,
-        "Offset": 128
+        "Offset": 132,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Spline Turn Speed",
+        "DataType": "float",
+        "Order": 32,
+        "Min": 0,
+        "Offset": 136,
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
       },
       {
         "Name": "Loop",
         "DataType": "Enum",
         "Order": 33,
-        "Offset": 132,
+        "Offset": 140,
         "DataSize": 4,
         "Options": {
           "Stop": 0,
           "Loop": 1,
           "Ping Pong": 2
-        }
+        },
+        "DisplayIf": [
+          { "Field": "Attached Type", "Op": "==", "Value": "1" }
+        ]
       },
       {
         "DataType": "Space",
@@ -3562,7 +3778,7 @@
         "DataType": "float",
         "Order": 1,
         "Min": 0,
-        "Offset": 136
+        "Offset": 144
       },
       {
         "Name": "Targets",
@@ -3573,14 +3789,14 @@
         "Name": "Mobys",
         "DataType": "MobyRef",
         "Order": 51,
-        "Offset": 140,
+        "Offset": 148,
         "Count": 4
       },
       {
         "Name": "Cuboids",
         "DataType": "CuboidRef",
         "Order": 52,
-        "Offset": 156,
+        "Offset": 164,
         "Count": 4
       }
     ]
@@ -3589,7 +3805,8 @@
     "Name": "Raids Controller",
     "RCVersion": 4,
     "MobyOClass": 16387,
-    "Length": 284,
+    "Length": 412,
+    "ForceDefaults": true,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3615,45 +3832,76 @@
         "DataSize": 1
       },
       {
+        "Name": "Sync",
+        "DataType": "Enum",
+        "Offset": 7,
+        "DataSize": 1,
+        "Tooltip": "Default behaviour of a controller is to run on the host first, and then sync each iteration with the other clients.",
+        "Options": {
+          "Host Sync to Clients" : 0,
+          "Client Only (No Sync)" : 1
+        }
+      },
+      {
         "Name": "Trigger When",
         "DataType": "Enum",
         "DataSize": 1,
-        "Offset": 104,
+        "Default": 1,
+        "Offset": 6,
         "Options": {
           "Any True": 0,
           "All True": 1
         }
       },
       {
+        "Name": "Iterate When",
+        "DataType": "Enum",
+        "Offset": 3,
+        "DataSize": 1,
+        "Tooltip": "Whether or not the Iterations number will only be incremented when the Conditions are met.\n\nUseful if wanting to run a controller for exactly one tick, regardless if its Conditions are met and its Targets are updated.",
+        "Options": {
+          "Conditions Match (Default)": 0,
+          "Conditions Checked": 1
+        }
+      },
+      {
         "Name": "Iterations (0=INFINITE)",
         "DataType": "Integer",
         "DataSize": 2,
-        "Offset": 106,
+        "Offset": 136,
         "Min": 0,
-        "Max": 32767
+        "Max": 32767,
+        "Default": 1
       },
       {
         "Name": "Conditions",
         "DataType": "Struct",
-        "Offset": 108,
-        "DataSize": 16,
+        "Offset": 140,
+        "DataSize": 20,
         "Count": 8,
         "Fields": [
           {
             "Name": "Type",
             "DataType": "Enum",
-            "DataSize": 4,
+            "DataSize": 1,
             "Offset": 0,
             "Options": {
               "Disabled": 0,
-              "Moby State": 1,
+              "Challenge": 14,
+              "Checkpoint": 8,
+              "Counter": 13,
               "Cuboid": 2,
-              "Player Button Press": 3,
               "Delay": 4,
+              "Difficulty": 7,
+              "Moby/Health": 10,
+              "Moby/State": 1,
               "Not Yet Triggered": 5,
               "NPC Target": 6,
-              "Difficulty Stars": 7,
-              "Checkpoint": 8
+              "Player/Button Press": 3,
+              "Player/Count": 15,
+              "Player/Health": 12,
+              "Player/Kills": 11,
+              "Random Chance": 9
             }
           },
           {
@@ -3661,7 +3909,7 @@
             "DataType": "MobyRef",
             "Offset": 4,
             "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "1" }
+              { "Field": "Type", "Op": "in", "Values": [ "1", "10", "13" ] }
             ]
           },
           {
@@ -3673,18 +3921,11 @@
             ]
           },
           {
-            "Name": "State Condition",
+            "Name": "Condition",
             "DataType": "Enum",
             "DataSize": 2,
             "Offset": 8,
-            "Options": {
-              "==": 0,
-              "!=": 1,
-              "<": 2,
-              "<=": 3,
-              ">": 4,
-              ">=": 5
-            },
+            "OptionsLookupKey": "NumberComparisons",
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "1" }
             ]
@@ -3698,7 +3939,21 @@
             "Min": 0,
             "Max": 127,
             "DisplayIf": [
-              { "Field": "Type", "Op": "==", "Value": "1" }
+              { "Field": "Type", "Op": "==", "Value": "1" },
+              { "Field": "Condition", "Op": "<", "Value": "7" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Integer",
+            "DataSize": 2,
+            "Offset": 10,
+            "Min": 0,
+            "Max": 127,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "1" },
+              { "Field": "Condition", "Op": ">=", "Value": "7" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
             ]
           },
           {
@@ -3710,12 +3965,23 @@
               "Any Player": 1,
               "All Players": 2,
               "No Players": 4,
+              "Host Player (Local if No Sync)": 128,
               "Any NPC": 8,
               "All NPCs": 16,
-              "No NPCs": 32
+              "No NPCs": 32,
+              "Any Moby": 64
             },
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "2" }
+            ]
+          },
+          {
+            "Name": "Moby",
+            "DataType": "MobyRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "2" },
+              { "Field": "Trigger By", "Op": "&=", "Value": "64" }
             ]
           },
           {
@@ -3753,9 +4019,33 @@
             ]
           },
           {
-            "Name": "Button Mask",
-            "DataType": "PadMask",
+            "Name": "Target Player(s)",
+            "DataType": "Mask",
+            "DataSize": 2,
             "Offset": 8,
+            "Options": {
+              "Player 0": 1,
+              "Player 1": 2,
+              "Player 2": 4,
+              "Player 3": 8,
+              "Player 4": 16,
+              "Player 5": 32,
+              "Player 6": 64,
+              "Player 7": 128,
+              "Player 8": 256,
+              "Player 9": 512,
+              "Host (Local if No Sync)": 1024
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "3", "11", "12" ] }
+            ]
+          },
+          {
+            "Name": "Button Mask",
+            "DataType": "Mask",
+            "DataSize": 2,
+            "OptionsLookupKey": "PadMask",
+            "Offset": 10,
             "DisplayIf": [
               { "Field": "Type", "Op": "==", "Value": "3" }
             ]
@@ -3772,7 +4062,8 @@
           },
           {
             "Name": "Stars",
-            "DataType": "RaidsDifficultyMask",
+            "DataType": "Mask",
+            "OptionsLookupKey": "RaidsDifficultyMask",
             "Offset": 8,
             "Default": 63,
             "DisplayIf": [
@@ -3799,6 +4090,270 @@
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8" ] }
             ]
+          },
+          {
+            "Name": "Probability",
+            "DataType": "Float",
+            "DataSize": 4,
+            "Offset": 8,
+            "Min": 0,
+            "Max": 1,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "9" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 12,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" },
+              { "Field": "Normalize Health (0-1)", "Op": "==", "Value": "False" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "Min": 0,
+            "Max": 1,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" },
+              { "Field": "Normalize Health (0-1)", "Op": "==", "Value": "True" }
+            ]
+          },
+          {
+            "Name": "Normalize Health (0-1)",
+            "DataType": "Bool",
+            "Tooltip": "If true, will compare player health as a value between 0 (dead) and 1 (full).",
+            "Offset": 13,
+            "Default": true,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "10" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Trigger By Players",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 17,
+            "Options": {
+              "Match Any": 0,
+              "Match All": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Weapons",
+            "DataType": "Mask",
+            "DataSize": 2,
+            "Offset": 10,
+            "Options": {
+              "Wrench": 1,
+              "Dual Vipers": 2,
+              "Magma Cannon": 4,
+              "Arbiter": 8,
+              "Fusion Rifle": 16,
+              "Mine Launcher": 32,
+              "B6 Obliterator": 64,
+              "Scorpion Flail": 128,
+              "Holoshields": 256,
+              "Puma": 512,
+              "Hoverbike": 1024,
+              "Landstalker": 2048,
+              "Hovership": 4096
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Trigger By Weapons",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 18,
+            "Options": {
+              "Match Any": 0,
+              "Match All": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Mobs",
+            "DataType": "Mask",
+            "DataSize": 2,
+            "Offset": 12,
+            "OptionsLookupKey": "RaidsMobs",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 16,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Integer",
+            "DataSize": 2,
+            "Offset": 14,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Use Sum",
+            "DataType": "Bool",
+            "DataSize": 1,
+            "Tooltip": "If true, will sum kills across Players & Weapons, and then compare from last time the condition was checked.",
+            "Offset": 19,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Trigger By Players",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 11,
+            "Options": {
+              "Match Any": 0,
+              "Match All": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 10,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Tooltip": "",
+            "Offset": 12,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Normalize Health (0-1)",
+            "DataType": "Bool",
+            "Tooltip": "If true, will compare player health as a value between 0 (dead) and 1 (full).",
+            "Offset": 16,
+            "Default": true,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "12" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 12,
+            "OptionsLookupKey": "NumberComparisons",
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "13" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "13" },
+              { "Field": "Condition", "Op": "<=", "Value": "10" }
+            ]
+          },
+          {
+            "Name": "Challenge",
+            "DataType": "Enum",
+            "OptionsLookupKey": "Challenges",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "14" }
+            ]
+          },
+          {
+            "Name": "Condition",
+            "DataType": "Enum",
+            "DataSize": 1,
+            "Offset": 12,
+            "Options": {
+              "Is Incomplete": 0,
+              "Is Complete": 1
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "14" }
+            ]
+          },
+          {
+            "Name": "Include Where",
+            "DataType": "Mask",
+            "Offset": 10,
+            "Default": 3,
+            "Options": {
+              "Alive" : 1,
+              "Dead" : 2
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "15" }
+            ]
+          },
+          {
+            "Name": "Match",
+            "DataType": "Mask",
+            "Offset": 8,
+            "Default": 0,
+            "Options": {
+              "0 Players": 1,
+              "1 Player": 2,
+              "2 Players": 4,
+              "3 Players": 8,
+              "4 Players": 16,
+              "5 Players": 32,
+              "6 Players": 64,
+              "7 Players": 128,
+              "8 Players": 256,
+              "9 Players": 512,
+              "10 Players": 1024
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "15" }
+            ]
           }
         ]
       },
@@ -3806,7 +4361,7 @@
         "Name": "Targets",
         "DataType": "Struct",
         "Offset": 8,
-        "DataSize": 12,
+        "DataSize": 16,
         "Count": 8,
         "Fields": [
           {
@@ -3816,25 +4371,32 @@
             "Offset": 0,
             "Options": {
               "Disabled": 0,
-              "Moby State Set": 1,
-              "Moby State Add": 5,
-              "Moby Animation Update": 2,
-              "Moby Enabled Update": 3,
-              "Move Cuboid": 4,
-              "Set Checkpoint": 12,
-              "NPC Set Target": 6,
-              "NPC Set Target To Triggered": 7,
-              "Player Give Ammo": 8,
-              "Player Give Health": 9,
-              "Player Respawn": 10,
-              "Set Raid Completed": 11
+              "Ammo/Set Ammo Drop Probability": 13,
+              "Ammo/Set Refill Ammo Cost Multiplier": 14,
+              "Challenge/Set Completed": 17,
+              "Checkpoint/Set": 12,
+              "Cuboid/Move": 4,
+              "Mission/Set Completed": 11,
+              "Mission/Set Failed": 16,
+              "Moby/Set State": 1,
+              "Moby/Add to State": 5,
+              "Moby/Set Animation": 2,
+              "Moby/Set Enabled": 3,
+              "Music/Play Track": 15,
+              "NPC/Set Target": 6,
+              "NPC/Set Target To Triggered": 7,
+              "Player/Give Ammo": 8,
+              "Player/Give Health": 9,
+              "Player/Respawn": 10,
+              "Update Counter": 18
             }
           },
           {
             "Name": "Stars",
+            "DataType": "Mask",
+            "OptionsLookupKey": "RaidsDifficultyMask",
             "Offset": 1,
             "DataSize": 1,
-            "DataType": "RaidsDifficultyMask",
             "Default": 63
           },
           {
@@ -3842,7 +4404,7 @@
             "DataType": "MobyRef",
             "Offset": 4,
             "DisplayIf": [
-              { "Field": "Type", "Op": "in", "Values": [ "1", "2", "3", "5" ] }
+              { "Field": "Type", "Op": "in", "Values": [ "1", "2", "3", "5", "18" ] }
             ]
           },
           {
@@ -3933,7 +4495,7 @@
               "Player 7": 128,
               "Player 8": 256,
               "Player 9": 512,
-              "Host": 1024
+              "Host (Local if No Sync)": 1024
             },
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
@@ -3980,6 +4542,129 @@
             "Offset": 4,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "12" ] }
+            ]
+          },
+          {
+            "Name": "Probability",
+            "Tooltip": "Default value is 0.1.",
+            "DataType": "Float",
+            "Offset": 4,
+            "Default": 0.1,
+            "Min": 0,
+            "Max": 1,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "13" }
+            ]
+          },
+          {
+            "Name": "Multiplier",
+            "Tooltip": "Default value is 1.",
+            "DataType": "Float",
+            "Offset": 4,
+            "Default": 1.0,
+            "Min": 0,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "14" }
+            ]
+          },
+          {
+            "Name": "Music Track",
+            "DataType": "Enum",
+            "DataSize": 2,
+            "OptionsLookupKey": "MusicTracks",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "15" ] }
+            ]
+          },
+          {
+            "Name": "Play Immediately",
+            "DataType": "Bool",
+            "Offset": 6,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "15" ] }
+            ]
+          },
+          {
+            "Name": "Loop",
+            "DataType": "Bool",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "15" ] }
+            ]
+          },
+          {
+            "Name": "Force Track",
+            "DataType": "Bool",
+            "Offset": 7,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "15" ] }
+            ]
+          },
+          {
+            "Name": "Spawn Loot Cuboid",
+            "DataType": "CuboidRef",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "11" }
+            ]
+          },
+          {
+            "Name": "Challenge",
+            "DataType": "Enum",
+            "DataSize": 4,
+            "OptionsLookupKey": "Challenges",
+            "Offset": 4,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "17" ] }
+            ]
+          },
+          {
+            "Name": "Update Type",
+            "DataType": "Enum",
+            "Offset": 12,
+            "DataSize": 1,
+            "Options": {
+              "Set": 0,
+              "Add": 1,
+              "Subtract": 2,
+              "Multiply": 3,
+              "Divide": 4,
+              "Max": 5,
+              "Min": 6
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "18" }
+            ]
+          },
+          {
+            "Name": "Value Source",
+            "DataType": "Enum",
+            "Offset": 13,
+            "DataSize": 1,
+            "Default": 0,
+            "Options": {
+              "Custom Value": 0,
+              "Condition 0": 1,
+              "Condition 1": 2,
+              "Condition 2": 3,
+              "Condition 3": 4,
+              "Condition 4": 5,
+              "Condition 5": 6,
+              "Condition 6": 7,
+              "Condition 7": 8
+            },
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "18" }
+            ]
+          },
+          {
+            "Name": "Value",
+            "DataType": "Float",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "18" },
+              { "Field": "Value Source", "Op": "==", "Value": "0" }
             ]
           }
         ]
@@ -4088,7 +4773,7 @@
           "Player 7": 128,
           "Player 8": 256,
           "Player 9": 512,
-          "Host": 1024
+          "Host (Local if No Sync)": 1024
         }
       },
       {
@@ -4105,8 +4790,9 @@
       },
       {
         "Name": "Alignment",
-        "DataType": "Alignment",
+        "DataType": "Enum",
         "DataSize": 1,
+        "OptionsLookupKey": "Alignment",
         "Offset": 5
       },
       {
@@ -4139,14 +4825,15 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 992,
+    "Length": 1088,
     "States": {
       "Destroyed": -1,
       "Off": 0,
       "Idle": 1,
       "Roam": 2,
       "Walk To Target": 3,
-      "Look At Target": 4
+      "Look At Target": 4,
+      "Cycle Animations": 5
     },
     "Overlay": [
       {
@@ -4159,13 +4846,18 @@
           "Idle": 1,
           "Roam": 2,
           "Walk To Target": 3,
-          "Look At Target": 4
+          "Look At Target": 4,
+          "Cycle Animations": 5
         }
       },
       {
         "Name": "Log (DEBUG)",
         "DataType": "Bool",
         "Offset": 97
+      },
+      {
+        "Name": "Mobys & Cuboids",
+        "DataType": "Label"
       },
       {
         "Name": "Puppet Moby",
@@ -4188,14 +4880,13 @@
         "Offset": 108
       },
       {
+        "Name": "Movement",
+        "DataType": "Label"
+      },
+      {
         "Name": "Path Graph",
         "DataType": "PathGraphRef",
         "Offset": 112
-      },
-      {
-        "Name": "Health",
-        "DataType": "Float",
-        "Offset": 116
       },
       {
         "Name": "Interact Range",
@@ -4228,18 +4919,16 @@
         "Offset": 140
       },
       {
-        "Name": "Animation Speed",
-        "DataType": "Float",
-        "Offset": 144
-      },
-      {
-        "Name": "Team",
-        "DataType": "Team",
+        "Name": "Radar Team",
+        "DataType": "Enum",
+        "OptionsLookupKey": "Teams",
+        "DataSize": 1,
         "Offset": 148
       },
       {
-        "Name": "Blip Type",
-        "DataType": "Integer",
+        "Name": "Radar Blip Type",
+        "DataType": "Enum",
+        "OptionsLookupKey": "BlipTypes",
         "Offset": 152
       },
       {
@@ -4266,79 +4955,193 @@
         }
       },
       {
-        "Name": "Idle Animation",
+        "Name": "Targeting",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Team",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 98,
+        "Options": {
+          "Friendly": 0,
+          "Enemy": 1
+        }
+      },
+      {
+        "Name": "Mob Aggro Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 192,
+        "Options": {
+          "Ignore": 0,
+          "When In Range": 1,
+          "Always Aggro": 2
+        },
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" }
+        ]
+      },
+      {
+        "Name": "Mob Aggro Distance",
+        "DataType": "Float",
+        "Offset": 184,
+        "Default": 15,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" },
+          { "Field": "Mob Aggro Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Targetable",
+        "DataType": "Bool",
+        "DataSize": 1,
+        "Offset": 194,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Targeting Height",
+        "DataType": "Float",
+        "Offset": 172,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Targeting Radius",
+        "DataType": "Float",
+        "Offset": 176,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Health",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Base Health",
+        "DataType": "Float",
+        "Offset": 116,
+        "Default": 100
+      },
+      {
+        "Name": "Healthbar",
+        "DataType": "Bool",
+        "Offset": 99
+      },
+      {
+        "Name": "Healthbar Offset",
+        "DataType": "Float",
+        "Offset": 188,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Healthbar", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Damage",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Damage Cooldown (Seconds)",
+        "DataType": "Float",
+        "Offset": 180,
+        "Min": 0
+      },
+      {
+        "Name": "Death Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 162,
+        "Options": {
+          "None": 0,
+          "Delete": 1,
+          "Delete and Blow Corn": 2
+        }
+      },
+      {
+        "Name": "Death Targets",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 163,
+        "Options": {
+          "Puppet Moby": 0,
+          "Puppet and Attached Moby": 1
+        }
+      },
+      {
+        "Name": "On Hit (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 164
+      },
+      {
+        "Name": "On Dead (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 168
+      },
+      {
+        "DataType": "Space"
+      },
+      {
+        "Name": "Per Difficulty Scalars",
+        "DataType": "Struct",
+        "Offset": 196,
+        "DataSize": 8,
+        "Count": 5,
+        "Labels": [
+          "1 Star",
+          "2 Stars",
+          "3 Stars",
+          "4 Stars",
+          "5 Stars"
+        ],
+        "Fields": [
+          {
+            "Name": "Health Multiplier",
+            "DataType": "Float",
+            "Offset": 0,
+            "Min": 0,
+            "Default": 1
+          },
+          {
+            "Name": "Speed Multiplier",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0,
+            "Default": 1
+          }
+        ]
+      },
+      {
+        "Name": "Animation",
+        "DataType": "Label"
+      },
+      {
+        "Name": "Base Animation Speed",
+        "DataType": "Float",
+        "Offset": 144,
+        "Default": 1
+      },
+      {
+        "Name": "Animations",
         "DataType": "Struct",
         "Offset": 0,
         "DataSize": 12,
-        "Fields": [
-          {
-            "Name": "Animation Id",
-            "DataType": "Integer",
-            "Offset": 0
-          },
-          {
-            "Name": "Speed",
-            "DataType": "Float",
-            "Offset": 4
-          },
-          {
-            "Name": "Duration",
-            "DataType": "Float",
-            "Offset": 8
-          }
-        ]
-      },
-      {
-        "Name": "Walk Animation",
-        "DataType": "Struct",
-        "Offset": 12,
-        "DataSize": 12,
-        "Fields": [
-          {
-            "Name": "Animation Id",
-            "DataType": "Integer",
-            "Offset": 0
-          },
-          {
-            "Name": "Speed",
-            "DataType": "Float",
-            "Offset": 4
-          },
-          {
-            "Name": "Duration",
-            "DataType": "Float",
-            "Offset": 8
-          }
-        ]
-      },
-      {
-        "Name": "Jump Animation",
-        "DataType": "Struct",
-        "Offset": 24,
-        "DataSize": 12,
-        "Fields": [
-          {
-            "Name": "Animation Id",
-            "DataType": "Integer",
-            "Offset": 0
-          },
-          {
-            "Name": "Speed",
-            "DataType": "Float",
-            "Offset": 4
-          },
-          {
-            "Name": "Duration",
-            "DataType": "Float",
-            "Offset": 8
-          }
-        ]
-      },
-      {
-        "Name": "Look At Animation",
-        "DataType": "Struct",
-        "Offset": 36,
-        "DataSize": 12,
+        "Labels": [
+          "Idle",
+          "Walk",
+          "Jump",
+          "Look At Player",
+          "Death"
+        ],
+        "Count": 5,
         "Fields": [
           {
             "Name": "Animation Id",
@@ -4405,6 +5208,410 @@
         "Tooltip": "Controller to activate when a new checkpoint is reached after this one.",
         "DataType": "MobyRef",
         "Offset": 8
+      }
+    ]
+  },
+  {
+    "Name": "Raids Laser",
+    "RCVersion": 4,
+    "MobyOClass": 16394,
+    "Length": 36,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "On (Hit Moby)": 2
+    },
+    "Overlay": [
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Color",
+        "DataType": "Enum",
+        "OptionsLookupKey": "Teams",
+        "DataSize": 1,
+        "Offset": 2,
+        "Default": "3"
+      },
+      {
+        "Name": "Beam Texture",
+        "DataType": "Enum",
+        "OptionsLookupKey": "FXTex",
+        "Default": 69,
+        "Offset": 4
+      },
+      {
+        "Name": "Glow Texture",
+        "DataType": "Enum",
+        "OptionsLookupKey": "FXTex",
+        "Default": 14,
+        "Offset": 8
+      },
+      {
+        "Name": "Length",
+        "DataType": "Float",
+        "Default": 5,
+        "Offset": 12
+      },
+      {
+        "Name": "Width",
+        "DataType": "Float",
+        "Default": 0.2,
+        "Offset": 16
+      },
+      {
+        "Name": "Damage Type",
+        "DataType": "Mask",
+        "Offset": 3,
+        "Options": {
+          "Mobs": 1,
+          "Players": 2
+        }
+      },
+      {
+        "Name": "Damage",
+        "DataType": "Float",
+        "Default": 0,
+        "Offset": 20
+      },
+      {
+        "Name": "Damage Max",
+        "DataType": "Float",
+        "Default": 0,
+        "Offset": 24
+      },
+      {
+        "Name": "Damage Scale",
+        "DataType": "Float",
+        "Default": 1,
+        "Offset": 28
+      }
+    ]
+  },
+  {
+    "Name": "Raids PVar Poke",
+    "RCVersion": 4,
+    "MobyOClass": 16395,
+    "Length": 16,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Target",
+        "DataType": "MobyRef",
+        "Offset": 4
+      },
+      {
+        "Name": "PVar",
+        "DataType": "MobyRefPVar",
+        "Ref": "Target",
+        "Offset": 8
+      },
+      {
+        "Name": "Value",
+        "DataType": "MobyRefPVarValue",
+        "Ref": "PVar",
+        "Offset": 16
+      }
+    ]
+  },
+  {
+    "Name": "Raids Radar Blip",
+    "RCVersion": 4,
+    "MobyOClass": 16396,
+    "Length": 8,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Blip Type",
+        "DataType": "Enum",
+        "OptionsLookupKey": "BlipTypes",
+        "Offset": 1,
+        "DataSize": 1
+      },
+      {
+        "Name": "Blip Team",
+        "DataType": "Enum",
+        "OptionsLookupKey": "Teams",
+        "Offset": 2,
+        "DataSize": 1
+      },
+      {
+        "Name": "Attach To",
+        "DataType": "MobyRef",
+        "Offset": 4
+      }
+    ]
+  },
+  {
+    "Name": "Raids Health Proxy",
+    "RCVersion": 4,
+    "MobyOClass": 16397,
+    "Length": 348,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "Paused": 2,
+      "Reset": 3,
+      "Dead": 127
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 80,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 81
+      },
+      {
+        "Name": "Team",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 82,
+        "Options": {
+          "Friendly": 0,
+          "Enemy": 1
+        }
+      },
+      {
+        "Name": "Death Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 83,
+        "Options": {
+          "None": 0,
+          "Delete": 1,
+          "Explode": 2,
+          "Explode & Blow Corn": 3
+        }
+      },
+      {
+        "Name": "Show Damage Popups",
+        "DataType": "Bool",
+        "DataSize": 1,
+        "Offset": 99
+      },
+      {
+        "Name": "Target Moby",
+        "DataType": "MobyRef",
+        "Offset": 84
+      },
+      {
+        "Name": "Targetable",
+        "DataType": "Bool",
+        "DataSize": 1,
+        "Offset": 98,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Targeting Height",
+        "DataType": "Float",
+        "Offset": 88,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Targeting Radius",
+        "DataType": "Float",
+        "Offset": 92,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "1" },
+          { "Field": "Targetable", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Healthbar",
+        "DataType": "Bool",
+        "DataSize": 1,
+        "Offset": 96
+      },
+      {
+        "Name": "Healthbar Scale",
+        "DataType": "Float",
+        "Offset": 104,
+        "Min": 0,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Healthbar", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Healthbar Offset",
+        "DataType": "Float",
+        "Offset": 108,
+        "Default": 1,
+        "DisplayIf": [
+          { "Field": "Healthbar", "Op": "==", "Value": "True" }
+        ]
+      },
+      {
+        "Name": "Mob Aggro Type",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 97,
+        "Options": {
+          "Ignore": 0,
+          "When In Range": 1,
+          "Always Aggro": 2
+        },
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" }
+        ]
+      },
+      {
+        "Name": "Mob Aggro Distance",
+        "DataType": "Float",
+        "Offset": 100,
+        "Default": 15,
+        "DisplayIf": [
+          { "Field": "Team", "Op": "==", "Value": "0" },
+          { "Field": "Mob Aggro Type", "Op": "==", "Value": "1" }
+        ]
+      },
+      {
+        "Name": "Damage Cooldown (Seconds)",
+        "DataType": "Float",
+        "Offset": 112,
+        "Min": 0
+      },
+      {
+        "Name": "On Hit (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 116
+      },
+      {
+        "Name": "On Dead (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 120
+      },
+      {
+        "Name": "Values",
+        "DataType": "Struct",
+        "Offset": 124,
+        "DataSize": 12,
+        "Count": 5,
+        "Labels": [
+          "1 Star",
+          "2 Stars",
+          "3 Stars",
+          "4 Stars",
+          "5 Stars"
+        ],
+        "Fields": [
+          {
+            "Name": "Health",
+            "DataType": "Float",
+            "Offset": 0,
+            "Min": 1
+          },
+          {
+            "Name": "Explosion Radius",
+            "DataType": "Float",
+            "Offset": 4,
+            "Min": 0
+          },
+          {
+            "Name": "Explosion Damage",
+            "DataType": "Float",
+            "Offset": 8,
+            "Min": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Raids Gold Bolt",
+    "RCVersion": 4,
+    "MobyOClass": 16398,
+    "Length": 4,
+    "States": {
+      "Destroyed": -1,
+      "Active": 0,
+      "Collected": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Index",
+        "DataType": "byte",
+        "Offset": 0
+      }
+    ]
+  },
+  {
+    "Name": "Raids Counter",
+    "RCVersion": 4,
+    "MobyOClass": 16399,
+    "Length": 4,
+    "States": {
+      "Destroyed": -1,
+      "Active": 0
+    },
+    "Overlay": [
+      {
+        "Name": "Value",
+        "DataType": "Float",
+        "Offset": 0
       }
     ]
   }

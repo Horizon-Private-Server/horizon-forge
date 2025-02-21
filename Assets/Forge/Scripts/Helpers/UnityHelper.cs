@@ -14,60 +14,6 @@ public static class UnityHelper
     private static Texture2D _defaultTexture;
     public static Texture2D DefaultTexture => _defaultTexture ? _defaultTexture : (_defaultTexture = new Texture2D(32, 32, TextureFormat.ARGB32, false));
 
-    private static readonly Dictionary<string, long> PAD_MASK_OPTIONS = new Dictionary<string, long>()
-    {
-        { "Up", 0x0010 },
-        { "Right", 0x0020 },
-        { "Down", 0x0040 },
-        { "Left", 0x0080 },
-
-        { "Start", 0x0008 },
-        { "Select", 0x0001 },
-
-        { "L3", 0x0002 },
-        { "R3", 0x0004 },
-        { "L2", 0x0100 },
-        { "R2", 0x0200 },
-        { "L1", 0x0400 },
-        { "R1", 0x0800 },
-
-        { "Triangle", 0x1000 },
-        { "Circle", 0x2000 },
-        { "Cross", 0x4000 },
-        { "Square", 0x8000 },
-    };
-
-    private static readonly Dictionary<string, long> ALIGNMENT_OPTIONS = new Dictionary<string, long>()
-    {
-        { "Top Left", 0 },
-        { "Top Center", 1 },
-        { "Top Right", 2 },
-        { "Middle Left", 3 },
-        { "Middle Center", 4 },
-        { "Middle Right", 5 },
-        { "Bottom Left", 6 },
-        { "Bottom Center", 7 },
-        { "Bottom Right", 8 },
-    };
-
-    private static readonly Dictionary<string, long> RAIDS_STARS_OPTIONS = new Dictionary<string, long>()
-    {
-        { "1 Star", 0 },
-        { "2 Stars", 1 },
-        { "3 Stars", 2 },
-        { "4 Stars", 3 },
-        { "5 Stars", 4 },
-    };
-
-    private static readonly Dictionary<string, long> RAIDS_DIFFICULTY_MASK_OPTIONS = new Dictionary<string, long>()
-    {
-        { "1 Star", 0x01 },
-        { "2 Stars", 0x02 },
-        { "3 Stars", 0x04 },
-        { "4 Stars", 0x08 },
-        { "5 Stars", 0x10 },
-    };
-
     public static void Matrix4x4PropertyField(SerializedProperty property)
     {
         EditorGUI.BeginDisabledGroup(!property.editable);
@@ -333,6 +279,8 @@ public static class UnityHelper
 
         var pvarData = pvarObject.GetPVarData();
         var pvarOverlay = pvarObject.GetPVarOverlay();
+        var pvarValues = pvarObject.GetPVarValues();
+        var pvarRefs = pvarObject.GetPVarReferences();
 
         // validate pvars
         var expectedPvarSize = pvarOverlay?.GetLength(pvarObject) ?? 0;
@@ -349,6 +297,21 @@ public static class UnityHelper
                     Array.Copy(pvarOverlay.DefaultBytes, lastLength, pvarData, lastLength, expectedPvarSize - lastLength);
 
                 pvarObject.SetPVarData(pvarData);
+
+                // find missing fields, set to default
+                var paths = pvarOverlay.GetPVarPaths(pvarObject);
+                if (paths != null)
+                {
+                    foreach (var path in paths)
+                    {
+                        if (!pvarValues.ContainsPath(path) && !pvarRefs.ContainsPath(path))
+                        {
+                            var def = pvarOverlay.GetPVarMetadata(path);
+                            Array.Copy(pvarOverlay.DefaultBytes, def.Offset, pvarData, def.Offset, def.Size);
+                            InitializePVarField(mapConfig, pvarOverlay, pvarObject, path, def.Field, def.Offset - def.Field.Offset);
+                        }
+                    }
+                }
             }
 
             InitializePVars(mapConfig, pvarObject, useDefault: pvarData == null);
@@ -376,7 +339,10 @@ public static class UnityHelper
                     InitializePVarField(mapConfig, pvarOverlay, pvarObject, "", def);
                 }
             }
-            catch (Exception ex) { Debug.LogError(ex); }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex);
+            }
         }
     }
 
@@ -438,6 +404,8 @@ public static class UnityHelper
             case "messagecontainer":
             case "varstringcontainer":
                 {
+                    string strValue = pvarValues[path];
+                    var messageData = strValue?.Split('|');
                     var strings = pvarObject.GetPVarStrings().Select(x => BinaryHelper.StrToRatchetStr(x)).ToArray();
                     var totalSize = 4 + (strings.Length * 8);
                     foreach (var str in strings)
@@ -449,13 +417,57 @@ public static class UnityHelper
                     var strOffset = offset + 4 + (strings.Length * 8);
                     for (int i = 0; i < strings.Length; ++i)
                     {
+                        var moveTo = 0;
+                        var runtime = 0;
+                        if (messageData != null && messageData[i] != null)
+                        {
+                            var parts = messageData[i].Split(',');
+                            int.TryParse(parts?.ElementAtOrDefault(0), out runtime);
+                            int.TryParse(parts?.ElementAtOrDefault(1), out moveTo);
+                        }
+
                         var str = strings[i] + "\0";
                         Array.Copy(BitConverter.GetBytes((short)strings[i].Length), 0, pvars, defOffset, 2);
+                        pvars[defOffset + 2] = (byte)runtime;
+                        pvars[defOffset + 3] = (byte)moveTo;
                         Array.Copy(BitConverter.GetBytes(strOffset), 0, pvars, defOffset + 4, 4);
                         Array.Copy(Encoding.ASCII.GetBytes(str), 0, pvars, strOffset, str.Length);
 
                         strOffset += str.Length;
                         defOffset += 8;
+                    }
+                    break;
+                }
+            case "mobyrefpvarvalue":
+                {
+                    // find respective mobyrefpvar
+                    var refPath = $".{def.Ref}";
+                    if (pvarValues.ContainsKey(refPath))
+                    {
+                        var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                        var pvarPath = parts?.ElementAtOrDefault(1);
+                        int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                        var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                        if (mobyRefPvarOverlay != null)
+                        {
+                            var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                            if (pvarMetadata != null)
+                            {
+                                var defOffset = pvarMetadata.Field.Offset;
+                                var defCount = pvarMetadata.Field.Count;
+                                try
+                                {
+                                    pvarMetadata.Field.Offset = 0;
+                                    pvarMetadata.Field.Count = null;
+                                    UpdatePVar(pvarOverlay, pvarObject, pvars, pvarValues, pvarRefs, mapData, path, pvarMetadata.Field, offset);
+                                }
+                                finally
+                                {
+                                    pvarMetadata.Field.Offset = defOffset;
+                                    pvarMetadata.Field.Count = defCount;
+                                }
+                            }
+                        }
                     }
                     break;
                 }
@@ -489,13 +501,13 @@ public static class UnityHelper
                         if (def.IsReferenceType())
                         {
                             var refValue = pvarRefs[iPath];
-                            def.ToBytes(refValue, pvars, iOffset, mapData);
+                            def.ToBytes(pvarOverlay, refValue, pvars, iOffset, mapData);
                         }
                         else
                         {
                             var strValue = pvarValues[iPath];
                             var value = def.FromString(strValue);
-                            def.ToBytes(value, pvars, iOffset);
+                            def.ToBytes(pvarOverlay, value, pvars, iOffset);
                         }
                     }
                     break;
@@ -523,32 +535,68 @@ public static class UnityHelper
             case "messagecontainer":
             case "varstringcontainer":
                 {
-                    // initialize first value if array doesn't fit
-                    // this should only occur on newly imported pathgraphs
-                    var strCount = BitConverter.ToInt32(pvars, offset);
-                    if (strCount > PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT) strCount = PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT;
-                    if (strings == null || strCount > strings.Length)
+                    if (pvarObject.GetPVarStrings() == null)
                     {
-                        int lastLen = strings?.Length ?? 0;
-
-                        // increase array size
-                        if (strings == null)
-                            strings = new string[strCount];
-                        else
-                            Array.Resize(ref strings, strCount);
-
-                        // find init values
-                        for (int i = lastLen; i < strCount; ++i)
+                        // initialize first value if array doesn't fit
+                        // this should only occur on newly imported pathgraphs
+                        var strCount = BitConverter.ToInt32(pvars, offset);
+                        if (strCount > PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT) strCount = PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT;
+                        if (strings == null || strCount > strings.Length)
                         {
-                            strings[i] = null;
-                            var strLen = BitConverter.ToInt16(pvars, offset + 4 + (i * 8));
-                            var strOff = BitConverter.ToInt32(pvars, offset + 4 + (i * 8) + 4);
-                            if (strLen > 0 && strOff > 0)
-                                strings[i] = BinaryHelper.RatchetStrToStr(Encoding.ASCII.GetString(pvars, strOff, strLen));
+                            int lastLen = strings?.Length ?? 0;
+
+                            // increase array size
+                            if (strings == null)
+                                strings = new string[strCount];
+                            else
+                                Array.Resize(ref strings, strCount);
+
+                            // find init values
+                            for (int i = lastLen; i < strCount; ++i)
+                            {
+                                strings[i] = null;
+                                var strLen = BitConverter.ToInt16(pvars, offset + 4 + (i * 8));
+                                var strOff = BitConverter.ToInt32(pvars, offset + 4 + (i * 8) + 4);
+                                if (strLen > 0 && strOff > 0)
+                                    strings[i] = BinaryHelper.RatchetStrToStr(Encoding.ASCII.GetString(pvars, strOff, strLen));
+                            }
+                        }
+
+                        pvarObject.SetPVarStrings(strings);
+                    }
+                    break;
+                }
+            case "mobyrefpvarvalue":
+                {
+                    // find respective mobyrefpvar
+                    var refPath = $".{def.Ref}";
+                    if (pvarValues.ContainsKey(refPath))
+                    {
+                        var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                        var pvarPath = parts?.ElementAtOrDefault(1);
+                        int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                        var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                        if (mobyRefPvarOverlay != null)
+                        {
+                            var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                            if (pvarMetadata != null)
+                            {
+                                var defOffset = pvarMetadata.Field.Offset;
+                                var defCount = pvarMetadata.Field.Count;
+                                try
+                                {
+                                    pvarMetadata.Field.Offset = 0;
+                                    pvarMetadata.Field.Count = null;
+                                    InitializePVarField(mapConfig, pvarOverlay, pvarObject, path, pvarMetadata.Field, offset);
+                                }
+                                finally
+                                {
+                                    pvarMetadata.Field.Offset = defOffset;
+                                    pvarMetadata.Field.Count = defCount;
+                                }
+                            }
                         }
                     }
-
-                    pvarObject.SetPVarStrings(strings);
                     break;
                 }
             case "struct":
@@ -576,6 +624,9 @@ public static class UnityHelper
                         if (count > 1) iPath += $"[{i}]";
                         var iOffset = offset + (dataSize * i);
 
+                        if (pvarOverlay.ForceDefaults)
+                            Array.Copy(pvarOverlay.DefaultBytes, iOffset, pvars, iOffset, def.GetDataSize());
+
                         if (def.IsReferenceType() && pvarRefs != null && !pvarRefs.ContainsKey(iPath))
                         {
                             MonoBehaviour refValue = null;
@@ -594,7 +645,7 @@ public static class UnityHelper
                         }
                         else if (!def.IsReferenceType() && pvarValues != null && !pvarValues.ContainsKey(iPath))
                         {
-                            pvarValues[iPath] = def.ToString(def.FromBytes(pvars, iOffset) ?? def.FromString(null));
+                            pvarValues[iPath] = def.ToString(def.FromBytes(pvarOverlay, pvars, iOffset) ?? def.FromString(null));
                             UnityEditor.EditorUtility.SetDirty(pvarObject as MonoBehaviour);
                         }
                     }
@@ -604,6 +655,7 @@ public static class UnityHelper
     }
 
     private static RaidsModeData _raidsModeData = null;
+    private static RaidsMobsScriptableObject _raidsMobConfig = null;
     private static void PVarsPropertyField_OverlayField(PvarOverlay pvarOverlay, PVarsPropertiesContainer properties, IPVarObject pvarObject, string basePath, PvarOverlayDef def, int defOffsetAdditive = 0)
     {
         var count = def.Count ?? 1;
@@ -612,7 +664,7 @@ public static class UnityHelper
         var pvarValues = pvarObject.GetPVarValues();
         var pvarRefs = pvarObject.GetPVarReferences();
         var pvarData = pvarObject.GetPVarData();
-        var display = def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, basePath));
+        var display = !def.Hidden && (def.DisplayIf == null || def.DisplayIf.All(x => x.IsMatch(pvarOverlay, pvarObject, def, basePath)));
         var path = basePath + $".{def.Name}";
         if (!display) return;
 
@@ -625,7 +677,7 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         bool value = (bool)def.FromString(strValue);
-                        if (strValue == null) value = (bool?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (bool?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
 
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.Toggle(new GUIContent(name, def.Tooltip), value);
@@ -643,7 +695,7 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         int value = (byte)def.FromString(strValue);
-                        if (strValue == null) value = (byte?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (byte?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
 
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
@@ -665,7 +717,7 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         int value = (sbyte)def.FromString(strValue);
-                        if (strValue == null) value = (sbyte?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (sbyte?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
 
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
@@ -687,7 +739,7 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         int value = (int)def.FromString(strValue);
-                        if (strValue == null) value = (int?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (int?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
 
                         EditorGUI.BeginChangeCheck();
                         value = EditorGUILayout.IntField(new GUIContent(name, def.Tooltip), value);
@@ -707,10 +759,17 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         float value = (float)def.FromString(strValue);
-                        if (strValue == null) value = (float?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (float?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
 
                         EditorGUI.BeginChangeCheck();
-                        value = EditorGUILayout.FloatField(new GUIContent(name, def.Tooltip), value);
+                        if (def.Min.HasValue && def.Max.HasValue)
+                        {
+                            value = EditorGUILayout.Slider(new GUIContent(name, def.Tooltip), value, def.Min.Value, def.Max.Value);
+                        }
+                        else
+                        {
+                            value = EditorGUILayout.FloatField(new GUIContent(name, def.Tooltip), value);
+                        }
                         if (EditorGUI.EndChangeCheck())
                         {
                             if (value < def.Min) value = (float)def.Min;
@@ -725,7 +784,7 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     var value = (Vector2)def.FromString(strValue);
-                    if (strValue == null) value = (Vector2?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (Vector2?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
 
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector2Field(new GUIContent(def.Name, def.Tooltip), value);
@@ -742,7 +801,7 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     var value = (Vector3)def.FromString(strValue);
-                    if (strValue == null) value = (Vector3?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (Vector3?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
 
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector3Field(new GUIContent(def.Name, def.Tooltip), value);
@@ -759,7 +818,7 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     var value = (Vector2)def.FromString(strValue);
-                    if (strValue == null) value = (Vector2?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (Vector2?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
                     
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector2Field(new GUIContent(def.Name, def.Tooltip), value);
@@ -776,7 +835,7 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     var value = (Color32)def.FromString(strValue);
-                    if (strValue == null) value = (Color32?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (Color32?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
 
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value, showEyedropper: true, showAlpha: false, hdr: false);
@@ -791,55 +850,10 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     var value = (Color32)def.FromString(strValue);
-                    if (strValue == null) value = (Color32?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (Color32?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
                     
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
-            case "team":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (byte?)def.FromBytes(pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLTeamIds)value, def.Min, def.Max);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
-            case "fxtex":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLFXTextureIds)value, def.Min, def.Max);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
-                    }
-                    break;
-                }
-            case "levelfxtex":
-                {
-                    // read value
-                    string strValue = pvarValues[path];
-                    int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
-
-                    EditorGUI.BeginChangeCheck();
-                    value = (int)PVarsPropertyField_EnumPopup(new GUIContent(def.Name, def.Tooltip), (DLLevelFXTextureIds)value, def.Min, def.Max);
                     if (EditorGUI.EndChangeCheck())
                     {
                         pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
@@ -853,49 +867,11 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
                         EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "alignment":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, ALIGNMENT_OPTIONS, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "raidsdifficulty":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, RAIDS_STARS_OPTIONS, dataSize);
+                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, def.GetOptions(), dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
@@ -910,30 +886,11 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
                         EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, def.Options, dataSize);
-                        if (EditorGUI.EndChangeCheck())
-                        {
-                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
-                        }
-                    });
-                    break;
-                }
-            case "raidsdifficultymask":
-                {
-                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
-                    {
-                        // read value
-                        string strValue = pvarValues[path2];
-                        var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
-                        value &= (long)(Math.Pow(2, dataSize * 8) - 1);
-
-                        EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, RAIDS_DIFFICULTY_MASK_OPTIONS, dataSize);
+                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, def.GetOptions(), dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
@@ -948,13 +905,13 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
                         if (!_raidsModeData)
                             _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
 
-                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
+                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Disabled ? $"{x.Name} (DISABLED)" : x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
                         mobIds.Add("None", -1);
 
                         EditorGUI.BeginChangeCheck();
@@ -966,18 +923,45 @@ public static class UnityHelper
                     });
                     break;
                 }
-            case "padmask":
+            case "raidsmobbehavior":
                 {
                     Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
                     {
                         // read value
                         string strValue = pvarValues[path2];
                         var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
+                        if (!_raidsModeData)
+                            _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
+
+                        if (!_raidsMobConfig)
+                            _raidsMobConfig = RaidsMobsScriptableObject.Load();
+
+                        // find reference field
+                        // check if raidsmobid
+                        // grab mob id
+                        var refPath = basePath + $".{def.Ref}";
+                        RaidsMob? mobId = null;
+                        if (pvarValues.ContainsKey(refPath))
+                        {
+                            var refValue = pvarValues[refPath];
+                            if (int.TryParse(refValue, out int idx))
+                                mobId = _raidsModeData?.Mobs?.ElementAtOrDefault(idx)?.Mob;
+                        }
+
+                        var mob = _raidsMobConfig?.Mobs?.FirstOrDefault(x => x.Mob == mobId);
+                        if (mob == null)
+                            return;
+
+                        if (mob?.Behaviors == null || !mob.Behaviors.Any())
+                            return;
+
+                        var behaviors = mob.Behaviors.ToDictionary(x => x, x => (long)mob.Behaviors.IndexOf(x));
+
                         EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_MaskPopup(new GUIContent(name, def.Tooltip), value, PAD_MASK_OPTIONS, dataSize);
+                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, behaviors, dataSize);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));
@@ -990,7 +974,7 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (int?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
 
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
@@ -1007,7 +991,7 @@ public static class UnityHelper
                     // read value
                     string strValue = pvarValues[path];
                     int value = (int)def.FromString(strValue);
-                    if (strValue == null) value = (int?)def.FromBytes(pvarData, baseOffset) ?? value;
+                    if (strValue == null) value = (int?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
                     
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
@@ -1017,6 +1001,102 @@ public static class UnityHelper
                         if (value > def.Max) value = (int)def.Max;
                         pvarValues.SetPropertyKeyValue(properties.PVarValues, path, def.ToString(value));
                     }
+                    break;
+                }
+            case "mobyrefpvar":
+                {
+                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
+                    {
+                        PvarOverlay mobyRefPvarOverlay = null;
+                        string[] mobyRefPvarPaths = new string[0];
+                        string oClass = null;
+
+                        // find reference field
+                        // check if mobyref
+                        // grab moby
+                        //(PvarOverlayDef refField, int refFieldParentOffset) = def.FindFieldFrom(pvarOverlay, def.Ref, offset);
+                        var refPath = basePath + $".{def.Ref}";
+                        if (pvarRefs.ContainsKey(refPath))
+                        {
+                            var mobyRef = pvarRefs[refPath] as Moby;
+                            if (mobyRef)
+                            {
+                                oClass = mobyRef.OClass.ToString();
+                                mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(mobyRef.RCVersion, mobyClass: mobyRef.OClass);
+                                if (mobyRefPvarOverlay != null)
+                                {
+                                    mobyRefPvarPaths = mobyRefPvarOverlay.GetPVarPaths(mobyRef);
+                                }
+                            }
+                        }
+
+                        // read value
+                        var parts = pvarValues[path2]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                        var pvarPath = parts?.ElementAtOrDefault(1);
+
+                        if (parts != null && parts.Length > 0 && parts[0] != oClass)
+                        {
+                            pvarPath = null;
+                            Undo.RecordObject(pvarValues.Owner, "OClass Change");
+                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, oClass + "|" + pvarPath);
+                        }
+
+                        EditorGUI.BeginChangeCheck();
+                        pvarPath = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), pvarPath, mobyRefPvarPaths, 4);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, oClass + "|" + pvarPath);
+                        }
+                    });
+                    break;
+                }
+            case "mobyrefpvarvalue":
+                {
+                    Draw(properties, pvarObject, basePath, def, baseOffset, (offset, name, path2) =>
+                    {
+                        PvarOverlayDef refDef = null;
+
+                        // find reference field
+                        // check if mobyref
+                        // grab moby
+                        //(PvarOverlayDef refField, int refFieldParentOffset) = def.FindFieldFrom(pvarOverlay, def.Ref, offset);
+                        var refPath = basePath + $".{def.Ref}";
+                        if (pvarValues.ContainsKey(refPath))
+                        {
+                            var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                            var pvarPath = parts?.ElementAtOrDefault(1);
+                            int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                            if (mobyRefPvarOverlay != null)
+                            {
+                                var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                                if (pvarMetadata != null)
+                                {
+                                    refDef = pvarMetadata.Field;
+                                }
+                            }
+                        }
+
+                        if (refDef != null)
+                        {
+                            var defOffset = refDef.Offset;
+                            var defCount = refDef.Count;
+                            EditorGUILayout.PrefixLabel(new GUIContent(name, def.Tooltip));
+                            EditorGUI.indentLevel++;
+                            try
+                            {
+                                refDef.Offset = 0;
+                                refDef.Count = null;
+                                PVarsPropertyField_OverlayField(pvarOverlay, properties, pvarObject, path2, refDef, defOffsetAdditive: offset);
+                            }
+                            finally
+                            {
+                                EditorGUI.indentLevel--;
+                                refDef.Offset = defOffset;
+                                refDef.Count = defCount;
+                            }
+                        }
+                    });
                     break;
                 }
             case "mobyrefstate":
@@ -1046,7 +1126,7 @@ public static class UnityHelper
                         // read value
                         string strValue = pvarValues[path2];
                         var value = (long)def.FromString(strValue);
-                        if (strValue == null) value = (long?)def.FromBytes(pvarData, offset) ?? value;
+                        if (strValue == null) value = (long?)def.FromBytes(pvarOverlay, pvarData, offset) ?? value;
                         value &= (long)(Math.Pow(2, dataSize * 8) - 1);
 
                         if (stateOptions != null && stateOptions.Any())
@@ -1206,8 +1286,8 @@ public static class UnityHelper
                                 if (messageData[i] != null)
                                 {
                                     var parts = messageData[i].Split(',');
-                                    int.TryParse(parts[0], out runtime);
-                                    int.TryParse(parts[1], out moveTo);
+                                    int.TryParse(parts?.ElementAtOrDefault(0), out runtime);
+                                    int.TryParse(parts?.ElementAtOrDefault(1), out moveTo);
                                 }
                             }
 
@@ -1279,6 +1359,9 @@ public static class UnityHelper
     {
         var count = def.Count ?? 1;
         var dataSize = def.GetDataSize();
+        if (properties.PVars.arraySize <= offset)
+            return;
+
         var serializedProperty = properties.PVars.GetArrayElementAtIndex(offset);
         var pvarValues = pvarObject.GetPVarValues();
         var pvarRefs = pvarObject.GetPVarReferences();
@@ -1298,8 +1381,8 @@ public static class UnityHelper
                 var path2 = path + $".{def.Name}";
                 if (count > 1)
                 {
-                    name = $"[{i}]";
-                    path2 += name;
+                    path2 += $"[{i}]";
+                    name = def.Labels?.ElementAtOrDefault(i) ?? $"[{i}]";
                 }
 
                 draw(defOffset, name, path2);
@@ -1424,6 +1507,15 @@ public static class UnityHelper
         selectedKey = names.ElementAtOrDefault(idx);
         if (selectedKey == null) return value;
         return options.GetValueOrDefault(selectedKey);
+    }
+
+    private static string PVarsPropertyField_EnumPopup(GUIContent label, string value, string[] options, int dataSize)
+    {
+        if (options == null) return value;
+
+        var idx = Array.IndexOf(options, value);
+        idx = EditorGUILayout.Popup(label, idx, options);
+        return options.ElementAtOrDefault(idx);
     }
 
     private static long PVarsPropertyField_MaskPopup(GUIContent label, long value, Dictionary<string, long> options, int dataSize)
@@ -1764,12 +1856,14 @@ public static class UnityHelper
     {
         if (!src) return null;
 
+        var lastActive = RenderTexture.active;
         RenderTexture rt = new RenderTexture(width, height, 24);
         RenderTexture.active = rt;
         Graphics.Blit(src, rt);
         Texture2D result = new Texture2D(width, height);
         result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         result.Apply();
+        RenderTexture.active = lastActive;
         rt.Release();
         return result;
     }

@@ -18,7 +18,11 @@ typedef int (*CanSelectIndex_func)(void* userdata, int index);
 
 
 Moby * spawnExplosion(VECTOR position, float size, u32 color);
+Moby * spawnExplosionDamage(VECTOR position, float size, u32 color, Moby* damager, float damage, u32 damageFlags);
 void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, float damageRadius);
+void playEquipRejectSound(Player* player);
+void playEquipSound(Player* player);
+void playUpgradeSound(Player* player);
 void playPaidSound(Player* player);
 GuberEvent* guberCreateEvent(Moby* moby, u32 eventType);
 
@@ -31,6 +35,11 @@ float getSignedRelativeSlope(VECTOR forward, VECTOR normal);
 u8 decTimerU8(u8* timeValue);
 u16 decTimerU16(u16* timeValue);
 u32 decTimerU32(u32* timeValue);
+
+int getProficiencyFromXp(double xp);
+double getXpForProficiency(int level);
+int getLevelFromXp(u32 xp);
+u32 getXpForLevel(int level);
 
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive);
 void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
@@ -54,8 +63,17 @@ int selectRandomIndex(int count, void* userdata, CanSelectIndex_func canSelectIn
 
 int hasPendingWorldHop(void);
 int isOnHubWorld(void);
+int missionIsFailed(void);
+int missionIsComplete(void);
+int missionIsActive(void);
 
-void replenishAmmo(void);
+int bankTryChargeLocalAccount(Player* player, u32 cost);
+
+int getAmmoRefillCost(Player* player);
+void replenishAmmo(Player* player);
 void respawnAllPlayers(void);
+
+void blowCorn(Moby* moby);
+int countBits(u32 value);
 
 #endif // RAIDS_MAP_UTILS_H

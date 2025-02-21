@@ -39,7 +39,11 @@
 #include "mob.h"
 #include "game.h"
 
-#define DLOG(moby, format, ...) if (((struct MessagerPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG(moby, format, ...) if (((struct MessagerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG(moby, format, ...) 
+#endif
 
 int messagerDrawQueueCount = 0;
 Moby* messagerDrawQueueMobys[MESSAGER_MAX_DRAW_QUEUE] = {};
@@ -131,7 +135,7 @@ void messagerUpdate(Moby* moby)
   if (msgIdx < 0 || msgIdx >= pvars->MessageCount) return;
 
   // run
-  //float t = (gameGetTime() - pvars->State.TimeActivated) / 1000.0;
+  float t = (gameGetTime() - pvars->State.TimeActivated) / 1000.0;
 
   for (i = 0; i < GAME_MAX_LOCALS; ++i) {
     Player* player = playerGetFromSlot(i);
@@ -148,10 +152,10 @@ void messagerUpdate(Moby* moby)
   }
 
   // complete
-  //if (msg->RuntimeSeconds > 0 && t >= msg->RuntimeSeconds) {
-  //  mobySetState(moby, msg->MoveTo > 0 ? msg->MoveTo : MESSAGER_STATE_COMPLETE, -1);
-  //  return;
-  //}
+  if (msg->RuntimeSeconds > 0 && t >= msg->RuntimeSeconds) {
+    mobySetState(moby, msg->MoveTo > 0 ? msg->MoveTo : MESSAGER_STATE_COMPLETE, -1);
+    return;
+  }
 }
 
 //--------------------------------------------------------------------------

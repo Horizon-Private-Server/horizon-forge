@@ -168,4 +168,10 @@ public class WaterMoby : MonoBehaviour, IRenderHandlePrefab
 
         m_Renderer.SetPropertyBlock(m_Mpb);
     }
+
+    public void DrawGizmos()
+    {
+
+    }
+
 }

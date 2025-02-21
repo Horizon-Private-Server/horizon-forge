@@ -21,6 +21,7 @@
 #include <libdl/stdio.h>
 #include <libdl/gamesettings.h>
 #include <libdl/dialog.h>
+#include <libdl/music.h>
 #include <libdl/sound.h>
 #include <libdl/patch.h>
 #include <libdl/ui.h>
@@ -32,6 +33,7 @@
 #include "maputils.h"
 #include "shared.h"
 #include "spawner.h"
+#include "dummy.h"
 #include "checkpoint.h"
 #include "gate.h"
 #include "mover.h"
@@ -40,9 +42,40 @@
 #include "mob.h"
 #include "game.h"
 
-#define DLOG(moby, format, ...) if (((struct ControllerPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG(moby, format, ...) if (((struct ControllerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG(moby, format, ...) 
+#endif
 
 int controllerInitialized = 0;
+
+int playerKillsLast[GAME_MAX_PLAYERS][MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS] = {};
+float playerHealthLast[GAME_MAX_PLAYERS] = {};
+
+//--------------------------------------------------------------------------
+int controllerAmIOwner(Moby* moby)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  return gameAmIHost() || pvars->NoSync;
+}
+
+//--------------------------------------------------------------------------
+int controllerValidateMobyRef(Moby* target, int uid)
+{
+  if (!target || target->UID != uid || mobyIsDestroyed(target)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+void controllerSetTriggerMoby(Moby* moby, Moby* triggerMoby)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  pvars->State.TriggeredByMoby = triggerMoby;
+}
 
 //--------------------------------------------------------------------------
 int controllerAnyTriggerActivated(Moby* moby)
@@ -53,28 +86,50 @@ int controllerAnyTriggerActivated(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-int controllerIsMobyStateConditionTrue(Moby* moby, int conditionIdx)
+int controllerConditionCompare(float currentValue, float lastValue, float comparisonValue, enum ControllerCompareType comparison)
 {
   int result = 0;
+  float delta = currentValue - lastValue;
+  switch (comparison) {
+    case CONTROLLER_COMPARE_EQUAL: result = currentValue == comparisonValue; break;
+    case CONTROLLER_COMPARE_NOTEQUAL: result = currentValue != comparisonValue; break;
+    case CONTROLLER_COMPARE_LESS: result = currentValue < comparisonValue; break;
+    case CONTROLLER_COMPARE_LEQUAL: result = currentValue <= comparisonValue; break;
+    case CONTROLLER_COMPARE_GREATER: result = currentValue > comparisonValue; break;
+    case CONTROLLER_COMPARE_GEQUAL: result = currentValue >= comparisonValue; break;
+    case CONTROLLER_COMPARE_CHANGED_TO: result = delta != 0 && currentValue == comparisonValue; break;
+    case CONTROLLER_COMPARE_INCREASED_BY: result = delta == comparisonValue; break;
+    case CONTROLLER_COMPARE_DECREASED_BY: result = delta == -comparisonValue; break;
+    case CONTROLLER_COMPARE_INCREASED_BY_AT_LEAST: result = delta >= comparisonValue; break;
+    case CONTROLLER_COMPARE_DECREASED_BY_AT_LEAST: result = -delta >= comparisonValue; break;
+    case CONTROLLER_COMPARE_INCREASED: result = delta > 0; break;
+    case CONTROLLER_COMPARE_DECREASED: result = delta < 0; break;
+    case CONTROLLER_COMPARE_CHANGED: result = delta != 0; break;
+    case CONTROLLER_COMPARE_UNCHANGED: result = delta == 0; break;
+  }
+
+  return result;
+}
+
+//--------------------------------------------------------------------------
+int controllerIsMobyStateConditionTrue(Moby* moby, int conditionIdx)
+{
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
-  
+
   // invalid moby
+  int targetState = -1; // destroyed
+  int cValue = condition->MobyState.State;
   Moby* target = condition->Moby;
-  if (!target || mobyIsDestroyed(target)) {
-    condition->Moby = NULL;
-    return 0;
-  }
+  if (!target) return 0;
+  if (controllerValidateMobyRef(target, condition->MobyUID))
+    targetState = target->State;
 
-  switch (condition->MobyState.StateInteractType) {
-    case CONTROLLER_MOBY_INTERACT_EQUAL: result = target->State == condition->MobyState.State; break;
-    case CONTROLLER_MOBY_INTERACT_NOTEQUAL: result = target->State != condition->MobyState.State; break;
-    case CONTROLLER_MOBY_INTERACT_LESS: result = target->State < condition->MobyState.State; break;
-    case CONTROLLER_MOBY_INTERACT_LEQUAL: result = target->State <= condition->MobyState.State; break;
-    case CONTROLLER_MOBY_INTERACT_GREATER: result = target->State > condition->MobyState.State; break;
-    case CONTROLLER_MOBY_INTERACT_GEQUAL: result = target->State >= condition->MobyState.State; break;
-  }
+  float delta = targetState - pvars->State.LastValue[conditionIdx];
+  int result = controllerConditionCompare(targetState, pvars->State.LastValue[conditionIdx], condition->MobyState.State, condition->MobyState.CompareType);
 
+  pvars->State.CounterValue[conditionIdx] = (condition->MobyState.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? delta : targetState;
+  pvars->State.LastValue[conditionIdx] = targetState;
   return result;
 }
 
@@ -87,23 +142,50 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   Player** players = playerGetAll();
   int cuboidIdx = condition->Cuboid.CuboidIdx;
   SpawnPoint* triggerCuboid = spawnPointGet(cuboidIdx);
-  int pSucceeded = 0, pCount = 0;
+  int pSucceeded = 0, pCount = 0, pHostSucceeded = 0;
   int npcSucceeded = 0, npcCount = 0;
+  int mobySucceeded = 0, mobyCount = 0;
 
   // no trigger by
   if (cuboidIdx < 0) return 0;
   if (!condition->Cuboid.TriggerBy) return 0;
 
-  // check for players
-  if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_CHECK_PLAYER) {
+  // check for all players
+  if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_CHECK_ALL_PLAYERS) {
     for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
       Player* p = players[j];
-      if (!p || !p->SkinMoby || !playerIsConnected(p)) continue;
+      if (!playerIsValid(p) || playerIsDead(p)) continue;
+
+      int isHost = (p->IsLocal && controllerAmIOwner(moby)) || (p->pNetPlayer->netClientIndex == gameGetHostId());
 
       // check if player is inside the cuboid
       int isInside = spawnPointIsPointInside(triggerCuboid, p->PlayerPosition, NULL);
       if (isInside != condition->Cuboid.InteractType && validPlayers[j]) {
         ++pSucceeded;
+        pvars->State.TriggeredByMoby = p->PlayerMoby;
+        if (isHost) ++pHostSucceeded;
+      } else {
+        validPlayers[j] = 0;
+      }
+
+      ++pCount;
+    }
+  }
+
+  // check for only host/local
+  else if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_HOST) {
+    for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
+      Player* p = players[j];
+      if (!playerIsValid(p) || playerIsDead(p)) continue;
+      
+      int isHost = (p->IsLocal && controllerAmIOwner(moby)) || (p->pNetPlayer->netClientIndex == gameGetHostId());
+      if (!isHost) continue;
+
+      // check if player is inside the cuboid
+      int isInside = spawnPointIsPointInside(triggerCuboid, p->PlayerPosition, NULL);
+      if (isInside != condition->Cuboid.InteractType && validPlayers[j]) {
+        ++pSucceeded;
+        ++pHostSucceeded;
         pvars->State.TriggeredByMoby = p->PlayerMoby;
       } else {
         validPlayers[j] = 0;
@@ -134,12 +216,29 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
     }
   }
 
+  if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_MOBY) {
+    Moby* condMoby = condition->Moby;
+    if (condMoby && !mobyIsDestroyed(condMoby)) {
+        
+      // check if moby is inside the cuboid
+      int isInside = spawnPointIsPointInside(triggerCuboid, condMoby->Position, NULL);
+      if (isInside != condition->Cuboid.InteractType) {
+        ++mobySucceeded;
+        pvars->State.TriggeredByMoby = condMoby;
+      }
+
+      ++mobyCount;
+    }
+  }
+
   int hasAnyPlayer = pSucceeded > 0 && pCount > 0;
   int hasAllPlayers = pSucceeded > 0 && pSucceeded == pCount;
   int hasNoPlayers = pSucceeded == 0 && pCount > 0;
+  int hasHostPlayer = pHostSucceeded > 0;
   int hasAnyNpc = npcSucceeded > 0 && npcCount > 0;
   int hasAllNpcs = npcSucceeded > 0 && npcSucceeded == npcCount;
   int hasNoNpcs = npcSucceeded == 0; // && npcCount > 0;
+  int hasMoby = mobySucceeded > 0 && mobyCount > 0;
   int succeeded = 0, count = 0;
 
   for (j = 0; j < 8; ++j) {
@@ -149,9 +248,11 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
         case CONTROLLER_CUBOID_TRIGGER_BY_ANY_PLAYER: succeeded += hasAnyPlayer; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ALL_PLAYERS: succeeded += hasAllPlayers; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_NO_PLAYERS: succeeded += hasNoPlayers; break;
+        case CONTROLLER_CUBOID_TRIGGER_BY_HOST: succeeded += hasHostPlayer; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ANY_NPC: succeeded += hasAnyNpc; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS: succeeded += hasAllNpcs; break;
         case CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS: succeeded += hasNoNpcs; break;
+        case CONTROLLER_CUBOID_TRIGGER_BY_MOBY: succeeded += hasMoby; break;
       }
       ++count;
     }
@@ -169,17 +270,22 @@ int controllerIsPlayerButtonConditionTrue(Moby* moby, int conditionIdx, char val
   int j;
   int succeeded = 0;
 
+  int acceptsHost = (condition->PlayerButtons.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
     Player* p = players[j];
-    if (!p || !p->SkinMoby || !playerIsConnected(p)) continue;
+    if (!playerIsValid(p) || playerIsDead(p)) continue;
 
-    // check if player is inside the cuboid
-    int hasButtonMask = playerPadGetButton(p, condition->PlayerButtons.PadMask);
-    if (hasButtonMask && validPlayers[j]) {
-      ++succeeded;
-      pvars->State.TriggeredByMoby = p->PlayerMoby;
-    } else {
-      validPlayers[j] = 0;
+    int bit = 1 << j;
+    if ((condition->PlayerButtons.PlayerMask & bit) != 0 || (acceptsHost && p->IsLocal)) {
+      // check if player has button mask
+      int hasButtonMask = playerPadGetButton(p, condition->PlayerButtons.PadMask);
+      if (hasButtonMask && validPlayers[j]) {
+        ++succeeded;
+        pvars->State.TriggeredByMoby = p->PlayerMoby;
+        pvars->State.CounterValue[conditionIdx] = p->PlayerId;
+      } else {
+        validPlayers[j] = 0;
+      }
     }
   }
 
@@ -242,6 +348,7 @@ int controllerDifficultyConditionTrue(Moby* moby, int conditionIdx)
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
 
+  pvars->State.CounterValue[conditionIdx] = MapConfig.State->DifficultyStars;
   return MapConfig.State && (condition->Difficulty.Mask & (1 << MapConfig.State->DifficultyStars)) != 0;
 }
 
@@ -258,7 +365,234 @@ int controllerCheckpointConditionTrue(Moby* moby, int conditionIdx)
     return 0;
   }
 
+  pvars->State.CounterValue[conditionIdx] = target->State;
   return target->State == condition->Checkpoint.IsActive;
+}
+
+//--------------------------------------------------------------------------
+int controllerChanceConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+  
+  float r = randRange(0, 1);
+  pvars->State.CounterValue[conditionIdx] = r;
+  return r < condition->Chance.Probability;
+}
+
+//--------------------------------------------------------------------------
+int controllerHealthConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+
+  Moby* target = condition->Moby;
+  if (!controllerValidateMobyRef(target, condition->MobyUID))
+    return 0;
+
+  struct TargetVars* targetVars = mobyGetTargetVars(target);
+  if (!targetVars) return 0;
+
+  float value = targetVars->hitPoints;
+  float delta = value - pvars->State.LastValue[conditionIdx];
+  float lastValue = pvars->State.LastValue[conditionIdx];
+  if (condition->Health.CompareType >= CONTROLLER_COMPARE_INCREASED_BY && condition->Health.Normalized && targetVars->maxHitPoints > 0) {
+    value /= targetVars->maxHitPoints;
+    delta /= targetVars->maxHitPoints;
+    lastValue /= targetVars->maxHitPoints;
+  }
+
+  int result = controllerConditionCompare(value, lastValue, condition->Health.Value, condition->Health.CompareType);
+
+  pvars->State.CounterValue[conditionIdx] = (condition->Health.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? delta : value;
+  pvars->State.LastValue[conditionIdx] = targetVars->hitPoints;
+  return result;
+}
+
+//--------------------------------------------------------------------------
+int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+
+  if (!condition->PlayerKills.PlayerMask) return 0;
+  if (!condition->PlayerKills.WeaponMask) return 0;
+  if (!condition->PlayerKills.MobMask) return 0;
+  if (!MapConfig.State) return 0;
+  
+  Player** players = playerGetAll();
+  int i,j,k;
+  int playerCount = 0;
+  int playerMatch = 0;
+  int weaponCount = 0;
+  int weaponMatch = 0;
+  int result = 0;
+  int acceptsHost = (condition->PlayerKills.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
+  float sumValue = 0;
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* player = players[i];
+    if (!playerIsValid(player)) continue;
+
+    int bit = 1 << i;
+    if ((condition->PlayerKills.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
+      
+      weaponCount = 0;
+      weaponMatch = 0;
+      for (j = 0; j < MOB_DAMAGE_SOURCE_COUNT-1; ++j) {
+        int wepBit = 1 << j;
+        if ((condition->PlayerKills.WeaponMask & wepBit) != 0) {
+          
+          result = 0;
+          float mobSumKills = 0;
+          float mobSumDelta = 0;
+          for (k = 0; k < MAX_MOB_SPAWN_PARAMS; ++k) {
+            int spawnParamBit = 1 << k;
+            if ((condition->PlayerKills.MobMask & spawnParamBit) != 0) {
+
+              int value = MapConfig.State->PlayerStates[i].State.AllKills[j][k];
+              int delta = value - playerKillsLast[i][j][k];
+
+              result |= controllerConditionCompare(value, playerKillsLast[i][j][k], condition->PlayerKills.Value, condition->PlayerKills.CompareType);
+              mobSumKills += value;
+              mobSumDelta += delta;
+              DLOG(moby, "condition:%d: wep:%d mob:%d value:%d delta:%d => match:%d\n", conditionIdx, j, k, value, delta, result);
+            }
+          }
+
+          weaponCount++;
+          sumValue += mobSumKills;
+          if (result) {
+            ++weaponMatch;
+            pvars->State.CounterValue[conditionIdx] = (condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? mobSumDelta : mobSumKills;
+            DLOG(moby, "condition:%d: wep:%d match\n", conditionIdx, j);
+          }
+        }
+      }
+
+      ++playerCount;
+      if (weaponMatch > 0 && (condition->PlayerKills.MatchAllWeapons == 0 || weaponCount == weaponMatch)) {
+        ++playerMatch;
+        DLOG(moby, "condition:%d: player:%d match\n", conditionIdx, i);
+      }
+    }
+  }
+
+  float sumLastValue = pvars->State.LastValue[conditionIdx];
+  float sumDelta = sumValue - sumLastValue;
+  pvars->State.LastValue[conditionIdx] = sumValue;
+
+  // run aggregate comparison
+  if (condition->PlayerKills.Aggregate) {
+    pvars->State.CounterValue[conditionIdx] = condition->PlayerKills.CompareType >= CONTROLLER_COMPARE_INCREASED_BY ? sumDelta : sumValue;
+    result = controllerConditionCompare(sumValue, sumLastValue, condition->PlayerKills.Value, condition->PlayerKills.CompareType);
+    DLOG(moby, "condition:%d: sum %f (dt: %f) => match:%d\n", conditionIdx, sumValue, sumDelta, result);
+    return result;
+  }
+
+  return playerMatch > 0 && (condition->PlayerKills.MatchAllPlayers == 0 || playerCount == playerMatch);
+}
+
+//--------------------------------------------------------------------------
+int controllerPlayerHealthConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+
+  if (!condition->PlayerHealth.PlayerMask) return 0;
+  
+  Player** players = playerGetAll();
+  int i,j;
+  int playerCount = 0;
+  int playerMatch = 0;
+  int result = 0;
+  int acceptsHost = (condition->PlayerHealth.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* player = players[i];
+    if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
+
+    int bit = 1 << i;
+    if ((condition->PlayerHealth.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
+  
+      // get health & delta
+      float value = player->Health;
+      float delta = value - playerHealthLast[i];
+      float lastValue = playerHealthLast[i];
+      if (condition->PlayerHealth.Normalized) {
+        value /= player->MaxHealth;
+        delta /= player->MaxHealth;
+        lastValue /= player->MaxHealth;
+      }
+  
+      result = controllerConditionCompare(value, lastValue, condition->PlayerHealth.Value, condition->PlayerHealth.CompareType);
+      ++playerCount;
+      if (result) { 
+        ++playerMatch;
+        pvars->State.CounterValue[conditionIdx] = (condition->PlayerHealth.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? delta : value;
+      }
+    }
+  }
+
+  return playerMatch > 0 && (condition->PlayerHealth.MatchAllPlayers == 0 || playerCount == playerMatch);
+}
+
+//--------------------------------------------------------------------------
+int controllerPlayerCountConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+
+  if (!condition->PlayerCount.CountMask) return 0;
+  if (!condition->PlayerCount.Filter) return 0;
+  
+  Player** players = playerGetAll();
+  int i;
+  int count = 0;
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* player = players[i];
+    if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
+
+    int isDead = playerIsDead(player);
+    if (isDead && (condition->PlayerCount.Filter & 2)) ++count;
+    else if (!isDead && (condition->PlayerCount.Filter & 1)) ++count;
+  }
+
+  int bit = 1 << count;
+  return (condition->PlayerCount.CountMask & bit) != 0;
+}
+
+//--------------------------------------------------------------------------
+int controllerCounterConditionTrue(Moby* moby, int conditionIdx)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+
+  Moby* target = condition->Moby;
+  if (!controllerValidateMobyRef(target, condition->MobyUID) || !target->PVar || target->OClass != COUNTER_MOBY_OCLASS)
+    return 0;
+  
+  float value = *(float*)target->PVar;
+  float delta = value - pvars->State.LastValue[conditionIdx];
+  int result = controllerConditionCompare(value, pvars->State.LastValue[conditionIdx], condition->Counter.Value, condition->Counter.CompareType);
+
+  pvars->State.CounterValue[conditionIdx] = (condition->Counter.CompareType >= CONTROLLER_COMPARE_INCREASED_BY) ? delta : value;
+  pvars->State.LastValue[conditionIdx] = value;
+  return result;
+}
+
+//--------------------------------------------------------------------------
+int controllerChallengeConditionTrue(Moby* moby, int conditionIdx)
+{
+  if (!MapConfig.State) return 0;
+
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
+
+  int idx = condition->Challenge.ChallengeIdx;
+  int bit = 1 << idx;
+  int expectedValue = condition->Challenge.Value;
+  int isCompleted = (MapConfig.State->CurrentMapStats.ChallengesMask & bit) != 0;
+
+  return isCompleted == expectedValue;
 }
 
 //--------------------------------------------------------------------------
@@ -281,6 +615,13 @@ void controllerUpdateTriggers(Moby* moby)
       case CONTROLLER_CONDITION_TYPE_NPC_TARGET: count += 1; succeeded += controllerIsNpcTargetConditionTrue(moby, i); break;
       case CONTROLLER_CONDITION_TYPE_DIFFICULTY: count += 1; succeeded += controllerDifficultyConditionTrue(moby, i); break;
       case CONTROLLER_CONDITION_TYPE_CHECKPOINT: count += 1; succeeded += controllerCheckpointConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_CHANCE: count += 1; succeeded += controllerChanceConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_HEALTH: count += 1; succeeded += controllerHealthConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_PLAYER_KILLS: count += 1; succeeded += controllerPlayerKillsConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_PLAYER_HEALTH: count += 1; succeeded += controllerPlayerHealthConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_PLAYER_COUNT: count += 1; succeeded += controllerPlayerCountConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_COUNTER: count += 1; succeeded += controllerCounterConditionTrue(moby, i); break;
+      case CONTROLLER_CONDITION_TYPE_CHALLENGE: count += 1; succeeded += controllerChallengeConditionTrue(moby, i); break;
       default: break;
     }
 
@@ -291,6 +632,14 @@ void controllerUpdateTriggers(Moby* moby)
       // if the condition we stopped on was not a delay
       if (pvars->Conditions[i].ConditionType != CONTROLLER_CONDITION_TYPE_DELAY) {
         for (j = i+1; j < CONTROLLER_MAX_CONDITIONS; ++j) {
+          if (pvars->Conditions[j].ConditionType == CONTROLLER_CONDITION_TYPE_DELAY)
+            pvars->State.DelayStartTime[j] = 0;
+        }
+      }
+      
+      // if XOR reset any previous delays
+      if (pvars->Conditions[i].ConditionType == CONTROLLER_CONDITION_TYPE_XOR) {
+        for (j = i-1; j >= 0; --j) {
           if (pvars->Conditions[j].ConditionType == CONTROLLER_CONDITION_TYPE_DELAY)
             pvars->State.DelayStartTime[j] = 0;
         }
@@ -316,6 +665,8 @@ int controllerControlMobyState(Moby* moby, struct ControllerTarget* target)
   if (target->TargetUpdateType == CONTROLLER_TARGET_UPDATE_TYPE_MOBY_STATE_ADDITIVE)
     state += targetMoby->State;
 
+  DLOG(moby, "controller set %08X state %d=>%d\n", (u32)targetMoby, targetMoby->State, state);
+
   // only when state changes
   if (targetMoby->State == state) return 0;
 
@@ -325,15 +676,13 @@ int controllerControlMobyState(Moby* moby, struct ControllerTarget* target)
     return 1;
   }
 
-  DLOG(moby, "controller set %08X state %d=>%d\n", (u32)targetMoby, targetMoby->State, state);
-
   // handle special cases
   switch (targetMoby->OClass) {
-    case SPAWNER_OCLASS: if (gameAmIHost()) { spawnerBroadcastNewState(targetMoby, state); }; break;
-    case MOVER_OCLASS: if (gameAmIHost()) { moverBroadcastNewState(targetMoby, state); } break;
-    case CONTROLLER_OCLASS: if (gameAmIHost()) { controllerBroadcastNewState(targetMoby, state); } break;
+    case SPAWNER_OCLASS: if (controllerAmIOwner(moby)) { spawnerBroadcastNewState(targetMoby, state); }; break;
+    case MOVER_OCLASS: if (controllerAmIOwner(moby)) { moverBroadcastNewState(targetMoby, state); } break;
+    case CONTROLLER_OCLASS: if (controllerAmIOwner(moby)) { controllerBroadcastNewState(targetMoby, state); } break;
 #if GATE
-    case GATE_OCLASS: if (gameAmIHost()) { gateBroadcastNewState(targetMoby, state); } break;
+    case GATE_OCLASS: if (controllerAmIOwner(moby)) { gateBroadcastNewState(targetMoby, state); } break;
 #endif
     case MOBY_ID_BOLT_CRANK_MP: if (targetMoby->PVar && targetMoby->State == 5) { POKE_U32(targetMoby->PVar, 0); } mobySetState(targetMoby, state, -1); break;
     default: mobySetState(targetMoby, state, -1); break;
@@ -443,7 +792,7 @@ int controllerControlGivePlayerAmmo(Moby* moby, struct ControllerTarget* target)
   Player** players = playerGetAll();
   int i;
   int count = 0;
-  int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && gameAmIHost();
+  int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = players[i];
     if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
@@ -480,7 +829,7 @@ int controllerControlGivePlayerHealth(Moby* moby, struct ControllerTarget* targe
   Player** players = playerGetAll();
   int i;
   int count = 0;
-  int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && gameAmIHost();
+  int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = players[i];
     if (!player || !player->PlayerMoby) continue;
@@ -489,7 +838,7 @@ int controllerControlGivePlayerHealth(Moby* moby, struct ControllerTarget* targe
     if ((target->RespawnPlayer.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
       if (target->GivePlayer.LivingOnly && playerIsDead(player)) continue;
       
-      if (target->GivePlayer.Amount > 0 && playerIsDead(player)) playerRespawn(player);
+      if (target->GivePlayer.Amount >= 0 && playerIsDead(player)) playerRespawn(player);
       if (target->GivePlayer.Amount == 0) playerSetHealth(player, player->MaxHealth);
       else playerSetHealth(player, clamp(player->Health + target->GivePlayer.Amount, 0, player->MaxHealth));
       
@@ -508,7 +857,7 @@ int controllerControlRespawnPlayer(Moby* moby, struct ControllerTarget* target)
   Player** players = playerGetAll();
   int i;
   int count = 0;
-  int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && gameAmIHost();
+  int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = players[i];
     if (!player || !player->PlayerMoby) continue;
@@ -530,11 +879,128 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   if (!MapConfig.State) return 0;
-  if (MapConfig.State->MissionComplete) return 0;
+  if (!missionIsActive()) return 0;
   
-  MapConfig.State->MissionComplete = 1;
-  MapConfig.State->MissionCompleteTime = gameAmIHost() ? gameGetTime() : pvars->State.RemoteIterationTime;
+  MapConfig.State->MissionStatus = RAIDS_MISSION_COMPLETED;
+  MapConfig.State->MissionCompleteTime = controllerAmIOwner(moby) ? gameGetTime() : pvars->State.RemoteIterationTime;
+  if (MapConfig.OnMissionCompleteFunc) MapConfig.OnMissionCompleteFunc(target->Cuboid.DestIdx);
   DLOG(moby, "mission end\n");
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlFailMission(Moby* moby, struct ControllerTarget* target)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  if (!MapConfig.State) return 0;
+  if (!missionIsActive()) return 0;
+  
+  if (MapConfig.OnMissionFailFunc) MapConfig.OnMissionFailFunc();
+  DLOG(moby, "mission fail\n");
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlSetAmmoDropProbability(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  if (MapConfig.State->AmmoDropChance == target->Value.FloatValue) return 0;
+
+  MapConfig.State->AmmoDropChance = target->Value.FloatValue;
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlSetRefillAmmoCostMultiplier(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  if (MapConfig.State->AmmoRefillCostMultiplier == target->Value.FloatValue) return 0;
+
+  MapConfig.State->AmmoRefillCostMultiplier = target->Value.FloatValue;
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlSetMusicTrack(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  if (!missionIsActive()) return 0;
+  
+  MapConfig.State->DesiredMusicTrack = target->Music.TrackId;
+  MapConfig.State->DesiredMusicTrackForce = target->Music.Force;
+  MapConfig.State->DesiredMusicTrackSkipTransition = target->Music.SkipTransition;
+  MapConfig.State->DesiredMusicTrackLoop = target->Music.Loop;
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlUpdateChallenge(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+  
+  int challengeIndex = target->Challenge.ChallengeIdx;
+  int bit = 1 << challengeIndex;
+  int setTo = 1;
+  int isCompleted = (MapConfig.State->CurrentMapStats.ChallengesMask & bit) != 0;
+  if (isCompleted == setTo) return 1;
+
+  if (setTo) {
+    bankAddXP(LEVELUP_CHALLENGE_INCREMENT_AMOUNT); // earn XP for completion
+  }
+
+  // set and send
+  if (setTo) {
+    MapConfig.State->CurrentMapStats.ChallengesMask |= bit;
+  } else {
+    MapConfig.State->CurrentMapStats.ChallengesMask &= ~bit;
+  }
+  bankSendMapStats(&MapConfig.State->CurrentMapStats);
+
+  // tell user
+  if (setTo && PATCH_INTEROP && PATCH_INTEROP->ReadCustomMapExtraData) {
+    char exDataBuf[RAIDS_MAX_EXDATA_SIZE];
+    struct RaidsCustomMapExtraData* exData = (struct RaidsCustomMapExtraData*)exDataBuf;
+    PATCH_INTEROP->ReadCustomMapExtraData(MapConfig.State->CurrentMapDef->Filename, exDataBuf, sizeof(exDataBuf), CUSTOM_MODE_RAIDS);
+      
+    int cNameOff = exData->Challenges[(challengeIndex*2)+0];
+    if (cNameOff) {
+      char* cName = exDataBuf + cNameOff;
+      char strBuf[64];
+      snprintf(strBuf, sizeof(strBuf), "Challenge \x0E%s\x08 Complete", cName);
+      pushSnack(0, strBuf, 120);
+    }
+  }
+
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int controllerControlUpdateCounter(Moby* moby, struct ControllerTarget* target)
+{
+  if (!MapConfig.State) return 0;
+
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  Moby* counterMoby = target->Counter.Moby;
+  if (!counterMoby || !counterMoby->PVar || mobyIsDestroyed(counterMoby) || counterMoby->OClass != COUNTER_MOBY_OCLASS)
+    return 0;
+  
+  float uValue = target->Counter.UpdateValue;
+  if (target->Counter.CounterValueIdx > 0) uValue = pvars->State.CounterValue[target->Counter.CounterValueIdx-1];
+  float* pValue = (float*)counterMoby->PVar;
+  switch (target->Counter.UpdateType)
+  {
+    case CONTROLLER_COUNTER_SET: *pValue = uValue; break;
+    case CONTROLLER_COUNTER_ADD: *pValue += uValue; break;
+    case CONTROLLER_COUNTER_SUB: *pValue -= uValue; break;
+    case CONTROLLER_COUNTER_MUL: *pValue *= uValue; break;
+    case CONTROLLER_COUNTER_DIV: *pValue /= uValue; break;
+    case CONTROLLER_COUNTER_MAX: *pValue = maxf(*pValue, uValue); break;
+    case CONTROLLER_COUNTER_MIN: *pValue = minf(*pValue, uValue); break;
+    default: return 0;
+  }
+
+  DLOG(moby, "set counter to %f (uvalue: %f)\n", *pValue, uValue);
+
   return 1;
 }
 
@@ -560,7 +1026,13 @@ int controllerIterate(Moby* moby)
       case CONTROLLER_TARGET_UPDATE_TYPE_GIVE_PLAYER_HEALTH: changed += controllerControlGivePlayerHealth(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_RESPAWN: changed += controllerControlRespawnPlayer(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_COMPLETE_MISSION: changed += controllerControlCompleteMission(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_FAIL_MISSION: changed += controllerControlFailMission(moby, &pvars->Targets[i]); break;
       case CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT: changed += controllerControlMobySetCheckpoint(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY: changed += controllerControlSetAmmoDropProbability(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER: changed += controllerControlSetRefillAmmoCostMultiplier(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_SET_MUSIC_TRACK: changed += controllerControlSetMusicTrack(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_CHALLENGE: changed += controllerControlUpdateChallenge(moby, &pvars->Targets[i]); break;
+      case CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_COUNTER: changed += controllerControlUpdateCounter(moby, &pvars->Targets[i]); break;
     }
   }
   
@@ -596,6 +1068,13 @@ void controllerOnStateChanged(Moby* moby)
 //--------------------------------------------------------------------------
 void controllerBroadcastNewState(Moby* moby, enum ControllerState state)
 {
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  if (pvars->NoSync) {
+    pvars->Init = 1;
+    mobySetState(moby, state, -1);
+    return;
+  }
+
 	// create event
 	GuberEvent * guberEvent = guberCreateEvent(moby, CONTROLLER_EVENT_SET_STATE);
   if (guberEvent) {
@@ -610,12 +1089,30 @@ void controllerBroadcastIterate(Moby* moby)
   u32 triggeredByUid = guberGetUID(pvars->State.TriggeredByMoby);
   int time = gameGetTime();
 
+  if (pvars->NoSync) {
+    return;
+  }
+
 	// create event
 	GuberEvent * guberEvent = guberCreateEvent(moby, CONTROLLER_EVENT_ITERATE);
   if (guberEvent) {
     guberEventWrite(guberEvent, &pvars->State.Iterations, 4);
     guberEventWrite(guberEvent, &triggeredByUid, 4);
     guberEventWrite(guberEvent, &time, 4);
+
+    int i;
+    int mask = 0;
+    for (i = 0; i < CONTROLLER_MAX_TARGETS; ++i) {
+      if (pvars->Targets[i].TargetUpdateType == CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_COUNTER) {
+        int idx = pvars->Targets[i].Counter.CounterValueIdx;
+        int bit = 1 << idx;
+        if (mask & bit) continue;
+
+        guberEventWrite(guberEvent, &pvars->State.CounterValue[idx], 4);
+        mask |= bit;
+      }
+    }
+
     DLOG(moby, "broadcast iterate triggeredby:%08X %08X\n", (u32)triggeredByUid, (u32)pvars->State.TriggeredByMoby);
   }
 }
@@ -627,7 +1124,7 @@ void controllerUpdate(Moby* moby)
 
   // initialize by sending first state
   if (!pvars->Init) {
-    if (gameAmIHost() && controllerInitialized) {
+    if (controllerAmIOwner(moby) && controllerInitialized) {
       controllerBroadcastNewState(moby, pvars->DefaultState);
     }
     
@@ -640,12 +1137,11 @@ void controllerUpdate(Moby* moby)
     moby->Triggers |= 1;
   }
 
-  if (!gameAmIHost()) return;
+  if (!controllerAmIOwner(moby)) return;
+  //if (!missionIsActive() && !isOnHubWorld()) return;
+  if (missionIsFailed()) return;
   if (moby->State == CONTROLLER_STATE_DEACTIVATED) return;
   if (moby->State == CONTROLLER_STATE_COMPLETED) return;
-
-  // update triggers
-  controllerUpdateTriggers(moby);
 
   // check if we've reached the iteration count
   if (pvars->Repeat > 0 && pvars->State.Iterations >= pvars->Repeat) {
@@ -653,6 +1149,9 @@ void controllerUpdate(Moby* moby)
     controllerBroadcastNewState(moby, CONTROLLER_STATE_COMPLETED);
     return;
   }
+
+  // update triggers
+  controllerUpdateTriggers(moby);
 
   // check if we should exit idle
   if (moby->State == CONTROLLER_STATE_IDLE && controllerAnyTriggerActivated(moby)) {
@@ -663,6 +1162,7 @@ void controllerUpdate(Moby* moby)
     controllerBroadcastNewState(moby, CONTROLLER_STATE_IDLE);
     return;
   } else if (moby->State != CONTROLLER_STATE_ACTIVATED) {
+    if (pvars->CountNoTrigger) pvars->State.Iterations++;
     return;
   }
 
@@ -711,12 +1211,22 @@ void controllerOnGuberCreated(Moby* moby)
         DLOG(moby, "controller %08X found moby target %d %08X\n", (u32)moby, i, (u32)pvars->Targets[i].Moby.Moby);
         break;
       }
+      case CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_COUNTER:
+      {
+        pvars->Targets[i].Counter.Moby = mobyGetFromIdxOrNull((int)pvars->Targets[i].Counter.Moby);
+        DLOG(moby, "controller %08X found moby target %d %08X\n", (u32)moby, i, (u32)pvars->Targets[i].Counter.Moby);
+        break;
+      }
       default: break;
     }
   }
 
   for (i = 0; i < CONTROLLER_MAX_CONDITIONS; ++i) {
     pvars->Conditions[i].Moby = mobyGetFromIdxOrNull((int)pvars->Conditions[i].Moby);
+    pvars->Conditions[i].MobyUID = -1;
+    if (pvars->Conditions[i].Moby) {
+      pvars->Conditions[i].MobyUID = pvars->Conditions[i].Moby->UID;
+    }
     DLOG(moby, "controller %08X found condition moby %d %08X\n", (u32)moby, i, (u32)pvars->Conditions[i].Moby);
   }
 }
@@ -750,6 +1260,19 @@ int controllerHandleEvent_Iterate(Moby* moby, GuberEvent* event)
 	guberEventRead(event, &pvars->State.Iterations, 4);
 	guberEventRead(event, &triggeredByUid, 4);
 	guberEventRead(event, &time, 4);
+
+  int i;
+  int mask;
+  for (i = 0; i < CONTROLLER_MAX_TARGETS; ++i) {
+    if (pvars->Targets[i].TargetUpdateType == CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_COUNTER) {
+      int idx = pvars->Targets[i].Counter.CounterValueIdx;
+      int bit = 1 << idx;
+      if (mask & bit) continue;
+
+      guberEventRead(event, &pvars->State.CounterValue[idx], 4);
+      mask |= bit;
+    }
+  }
   
   Guber* triggeredByGuber = guberGetObjectByUID(triggeredByUid);
   if (triggeredByGuber && triggeredByGuber->VTable && triggeredByGuber->VTable->GetMoby) {
@@ -759,7 +1282,7 @@ int controllerHandleEvent_Iterate(Moby* moby, GuberEvent* event)
   }
   
 	// iterate
-  if (!gameAmIHost()) {
+  if (!controllerAmIOwner(moby)) {
     pvars->State.RemoteIterationTime = time;
     controllerIterate(moby);
   }
@@ -805,6 +1328,22 @@ int controllerHandleEvent(Moby* moby, GuberEvent* event)
 void controllerStart(void)
 {
   controllerInitialized = 1;
+
+  // cache values used for delta conditions
+  int i;
+  Player** players = playerGetAll();
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+
+    Player* player = players[i];
+    if (!playerIsValid(player)) continue;
+    
+    int j;
+    if (MapConfig.State) {
+      memcpy(playerKillsLast[i], MapConfig.State->PlayerStates[i].State.AllKills, sizeof(playerKillsLast[i]));
+    }
+
+    playerHealthLast[i] = player->Health;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -813,6 +1352,9 @@ void controllerInit(void)
   Moby* temp = mobySpawn(CONTROLLER_OCLASS, 0);
   if (!temp)
     return;
+
+  DPRINTF("controller target size %d\n", sizeof(struct ControllerTarget));
+  DPRINTF("controller target moby offset %d\n", OFFSET_OF(struct ControllerTarget, Moby.Moby));
 
   // set vtable callbacks
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);

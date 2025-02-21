@@ -92,6 +92,13 @@ public static class BinaryHelper
         }
     }
 
+    public static void WriteCString(this BinaryWriter writer, string value)
+    {
+        var bytes = Encoding.ASCII.GetBytes(value);
+        writer.Write(bytes);
+        writer.Write((byte)0);
+    }
+
     public static void WriteVectorXZY(this BinaryWriter writer, Vector3 value)
     {
         writer.Write(value.x);

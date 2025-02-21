@@ -19,7 +19,6 @@ public class MapConfigEditor : Editor
 
     SerializedProperty m_DLBaseMap;
     SerializedProperty m_DLForceCustomMode;
-    SerializedProperty m_DLHideFromMapList;
     SerializedProperty m_DLLoadingScreen;
     SerializedProperty m_DLMinimap;
     SerializedProperty m_DLMobysIncludedInExport;
@@ -48,7 +47,6 @@ public class MapConfigEditor : Editor
 
         m_DLBaseMap = serializedObject.FindProperty("DLBaseMap");
         m_DLForceCustomMode = serializedObject.FindProperty("DLForceCustomMode");
-        m_DLHideFromMapList = serializedObject.FindProperty("DLHideFromMapList");
         m_DLLoadingScreen = serializedObject.FindProperty("DLLoadingScreen");
         m_DLMinimap = serializedObject.FindProperty("DLMinimap");
         m_DLMobysIncludedInExport = serializedObject.FindProperty("DLMobysIncludedInExport");
@@ -88,7 +86,6 @@ public class MapConfigEditor : Editor
         if ((target as MapConfig).HasDeadlockedBaseMap())
         {
             EditorGUILayout.PropertyField(m_DLForceCustomMode);
-            EditorGUILayout.PropertyField(m_DLHideFromMapList);
             EditorGUILayout.PropertyField(m_DLLoadingScreen);
             EditorGUILayout.PropertyField(m_DLMinimap);
             EditorGUILayout.PropertyField(m_DLMobysIncludedInExport);

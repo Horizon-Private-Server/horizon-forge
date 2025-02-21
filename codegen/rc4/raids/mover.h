@@ -19,6 +19,7 @@ enum MoverEventType {
 enum MoverState {
 	MOVER_STATE_DEACTIVATED,
 	MOVER_STATE_ACTIVATED,
+	MOVER_STATE_PAUSED,
 	MOVER_STATE_COMPLETED = 127,
 };
 
@@ -28,11 +29,28 @@ enum MoverSplineLoopType {
 	MOVER_MOTION_PING_PONG,
 };
 
+enum MoverAttachedType {
+	MOVER_ATTACHED_NONE,
+	MOVER_ATTACHED_SPLINE,
+	MOVER_ATTACHED_MOBY,
+};
+
+enum MoverRandomizeSplineType {
+	MOVER_RANDSPLINE_NONE,
+	MOVER_RANDSPLINE_VERTEX,
+	MOVER_RANDSPLINE_EDGE,
+};
+
 struct MoverRuntimeState
 {
+  VECTOR MoverLastPosition;
   VECTOR LastAppliedPositionDelta;
   VECTOR LastAppliedRotationDelta;
+  VECTOR MobyLastPosition;
+  VECTOR MobyLastRotation;
   int TimeStarted;
+  float TimePausedT;
+  float TimeOffset;
   int CurrentSplineDir;
   float CurrentSplineLen;
 };
@@ -63,10 +81,14 @@ struct MoverPVar
   int AngularFrequency;
 
   // spline
-  int SplineIdx;
-  char SplineInitSnapTo;
-  char SplineAlign;
+  int AttachedToSplineIdx;
+  Moby* AttachedToMoby;
+  char AttachedType;
+  char AttachedInitSnapTo;
+  char AttachedAlign;
+  char SplineRandomizeStart;
   float SplineSpeed;
+  float SplineTurnSpeed;
   enum MoverSplineLoopType SplineLoop;
 
   // 

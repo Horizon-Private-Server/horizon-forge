@@ -19,6 +19,8 @@ Shader "Horizon Forge/Universal"
         _Smoothness("Smoothness", Range(0,1)) = 0
         _AlphaClip("AlphaClip", Range(0,1)) = 0
         _Color("Color", Color) = (1,1,1,1)
+        [Toggle] _Emission("Emission", Integer) = 0
+        [HDR] _EmissionColor("Emission Color", Color) = (0,0,0,0)
         _Rim("Rim", Range(0,1)) = 0.25
         _Shading("Shading", Range(0,1)) = 0.5
         _WorldLightIndex("World Light Index", Integer) = 0
@@ -92,6 +94,8 @@ Shader "Horizon Forge/Universal"
             int _WorldLightIndex;
             float _Smoothness;
             float4 _Color;
+            int _Emission;
+            float3 _EmissionColor;
             float _AlphaClip;
             float4 _IdColor;
             float _Rim;
@@ -304,10 +308,14 @@ Shader "Horizon Forge/Universal"
                 {
                     col.rgb = lerp(col.rgb, _FORGE_SELECTION_COLOR.rgb, _FORGE_SELECTION_COLOR.a);
                 }
+                
+                
+                if (_Emission)
+                    col.rgb += col.rgb * _EmissionColor.rgb;
 
                 float fogZ = LinearEyeDepth(i.pos.z);
                 float fogFactor = _Fog * saturate((fogZ - _FORGE_FOG_NEAR_DISTANCE) / (_FORGE_FOG_FAR_DISTANCE - _FORGE_FOG_NEAR_DISTANCE));
-                return fixed4(lerp(col.rgb, _FORGE_FOG_COLOR.rgb, lerp(_FORGE_FOG_NEAR_INTENSITY, _FORGE_FOG_FAR_INTENSITY, fogFactor)), col.a);
+                return float4(lerp(col.rgb, _FORGE_FOG_COLOR.rgb, lerp(_FORGE_FOG_NEAR_INTENSITY, _FORGE_FOG_FAR_INTENSITY, fogFactor)), col.a);
 #endif
             }
             ENDCG

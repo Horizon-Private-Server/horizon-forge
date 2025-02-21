@@ -69,6 +69,12 @@ public static class WrenchHelper
         return p.ExitCode;
     }
 
+    public static bool CompressWad(string binFile, string outWadFile)
+    {
+        var r = RunWrench(out _, "compress", binFile, "-o", outWadFile);
+        return r == 0;
+    }
+
     public static bool ExportTfrags(string binFile, string outColladaFile, int game)
     {
         var r = RunWrench(out _, "extract_tfrags", binFile, "-o", outColladaFile, "-g", GetGame(game));

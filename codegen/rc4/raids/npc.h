@@ -39,6 +39,7 @@ enum NpcState
 	NPC_STATE_ROAM,
 	NPC_STATE_WALK_TO_TARGET,
 	NPC_STATE_LOOK_AT_TARGET,
+  NPC_STATE_CYCLE_ANIMATIONS,
   NPC_STATE_DIE
 };
 
@@ -49,7 +50,26 @@ enum NpcAction
 	NPC_ACTION_WALK,
 	NPC_ACTION_LOOK_AT_TARGET,
   NPC_ACTION_DIE,
-  NPC_ACTION_ROAM
+  NPC_ACTION_ROAM,
+  NPC_ACTION_CYCLE_ANIMATIONS
+};
+
+enum NpcAggroType {
+  NPC_MOB_AGGRO_IGNORE = 0,
+  NPC_MOB_AGGRO_IN_RANGE,
+  NPC_MOB_AGGRO_ALWAYS,
+};
+
+enum NpcOnDeathType {
+  NPC_ON_DEATH_NONE = 0,
+  NPC_ON_DEATH_DESTROY,
+  NPC_ON_DEATH_BLOW_CORN,
+};
+
+struct NpcDifficultyConfig
+{
+  float HealthMult;
+  float SpeedMult;
 };
 
 struct NpcAnimDef
@@ -65,13 +85,15 @@ struct NpcParameters
   struct NpcAnimDef WalkAnim;
   struct NpcAnimDef JumpAnim;
   struct NpcAnimDef LookAtPlayerAnim;
-  struct NpcAnimDef Unused0Anim;
+  struct NpcAnimDef DeathAnim;
   struct NpcAnimDef Unused1Anim;
   struct NpcAnimDef Unused2Anim;
   struct NpcAnimDef Unused3Anim;
 
   char DefaultState;
   char Log;
+  char IsOnEnemyTeam;
+  char Healthbar;
   Moby* NpcMoby;
   Moby* TargetMoby;
   int AttachedCuboidIdx;
@@ -88,11 +110,27 @@ struct NpcParameters
   int BlipType;
   Moby* AttachedMoby;
   u16 Bangles;
+  char OnDeathType;
+  char DeathToAttachedMoby;
 
-  float AttachedMobyYawOffset;
+  Moby* OnHitControllerMoby;
+  Moby* OnKilledControllerMoby;
+
+  float TargetHeight;
+  float TargetRadius;
+  float DamageCooldownSeconds;
+  float MobTargetDistance;
+  float HealthbarOffset;
+  char MobTargetType;
+  char DamageBubbles;
+  char Targetable;
+  struct NpcDifficultyConfig DifficultyConfigs[RAIDS_DIFFICULTY_COUNT];
+
   VECTOR SpawnPosition;
   VECTOR AttachedCuboidOffset;
   VECTOR AttachedMobyOffset;
+  int TicksSinceLastDamage;
+  float AttachedMobyYawOffset;
 };
 
 struct NpcPVar

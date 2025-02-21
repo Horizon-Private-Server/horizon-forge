@@ -11,6 +11,8 @@ public class PathGraphNode : MonoBehaviour
 {
     public float Radius = 1f;
     [Range(0f, 1f)] public float Cornering = 1f;
+    public bool HasHeightLimit = false;
+    [Min(0)] public float HeightLimit = 10f;
 
     private PathGraph _graph;
     private GUIStyle _weightStyle;
@@ -173,6 +175,15 @@ public class PathGraphNode : MonoBehaviour
         Gizmos.matrix = Matrix4x4.TRS(GetCenterPosition(), this.transform.rotation, new Vector3(Cornering, 0, Cornering));
         Gizmos.DrawWireSphere(Vector3.zero, Radius);
         Gizmos.matrix = m;
+
+        if (HasHeightLimit)
+        {
+            Gizmos.color = GetColor();
+            Gizmos.matrix = Matrix4x4.TRS(GetCenterPosition() + (Vector3.up * HeightLimit), this.transform.rotation, new Vector3(1, 0, 1));
+            Gizmos.DrawWireSphere(Vector3.zero, Radius);
+            Gizmos.matrix = m;
+            Gizmos.DrawLine(GetCenterPosition(), GetCenterPosition() + (Vector3.up * HeightLimit));
+        }
 
         // draw connections
         foreach (var edge in graph.Edges.Where(x => x.From == this))

@@ -55,25 +55,26 @@ public static class AssetUtilities
         // collect
         foreach (var go in Selection.gameObjects)
         {
-            var meshRenderers = go.GetComponentsInChildren<MeshRenderer>();
+            var meshRenderers = go.GetComponentsInChildren<MeshRenderer>(includeInactive: true);
 
             foreach (var mr in meshRenderers)
             {
                 var mf = mr.GetComponent<MeshFilter>();
                 if (mf)
                 {
-                    for (int m = 0; m < mr.sharedMaterials.Length; ++m)
+                    for (int submesh = 0; submesh < mf.sharedMesh.subMeshCount; ++submesh)
                     {
+                        var m = submesh % mr.sharedMaterials.Length;
                         var mat = mr.sharedMaterials[m];
                         if (!mat || mat.shader.name != "Horizon Forge/Universal") continue;
 
                         var tex = mat.mainTexture as Texture2D;
-                        if (tex && tex.wrapMode != TextureWrapMode.Clamp)
+                        if (tex)
                         {
                             if (!texMeshes.TryGetValue(tex, out var list))
                                 texMeshes[tex] = list = new List<(Mesh, int)>();
 
-                            var pair = (mf.sharedMesh, m % mf.sharedMesh.subMeshCount);
+                            var pair = (mf.sharedMesh, submesh);
                             if (!list.Any(x => x.Item1 == pair.Item1 && x.Item2 == pair.Item2))
                                 list.Add(pair);
                         }
@@ -108,11 +109,11 @@ public static class AssetUtilities
                     if (uv.y < 0 || uv.y > 1)
                         clampY = false;
 
-                    if (clampX && clampY) break;
+                    if (!clampX && !clampY) break;
                 }
             }
 
-            if (clampX || clampY)
+            //if (clampX || clampY)
             {
                 Debug.Log($"CLAMP X:{clampX} Y:{clampY} {tex.name}");
                 clampedTextures.Add((tex, clampX, clampY));
@@ -128,12 +129,8 @@ public static class AssetUtilities
                 var clampX = texClamp.Item2;
                 var clampY = texClamp.Item3;
 
-                if (clampX && clampY)
-                    tex.wrapMode = TextureWrapMode.Clamp;
-                else if (clampX)
-                    tex.wrapModeU = TextureWrapMode.Clamp;
-                else if (clampY)
-                    tex.wrapModeV = TextureWrapMode.Clamp;
+                tex.wrapModeU = clampX ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
+                tex.wrapModeV = clampY ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
 
                 EditorUtility.SetDirty(tex);
 
@@ -143,13 +140,8 @@ public static class AssetUtilities
                     var assetImporter = AssetImporter.GetAtPath(assetPath);
                     if (assetImporter is TextureImporter textureImporter)
                     {
-                        if (clampX && clampY)
-                            textureImporter.wrapMode = TextureWrapMode.Clamp;
-                        else if (clampX)
-                            textureImporter.wrapModeU = TextureWrapMode.Clamp;
-                        else if (clampY)
-                            textureImporter.wrapModeV = TextureWrapMode.Clamp;
-
+                        textureImporter.wrapModeU = clampX ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
+                        textureImporter.wrapModeV = clampY ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
                     }
                 }
             }

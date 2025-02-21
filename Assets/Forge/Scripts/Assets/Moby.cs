@@ -67,6 +67,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     [HideInInspector] public SerializableMonoBehaviourDictionary PVarReferences;
     [HideInInspector] public string[] PVarStrings;
     [HideInInspector] public GameObject PrefabOverride;
+    [HideInInspector] public Matrix4x4 PrefabOverrideTransformation = Matrix4x4.identity;
 
     public int GetRCVersion() => RCVersion;
     public byte[] GetPVarData() => PVars;
@@ -79,7 +80,13 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     public void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs) => PVarReferences = pvarRefs;
     public void SetPVarStrings(string[] strings) => PVarStrings = strings;
     public object GetPVarValue(string path) => GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences);
-    public T GetPVarValue<T>(string path) => (T?)GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences) ?? default(T);
+    public T GetPVarValue<T>(string path)
+    {
+        var value = GetPVarOverlay().GetPVarValue(path, PVarValues, PVarReferences);
+        if (value == null) return default(T);
+
+        return (T)Convert.ChangeType(value, typeof(T));
+    }
 
     public GameObject GameObject => this ? this.gameObject : null;
     public bool IsHidden => renderHandle?.IsHidden ?? false;
@@ -120,6 +127,9 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         // only render gizmos if gameobject is in actual selection
         if (Selection.gameObjects == null) return;
         if (!Selection.gameObjects.Contains(this.gameObject)) return;
+
+        // draw render handle gizmos
+        renderHandle?.DrawGizmos();
 
         if (DrawPVarMobyLines)
         {
@@ -226,6 +236,13 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         renderHandle.WorldLightIndex = Light1;
         renderHandle.Layer = LayerMask.NameToLayer("MOBY");
         renderHandle.Update(this.gameObject, GetPrefab());
+        if (PrefabOverride && PrefabOverrideTransformation.ValidTRS())
+        {
+            renderHandle.Offset = PrefabOverrideTransformation.GetPosition();
+            renderHandle.Rotation = PrefabOverrideTransformation.GetRotation();
+            renderHandle.Scale = PrefabOverrideTransformation.GetScale();
+        }
+
         UpdateMaterials();
 
         InitializePVarReferences();
@@ -323,7 +340,10 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     public void Write(BinaryWriter writer)
     {
-        var euler = this.transform.rotation.eulerAngles * -Mathf.Deg2Rad;
+        var euler = this.transform.rotation.eulerAngles;
+        euler.x = Mathf.DeltaAngle(0, euler.x) * -Mathf.Deg2Rad;
+        euler.y = Mathf.DeltaAngle(0, euler.y) * -Mathf.Deg2Rad;
+        euler.z = Mathf.DeltaAngle(0, euler.z) * -Mathf.Deg2Rad;
 
         switch (RCVersion)
         {
@@ -340,7 +360,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                     writer.Write(0);
                     writer.Write(0);
                     writer.Write(OClass);
-                    writer.Write(this.transform.localScale.x);
+                    writer.Write(this.transform.lossyScale.x);
                     writer.Write(DrawDistance);
                     writer.Write(UpdateDistance);
                     writer.Write(0x20);
@@ -374,7 +394,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
                     writer.Write(Uid);
                     writer.Write(Bolts);
                     writer.Write(OClass);
-                    writer.Write(this.transform.localScale.x);
+                    writer.Write(this.transform.lossyScale.x);
                     writer.Write(DrawDistance);
                     writer.Write(UpdateDistance);
                     writer.Write(0);

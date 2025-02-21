@@ -18,6 +18,7 @@ public class ISOImporterWindow : EditorWindow
 
     DropdownField srcDropdown;
     Toggle overwriteToggle;
+    Toggle reuseLastUnpackToggle;
     Toggle[] assetToggles;
     Button importButton;
 
@@ -60,6 +61,14 @@ public class ISOImporterWindow : EditorWindow
             container.Add(overwriteToggle);
         });
 
+        // Create toggle
+        root.BuildRow("Reuse last unpack", (container) =>
+        {
+            reuseLastUnpackToggle = new Toggle();
+            reuseLastUnpackToggle.value = false; // default off
+            container.Add(reuseLastUnpackToggle);
+        });
+        
         // VisualElements objects can contain other VisualElement following a tree hierarchy
         root.BuildPadding();
         var importTypesLabel = new Label("Types");
@@ -108,10 +117,10 @@ public class ISOImporterWindow : EditorWindow
             return;
         }
 
-        ImportISO(isoPath, SourceRACVersion[srcDropdown.index], assetToggles[0].value, assetToggles[1].value, assetToggles[2].value, overwriteToggle.value);
+        ImportISO(isoPath, SourceRACVersion[srcDropdown.index], assetToggles[0].value, assetToggles[1].value, assetToggles[2].value, overwriteToggle.value, reuseLastUnpackToggle.value);
     }
 
-    public static bool ImportISO(string isoPath, int isoRacVersion, bool importTies, bool importShrubs, bool importMobys, bool overwrite)
+    public static bool ImportISO(string isoPath, int isoRacVersion, bool importTies, bool importShrubs, bool importMobys, bool overwrite, bool reuseLastUnpackToggle)
     {
         var assetImports = new List<PackerImporterWindow.PackerAssetImport>(10000);
         var racVersion = isoRacVersion;
@@ -143,6 +152,10 @@ public class ISOImporterWindow : EditorWindow
                     return false;
 
                 var levelFolder = Path.Combine(tempFolder, $"rc{racVersion}-{(int)level}");
+                var shouldExtract = !Directory.Exists(levelFolder) || !reuseLastUnpackToggle;
+                if (!shouldExtract) continue;
+
+                // reset level folder
                 if (Directory.Exists(levelFolder)) Directory.Delete(levelFolder, true);
                 Directory.CreateDirectory(levelFolder);
 
@@ -168,7 +181,7 @@ public class ISOImporterWindow : EditorWindow
 
             // then gather assets
             i = 0;
-            foreach (var level in levelsToImport)
+            foreach (DLMapIds level in levelsToImport)
             {
                 if (CancelProgressBar(ref cancel, $"Gathering {isoLabelStr} Level Assets ({assetImports.Count} total assets to import)", level.ToString(), i / (float)levelsToImport.Length))
                     return false;
@@ -176,40 +189,45 @@ public class ISOImporterWindow : EditorWindow
                 var result = PackerHelper.PACKER_STATUS_CODES.SUCCESS;
                 var levelFolder = Path.Combine(tempFolder, $"rc{racVersion}-{(int)level}");
                 var assetsFolder = Path.Combine(levelFolder, FolderNames.AssetsFolder);
-
-                // unpack sounds
                 var soundPath = racVersion == RCVER.DL ? Path.Combine(levelFolder, "sound.bnk") : Path.Combine(levelFolder, $"level{(int)level}.1.wad");
                 var soundsFolder = Path.Combine(levelFolder, FolderNames.BinarySoundsFolder);
-                result = PackerHelper.UnpackSounds(soundPath, soundsFolder, racVersion);
-                if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                {
-                    Debug.LogError($"Error unpacking sounds {level}: {result}");
-                    cancel = true;
-                    continue;
-                }
+                var missionsFolder = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
+                var needsMission = level < DLMapIds.MP_Battledome;
 
-                if (CancelProgressBar(ref cancel, $"Gathering {isoLabelStr} Level Assets ({assetImports.Count} total assets to import)", level.ToString(), i / (float)levelsToImport.Length))
-                    return false;
-
-                // unpack assets
-                result = PackerHelper.UnpackAssets(levelFolder, assetsFolder, racVersion);
-                if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                var shouldUnpack = !Directory.Exists(assetsFolder) || !Directory.Exists(soundsFolder) || (needsMission && !Directory.Exists(missionsFolder)) || !reuseLastUnpackToggle;
+                if (shouldUnpack)
                 {
-                    Debug.LogError($"Error unpacking assets {level}: {result}");
-                    cancel = true;
-                    continue;
-                }
-
-                // unpack missions
-                var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
-                if (Directory.Exists(missionsPath))
-                {
-                    result = PackerHelper.UnpackMissions(missionsPath);
+                    // unpack sounds
+                    result = PackerHelper.UnpackSounds(soundPath, soundsFolder, racVersion);
                     if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
                     {
-                        Debug.LogError($"Error unpacking missions {level}: {result}");
+                        Debug.LogError($"Error unpacking sounds {level}: {result}");
                         cancel = true;
                         continue;
+                    }
+
+                    if (CancelProgressBar(ref cancel, $"Gathering {isoLabelStr} Level Assets ({assetImports.Count} total assets to import)", level.ToString(), i / (float)levelsToImport.Length))
+                        return false;
+
+                    // unpack assets
+                    result = PackerHelper.UnpackAssets(levelFolder, assetsFolder, racVersion);
+                    if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                    {
+                        Debug.LogError($"Error unpacking assets {level}: {result}");
+                        cancel = true;
+                        continue;
+                    }
+
+                    // unpack missions
+                    if (Directory.Exists(missionsFolder))
+                    {
+                        result = PackerHelper.UnpackMissions(missionsFolder);
+                        if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                        {
+                            Debug.LogError($"Error unpacking missions {level}: {result}");
+                            cancel = true;
+                            continue;
+                        }
                     }
                 }
 
@@ -286,9 +304,9 @@ public class ISOImporterWindow : EditorWindow
                     var mobyDirs = Directory.EnumerateDirectories(mobyAssetDir).ToList();
 
                     // missions may have more mobys
-                    if (Directory.Exists(missionsPath))
+                    if (Directory.Exists(missionsFolder))
                     {
-                        var missionDirs = Directory.EnumerateDirectories(missionsPath);
+                        var missionDirs = Directory.EnumerateDirectories(missionsFolder);
                         foreach (var missionDir in missionDirs)
                         {
                             var missionMobyAssetDir = Path.Combine(missionDir, FolderNames.BinaryMobyFolder);

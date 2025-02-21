@@ -56,6 +56,7 @@ typedef struct PatchConfig
   char enableInGameScoreboard;
   char enableNPSLagComp;
   char enableFastLoad;
+  char levelOfDetailMobs;
 
 #if TWEAKERS
   char characterTweakers[1 + 7*2];
@@ -205,11 +206,11 @@ typedef struct CustomMapDef
   int Version;
   int CustomModeExtraDataMask;
   short ShrubMinRenderDistance;
+  short Subsort;
   char BaseMapId;
   char ForcedCustomModeId;
-  char HideFromMapList;
   char Name[32];
-  char Filename[64];
+  char Filename[48];
 } CustomMapDef_t;
 
 enum CHARACTER_TWEAKER_ID
@@ -295,6 +296,38 @@ enum COMMON_DZO_DRAW_TYPE
 	COMMON_DZO_DRAW_STRETCHED,
 	COMMON_DZO_DRAW_ONLY,
 };
+
+/*
+ * NAME :    helperAlign
+ *
+ * DESCRIPTION :
+ *       Transforms the point by the given alignment.
+ *
+ * NOTES :
+ *
+ * ARGS :
+ *
+ * RETURN :
+ *
+ * AUTHOR :      Daniel "Dnawrkshp" Gerendasy
+ */
+void helperAlign(float* pX, float* pY, float w, float h, enum TextAlign alignment);
+
+/*
+ * NAME :    helperRealign
+ *
+ * DESCRIPTION :
+ *       Transforms the point from one alignment to another.
+ *
+ * NOTES :
+ *
+ * ARGS :
+ *
+ * RETURN :
+ *
+ * AUTHOR :      Daniel "Dnawrkshp" Gerendasy
+ */
+void helperRealign(float* pX, float* pY, float w, float h, enum TextAlign fromAlignment, enum TextAlign toAlignment);
 
 /*
  * NAME :    gfxHelperDrawBox

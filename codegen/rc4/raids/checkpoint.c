@@ -40,8 +40,13 @@
 #include "mob.h"
 #include "game.h"
 
-#define DLOG_CHPT(moby, format, ...) if (((struct CheckpointPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
-#define DLOG_MNGR(moby, format, ...) if (((struct CheckpointManagerPVar*)moby->PVar)->Log) { DPRINTF(format, ##__VA_ARGS__); }
+#if DEBUG
+#define DLOG_CHPT(moby, format, ...) if (((struct CheckpointPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#define DLOG_MNGR(moby, format, ...) if (((struct CheckpointManagerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
+#else
+#define DLOG_CHPT(moby, format, ...) 
+#define DLOG_MNGR(moby, format, ...) 
+#endif
 
 Moby* checkpointManagerMoby = NULL;
 
@@ -51,7 +56,6 @@ void checkpointOnStateChanged(Moby* moby)
   struct CheckpointPVar* pvars = (struct CheckpointPVar*)moby->PVar;
 
   if (!gameAmIHost()) return;
-
 
   DLOG_CHPT(moby, "CHECKPOINT STATE %d (%08X %08X)\n", moby->State, (u32)pvars->OnActivateControllerMoby, (u32)pvars->OnDeactivateControllerMoby);
 
@@ -67,16 +71,8 @@ void checkpointOnStateChanged(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void checkpointUpdate(Moby* moby)
+void checkpointSetCuboid(Moby* moby)
 {
-  // detect when state was changed
-  if ((moby->Triggers & 1) == 0) {
-    checkpointOnStateChanged(moby);
-    moby->Triggers |= 1;
-  }
-
-  if (moby->State != CHECKPOINT_ACTIVE) return;
-
   // update cuboid
   int i;
   int spCount = spawnPointGetCount();
@@ -91,9 +87,28 @@ void checkpointUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void checkpointUpdate(Moby* moby)
+{
+  // wait for all clients to be ready before triggering anything
+  if (!MapConfig.ClientsReady) return;
+
+  // detect when state was changed
+  if ((moby->Triggers & 1) == 0) {
+    checkpointOnStateChanged(moby);
+    moby->Triggers |= 1;
+  }
+
+  if (moby->State != CHECKPOINT_ACTIVE) return;
+
+  // update cuboid
+  checkpointSetCuboid(moby);
+}
+
+//--------------------------------------------------------------------------
 int checkpointSetActive(Moby* checkpointMoby)
 {
   if (!checkpointManagerMoby) return 0;
+  if (!checkpointSetActive) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
 
@@ -111,11 +126,18 @@ int checkpointSetActive(Moby* checkpointMoby)
   DLOG_MNGR(checkpointManagerMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
   DLOG_CHPT(checkpointMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
   
+  // update checkpoint locally
+  mobySetState(checkpointManagerMoby, idx, -1);
+  checkpointManagerUpdate(checkpointManagerMoby);
+  checkpointUpdate(checkpointMoby);
+
 	// create event
-	GuberEvent * guberEvent = guberCreateEvent(checkpointManagerMoby, CHECKPOINT_EVENT_SET_STATE);
-  if (guberEvent) {
-    guberEventWrite(guberEvent, &idx, 4);
-  }
+  // if (gameAmIHost()) {
+  //   GuberEvent * guberEvent = guberCreateEvent(checkpointManagerMoby, CHECKPOINT_EVENT_SET_STATE);
+  //   if (guberEvent) {
+  //     guberEventWrite(guberEvent, &idx, 4);
+  //   }
+  // }
 
   return 1;
 }
@@ -124,10 +146,6 @@ int checkpointSetActive(Moby* checkpointMoby)
 void checkpointManagerUpdate(Moby* moby)
 {
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)moby->PVar;
-
-  if (padGetButton(0, PAD_L1 | PAD_UP) > 0) {
-    playerRespawn(playerGetFromSlot(0));
-  }
 
   // detect when state was changed
   if ((moby->Triggers & 1) == 0) {
@@ -143,7 +161,6 @@ void checkpointManagerUpdate(Moby* moby)
     }
     moby->Triggers |= 1;
   }
-
 }
 
 //--------------------------------------------------------------------------
@@ -208,7 +225,7 @@ int checkpointHandleEvent(Moby* moby, GuberEvent* event)
 //--------------------------------------------------------------------------
 void checkpointStart(void)
 {
-
+  
 }
 
 //--------------------------------------------------------------------------
@@ -270,16 +287,19 @@ void checkpointInit(void)
 
       if (managerPvars && checkpointCount < CHECKPOINT_MAX_CHECKPOINTS) {
 
+        managerPvars->CheckpointMobys[checkpointCount] = moby;
+        
         // set default state
         if (managerPvars->DefaultCheckpointMoby == moby) {
           DLOG_MNGR(checkpointManagerMoby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
           DLOG_CHPT(moby, "set as default checkpoint %08X %d\n", (u32)moby, checkpointCount);
+          //checkpointSetActive(moby);
+          checkpointSetCuboid(moby);
           mobySetState(checkpointManagerMoby, checkpointCount, -1);
           mobySetState(moby, CHECKPOINT_ACTIVE, -1);
-          checkpointUpdate(moby);
+          //checkpointUpdate(moby);
         }
 
-        managerPvars->CheckpointMobys[checkpointCount] = moby;
         checkpointCount++;
       }
     }

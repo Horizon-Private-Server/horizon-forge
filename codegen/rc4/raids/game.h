@@ -10,20 +10,12 @@
 #define MAP_CONFIG_MAGIC                      (0xDEADBEEF)
 
 #define RAIDS_HUB_MAPFILENAME                 ("raids_hub")
+#define RAIDS_MAX_EXDATA_SIZE                 (2048)
 
 #define TPS																		(60)
 
-#define ZOMBIE_MOBY_OCLASS										(0x20F6)
-#define EXECUTIONER_MOBY_OCLASS							  (0x2468)
-#define TREMOR_MOBY_OCLASS							      (0x24D3)
-#define SWARMER_MOBY_OCLASS							      (0x2695)
-#define REAPER_MOBY_OCLASS							      (0x2570)
-#define REACTOR_MOBY_OCLASS							      (0x20BE)
 #define NPC_MOBY_OCLASS                       (0x4006)
-
-
-#define STATUE_MOBY_OCLASS                    (0x2402)
-#define BIGAL_MOBY_OCLASS                     (0x2124)
+#define COUNTER_MOBY_OCLASS                   (0x400F)
 
 #define GRAVITY_MAGNITUDE                     (15 * MATH_DT)
 
@@ -32,12 +24,13 @@
 
 #define MAX_MOBS_BASE													(10)
 #define MAX_MOBS_ROUND_WEIGHT									(10)
-#define MAX_MOBS_ALIVE											  (60)
+#define MAX_MOBS_ALIVE											  (50)
 #define MAX_MOBS_ALIVE_BUFFER									(10)
 #define MAX_MOBS_ALIVE_REAL									  (MAX_MOBS_ALIVE - MAX_MOBS_ALIVE_BUFFER)
 
 #define MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH 	(100)
-#define MOB_MOVE_SKIP_TICKS                   (6)
+#define MOB_MOVE_SKIP_TICKS                   (8)
+#define MOB_MOVE_SKIP_TICKS_LOWPRIORITY       (16)
 #define MOB_MAX_STUCK_COUNTER_FOR_NEW_PATH    (3)
 
 #define MOB_SHORT_FREEZE_DURATION_TICKS       (60)
@@ -63,6 +56,7 @@
 #define MOB_BASE_SPEED_SCALE                  (0.05*1)
 #define MOB_BASE_HEALTH										    (30)
 #define MOB_BASE_HEALTH_SCALE                 (0.05*1)
+#define MOB_JUMP_MOVE_SPEED                   (10)
 
 #define MAX_MOB_AMMO_DROPS                    (10)
 #define MOB_SPECIAL_MUTATION_PROBABILITY		  (0.005)
@@ -82,18 +76,21 @@
 #define MOB_POSTFX_ACID_FREQ_TICKS            ((int)(TPS * 0.5))
 #define MOB_POSTFX_ACID_DMG_PERC              (0.05)
 #define MOB_POSTFX_FREEZE_DUR_TICKS           (TPS * 5)
-#define MOB_POSTFX_FREEZE_FACTOR              (0.5)
-#define MOB_POSTFX_NAPALM_DMG_PERC            (0.05)
-#define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.15)
+#define MOB_POSTFX_FREEZE_FACTOR              (0.75)
+#define MOB_POSTFX_NAPALM_DMG_PERC            (0.10)
+#define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.25)
 
 #define JACKPOT_BOLTS													(50)
 #define XP_ALPHAMOD_XP												(10)
 #define NANOLEECH_HEALTH											(5)
 #define NANOLEECH_CHANCE											(0.01)
 
-#define LEVELUP_XP_QUADRATIC_RATE             (10)
-#define LEVELUP_XP_LINEAR_RATE                (0)
-#define LEVELUP_XP_CONSTANT                   (0)
+#define LEVELUP_MAX_LEVEL                     (98)
+#define LEVELUP_PLAYER_LINEAR_FACTOR          (100)
+#define LEVELUP_PLAYER_STEP_FACTOR            (50)
+#define LEVELUP_PLAYER_STEP_EVERY             (10)
+#define LEVELUP_PLAYER_INCREMENT_AMOUNT       (25)
+#define LEVELUP_CHALLENGE_INCREMENT_AMOUNT    (25)
 
 #define PLAYER_BASE_REVIVE_TICKS					    (60 * TPS)
 #define PLAYER_MIN_REVIVE_TICKS					      (10 * TPS)
@@ -105,12 +102,6 @@
 #define PLAYER_KNOCKBACK_BASE_TICKS						(10)
 #define PLAYER_COLL_RADIUS          					(0.5)
 
-#define BIG_AL_MAX_DIST												(5)
-#define WEAPON_VENDOR_MAX_DIST								(3)
-#define WEAPON_UPGRADE_COOLDOWN_TICKS					(15)
-#define WEAPON_MENU_COOLDOWN_TICKS						(60)
-#define VENDOR_MAX_WEAPON_LEVEL								(9)
-
 #define PLAYER_SKILLPOINT_DAMAGE_FACTOR       (0.08)
 #define PLAYER_SKILLPOINT_SPEED_FACTOR        (0.03)
 #define PLAYER_SKILLPOINT_HEALTH_FACTOR       (5)
@@ -118,7 +109,7 @@
 #define SNACK_ITEM_MAX_COUNT                  (16)
 #define DAMAGE_BUBBLE_MAX_COUNT               (16)
 
-#define MAX_MOB_SPAWN_PARAMS                  (10)
+#define MAX_MOB_SPAWN_PARAMS                  (16)
 #define MAX_MOB_COMPLEXITY_DRAWN              (7500)
 #define MAX_MOB_COMPLEXITY_DRAWN_DZO          (MAX_MOB_COMPLEXITY_DRAWN * 1)
 #define MOB_COMPLEXITY_SKIN_FACTOR            (500)
@@ -136,6 +127,8 @@ enum GameNetMessage
   CUSTOM_MSG_WORLD_HOP_MISSING_MAP,
   CUSTOM_MSG_SET_PLAYER_EQUIPPED_INVENTORY,
   CUSTOM_MSG_SET_PLAYER_ACCOUNT,
+  CUSTOM_MSG_SET_MISSION_FAILED,
+  CUSTOM_MSG_USE_LIFE,
 };
 
 enum RaidsCustomMenus
@@ -143,6 +136,8 @@ enum RaidsCustomMenus
   RAIDS_CUSTOM_MENU_NONE = 0,
   RAIDS_CUSTOM_MENU_INVENTORY,
   RAIDS_CUSTOM_MENU_LEVELSELECT,
+  RAIDS_CUSTOM_MENU_STORE,
+  RAIDS_CUSTOM_MENU_SKILLS,
 };
 
 enum RaidsDifficultys
@@ -155,31 +150,67 @@ enum RaidsDifficultys
   RAIDS_DIFFICULTY_COUNT
 };
 
+enum RaidsMissionStatus
+{
+  RAIDS_MISSION_ACTIVE = 0,
+  RAIDS_MISSION_FAILED = 1,
+  RAIDS_MISSION_COMPLETED = 2,
+};
+
+enum MobDamageSource
+{
+  MOB_DAMAGE_SOURCE_UNKNOWN = 0,
+  MOB_DAMAGE_SOURCE_WRENCH,
+  MOB_DAMAGE_SOURCE_DUAL_VIPERS,
+  MOB_DAMAGE_SOURCE_MAGMA_CANNON,
+  MOB_DAMAGE_SOURCE_ARBITER,
+  MOB_DAMAGE_SOURCE_FUSION_RIFLE,
+  MOB_DAMAGE_SOURCE_MINE_LAUNCHER,
+  MOB_DAMAGE_SOURCE_B6_OBLITERATOR,
+  MOB_DAMAGE_SOURCE_SCORPION_FLAIL,
+  MOB_DAMAGE_SOURCE_HOLOSHIELD,
+  MOB_DAMAGE_SOURCE_PUMA,
+  MOB_DAMAGE_SOURCE_HOVERBIKE,
+  MOB_DAMAGE_SOURCE_LANDSTALKER,
+  MOB_DAMAGE_SOURCE_HOVERSHIP,
+  MOB_DAMAGE_SOURCE_COUNT
+};
+
+struct RaidsBankMapStats;
 struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobCreateArgs;
+struct MobDamageEventArgs;
 
 typedef void (*PushSnack_func)(char * string, int ticksAlive, int localPlayerIdx);
-typedef RaidsPlayerBank_t* (*GetBank_func)(void);
+typedef void (*PushDamageBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int isCrit);
+typedef long (*GetAmmoRefillCost_func)(Player* player);
 typedef void (*BeginWorldHop_func)(char* mapFilename, int difficulty, int cost, int delayMs);
-typedef void (*SendBankAccountToServer_func)(void);
 typedef void (*PopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobConfig* config, int spawnParamsIdx, int isBaseConfig, float difficultyMult);
 typedef void (*RegisterNpc_func)(Moby* moby);
 typedef int (*OnGuberEvent_func)(Moby* moby, GuberEvent* event);
 typedef struct Guber* (*OnGetGuber_func)(Moby* moby);
 typedef int (*TryCreateMob_func)(struct MobCreateArgs* args);
+typedef void (*RequestPrestigeLoot_func)(int gadgetId);
+typedef void (*OnMissionComplete_func)(int cuboidIdx);
+typedef void (*OnMissionFail_func)(void);
 
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobUpdate_func)(Moby* moby);
-typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, int weaponId);
+typedef void (*MapOnMobDamaged_func)(Moby* moby, struct MobDamageEventArgs* args);
+typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
+typedef void (*MapOnMobDestroyed_func)(Moby* moby);
+typedef void (*MapCreateAmmoDropAt_func)(Moby* moby);
 typedef void (*FrameTick_func)(void);
 
 struct RaidsPlayerState
 {
-  u64 Experience;
+  u32 Bolts;
+  float Experience;
 	int Kills;
 	int Deaths;
+	int AllKills[MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS];
   u16 Skills[RAIDS_SKILLS_COUNT];
 };
 
@@ -209,7 +240,6 @@ struct RaidsMobStats
 	int MobsDrawGameTime;
   int TotalSpawning;
   int TotalAlive;
-  int TotalSpawnedThisRound;
   int TotalSpawned;
   int NumSpawnedThisRound[MAX_MOB_SPAWN_PARAMS];
   u8 NumAlive[MAX_MOB_SPAWN_PARAMS];
@@ -224,24 +254,31 @@ struct RaidsState
   int ClientsReady;
 	int MenuOpen;
   int OnHubWorld;
-	Moby* Vendor;
-	Moby* BigAl;
 	struct RaidsPlayer* LocalPlayerState;
 	int GameOver;
-  int MissionComplete;
+  int MissionStatus;
   int MissionStartTime;
   int MissionCompleteTime;
+  int LivesLeft;
 	int WinningTeam;
 	int ActivePlayerCount;
 	int AlivePlayerCount;
+  int TicksWithNoLivingPlayers;
 	int IsHost;
 	float Difficulty;
   float AmmoDropChance;
+  float AmmoRefillCostMultiplier;
   int DifficultyStars;
+  int DesiredMusicTrack;
   int PendingWorldHopAtTime;
+  int PendingWorldHopDifficultyStars;
   CustomMapDef_t* PendingWorldHopMapDef;
   CustomMapDef_t* CurrentMapDef;
+  struct RaidsBankMapStats CurrentMapStats;
 	char NumTeams;
+  char DesiredMusicTrackSkipTransition;
+  char DesiredMusicTrackForce;
+  char DesiredMusicTrackLoop;
 };
 
 struct RaidsMapConfig
@@ -251,31 +288,46 @@ struct RaidsMapConfig
   struct RaidsState* State;
   struct MobSpawnParams* MobSpawnParams;
   int MobSpawnParamsCount;
+  int* TrackWhitelist;
+  int TrackWhitelistCount;
+  int TrackWhitelistEnabled;
+  struct BankVTable* BankVTable;
 
   // mode
   PushSnack_func PushSnackFunc;
-  GetBank_func GetBankFunc;
+  PushDamageBubble_func PushDamageBubbleFunc;
+  GetAmmoRefillCost_func GetAmmoRefillCostFunc;
   BeginWorldHop_func BeginWorldHopFunc;
-  SendBankAccountToServer_func SendBankAccountToServerFunc;
   PopulateSpawnArgs_func PopulateSpawnArgsFunc;
   RegisterNpc_func RegisterNpcFunc;
   OnGuberEvent_func OnGuberEventFunc;
   OnGetGuber_func OnGetGuberFunc;
   TryCreateMob_func TryCreateMobFunc;
+  RequestPrestigeLoot_func RequestPrestigeLootFunc;
+  OnMissionComplete_func OnMissionCompleteFunc;
+  OnMissionFail_func OnMissionFailFunc;
 
   // map
   MapOnMobCreate_func OnMobCreateFunc;
   MapOnMobSpawned_func OnMobSpawnedFunc;
   MapOnMobUpdate_func OnMobUpdateFunc;
+  MapOnMobDamaged_func OnMobDamagedFunc;
   MapOnMobKilled_func OnMobKilledFunc;
+  MapOnMobDestroyed_func OnMobDestroyedFunc;
+  MapCreateAmmoDropAt_func CreateAmmoDropAtFunc;
   FrameTick_func OnFrameTickFunc;
 };
 
 struct RaidsCustomMapExtraData
 {
+  int RaidsVersion;
+  int MinPlayerLevel;
+  int CollectiblesCount;
+  int ChallengesCount;
   int Cost[5];
   char Author[32];
   char Description[256];
+  char* Challenges[0]; // array of char* tuples, for challenge name & description
 };
 
 struct RaidsGameData

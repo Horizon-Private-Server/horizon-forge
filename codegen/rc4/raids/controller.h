@@ -36,15 +36,31 @@ enum ControllerConditionType {
   CONTROLLER_CONDITION_TYPE_NPC_TARGET,
   CONTROLLER_CONDITION_TYPE_DIFFICULTY,
   CONTROLLER_CONDITION_TYPE_CHECKPOINT,
+  CONTROLLER_CONDITION_TYPE_CHANCE,
+  CONTROLLER_CONDITION_TYPE_HEALTH,
+  CONTROLLER_CONDITION_TYPE_PLAYER_KILLS,
+  CONTROLLER_CONDITION_TYPE_PLAYER_HEALTH,
+  CONTROLLER_CONDITION_TYPE_COUNTER,
+  CONTROLLER_CONDITION_TYPE_CHALLENGE,
+  CONTROLLER_CONDITION_TYPE_PLAYER_COUNT,
 };
 
-enum ControllerMobyStateInteractType {
-	CONTROLLER_MOBY_INTERACT_EQUAL,
-	CONTROLLER_MOBY_INTERACT_NOTEQUAL,
-	CONTROLLER_MOBY_INTERACT_LESS,
-	CONTROLLER_MOBY_INTERACT_LEQUAL,
-	CONTROLLER_MOBY_INTERACT_GREATER,
-	CONTROLLER_MOBY_INTERACT_GEQUAL,
+enum ControllerCompareType {
+	CONTROLLER_COMPARE_EQUAL,
+	CONTROLLER_COMPARE_NOTEQUAL,
+	CONTROLLER_COMPARE_CHANGED_TO,
+	CONTROLLER_COMPARE_LESS,
+	CONTROLLER_COMPARE_LEQUAL,
+	CONTROLLER_COMPARE_GREATER,
+	CONTROLLER_COMPARE_GEQUAL,
+	CONTROLLER_COMPARE_INCREASED_BY,
+	CONTROLLER_COMPARE_DECREASED_BY,
+	CONTROLLER_COMPARE_INCREASED_BY_AT_LEAST,
+	CONTROLLER_COMPARE_DECREASED_BY_AT_LEAST,
+	CONTROLLER_COMPARE_INCREASED,
+	CONTROLLER_COMPARE_DECREASED,
+	CONTROLLER_COMPARE_CHANGED,
+	CONTROLLER_COMPARE_UNCHANGED,
 };
 
 enum ControllerCuboidInteractType {
@@ -60,9 +76,21 @@ enum ControllerCuboidTriggerBy {
 	CONTROLLER_CUBOID_TRIGGER_BY_ANY_NPC = 1 << 3,
 	CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS = 1 << 4,
 	CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS = 1 << 5,
+	CONTROLLER_CUBOID_TRIGGER_BY_MOBY = 1 << 6,
+	CONTROLLER_CUBOID_TRIGGER_BY_HOST = 1 << 7,
 
-	CONTROLLER_CUBOID_TRIGGER_BY_CHECK_PLAYER = CONTROLLER_CUBOID_TRIGGER_BY_ANY_PLAYER | CONTROLLER_CUBOID_TRIGGER_BY_ALL_PLAYERS | CONTROLLER_CUBOID_TRIGGER_BY_NO_PLAYERS,
+	CONTROLLER_CUBOID_TRIGGER_BY_CHECK_ALL_PLAYERS = CONTROLLER_CUBOID_TRIGGER_BY_ANY_PLAYER | CONTROLLER_CUBOID_TRIGGER_BY_ALL_PLAYERS | CONTROLLER_CUBOID_TRIGGER_BY_NO_PLAYERS,
 	CONTROLLER_CUBOID_TRIGGER_BY_CHECK_NPC = CONTROLLER_CUBOID_TRIGGER_BY_ANY_NPC | CONTROLLER_CUBOID_TRIGGER_BY_ALL_NPCS | CONTROLLER_CUBOID_TRIGGER_BY_NO_NPCS,
+};
+
+enum ControllerCounterUpdateType {
+	CONTROLLER_COUNTER_SET,
+	CONTROLLER_COUNTER_ADD,
+	CONTROLLER_COUNTER_SUB,
+	CONTROLLER_COUNTER_MUL,
+	CONTROLLER_COUNTER_DIV,
+	CONTROLLER_COUNTER_MAX,
+	CONTROLLER_COUNTER_MIN,
 };
 
 enum ControllerTargetUpdateType {
@@ -79,6 +107,12 @@ enum ControllerTargetUpdateType {
   CONTROLLER_TARGET_UPDATE_TYPE_RESPAWN,
   CONTROLLER_TARGET_UPDATE_TYPE_COMPLETE_MISSION,
   CONTROLLER_TARGET_UPDATE_TYPE_MOBY_SET_CHECKPOINT,
+  CONTROLLER_TARGET_UPDATE_TYPE_SET_AMMO_DROP_PROBABILITY,
+  CONTROLLER_TARGET_UPDATE_TYPE_SET_REFILL_AMMO_COST_MULTIPLIER,
+  CONTROLLER_TARGET_UPDATE_TYPE_SET_MUSIC_TRACK,
+  CONTROLLER_TARGET_UPDATE_TYPE_FAIL_MISSION,
+  CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_CHALLENGE,
+  CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_COUNTER,
 };
 
 struct ControllerRuntimeState
@@ -87,19 +121,22 @@ struct ControllerRuntimeState
   int Iterations;
   int RemoteIterationTime;
   int DelayStartTime[CONTROLLER_MAX_CONDITIONS];
+  float LastValue[CONTROLLER_MAX_CONDITIONS];
+  float CounterValue[CONTROLLER_MAX_CONDITIONS];
   Moby* TriggeredByMoby;
 };
 
 struct ControllerCondition
 {
-  enum ControllerConditionType ConditionType;
+  char ConditionType;
+  short MobyUID;
   Moby* Moby;
 
   union {
     
     // trigger if moby state
     struct {
-      short StateInteractType;
+      short CompareType;
       short State;
     } MobyState;
     
@@ -113,7 +150,8 @@ struct ControllerCondition
     
     // trigger if player button
     struct {
-      int PadMask;
+      short PlayerMask;
+      short PadMask;
     } PlayerButtons;
     
     // trigger if delay
@@ -136,6 +174,58 @@ struct ControllerCondition
     struct {
       char IsActive;
     } Checkpoint;
+
+    // trigger if chance
+    struct {
+      float Probability;
+    } Chance;
+
+    // trigger if moby health
+    struct {
+      float Value;
+      char CompareType;
+      char Normalized;
+    } Health;
+
+    // trigger if weapon kills
+    struct {
+      short PlayerMask;
+      short WeaponMask;
+      short MobMask;
+      short Value;
+      char CompareType;
+      char MatchAllPlayers;
+      char MatchAllWeapons;
+      char Aggregate;
+    } PlayerKills;
+
+    // trigger if player health
+    struct {
+      short PlayerMask;
+      char CompareType;
+      char MatchAllPlayers;
+      float Value;
+      char Normalized;
+    } PlayerHealth;
+
+    // trigger if counter
+    struct {
+      float Value;
+      char CompareType;
+    } Counter;
+
+    // trigger if Challenge
+    struct {
+      int ChallengeIdx;
+      char Value;
+    } Challenge;
+
+    // trigger if player button
+    struct {
+      short CountMask;
+      char Filter;
+    } PlayerCount;
+    
   };
 };
 
@@ -183,21 +273,57 @@ struct ControllerTarget
       char TriggeredOnly;
       char DeadOnly;
     } RespawnPlayer;
+
+    // respawn player
+    struct {
+      short TrackId;
+      char SkipTransition;
+      char Force;
+      char Loop;
+    } Music;
+
+    // values
+    struct {
+      union {
+        float FloatValue;
+        int IntValue;
+        char CharValue;
+        short ShortValue;
+      };
+    } Value;
+
+    // challenge
+    struct {
+      int ChallengeIdx;
+    } Challenge;
+
+    // counter moby
+    struct {
+      Moby* Moby;
+      float UpdateValue;
+      char UpdateType;
+      char CounterValueIdx;
+    } Counter;
   };
 };
 
 struct ControllerPVar
 {
-  int Init;
+  char Init;
+  char PADDING[2];
+  char CountNoTrigger; // if true, will count failed trigger ticks towards total # of repeats
   char DefaultState;
   char Log;
-  struct ControllerTarget Targets[CONTROLLER_MAX_TARGETS];
   char TriggerIfAllTrue;
+  char NoSync;
+  struct ControllerTarget Targets[CONTROLLER_MAX_TARGETS];
   short Repeat;
   struct ControllerCondition Conditions[CONTROLLER_MAX_CONDITIONS];
   struct ControllerRuntimeState State;
 };
 
+int controllerAmIOwner(Moby* moby);
+void controllerSetTriggerMoby(Moby* moby, Moby* triggerMoby);
 void controllerBroadcastNewState(Moby* moby, enum ControllerState state);
 struct Guber* controllerGetGuber(Moby* moby);
 int controllerHandleEvent(Moby* moby, GuberEvent* event);

@@ -14,7 +14,7 @@ public class PathGraph : MonoBehaviour
     [SerializeField, HideInInspector]
     private List<PathGraphNode> _cachedNodes;
 
-    public string VarName = "Mob";
+    [Min(1)] public int MaxExportedPathLength = 3;
     public List<PathGraphEdge> Edges = new List<PathGraphEdge>();
 
     public void RefreshCache()
@@ -376,6 +376,7 @@ public class PathGraph : MonoBehaviour
 
         string nodesVarName = $"{varPrefix}_PATHFINDING_NODES";
         string nodesCorneringVarName = $"{varPrefix}_PATHFINDING_NODES_CORNERING";
+        string nodesHeightVarName = $"{varPrefix}_PATHFINDING_NODES_HEIGHT";
         string edgesVarName = $"{varPrefix}_PATHFINDING_EDGES";
         string edgesRequiredVarName = $"{varPrefix}_PATHFINDING_EDGES_REQUIRED";
         string edgesPathFitVarName = $"{varPrefix}_PATHFINDING_EDGES_PATHFIT";
@@ -407,6 +408,15 @@ public class PathGraph : MonoBehaviour
         }
         dataDefs += "};\n\n";
 
+        // build list of node height amount
+        dataDefs += $"u16 {nodesHeightVarName}[] = {{\n";
+        foreach (var node in _cachedNodes)
+        {
+            var heightLimit = node.HasHeightLimit ? (node.HeightLimit * 256) : ushort.MaxValue;
+            dataDefs += $"\t{(ushort)(Mathf.Clamp(heightLimit, 0, ushort.MaxValue))},\n";
+        }
+        dataDefs += "};\n\n";
+
         // build list of edges
         dataDefs += $"u8 {edgesVarName}[][2] = {{\n";
         foreach (var edge in this.Edges)
@@ -419,7 +429,7 @@ public class PathGraph : MonoBehaviour
         dataDefs += $"u8 {edgesRequiredVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.Required ? (int)(edge.RequiredUntil * 255) : 0)},\n";
+            dataDefs += $"\t{(edge.Required ? (int)(Mathf.Clamp(edge.RequiredUntil * 255 + 1, 0, 255)) : 0)},\n";
         }
         dataDefs += "};\n\n";
 
@@ -435,15 +445,15 @@ public class PathGraph : MonoBehaviour
         dataDefs += $"u8 {edgesJumpPadSpeedVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.JumpPad ? (int)edge.JumpPadSpeed : 0)},\n";
+            dataDefs += $"\t{(edge.JumpPad ? (int)Math.Ceiling(edge.JumpPadSpeed + 0.01) : 0)},\n";
         }
         dataDefs += "};\n\n";
 
         // build list of edge jump pad ats
-        dataDefs += $"u8 {edgesJumpPadAtVarName}[] = {{\n";
+        dataDefs += $"u16 {edgesJumpPadAtVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * 255) : 0)},\n";
+            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * ushort.MaxValue) : 0)},\n";
         }
         dataDefs += "};\n\n";
         dataDefs += ExportPathsAsC(varPrefix, out int longestPath);
@@ -454,6 +464,7 @@ public class PathGraph : MonoBehaviour
     .MaxPathNodeCount = {longestPath},
     .Nodes = {nodesVarName},
     .Cornering = {nodesCorneringVarName},
+    .Heights = {nodesHeightVarName},
     .Edges = {edgesVarName},
     .EdgesRequired = {edgesRequiredVarName},
     .EdgesPathFit = {edgesPathFitVarName},
@@ -503,6 +514,23 @@ public class PathGraph : MonoBehaviour
             }
         }
 
+        // limit longest path
+        if (longestPath > MaxExportedPathLength)
+            longestPath = MaxExportedPathLength;
+
+        // count unique paths
+        //var uniquePaths = new HashSet<string>();
+        //foreach (var path in paths)
+        //{
+        //    var pathStr = "";
+        //    for (int i = 0; i < longestPath; ++i)
+        //    {
+        //        pathStr += "," + path.ElementAtOrDefault(i);
+        //    }
+        //    uniquePaths.Add(pathStr);
+        //}
+        //Debug.Log($"Found {uniquePaths.Count}/{paths.Count} unique paths for {gameObject.name}");
+        
         // build list of nodes
         str += $"u8 {varPrefix}_PATHFINDING_PATHS[][{longestPath}] = {{\n";
         foreach (var path in paths)

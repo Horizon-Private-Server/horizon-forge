@@ -21,6 +21,7 @@ public class PvarOverlay
     public int? AmbientSoundType { get; set; }
     public int? CameraType { get; set; }
     public bool ShowRawEditor { get; set; }
+    public bool ForceDefaults { get; set; }
     public int Length { get; set; }
     public string Default { get; set; }
     public string Pointers { get; set; }
@@ -37,6 +38,8 @@ public class PvarOverlay
     {
         int length = Length;
         var pvarData = pvarObject.GetPVarData();
+        var pvarValues = pvarObject.GetPVarValues();
+        var pvarRefs = pvarObject.GetPVarReferences();
         var strings = pvarObject.GetPVarStrings();
         if (pvarData == null) return length;
         if (Overlay == null) return length;
@@ -70,10 +73,100 @@ public class PvarOverlay
                             length += 4 - (length % 4); // align to 4
                         break;
                     }
+                case "mobyrefpvarvalue":
+                    {
+                        // find respective mobyrefpvar
+                        var refPath = $".{def.Ref}";
+                        if (pvarValues.ContainsKey(refPath))
+                        {
+                            var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                            var pvarPath = parts?.ElementAtOrDefault(1);
+                            int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: oClass);
+                            if (mobyRefPvarOverlay != null)
+                            {
+                                var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                                if (pvarMetadata != null)
+                                {
+                                    length += pvarMetadata.Size;
+                                }
+                            }
+                        }
+                        break;
+                    }
             }
         }
 
         return length;
+    }
+    
+    public string[] GetPVarPaths(IPVarObject pvarObject)
+    {
+        var paths = new List<string>();
+        foreach (var def in this.Overlay)
+        {
+            GetPVarPaths(pvarObject, paths, null, def);
+        }
+        return paths.ToArray();
+    }
+
+    private void GetPVarPaths(IPVarObject pvarObject, List<string> paths, string path, PvarOverlayDef def)
+    {
+        var count = def.Count ?? 1;
+        for (int i = 0; i < count; ++i)
+        {
+            var defPath = path + "." + def.Name;
+            if (def.Count.HasValue)
+                defPath += $"[{i}]";
+
+            paths.Add(defPath);
+            if (def.Fields != null)
+            {
+                foreach (var childDef in def.Fields)
+                {
+                    GetPVarPaths(pvarObject, paths, defPath, childDef);
+                }
+            }
+        }
+    }
+
+    public string FindPVarAtOffset(int targetOffset)
+    {
+        return FindPVarAtOffset(this.Overlay, null, 0, targetOffset);
+    }
+
+    private string FindPVarAtOffset(List<PvarOverlayDef> defs, string path, int baseOffset, int targetOffset)
+    {
+        foreach (var def in defs)
+        {
+            var offset = baseOffset + def.Offset;
+            var size = def.GetDataSize();
+            var count = def.Count ?? 1;
+            var defPath = path + "." + def.Name;
+
+            // target is inside this pvar
+            if (targetOffset >= offset && targetOffset < (offset + size*count))
+            {
+                // get idx
+                for (int i = 0; i < count; ++i)
+                {
+                    var idxOffset = offset + (i * size);
+                    if (targetOffset >= idxOffset && targetOffset < (idxOffset + size))
+                    {
+                        defPath += $"[{i}]";
+                        offset = idxOffset;
+                        break;
+                    }
+                }
+
+                if (def.Fields != null && def.Fields.Any())
+                    return FindPVarAtOffset(def.Fields, defPath, offset, targetOffset);
+                else
+                    return defPath;
+            }
+        }
+
+        return null;
     }
 
     public object GetPVarValue(string path, SerializableStringDictionary pvarValues, SerializableMonoBehaviourDictionary pvarRefs)
@@ -85,7 +178,7 @@ public class PvarOverlay
         {
             var name = parts[i];
             if (name.EndsWith("]") && name.Contains("["))
-                name = name.Substring(0, name.IndexOf("[") - 1);
+                name = name.Substring(0, name.IndexOf("["));
 
             def = defs.FirstOrDefault(x => x.Name == name);
             if (def == null) break;
@@ -96,6 +189,44 @@ public class PvarOverlay
 
         if (def.IsReferenceType()) return pvarRefs[path];
         return def.FromString(pvarValues[path]);
+    }
+
+    public PvarOverlayDefMetadata GetPVarMetadata(string path)
+    {
+        if (path == null) return null;
+
+        var parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        var defs = Overlay;
+        var offset = 0;
+        PvarOverlayDef def = null;
+        for (int i = 0; i < parts.Length; ++i)
+        {
+            int? idx = null;
+            var name = parts[i];
+            if (name.EndsWith("]") && name.Contains("["))
+            {
+                idx = int.TryParse(name.Substring(name.IndexOf("[") + 1, name.IndexOf("]") - name.IndexOf("[") - 1), out var parsedIdx) ? parsedIdx : null;
+                name = name.Substring(0, name.IndexOf("["));
+            }
+
+            def = defs.FirstOrDefault(x => x.Name == name);
+            if (def == null) break;
+            defs = def.Fields;
+
+            if (idx.HasValue)
+                offset += def.Offset + (idx.Value * def.GetDataSize());
+            else
+                offset += def.Offset;
+        }
+
+        if (def == null) return null;
+
+        return new PvarOverlayDefMetadata()
+        {
+            Offset = offset,
+            Size = def.GetDataSize(),
+            Field = def,
+        };
     }
 
     [OnDeserialized]
@@ -127,7 +258,10 @@ public class PvarOverlay
 
         foreach (var def in this.Overlay)
         {
-            SetDefaultBytes(this, def, DefaultBytes);
+            if (String.IsNullOrEmpty(str) || def.Default != null || def.IsReferenceType())
+            {
+                SetDefaultBytes(this, def, DefaultBytes);
+            }
         }
 
         var ptrs = Pointers?.Replace(" ", "")?.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -256,31 +390,19 @@ public class PvarOverlay
                         Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
-            case "raidsdifficulty":
-                {
-                    // default enum to first value in list
-
-                    var count = def.Count ?? 1;
-                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
-                    var value = defaultValue ?? 0;
-                    var valueBytes = BitConverter.GetBytes(value);
-                    for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
-                    break;
-                }
-            case "raidsdifficultymask":
-                {
-                    // default enum to first value in list
-
-                    var count = def.Count ?? 1;
-                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
-                    var value = defaultValue ?? 0;
-                    var valueBytes = BitConverter.GetBytes(value);
-                    for (int i = 0; i < count; ++i)
-                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
-                    break;
-                }
             case "raidsmobid":
+                {
+                    // default enum to first value in list
+
+                    var count = def.Count ?? 1;
+                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
+                    var value = defaultValue ?? 0;
+                    var valueBytes = BitConverter.GetBytes(value);
+                    for (int i = 0; i < count; ++i)
+                        Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
+                    break;
+                }
+            case "raidsmobbehavior":
                 {
                     // default enum to first value in list
 
@@ -339,6 +461,17 @@ public class PvarOverlay
                         Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
                     break;
                 }
+            case "mobyrefpvar":
+                {
+                    // default to 0
+                    var count = def.Count ?? 1;
+                    for (int i = 0; i < count; ++i)
+                    {
+                        for (int j = 0; j < dataSize; ++j)
+                            defaultBytes[j] = 0;
+                    }
+                    break;
+                }
             case "byte":
             case "sbyte":
                 {
@@ -371,6 +504,20 @@ public class PvarOverlay
 
                     break;
                 }
+            default:
+                {
+                    // try to parse default as a number
+                    var count = def.Count ?? 1;
+                    var defaultValue = long.TryParse(def.Default, out var defVal) ? defVal : (long?)null;
+                    if (defaultValue.HasValue)
+                    {
+                        var value = (long)Mathf.Clamp(defaultValue ?? 0, def.Min ?? long.MinValue, def.Max ?? long.MaxValue);
+                        var valueBytes = BitConverter.GetBytes(value);
+                        for (int i = 0; i < count; ++i)
+                            Array.Copy(valueBytes, 0, defaultBytes, offset + (i * dataSize), dataSize);
+                    }
+                    break;
+                }
         }
     }
 }
@@ -383,14 +530,17 @@ public class PvarOverlayDef
     public string Ref { get; set; }
     public int Offset { get; set; }
     public Dictionary<string, long> Options { get; set; }
+    public string OptionsLookupKey { get; set; }
     public int? DataSize { get; set; }
     public int? Count { get; set; }
     public float? Min { get; set; }
     public float? Max { get; set; }
     public string Default { get; set; }
+    public List<string> Labels { get; set; }
     public List<PvarOverlayDef> Fields { get; set; }
     public List<PvarOverlayDisplayRule> DisplayIf { get; set; }
     public int? Order { get; set; }
+    public bool Hidden { get; set; }
 
     public PvarOverlayDef ParentDef { get; set; }
 
@@ -404,10 +554,7 @@ public class PvarOverlayDef
         {
             case "byte":
             case "sbyte":
-            case "team":
             case "bool": return 1;
-
-            case "padmask": return 2;
 
             case "colorrgb": return 3;
 
@@ -424,10 +571,8 @@ public class PvarOverlayDef
             case "levelfxtex":
             case "fxtex":
             case "colorrgba":
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "screenposition":
             case "mobyrefstate":
             case "integer": return 4;
@@ -436,6 +581,9 @@ public class PvarOverlayDef
             case "vector3": return 12;
 
             case "struct": return Fields?.Max(x => x.Offset + x.GetDataSize()) ?? 0;
+                
+            case "mobyrefpvar": return 8;
+            case "mobyrefpvarvalue": return 0;
 
             case "varstringcontainer": return 4;
             case "messagecontainer": return 4;
@@ -468,7 +616,7 @@ public class PvarOverlayDef
         }
     }
 
-    public object FromBytes(byte[] bytes, int index)
+    public object FromBytes(PvarOverlay pvarOverlay, byte[] bytes, int index)
     {
         // don't include the ref types
         // that are stored in CuboidRefs[] etc
@@ -480,7 +628,7 @@ public class PvarOverlayDef
         switch (this.DataType?.ToLower())
         {
             case "bool": return buffer[0] != 0;
-            case "team":
+            case "bliptype":
             case "byte": return buffer[0];
             case "sbyte": return (sbyte)buffer[0];
             case "fxtex":
@@ -494,19 +642,25 @@ public class PvarOverlayDef
             case "vector3": return new Vector3(BitConverter.ToSingle(buffer), BitConverter.ToSingle(buffer, 4), BitConverter.ToSingle(buffer, 8));
             case "colorrgb": return new Color32(buffer[0], buffer[1], buffer[2], 255);
             case "colorrgba": return new Color32(buffer[0], buffer[1], buffer[2], buffer[3]);
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "mask":
-            case "padmask":
             case "mobyrefstate":
             case "enum": return BitConverter.ToInt64(buffer);
+            case "mobyrefpvar":
+                {
+                    var offset = BitConverter.ToInt16(buffer, 0);
+                    var size = BitConverter.ToInt16(buffer, 2);
+                    if (size <= 0) return null; // size is empty so no pvar selected
+
+                    // find path at offset
+                    return pvarOverlay.FindPVarAtOffset(offset);
+                }
             default: return null;
         }
     }
 
-    public void ToBytes(object value, byte[] bytes, int index, object args = null)
+    public void ToBytes(PvarOverlay pvarOverlay, object value, byte[] bytes, int index, object args = null)
     {
         // don't include the ref types
         // that are stored in CuboidRefs[] etc
@@ -516,11 +670,8 @@ public class PvarOverlayDef
         switch (this.DataType?.ToLower())
         {
             case "bool": buffer[0] = (byte)(((bool?)value ?? false) ? 1 : 0); break;
-            case "team": buffer[0] = (byte)((DLTeamIds?)value ?? 0); break;
             case "byte": buffer[0] = (byte)((byte?)value ?? 0); break;
             case "sbyte": buffer[0] = (byte)((sbyte?)value ?? 0); break;
-            case "fxtex":
-            case "levelfxtex":
             case "mobygroupid":
             case "tiegroupid":
             case "integer": BitConverter.TryWriteBytes(buffer, (int?)value ?? 0); break;
@@ -530,14 +681,59 @@ public class PvarOverlayDef
             case "vector3": BitConverter.TryWriteBytes(buffer, ((Vector3?)value ?? Vector3.zero).x); BitConverter.TryWriteBytes(buffer.AsSpan(4), ((Vector3?)value ?? Vector3.zero).y); BitConverter.TryWriteBytes(buffer.AsSpan(8), ((Vector3?)value ?? Vector3.zero).z); break;
             case "colorrgb": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; break;
             case "colorrgba": buffer[0] = ((Color32)value).r; buffer[1] = ((Color32)value).g; buffer[2] = ((Color32)value).b; buffer[3] = ((Color32)value).a; break;
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
-            case "raidsmobid":
+            case "raidsmobbehavior":
             case "mask":
-            case "padmask":
             case "mobyrefstate":
             case "enum": BitConverter.TryWriteBytes(buffer, (long)value); break;
+
+            case "raidsmobid":
+                {
+                    // validate mob isn't disabled
+                    var mobIdx = (long)value;
+                    if (mobIdx >= 0)
+                    {
+                        var raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
+                        if (raidsModeData != null && raidsModeData?.Mobs != null)
+                        {
+
+                            var mob = raidsModeData.Mobs.ElementAtOrDefault((int)mobIdx);
+                            if (mob == null || mob.Disabled)
+                                mobIdx = -1;
+                            else
+                                mobIdx = raidsModeData.Mobs.Where(x => !x.Disabled).ToList().IndexOf(mob);
+                        }
+                        else
+                        {
+                            mobIdx = -1;
+                        }
+                    }
+
+                    BitConverter.TryWriteBytes(buffer, mobIdx);
+                    break;
+                }
+
+            case "mobyrefpvar":
+                {
+                    var parts = (value as string)?.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                    var pvarPath = parts?.ElementAtOrDefault(1);
+                    int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
+                    var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                    if (mobyRefPvarOverlay != null)
+                    {
+                        var metadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
+                        if (metadata != null)
+                        {
+                            BitConverter.TryWriteBytes(buffer, (short)metadata.Offset);
+                            BitConverter.TryWriteBytes(buffer.AsSpan(2), (short)metadata.Size);
+
+                            // todo
+                            // add support for child mobyrefs
+                            if (metadata.Field.DataType?.ToLower() == "mobyref")
+                                buffer[4] = 1;
+                        }
+                    }
+                    break;
+                }
 
             case "mobyref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Mobys, value)); break;
             case "cuboidref": BitConverter.TryWriteBytes(buffer, Array.IndexOf((args as UnityHelper.PVarMapDataContainer).Cuboids, value)); break;
@@ -628,19 +824,48 @@ public class PvarOverlayDef
 
                     return new Color32(0, 0, 0, 0);
                 }
-            case "team": return Enum.TryParse<DLTeamIds>(v, out var teamId) ? teamId : DLTeamIds.Blue;
-            case "fxtex": return Enum.TryParse<DLFXTextureIds>(v, out var fxtexId) ? fxtexId : DLFXTextureIds.FX_LAME_SHADOW;
-            case "levelfxtex": return Enum.TryParse<DLLevelFXTextureIds>(v, out var lvlfxtexId) ? lvlfxtexId : DLLevelFXTextureIds.FX_LEVEL_0;
-            case "alignment":
-            case "raidsdifficulty":
-            case "raidsdifficultymask":
             case "raidsmobid":
+            case "raidsmobbehavior":
             case "mask":
-            case "padmask":
             case "mobyrefstate":
             case "enum": return long.TryParse(v, out var enumValue) ? enumValue : 0;
+            case "mobyrefpvar": return value;
             default: return null;
         }
+    }
+
+    public Dictionary<string, long> GetOptions()
+    {
+        if (Options != null) return Options;
+
+        var key = OptionsLookupKey?.ToLower();
+        if (key == "challenges")
+        {
+            var raidsData = GameObject.FindObjectOfType<RaidsModeData>();
+            var options = new Dictionary<string, long>();
+            if (raidsData)
+                options = raidsData.Challenges.ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Challenges.IndexOf(x).ToString() : x.Name, x => (long)raidsData.Challenges.IndexOf(x));
+
+            return options;
+        }
+        else if (key == "raidsmobs")
+        {
+            var raidsData = GameObject.FindObjectOfType<RaidsModeData>();
+            var options = new Dictionary<string, long>();
+            var isMask = this.DataType?.ToLower() == "mask";
+            var maskCount = this.GetDataSize() * 8;
+            if (raidsData)
+            {
+                if (isMask)
+                    options = raidsData.Mobs.Take(maskCount).ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Mobs.IndexOf(x).ToString() : x.Name, x => (long)(1 << raidsData.Mobs.IndexOf(x)));
+                else
+                    options = raidsData.Mobs.ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Mobs.IndexOf(x).ToString() : x.Name, x => (long)raidsData.Mobs.IndexOf(x));
+            }
+
+            return options;
+        }
+
+        return PvarOverlayConstants.PVAR_OPTIONS_LOOKUP.GetValueOrDefault(key) ?? new Dictionary<string, long>();
     }
 
     public (PvarOverlayDef def, int offset) FindFieldFrom(PvarOverlay pvarOverlay, string fieldName, int offset)
@@ -695,18 +920,57 @@ public class PvarOverlayDisplayRule
         var refPath = $"{basePath}.{Field}";
         var fieldDef = (def.ParentDef?.Fields ?? pvarOverlay.Overlay)?.FirstOrDefault(x => x.Name == Field);
 
+
+
         if (fieldDef != null && pvarValues != null && pvarValues.ContainsKey(refPath))
         {
             var fieldValue = pvarValues[refPath];
+            long a, b;
 
             switch (Op?.ToLower())
             {
                 case "==": return fieldValue == Value;
+                case "&=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && (a & b) == b;
+                case "&": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && (a & b) != 0;
                 case "!=": return fieldValue != Value;
+                case "<": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a < b;
+                case ">": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a > b;
+                case "<=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a <= b;
+                case ">=": return long.TryParse(fieldValue, out a) && long.TryParse(Value, out b) && a >= b;
                 case "in": return Values?.Contains(fieldValue) ?? false;
             }
         }
 
         return false;
     }
+}
+
+public class PvarOverlayDefMetadata
+{
+    public int Offset { get; set; }
+    public int Size { get; set; }
+    public PvarOverlayDef Field { get; set; }
+}
+
+public static class PvarOverlayConstants
+{
+    public static readonly Dictionary<string, Dictionary<string, long>> PVAR_OPTIONS_LOOKUP = new Dictionary<string, Dictionary<string, long>>()
+    {
+        { "padmask", FromEnum<DLPadMask>() },
+        { "alignment", FromEnum<DLAlignment>() },
+        { "raidsdifficulty", FromEnum<DLRaidsDifficulties>() },
+        { "raidsdifficultymask", FromEnum<DLRaidsDifficultyMask>() },
+        { "musictracks", FromEnum<DLMusicTracks>() },
+        { "levelfxtex", FromEnum<DLLevelFXTextureIds>() },
+        { "fxtex", FromEnum<DLFXTextureIds>() },
+        { "teams", FromEnum<DLTeamIds>() },
+        { "bliptypes", FromEnum<DLBlipTypes>() },
+        { "numbercomparisons", FromEnum<DLRaidsNumberComparisons>() },
+    };
+
+    private static Dictionary<string, long> FromEnum<T>() where T : Enum
+    {
+        return ((T[])Enum.GetValues(typeof(T))).ToDictionary(x => ObjectNames.NicifyVariableName(x.ToString().Replace("_", " ")), x => Convert.ToInt64(x));
+    }
+
 }
