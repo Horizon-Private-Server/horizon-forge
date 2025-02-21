@@ -290,7 +290,7 @@ enum CustomMessageId
     /*
      * 
      */
-    CUSTOM_MSG_ID_UPDATE_RAIDS_BANK_INVENTORY_REQUEST = 52,
+    CUSTOM_MSG_ID_UPDATE_RAIDS_BANK_INVENTORY_ITEM_REQUEST = 52,
 
     /*
      * 
@@ -336,6 +336,11 @@ enum CustomMessageId
      * 
      */
     CUSTOM_MSG_ID_RAIDS_SET_MISSION_COMPLETED_REQUEST = 61,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_BANK_EQUIPPED_INVENTORY_REQUEST = 62,
 
     /*
      * Start of custom message ids reserved for custom game modes.

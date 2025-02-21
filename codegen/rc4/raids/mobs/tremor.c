@@ -573,7 +573,8 @@ void tremorDoAction(Moby* moby)
 		case TREMOR_ACTION_ATTACK:
 		{
       int attack1AnimId = TREMOR_ANIM_SWING;
-      int nextAnimId = mobGetAnimIf(moby, TREMOR_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
+      int defaultAnimId = mobHasVelocity(pvars) ? TREMOR_ANIM_RUN : TREMOR_ANIM_IDLE;
+      int nextAnimId = mobGetAnimIf(moby, defaultAnimId, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
 			mobTransAnim(moby, nextAnimId, 0);
 
 			float speedMult = 0;
@@ -756,7 +757,7 @@ int tremorIsIdling(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int tremorCanAttack(struct MobPVar* pvars)
 {
-	return pvars->MobVars.AttackCooldownTicks == 0;
+	return pvars->MobVars.AttackCooldownTicks == 0 && pvars->MobVars.Action != TREMOR_ACTION_ATTACK;
 }
 
 //--------------------------------------------------------------------------

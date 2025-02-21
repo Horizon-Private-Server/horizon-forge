@@ -64,6 +64,7 @@ MonoBehaviour:
     Health: 15
     HealthMax: 0
     HealthScale: 1
+    TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 0.5
     CollRadius: 1
@@ -106,6 +107,7 @@ MonoBehaviour:
     Health: 5
     HealthMax: 0
     HealthScale: 1
+    TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 1.75
     CollRadius: 0.5
@@ -134,6 +136,7 @@ MonoBehaviour:
     Health: 5
     HealthMax: 0
     HealthScale: 1
+    TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 2
     CollRadius: 1
@@ -165,6 +168,7 @@ MonoBehaviour:
     Health: 200
     HealthMax: 0
     HealthScale: 1.1
+    TurnSpeed: 1
     AttackRadius: 50
     HitRadius: 0.5
     CollRadius: 1
@@ -196,6 +200,7 @@ MonoBehaviour:
     Health: 100
     HealthMax: 0
     HealthScale: 1.1
+    TurnSpeed: 1
     AttackRadius: 4
     HitRadius: 0.5
     CollRadius: 2
@@ -250,6 +255,7 @@ MonoBehaviour:
     Health: 20
     HealthMax: 0
     HealthScale: 1
+    TurnSpeed: 1
     AttackRadius: 4
     HitRadius: 0.75
     CollRadius: 1.25
@@ -278,6 +284,7 @@ MonoBehaviour:
     Health: 100
     HealthMax: 0
     HealthScale: 1.1
+    TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 0.5
     CollRadius: 1.5
@@ -306,6 +313,7 @@ MonoBehaviour:
     Health: 80
     HealthMax: 0
     HealthScale: 1
+    TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 1
     CollRadius: 1.25
@@ -334,6 +342,7 @@ MonoBehaviour:
     Health: 15
     HealthMax: 0
     HealthScale: 0.75
+    TurnSpeed: 2
     AttackRadius: 5
     HitRadius: 1
     CollRadius: 1

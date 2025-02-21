@@ -443,6 +443,7 @@ Moby* stalkerturretGetNextTarget(Moby* moby)
 	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
   Moby* turretMoby = turretVars->TurretMoby;
   Moby* baseMoby = turretVars->BaseMoby;
+  int bestHasAggroZone = 0;
 	Player * closestPlayer = NULL;
 	float closestPlayerDist = 100000;
 
@@ -472,9 +473,10 @@ Moby* stalkerturretGetNextTarget(Moby* moby)
         dist *= (1.0 / STALKERTURRET_TARGET_KEEP_CURRENT_FACTOR);
 
       // pick closest target
-      if (dist < closestPlayerDist) {
+      if ((bestHasAggroZone == inAggroZone && dist < closestPlayerDist) || (!bestHasAggroZone && inAggroZone)) {
         closestPlayer = p;
         closestPlayerDist = dist;
+        bestHasAggroZone = inAggroZone;
       }
     }
 	}

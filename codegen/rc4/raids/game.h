@@ -77,8 +77,8 @@
 #define MOB_POSTFX_ACID_DMG_PERC              (0.05)
 #define MOB_POSTFX_FREEZE_DUR_TICKS           (TPS * 5)
 #define MOB_POSTFX_FREEZE_FACTOR              (0.75)
-#define MOB_POSTFX_NAPALM_DMG_PERC            (0.05)
-#define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.15)
+#define MOB_POSTFX_NAPALM_DMG_PERC            (0.10)
+#define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.25)
 
 #define JACKPOT_BOLTS													(50)
 #define XP_ALPHAMOD_XP												(10)
@@ -87,7 +87,10 @@
 
 #define LEVELUP_MAX_LEVEL                     (98)
 #define LEVELUP_PLAYER_LINEAR_FACTOR          (100)
+#define LEVELUP_PLAYER_STEP_FACTOR            (50)
+#define LEVELUP_PLAYER_STEP_EVERY             (10)
 #define LEVELUP_PLAYER_INCREMENT_AMOUNT       (25)
+#define LEVELUP_CHALLENGE_INCREMENT_AMOUNT    (25)
 
 #define PLAYER_BASE_REVIVE_TICKS					    (60 * TPS)
 #define PLAYER_MIN_REVIVE_TICKS					      (10 * TPS)
@@ -177,6 +180,7 @@ struct RaidsBankMapStats;
 struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobCreateArgs;
+struct MobDamageEventArgs;
 
 typedef void (*PushSnack_func)(char * string, int ticksAlive, int localPlayerIdx);
 typedef void (*PushDamageBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int isCrit);
@@ -194,6 +198,7 @@ typedef void (*OnMissionFail_func)(void);
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobUpdate_func)(Moby* moby);
+typedef void (*MapOnMobDamaged_func)(Moby* moby, struct MobDamageEventArgs* args);
 typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 typedef void (*MapOnMobDestroyed_func)(Moby* moby);
 typedef void (*MapCreateAmmoDropAt_func)(Moby* moby);
@@ -306,6 +311,7 @@ struct RaidsMapConfig
   MapOnMobCreate_func OnMobCreateFunc;
   MapOnMobSpawned_func OnMobSpawnedFunc;
   MapOnMobUpdate_func OnMobUpdateFunc;
+  MapOnMobDamaged_func OnMobDamagedFunc;
   MapOnMobKilled_func OnMobKilledFunc;
   MapOnMobDestroyed_func OnMobDestroyedFunc;
   MapCreateAmmoDropAt_func CreateAmmoDropAtFunc;

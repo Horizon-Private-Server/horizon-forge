@@ -14,6 +14,9 @@
 
 #define BADGE_HEALTH_BUFF_AMOUNT       (200)
 #define BADGE_AMMO_MOD_BUFF_AMOUNT     (6)
+#define BADGE_AREA_MOD_BUFF_AMOUNT     (3)
+#define BADGE_SPEED_MOD_BUFF_AMOUNT    (4)
+#define BADGE_IMPACT_MOD_BUFF_AMOUNT   (4)
 
 enum RaidsGadgetPaintSpecialMask
 {
@@ -47,8 +50,12 @@ enum RaidsBadgeType
   RAIDS_BADGE_TYPE_SHARPSHOOTER,
   RAIDS_BADGE_TYPE_BERSERKER,
   RAIDS_BADGE_TYPE_FLINCH_RESISTANCE,
-  RAIDS_BADGE_TYPE_HEATH_BUFF,
-  RAIDS_BADGE_TYPE_AMMO_BUFF,
+  RAIDS_BADGE_TYPE_HEALTH_BUFF,
+  RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF,
+  RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF,
+  RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF,
+  RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF,
+  RAIDS_BADGE_TYPE_EXPLODING_ENEMIES,
   RAIDS_BADGE_TYPE_COUNT
 };
 
@@ -68,12 +75,22 @@ enum RaidsItemTypes
   RAIDS_ITEM_BADGE,
 };
 
+enum RaidsItemUpdateAction
+{
+  RAIDS_ITEM_UPDATE_NONE = 0,
+  RAIDS_ITEM_UPDATE_SELL,
+  RAIDS_ITEM_UPDATE_SET_NOTIFY,
+  RAIDS_ITEM_UPDATE_EQUIP,
+  RAIDS_ITEM_UPDATE_UNEQUIP
+};
+
 typedef struct RaidsInventoryItem
 {
   char Type;
   char Notify;
   u8 Quality; // determines rarity + values on probability curve
   u32 Price;
+  u32 Uid;
 
   union {
     struct {
@@ -85,6 +102,8 @@ typedef struct RaidsInventoryItem
       u8 CritChance; // 0-255 (0-100%) chance crit
       u8 OmegaMod;
       u8 AlphaModCounts[ALPHA_MOD_COUNT-1];
+      u8 Effect;
+      u8 EffectStrength;
     } WeaponData;
 
     struct {
@@ -94,14 +113,18 @@ typedef struct RaidsInventoryItem
   };
 } RaidsInventoryItem_t;
 
-typedef struct RaidsPlayerInventory
+typedef struct RaidsPlayerInventoryPage
 {
   RaidsInventoryItem_t Items[BANK_MAX_ITEMS];
-  u32 TotalWeapons;
+  u32 Total;
+  u16 TotalByFilter[9];
+  u16 FilterHasNewMask;
   int RefreshLocalInventory;
-  char EquippedBadgeIdx;
-  char EquippedWeaponIdxs[WEAPON_SLOT_COUNT-1];
-} RaidsPlayerInventory_t;
+  int Filter;
+  int Page;
+  int HasFlag;
+  long LastRequestTime;
+} RaidsPlayerInventoryPage_t;
 
 typedef struct RaidsPlayerAccount
 {
@@ -112,23 +135,32 @@ typedef struct RaidsPlayerAccount
   u16 Skills[RAIDS_SKILLS_COUNT];
 } RaidsPlayerAccount_t;
 
-typedef struct RaidsPlayerBank
-{
-  RaidsPlayerInventory_t Inventory;
-  RaidsPlayerAccount_t Account;
-} RaidsPlayerBank_t;
-
 typedef struct RaidsPlayerEquippedInventory
 {
   RaidsInventoryItem_t Items[WEAPON_SLOT_COUNT-1];
   RaidsInventoryItem_t Badge;
+  int RefreshLocalInventory;
 } RaidsPlayerEquippedInventory_t;
+
+typedef struct RaidsPlayerBank
+{
+  RaidsPlayerAccount_t Account;
+  RaidsPlayerEquippedInventory_t EquippedInventory;
+} RaidsPlayerBank_t;
 
 struct RaidsGetBankRequest
 {
   u32 DestAddress;
   u32 DestHasFlagAddress;
   u32 DestTimeFlagAddress;
+  int Filter;
+  int Page;
+};
+
+struct RaidsUpdateBankInventoryItemRequest
+{
+  RaidsInventoryItem_t Item;
+  char Action;
 };
 
 struct RaidsUpdateBankInventoryRequest
@@ -187,14 +219,15 @@ typedef enum RaidsItemRarity (*BankGetRarityFromQuality_func)(int quality);
 typedef float (*BankGetEquippedBadgeEffectStrength_func)(int playerId, enum RaidsBadgeType effect);
 typedef RaidsInventoryItem_t* (*BankGetEquippedWeaponFromGadgetBox_func)(GadgetBox* gbox, int gadgetId);
 
-typedef void (*BankRequestInventoryFromServer_func)(void);
-typedef void (*BankSendInventoryToServer_func)(void);
+typedef void (*BankRequestInventoryFromServer_func)(RaidsPlayerInventoryPage_t* inventory, int filter, int page);
+typedef void (*BankSendInventoryItemToServer_func)(RaidsInventoryItem_t* item, enum RaidsItemUpdateAction action);
+typedef void (*BankRequestEquippedInventoryFromServer_func)(void);
 typedef void (*BankRequestAccountFromServer_func)(void);
 typedef void (*BankSendAccountToServer_func)(void);
 typedef void (*BankRequestMapStats_func)(char* mapFilename, struct RaidsBankMapStats* dest);
 
-typedef int (*BankGetHasInventory_func)(void);
-typedef int (*BankHasPendingInventoryRequest_func)(void);
+typedef int (*BankGetHasEquippedInventory_func)(void);
+typedef int (*BankHasPendingEquippedInventoryRequest_func)(void);
 typedef int (*BankGetHasAccount_func)(void);
 typedef int (*BankHasPendingAccountRequest_func)(void);
 
@@ -214,13 +247,14 @@ struct BankVTable
   BankGetEquippedWeaponFromGadgetBox_func GetEquippedWeaponFromGadgetBox;
 
   BankRequestInventoryFromServer_func RequestInventoryFromServer;
-  BankSendInventoryToServer_func SendInventoryToServer;
+  BankSendInventoryItemToServer_func SendInventoryItemToServer;
+  BankRequestEquippedInventoryFromServer_func RequestEquippedInventoryFromServer;
   BankRequestAccountFromServer_func RequestAccountFromServer;
   BankSendAccountToServer_func SendAccountToServer;
   BankRequestMapStats_func RequestMapStats;
 
-  BankGetHasInventory_func GetHasInventory;
-  BankHasPendingInventoryRequest_func HasPendingInventoryRequest;
+  BankGetHasEquippedInventory_func GetHasEquippedInventory;
+  BankHasPendingEquippedInventoryRequest_func HasPendingEquippedInventoryRequest;
   BankGetHasAccount_func GetHasAccount;
   BankHasPendingAccountRequest_func HasPendingAccountRequest;
   
@@ -232,8 +266,8 @@ struct BankVTable
   BankAddWeaponXP_func AddWeaponXP;
 };
 
-int bankGetHasInventory(void);
-int bankHasPendingInventoryRequest(void);
+int bankGetHasEquippedInventory(void);
+int bankHasPendingEquippedInventoryRequest(void);
 int bankGetHasAccount(void);
 int bankHasPendingAccountRequest(void);
 
@@ -249,8 +283,9 @@ u32 bankAddXP(u32 amount);
 double bankGetWeaponXP(int gadgetId);
 double bankAddWeaponXP(double amount, int gadgetId);
 
-void bankRequestInventoryFromServer(void);
-void bankSendInventoryToServer(void);
+void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page);
+void bankSendInventoryItemToServer(RaidsInventoryItem_t* item, enum RaidsItemUpdateAction action);
+void bankRequestEquippedInventoryFromServer(void);
 void bankRequestAccountFromServer(void);
 void bankSendAccountToServer(void);
 void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest);
@@ -261,8 +296,8 @@ RaidsInventoryItem_t* bankGetLocalItemFromBank(int index);
 RaidsInventoryItem_t* bankGetLocalWeaponFromBank(int index);
 RaidsInventoryItem_t* bankGetLocalBadgeFromBank(int index);
 RaidsInventoryItem_t* bankGetLocalEquippedBadge(void);
-void bankEquipLocalItemAtIndex(int weaponIdx);
-void bankSellLocalItemAtIndex(int weaponIdx);
+int bankEquipItem(RaidsInventoryItem_t* item);
+int bankSellItem(RaidsInventoryItem_t* item);
 int bankGetEquipSlotFromGadgetId(int gadgetId);
 RaidsInventoryItem_t* bankGetLocalEquippedWeapon(int gadgetId);
 int bankGetPlayerIdxFromGadgetBox(GadgetBox* gbox);

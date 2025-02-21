@@ -945,7 +945,7 @@ int controllerControlUpdateChallenge(Moby* moby, struct ControllerTarget* target
   if (isCompleted == setTo) return 1;
 
   if (setTo) {
-    bankAddXP(1); // earn 1 XP for completion
+    bankAddXP(LEVELUP_CHALLENGE_INCREMENT_AMOUNT); // earn XP for completion
   }
 
   // set and send

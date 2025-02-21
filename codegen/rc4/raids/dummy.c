@@ -125,6 +125,7 @@ void dummyOnStateChanged(Moby* moby)
       // reset on deactivated
       pvars->TargetVars.hitPoints = difficultyConfig->Health;
       pvars->TargetVars.maxHitPoints = difficultyConfig->Health;
+      DLOG(moby, "dead %d\n", gameGetTime());
       break;
     }
     case DUMMY_STATE_DEACTIVATED:
@@ -222,6 +223,12 @@ void dummyUpdate(Moby* moby)
   moby->AnimSeqId = moby->LSeq = targetMoby->AnimSeqId;
   targetMoby->CollActive = -1;
 
+  // need collision
+  if (!moby->CollData) {
+    void* collMobyPtr = mobyGetClassPtr(MOBY_ID_HEALTH_BOX_MULT);
+    if (collMobyPtr) moby->CollData = *(void**)((u32)collMobyPtr + 0x10);
+  }
+
   // register target if friendly and targetable
   if (!pvars->Config.IsOnEnemyTeam && pvars->Config.MobTargetType != DUMMY_MOB_AGGRO_IGNORE) {
     mobRegisterTarget(moby);
@@ -271,7 +278,7 @@ void dummyUpdate(Moby* moby)
       }
 
       // bubble
-      if (MapConfig.PushDamageBubbleFunc)
+      if (pvars->Config.DamageBubbles && MapConfig.PushDamageBubbleFunc)
         MapConfig.PushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, 0);
 
       pvars->State.TicksSinceLastDamage = 0;

@@ -54,8 +54,8 @@ void hackerorbUpdate(Moby* moby)
 {
   // detect when state was changed
   if ((moby->Triggers & 1) == 0 && moby->Mission != moby->State) {
-    if (moby->State == HACKERORB_STATE_CAPTURED || moby->State == HACKERORB_STATE_UNCAPTURED) {
-      DPRINTF("hackerorb %08X send state %d => %d\n", (u32)moby, moby->Mission, moby->State);
+    if (moby->PrevState != 0 && (moby->State == HACKERORB_STATE_CAPTURED || moby->State == HACKERORB_STATE_UNCAPTURED)) {
+      DPRINTF("hackerorb %08X send state %d => %d\n", (u32)moby, moby->PrevState, moby->State);
       hackerorbBroadcastState(moby);
     }
     moby->Mission = moby->State;

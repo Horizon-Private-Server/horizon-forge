@@ -24,6 +24,7 @@ struct MobPVar;
 struct MobStateUpdateEventArgs;
 
 void mapOnMobUpdate(Moby* moby);
+void mapOnMobDamaged(Moby* moby, struct MobDamageEventArgs* args);
 void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void mapOnMobDestroyed(Moby* moby);
 void mapOnMobSpawned(Moby* moby);

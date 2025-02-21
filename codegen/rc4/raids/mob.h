@@ -216,7 +216,8 @@ struct MobVars {
 	int LastAcidBy;
   float LastAcidByDamage;
 	int LastHitBy;
-	u16 LastHitByOClass;
+	float LastHitByDamage;
+  u16 LastHitByOClass;
 	u16 NextCheckActionDelayTicks;
 	u16 NextActionDelayTicks;
 	u16 ActionCooldownTicks;

@@ -29,13 +29,14 @@ struct BankVTable bankVTable = {
   .GetEquippedWeaponFromGadgetBox = &bankGetEquippedWeaponFromGadgetBox,
 
   .RequestInventoryFromServer = &bankRequestInventoryFromServer,
-  .SendInventoryToServer = &bankSendInventoryToServer,
+  .SendInventoryItemToServer = &bankSendInventoryItemToServer,
+  .RequestEquippedInventoryFromServer = &bankRequestEquippedInventoryFromServer,
   .RequestAccountFromServer = &bankRequestAccountFromServer,
   .SendAccountToServer = &bankSendAccountToServer,
   .RequestMapStats = &bankRequestMapStats,
 
-  .GetHasInventory = &bankGetHasInventory,
-  .HasPendingInventoryRequest = &bankHasPendingInventoryRequest,
+  .GetHasEquippedInventory = &bankGetHasEquippedInventory,
+  .HasPendingEquippedInventoryRequest = &bankHasPendingEquippedInventoryRequest,
   .GetHasAccount = &bankGetHasAccount,
   .HasPendingAccountRequest = &bankHasPendingAccountRequest,
 
@@ -69,9 +70,9 @@ u32 bankPaintColors[] = {
   0x006000FF,         // maroon
 };
 
-int bankHasInventory = 0;
+int bankHasEquippedInventory = 0;
 int bankHasAccount = 0;
-long bankLastInventoryRequestTime = 0;
+long bankLastEquippedInventoryRequestTime = 0;
 long bankLastAccountRequestTime = 0;
 char bankLevelUpBuf[64];
 
@@ -164,16 +165,16 @@ void bankBroadcastAccount(void)
 }
 
 //--------------------------------------------------------------------------
-int bankGetHasInventory(void)
+int bankGetHasEquippedInventory(void)
 {
-  return bankHasInventory;
+  return bankHasEquippedInventory;
 }
 
 //--------------------------------------------------------------------------
-int bankHasPendingInventoryRequest(void)
+int bankHasPendingEquippedInventoryRequest(void)
 {
-  long dtMs = (timerGetSystemTime() - bankLastInventoryRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
-  return bankLastInventoryRequestTime && dtMs < (2*TIME_SECOND);
+  long dtMs = (timerGetSystemTime() - bankLastEquippedInventoryRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
+  return bankLastEquippedInventoryRequestTime && dtMs < (2*TIME_SECOND);
 }
 
 //--------------------------------------------------------------------------
@@ -190,45 +191,58 @@ int bankHasPendingAccountRequest(void)
 }
 
 //--------------------------------------------------------------------------
-void bankRequestInventoryFromServer(void)
+void bankRequestEquippedInventoryFromServer(void)
 {
   void* connection = netGetLobbyServerConnection();
   if (!connection) return;
 
-  bankLastInventoryRequestTime = timerGetSystemTime();
-  bankHasInventory = 0;
+  bankLastEquippedInventoryRequestTime = timerGetSystemTime();
+  bankHasEquippedInventory = 0;
   struct RaidsGetBankRequest msg = {
-    .DestAddress = (u32)&bankLocalBank.Inventory,
-    .DestHasFlagAddress = (u32)&bankHasInventory,
-    .DestTimeFlagAddress = (u32)&bankLastInventoryRequestTime
+    .DestAddress = (u32)&bankLocalBank.EquippedInventory,
+    .DestHasFlagAddress = (u32)&bankHasEquippedInventory,
+    .DestTimeFlagAddress = (u32)&bankLastEquippedInventoryRequestTime
+  };
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_BANK_EQUIPPED_INVENTORY_REQUEST, sizeof(msg), &msg);
+  DPRINTF("request equipped inventory\n");
+}
+
+//--------------------------------------------------------------------------
+void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  inventory->LastRequestTime = timerGetSystemTime();
+  inventory->HasFlag = 0;
+  struct RaidsGetBankRequest msg = {
+    .DestAddress = (u32)inventory,
+    .DestHasFlagAddress = (u32)&inventory->HasFlag,
+    .DestTimeFlagAddress = (u32)&inventory->LastRequestTime,
+    .Filter = filter,
+    .Page = page
   };
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_BANK_INVENTORY_REQUEST, sizeof(msg), &msg);
   DPRINTF("request inventory\n");
 }
 
 //--------------------------------------------------------------------------
-void bankSendInventoryToServer(void)
+void bankSendInventoryItemToServer(RaidsInventoryItem_t* item, enum RaidsItemUpdateAction action)
 {
-  struct RaidsUpdateBankInventoryRequest msg;
+  struct RaidsUpdateBankInventoryItemRequest msg;
+
+  if (!item) return;
+  if (!item->Type) return;
 
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   if (!localBank) return;
   void* connection = netGetLobbyServerConnection();
   if (!connection) return;
-  if (!bankHasInventory) return;
 
-  int i;
-  for (i = 0; i < BANK_MAX_ITEMS; i += BANK_UPDATE_SIZE) {
-    msg.Index = i;
-    msg.Count = (BANK_MAX_ITEMS - i);
-    msg.EquippedBadgeIdx = localBank->Inventory.EquippedBadgeIdx;
-    if (msg.Count > BANK_UPDATE_SIZE) msg.Count = BANK_UPDATE_SIZE;
-
-    memcpy(msg.EquippedWeaponIdxs, localBank->Inventory.EquippedWeaponIdxs, sizeof(msg.EquippedWeaponIdxs));
-    memcpy(msg.Items, &localBank->Inventory.Items[i], sizeof(RaidsInventoryItem_t)*msg.Count);
-    netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_UPDATE_RAIDS_BANK_INVENTORY_REQUEST, sizeof(msg), &msg);
-  }
-  DPRINTF("sent inventory\n");
+  memcpy(&msg.Item, item, sizeof(RaidsInventoryItem_t));
+  msg.Action = action;
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_UPDATE_RAIDS_BANK_INVENTORY_ITEM_REQUEST, sizeof(msg), &msg);
+  DPRINTF("sent inventory item %08X action:%d\n", item->Uid, action);
 }
 
 //--------------------------------------------------------------------------
@@ -323,13 +337,13 @@ u32 bankSubtractBolts(u32 amount)
 u32 bankGetXP(void) { return bankLocalBank.Account.Experience; }
 u32 bankAddXP(u32 amount)
 {
-
   // add xp
   u32 xp = bankLocalBank.Account.Experience;
   bankLocalBank.Account.Experience += amount;
 
   int level = getLevelFromXp(xp);
   int nextLevel = getLevelFromXp(xp + amount);
+  //printf("add xp %'d (+%'d)\n", xp, amount);
   if (nextLevel > level) {
     bankLocalBank.Account.SkillPoints += 1;
 
@@ -471,9 +485,7 @@ RaidsInventoryItem_t* bankGetLocalEquippedWeapon(int gadgetId)
   int slotId = bankGetEquipSlotFromGadgetId(gadgetId);
   if (slotId < 0) return NULL;
 
-  int equipIdx = bankLocalBank.Inventory.EquippedWeaponIdxs[slotId];
-  if (equipIdx < 0) return NULL;
-  RaidsInventoryItem_t* item = &bankLocalBank.Inventory.Items[equipIdx];
+  RaidsInventoryItem_t* item = &bankLocalBank.EquippedInventory.Items[slotId];
 
   if (item->Type != RAIDS_ITEM_WEAPON) return NULL;
   if (item->WeaponData.GadgetId != gadgetId) return NULL;
@@ -481,37 +493,12 @@ RaidsInventoryItem_t* bankGetLocalEquippedWeapon(int gadgetId)
 }
 
 //--------------------------------------------------------------------------
-RaidsInventoryItem_t* bankGetLocalItemFromBank(int index)
-{
-  if (index < 0) return NULL;
-  if (index >= BANK_MAX_ITEMS) return NULL;
-
-  RaidsInventoryItem_t* item = &bankLocalBank.Inventory.Items[index];
-  if (!item->Type) return NULL;
-
-  return item;
-}
-
-//--------------------------------------------------------------------------
-RaidsInventoryItem_t* bankGetLocalWeaponFromBank(int index)
-{
-  RaidsInventoryItem_t* item = bankGetLocalItemFromBank(index);
-  if (!item || item->Type != RAIDS_ITEM_WEAPON || !item->WeaponData.GadgetId) return NULL;
-  return item;
-}
-
-//--------------------------------------------------------------------------
-RaidsInventoryItem_t* bankGetLocalBadgeFromBank(int index)
-{
-  RaidsInventoryItem_t* item = bankGetLocalItemFromBank(index);
-  if (!item || item->Type != RAIDS_ITEM_BADGE) return NULL;
-  return item;
-}
-
-//--------------------------------------------------------------------------
 RaidsInventoryItem_t* bankGetLocalEquippedBadge(void)
 {
-  return bankGetLocalBadgeFromBank(bankLocalBank.Inventory.EquippedBadgeIdx);
+  RaidsInventoryItem_t* badge = &bankLocalBank.EquippedInventory.Badge;
+  if (badge->Type != RAIDS_ITEM_BADGE) return NULL;
+
+  return badge;
 }
 
 //--------------------------------------------------------------------------
@@ -556,8 +543,12 @@ int bankGetAlphaModCount(GadgetBox* gadgetBox, int gadgetId, int alphaModId)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gadgetBox, gadgetId);
   if (!bankWeapon) return 0;
 
-  if (alphaModId == ALPHA_MOD_AMMO) {
-    extra = (int)ceilf(BADGE_AMMO_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_AMMO_BUFF));
+  switch (alphaModId)
+  {
+    case ALPHA_MOD_AMMO: extra = (int)ceilf(BADGE_AMMO_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF)); break;
+    case ALPHA_MOD_AREA: extra = (int)ceilf(BADGE_AREA_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF)); break;
+    case ALPHA_MOD_SPEED: extra = (int)ceilf(BADGE_SPEED_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF)); break;
+    case ALPHA_MOD_IMPACT: extra = (int)ceilf(BADGE_IMPACT_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF)); break;
   }
 
   return extra + bankWeapon->WeaponData.AlphaModCounts[alphaModId-1];
@@ -771,19 +762,7 @@ void bankUpdateLocalState(Player * player)
   // save to equipped
   int i;
   for (i = 0; i < WEAPON_SLOT_OMNI_SHIELD; ++i) {
-    int equippedIdx = localBank->Inventory.EquippedWeaponIdxs[i];
-    if (equippedIdx < 0) {
-      memset(&state->PlayerStates[playerId].Inventory.Items[i], 0, sizeof(RaidsInventoryItem_t));
-    } else {
-      memcpy(&state->PlayerStates[playerId].Inventory.Items[i], &localBank->Inventory.Items[equippedIdx], sizeof(RaidsInventoryItem_t));
-    }
-  }
-
-  RaidsInventoryItem_t* equippedBadge = bankGetLocalEquippedBadge();
-  if (!equippedBadge) {
-    memset(&state->PlayerStates[playerId].Inventory.Badge, 0, sizeof(RaidsInventoryItem_t));
-  } else {
-    memcpy(&state->PlayerStates[playerId].Inventory.Badge, equippedBadge, sizeof(RaidsInventoryItem_t));
+    memcpy(&state->PlayerStates[playerId].Inventory, &localBank->EquippedInventory, sizeof(RaidsPlayerEquippedInventory_t));
   }
 
   if (player->LocalPlayerIndex == 0) {
@@ -793,46 +772,62 @@ void bankUpdateLocalState(Player * player)
 }
 
 //--------------------------------------------------------------------------
-void bankSellLocalItemAtIndex(int itemIdx)
+int bankSellItem(RaidsInventoryItem_t* item)
 {
+  int isEquipped = 0;
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  if (!localBank) return;
-
-  if (itemIdx < 0 || itemIdx >= BANK_MAX_ITEMS) return;
-  RaidsInventoryItem_t* item = &localBank->Inventory.Items[itemIdx];
-  if (!item || !item->Type) return;
+  if (!localBank) return 0;
+  if (!item) return 0;
+  if (!item->Type) return 0;
 
   if (bankItemIsBadge(item)) {
-    int isEquipped = localBank->Inventory.EquippedBadgeIdx == itemIdx;
-    if (isEquipped) localBank->Inventory.EquippedBadgeIdx = -1;
-  } else {
-    int equipSlot = bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId);
-    int isEquipped = localBank->Inventory.EquippedWeaponIdxs[equipSlot] == itemIdx;
-    if (isEquipped) localBank->Inventory.EquippedWeaponIdxs[equipSlot] = -1;
+    RaidsInventoryItem_t* badge = bankGetLocalEquippedBadge();
+    if (badge != NULL && badge->Uid == item->Uid) {
+      isEquipped = 1;
+      memset(&localBank->EquippedInventory.Badge, 0, sizeof(localBank->EquippedInventory.Badge));
+    }
+  } else if (bankItemIsWeapon(item)) {
+    int slotId = bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId);
+    RaidsInventoryItem_t* weapon = bankGetLocalEquippedWeapon(item->WeaponData.GadgetId);
+    if (weapon != NULL && weapon->Uid == item->Uid) {
+      isEquipped = 1;
+      memset(&localBank->EquippedInventory.Items[slotId], 0, sizeof(RaidsInventoryItem_t));
+    }
   }
 
+  // broadcast
+  bankSendInventoryItemToServer(item, RAIDS_ITEM_UPDATE_SELL);
+
+  // apply sell
   localBank->Account.Bolts += item->Price;
   memset(item, 0, sizeof(RaidsInventoryItem_t));
-  localBank->Inventory.RefreshLocalInventory = 1;
+
+  // refresh equipped inventory
+  if (isEquipped) {
+    localBank->EquippedInventory.RefreshLocalInventory = 1;
+  }
+
+  return 1;
 }
 
 //--------------------------------------------------------------------------
-void bankEquipLocalItemAtIndex(int itemIdx)
+int bankEquipItem(RaidsInventoryItem_t* item)
 {
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  if (!localBank) return;
-
-  if (itemIdx < 0 || itemIdx >= BANK_MAX_ITEMS) return;
-  RaidsInventoryItem_t* item = &localBank->Inventory.Items[itemIdx];
-  if (!item || !item->Type) return;
+  if (!localBank) return 0;
+  if (!item) return 0;
+  if (!item->Type) return 0;
 
   if (bankItemIsBadge(item)) {
-    localBank->Inventory.EquippedBadgeIdx = itemIdx;
+    memcpy(&localBank->EquippedInventory.Badge, item, sizeof(RaidsInventoryItem_t));
   } else {
-    localBank->Inventory.EquippedWeaponIdxs[bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId)] = itemIdx;
+    memcpy(&localBank->EquippedInventory.Items[bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId)], item, sizeof(RaidsInventoryItem_t));
   }
 
-  localBank->Inventory.RefreshLocalInventory = 1;
+  bankSendInventoryItemToServer(item, RAIDS_ITEM_UPDATE_EQUIP);
+  bankRequestEquippedInventoryFromServer();
+  //localBank->EquippedInventory.RefreshLocalInventory = 1;
+  return 1;
 }
 
 //--------------------------------------------------------------------------
@@ -906,10 +901,12 @@ void bankTick(void)
   int i;
 
   // handle new inventory change
-  if (bankLocalBank.Inventory.RefreshLocalInventory) {
+  if (bankLocalBank.EquippedInventory.RefreshLocalInventory) {
     for (i = 0; i < GAME_MAX_LOCALS; ++i) {
       bankUpdateLocalState(playerGetFromSlot(i));
     }
+
+    bankLocalBank.EquippedInventory.RefreshLocalInventory = 0;
   }
 
   // process players

@@ -197,6 +197,7 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
 
   if (spawnerGetRandomSpawnPoint(moby, mobParamsIdx, args.Position, &args.Yaw)) {
     spawnerRequestSpawn(moby, &args);
+    DLOG(moby, "request spawn %d\n", gameGetTime());
     return 1;
     // if (MapConfig.TryCreateMobFunc(&args)) {
     //   pvars->State.NumSpawned[mobParamsIdx]++;
@@ -480,7 +481,7 @@ void spawnerOnChildMobUpdate(Moby* moby, Moby* childMoby, u32 userdata)
 void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
-  DLOG(moby, "MOB%d: spawned %08X (%d/%d)\n", userdata, (u32)childMoby, pvars->State.NumSpawned[userdata], pvars->State.NumTotalSpawned + pvars->State.NumTotalKilled);
+  DLOG(moby, "MOB%d: %d spawned %08X (%d/%d)\n", userdata, gameGetTime(), (u32)childMoby, pvars->State.NumSpawned[userdata], pvars->State.NumTotalSpawned + pvars->State.NumTotalKilled);
 }
 
 //--------------------------------------------------------------------------
@@ -859,6 +860,7 @@ void spawnerStart(void)
         pvars->State.NumTotalSpawned++;
         pvars->State.NumAlive[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalAlive++;
+        DLOG(moby, "spawned %d\n", gameGetTime());
       }
     }
   }

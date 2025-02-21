@@ -16,7 +16,7 @@ public class RaidsMobSpawnParamPropertyDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return 20f + LINE_HEIGHT * (property.isExpanded ? 34 : 0);
+        return 20f + LINE_HEIGHT * (property.isExpanded ? 35 : 0);
     }
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)

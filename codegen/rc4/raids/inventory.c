@@ -29,9 +29,7 @@ extern struct RaidsState State;
 extern u32 bankRarityColors[];
 extern u32 bankPaintColors[];
 extern char bankRarityCode[];
-char inventoryFilterMapping[BANK_MAX_ITEMS];
-char inventoryTabCounts[INVENTORY_TAB_COUNT];
-char inventoryTabHasNew[INVENTORY_TAB_COUNT];
+RaidsPlayerInventoryPage_t inventoryPage = {};
 
 InventoryDrawState_t inventoryDrawState = {
   .SelectedIdx = 0,
@@ -128,8 +126,12 @@ char* inventoryBadgeNames[] = {
   [RAIDS_BADGE_TYPE_SHARPSHOOTER] "Sharpshooter",
   [RAIDS_BADGE_TYPE_BERSERKER] "Berserker",
   [RAIDS_BADGE_TYPE_FLINCH_RESISTANCE] "Flinch Resistance",
-  [RAIDS_BADGE_TYPE_HEATH_BUFF] "Nanotech Reserves",
-  [RAIDS_BADGE_TYPE_AMMO_BUFF] "Extra Mags",
+  [RAIDS_BADGE_TYPE_HEALTH_BUFF] "Nanotech Reserves",
+  [RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF] "Extra Mags",
+  [RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF] "Explosive Mags",
+  [RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF] "Fire Rate",
+  [RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF] "High-Impact Rounds",
+  [RAIDS_BADGE_TYPE_EXPLODING_ENEMIES] "Detonating Enemies",
   [RAIDS_BADGE_TYPE_COUNT] NULL,
 };
 
@@ -141,6 +143,37 @@ char* inventorySkillNames[] = {
 };
 
 //--------------------------------------------------------------------------
+int inventoryGetHasInventoryPage(void)
+{
+  return inventoryPage.HasFlag && inventoryPage.Filter == inventoryDrawState.FilterIdx && inventoryPage.Page == inventoryDrawState.PageIdx;
+}
+
+//--------------------------------------------------------------------------
+int inventoryHasPendingInventoryPageRequest(void)
+{
+  long dtMs = (timerGetSystemTime() - inventoryPage.LastRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
+  return inventoryPage.LastRequestTime && dtMs < (2*TIME_SECOND);
+}
+
+//--------------------------------------------------------------------------
+RaidsInventoryItem_t* inventoryGetLocalItem(int index)
+{
+  if (index < 0) return NULL;
+  if (index >= BANK_MAX_ITEMS) return NULL;
+
+  RaidsInventoryItem_t* item = &inventoryPage.Items[index];
+  if (!item->Type) return NULL;
+
+  return item;
+}
+
+//--------------------------------------------------------------------------
+void inventoryRequestPage(void)
+{
+  bankRequestInventoryFromServer(&inventoryPage, inventoryDrawState.FilterIdx, inventoryDrawState.PageIdx);
+}
+
+//--------------------------------------------------------------------------
 void inventoryOpen(void)
 {
   struct RaidsState* state = MapConfig.State;
@@ -150,8 +183,9 @@ void inventoryOpen(void)
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
 
   state->MenuOpen = RAIDS_CUSTOM_MENU_INVENTORY;
-  bankRequestInventoryFromServer();
-  inventorySetFilter(inventoryDrawState.FilterIdx);
+  inventoryDrawState.SelectedIdx = 0;
+  inventoryDrawState.PageIdx = 0;
+  inventoryRequestPage();
   padDisableInput();
 }
 
@@ -165,7 +199,7 @@ void inventoryClose(void)
   
   state->MenuOpen = RAIDS_CUSTOM_MENU_NONE;
   padEnableInput();
-  bankSendInventoryToServer();
+  //bankSendInventoryToServer();
 }
 
 //--------------------------------------------------------------------------
@@ -174,44 +208,6 @@ u32 inventoryDrawGetCompareColor(int compare)
   if (compare < 0) return 0x800000FF; // red
   if (compare == 0) return 0x80FFFFFF; // white
   return 0x8000FFFF; // yellow
-}
-
-//--------------------------------------------------------------------------
-void inventorySetFilter(int filter)
-{
-  int i;
-  RaidsPlayerBank_t* localBank = bankGetLocalBank();
-
-  if (!localBank) return;
-
-  // filter by item
-  int idx = 0;
-  memset(inventoryFilterMapping, -1, sizeof(inventoryFilterMapping));
-  memset(inventoryTabCounts, 0, sizeof(inventoryTabCounts));
-  memset(inventoryTabHasNew, 0, sizeof(inventoryTabHasNew));
-  for (i = 0; i < BANK_MAX_ITEMS; ++i) {
-    // count
-    RaidsInventoryItem_t* item = &localBank->Inventory.Items[i];
-    int tab = 0;
-    if (!item->Type) continue;
-    
-    if (item->Type == RAIDS_ITEM_BADGE) {
-      tab = INVENTORY_TAB_BADGES;
-    } else if (item->Type == RAIDS_ITEM_WEAPON) {
-      tab = weaponIdToSlot(item->WeaponData.GadgetId);
-    } else {
-      continue;
-    }
-
-    // count
-    inventoryTabCounts[tab]++;
-    if (localBank->Inventory.Items[i].Notify == RAIDS_ITEM_NOTIFY_NEW) inventoryTabHasNew[tab] = 1;
-
-    // add to mapping if matches filter
-    if (filter == tab) {
-      inventoryFilterMapping[idx++] = i;
-    }
-  }
 }
 
 //--------------------------------------------------------------------------
@@ -339,7 +335,7 @@ void inventoryDrawItemInfo(InventoryDrawState_t* drawState)
   // draw box
   gfxHelperDrawBox(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, fw, fh, bgColor, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
 
-  RaidsInventoryItem_t* selectedItem = bankGetLocalItemFromBank(inventoryFilterMapping[drawState->SelectedIdx]);
+  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(drawState->SelectedIdx);
   if (!selectedItem) return;
 
   int hasComparison = 0;
@@ -506,14 +502,18 @@ void inventoryDrawItem(InventoryDrawState_t* drawState, int row, int col, RaidsI
   // seen
   if (isSelected && item->Notify == RAIDS_ITEM_NOTIFY_NEW) {
     item->Notify = RAIDS_ITEM_NOTIFY_NONE;
-    inventorySetFilter(drawState->FilterIdx);
+    bankSendInventoryItemToServer(item, RAIDS_ITEM_UPDATE_SET_NOTIFY);
+    // UPDATE ITEM
+    //inventorySetFilter(drawState->FilterIdx);
   }
   
   // draw equipped
   if (isBadge) {
-    isEquipped = inventoryFilterMapping[idx] == localBank->Inventory.EquippedBadgeIdx;
+    RaidsInventoryItem_t* equippedItem = bankGetLocalEquippedBadge();
+    isEquipped = equippedItem != NULL && equippedItem->Uid == item->Uid;
   } else {
-    isEquipped = inventoryFilterMapping[idx] == localBank->Inventory.EquippedWeaponIdxs[bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId)];
+    RaidsInventoryItem_t* equippedItem = bankGetLocalEquippedWeapon(item->WeaponData.GadgetId);
+    isEquipped = equippedItem != NULL && equippedItem->Uid == item->Uid;
   }
 
   if (isEquipped) {
@@ -566,7 +566,7 @@ void inventoryDrawInventory(InventoryDrawState_t* drawState)
   int i,j;
   char strBuf[128];
 
-  if (!bankGetHasInventory()) {
+  if (!inventoryGetHasInventoryPage()) {
     inventoryDrawSpinner(drawState, -INVENTORY_DRAW_WEAPONS_W/2.0, 0);
     return;
   }
@@ -581,12 +581,13 @@ void inventoryDrawInventory(InventoryDrawState_t* drawState)
     float offX = (tabW * i);
     int spriteId = inventoryWeaponSpriteIds[i];
     int spriteDim = inventoryWeaponSpriteDims[i];
+    int inventoryTabHasNew = inventoryPage.FilterHasNewMask & (1 << i);
     gfxHelperDrawBox(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, -(INVENTORY_DRAW_FULL_W/2) + offX, -(INVENTORY_DRAW_FULL_H/2), tabW, tabH, isTabSelected ? 0x40004040 : 0x40101010, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
     gfxHelperDrawSprite(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, -(INVENTORY_DRAW_FULL_W/2) + offX + (INVENTORY_TAB_SPRITE_PADDING/2), -(INVENTORY_DRAW_FULL_H/2)+2, tabD, tabD, spriteDim, spriteDim, spriteId, isTabSelected ? 0x80FFFFFF : 0x80808080, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
-    if (inventoryTabHasNew[i]) {
+    if (inventoryTabHasNew) {
       gfxHelperDrawSprite(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, -(INVENTORY_DRAW_FULL_W/2) + offX + tabW, -(INVENTORY_DRAW_FULL_H/2), 8, 8, 32, 32, INVENTORY_NOTIFY_SPRITE_ID, INVENTORY_NOTIFY_NEW_COLOR, TEXT_ALIGN_TOPRIGHT, COMMON_DZO_DRAW_NORMAL);
     }
-    snprintf(strBuf, sizeof(strBuf), "%d", inventoryTabCounts[i]);
+    snprintf(strBuf, sizeof(strBuf), "%d", inventoryPage.TotalByFilter[i]);
     gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, -(INVENTORY_DRAW_FULL_W/2) + offX + tabW, -(INVENTORY_DRAW_FULL_H/2)+2+tabD, 0.6, 0x80FFFFFF, strBuf, -1, TEXT_ALIGN_BOTTOMRIGHT, COMMON_DZO_DRAW_NORMAL);
   }
   gfxDoGifPaging();
@@ -595,8 +596,7 @@ void inventoryDrawInventory(InventoryDrawState_t* drawState)
   for (i = 0; i < INVENTORY_DRAW_WEAPONS_DIM; ++i) {
     for (j = 0; j < INVENTORY_DRAW_WEAPONS_DIM; ++j) {
       int idx = (i*INVENTORY_DRAW_WEAPONS_DIM)+j;
-      int remappedIdx = inventoryFilterMapping[idx];
-      RaidsInventoryItem_t* item = bankGetLocalItemFromBank(remappedIdx);
+      RaidsInventoryItem_t* item = inventoryGetLocalItem(idx);
       inventoryDrawItem(drawState, i, j, item);
     }
   }
@@ -608,7 +608,7 @@ void inventoryDrawInventory(InventoryDrawState_t* drawState)
 void inventoryGetSelectedItemInteraction(int* canSell, int* alreadyEquipped, int* canEquip, int* tooStrong)
 {
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  RaidsInventoryItem_t* selectedItem = bankGetLocalItemFromBank(inventoryFilterMapping[inventoryDrawState.SelectedIdx]);
+  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
   if (selectedItem) {
     if (bankItemIsWeapon(selectedItem)) {
       int accountProf = getProficiencyFromXp(localBank->Account.WeaponXp[bankGetEquipSlotFromGadgetId(selectedItem->WeaponData.GadgetId)]);
@@ -646,12 +646,12 @@ void inventoryDrawFooter(InventoryDrawState_t* drawState)
   int canSell = 0;
   int alreadyEquipped = 0;
   int badgeAndMissionActive = 0;
-  int isLoading = !bankGetHasInventory();
+  int isLoading = !inventoryGetHasInventoryPage();
   u32 sellPrice = 0;
   Player* localPlayer = playerGetFromSlot(0);
 
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  RaidsInventoryItem_t* selectedItem = bankGetLocalItemFromBank(inventoryFilterMapping[inventoryDrawState.SelectedIdx]);
+  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
   if (selectedItem) {
     sellPrice = selectedItem->Price;
     inventoryGetSelectedItemInteraction(&canSell, &alreadyEquipped, &canEquip, &selectedTooStrong);
@@ -686,12 +686,12 @@ void inventoryDraw(void)
   GameSettings* gs = gameGetSettings();
   Player* localPlayer = playerGetFromSlot(0);
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  RaidsInventoryItem_t* selectedItem = bankGetLocalItemFromBank(inventoryFilterMapping[inventoryDrawState.SelectedIdx]);
-  int isLoadingInventory = bankHasPendingInventoryRequest();
+  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
+  int isLoadingInventory = inventoryHasPendingInventoryPageRequest();
   int isLoadingAccount = bankHasPendingAccountRequest();
 
   // bad state
-  if ((!isLoadingInventory && !bankGetHasInventory()) || (!isLoadingAccount && !bankGetHasAccount())) {
+  if ((!isLoadingInventory && !inventoryGetHasInventoryPage()) || (!isLoadingAccount && !bankGetHasAccount())) {
     inventoryClose();
     return;
   }
@@ -761,14 +761,18 @@ void inventoryHandleInput(void)
       return;
     } else if (padGetButtonDown(0, PAD_CROSS) > 0) {
       inventoryDrawState.ShowSellDialog = 0;
-      bankSellLocalItemAtIndex(inventoryFilterMapping[inventoryDrawState.SelectedIdx]);
+      if (bankSellItem(&inventoryPage.Items[inventoryDrawState.SelectedIdx])) {
+        //inventoryPage.RefreshLocalInventory = 1;
+        inventoryRequestPage();
+      }
+      //bankSellLocalItemAtIndex(inventoryFilterMapping[inventoryDrawState.SelectedIdx]);
     }
 
     return;
   }
   
   Player* localPlayer = playerGetFromSlot(0);
-  RaidsInventoryItem_t* selectedItem = bankGetLocalItemFromBank(inventoryFilterMapping[inventoryDrawState.SelectedIdx]);
+  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
   inventoryGetSelectedItemInteraction(&canSell, &alreadyEquipped, &canEquip, &selectedTooStrong);
 
   // handle close input
@@ -778,7 +782,7 @@ void inventoryHandleInput(void)
   }
 
   // handle input
-  if (bankGetHasInventory()) {
+  if (inventoryGetHasInventoryPage()) {
     int selIdx = inventoryDrawState.SelectedIdx;
     if (padGetButtonDown(0, PAD_LEFT) > 0) {                              // NAV LEFT
       int row = (selIdx-1)%INVENTORY_DRAW_WEAPONS_DIM;
@@ -794,16 +798,22 @@ void inventoryHandleInput(void)
       selIdx = (selIdx-INVENTORY_DRAW_WEAPONS_DIM) % BANK_MAX_ITEMS;
       if (selIdx < 0) selIdx += BANK_MAX_ITEMS;
     } else if (padGetButtonDown(0, PAD_L1) > 0) {                         // TAB LEFT
+      selIdx = 0;
       inventoryDrawState.FilterIdx--;
+      inventoryDrawState.PageIdx = 0;
       if (inventoryDrawState.FilterIdx < 0) inventoryDrawState.FilterIdx = INVENTORY_TAB_COUNT - 1;
-      inventorySetFilter(inventoryDrawState.FilterIdx);
+      inventoryRequestPage();
     } else if (padGetButtonDown(0, PAD_R1) > 0) {                         // TAB RIGHT
+      selIdx = 0;
+      inventoryDrawState.PageIdx = 0;
       inventoryDrawState.FilterIdx = (inventoryDrawState.FilterIdx + 1) % INVENTORY_TAB_COUNT;
-      inventorySetFilter(inventoryDrawState.FilterIdx);
-    } else if (padGetButtonDown(0, PAD_CROSS) > 0) {          // EQUIP
+      inventoryRequestPage();
+    } else if (padGetButtonDown(0, PAD_CROSS) > 0) {                      // EQUIP
       if (canEquip || alreadyEquipped) {
-        bankEquipLocalItemAtIndex(inventoryFilterMapping[selIdx]);
-        playEquipSound(localPlayer);
+        if (bankEquipItem(&inventoryPage.Items[selIdx])) {
+          playEquipSound(localPlayer);
+          inventoryPage.RefreshLocalInventory = 1;
+        }
       } else {
         playEquipRejectSound(localPlayer);
       }
@@ -812,7 +822,10 @@ void inventoryHandleInput(void)
     } else if (selectedItem && padGetButtonDown(0, PAD_CIRCLE) > 0) {   // FAVORITE
       if (selectedItem->Notify == RAIDS_ITEM_NOTIFY_FAV) selectedItem->Notify = 0;
       else selectedItem->Notify = RAIDS_ITEM_NOTIFY_FAV;
+
+      bankSendInventoryItemToServer(selectedItem, RAIDS_ITEM_UPDATE_SET_NOTIFY);
     }
+
     inventoryDrawState.SelectedIdx = selIdx;
   }
 }
@@ -844,8 +857,9 @@ void inventoryTick(void)
       
     // reset filter when inventory changes while menu is open
     RaidsPlayerBank_t* localBank = bankGetLocalBank();
-    if (localBank->Inventory.RefreshLocalInventory) {
-      inventorySetFilter(inventoryDrawState.FilterIdx);
+    if (inventoryPage.RefreshLocalInventory) {
+      //inventorySetFilter(inventoryDrawState.FilterIdx);
+      inventoryPage.RefreshLocalInventory = 0;
     }
 
     inventoryHandleInput();

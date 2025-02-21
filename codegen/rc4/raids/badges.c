@@ -178,8 +178,12 @@ void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badge
     case RAIDS_BADGE_TYPE_SHARPSHOOTER: break; // handled by gamemode
     case RAIDS_BADGE_TYPE_BERSERKER: badgesUpdate_Berserker(player, badgeIdx, strength); break;
     case RAIDS_BADGE_TYPE_FLINCH_RESISTANCE: badgesUpdate_FlinchResistance(player, badgeIdx, strength); break;
-    case RAIDS_BADGE_TYPE_HEATH_BUFF: break; // handled by gamemode
-    case RAIDS_BADGE_TYPE_AMMO_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_HEALTH_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF: break; // handled by gamemode
+    case RAIDS_BADGE_TYPE_EXPLODING_ENEMIES: break; // handled by gamemode
     default: break;
   }
 }
@@ -199,7 +203,7 @@ void badgesStart(void)
     // update time last had full health
     if (player->PlayerState == PLAYER_STATE_GET_HIT)
       badgesPlayerTimeLastHit[player->PlayerId] = gameGetTime();
-    if (player->timers.gadgetRefire > 0)
+    if (player->timers.gadgetRefire > 0 || player->PlayerState == PLAYER_STATE_FLAIL_ATTACK)
       badgesPlayerTimeLastCantShoot[player->PlayerId] = gameGetTime();
 
     RaidsInventoryItem_t* badge = &MapConfig.State->PlayerStates[i].Inventory.Badge;

@@ -65,7 +65,7 @@ void levelselectGo(LevelselectDrawState_t* drawState)
   int cost = drawState->SelectedMapExtraData.Cost[drawState->SelectedDifficulty];
   int level = getLevelFromXp(localBank->Account.Experience);
   int hasMinLevel = (level + 1) >= levelselectDrawState.SelectedMapExtraData.MinPlayerLevel;
-  if (cost > localBank->Account.Bolts || !hasMinLevel) {
+  if (cost < 0 || cost > localBank->Account.Bolts || !hasMinLevel) {
     playEquipRejectSound(playerGetFromSlot(0));
     return;
   }
@@ -265,6 +265,13 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
 
   if (levelselectDrawState.NumPlanets > 0 && levelselectDrawState.SelectedMapFilename[0]) {
 
+    RaidsPlayerBank_t* localBank = bankGetLocalBank();
+    int level = getLevelFromXp(localBank->Account.Experience);
+    char selectChar = gameAmIHost() ? '\x10' : '\x08';
+    int cost = levelselectDrawState.SelectedMapExtraData.Cost[levelselectDrawState.SelectedDifficulty];
+    int canAfford = cost <= localBank->Account.Bolts;
+    int hasMinLevel = (level + 1) >= levelselectDrawState.SelectedMapExtraData.MinPlayerLevel;
+
     // author
     Window_t windowAuthor;
     windowCreateFrom(&windowAuthor, drawWindow, 0, 0, drawWindow->Width, authorHeight, TEXT_ALIGN_TOPLEFT);
@@ -304,7 +311,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPCENTER, 0, 5, 1.0, progressColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
 
     // best time
-    if (!isHub) {
+    if (!isHub && cost >= 0) {
       int bestTimeMs = levelselectDrawState.MapStats.BestTimeMsPerDifficulty[levelselectDrawState.SelectedDifficulty];
       int bestTimeSeconds = bestTimeMs / 1000;
       int bestTimeMinutes = bestTimeSeconds / 60;
@@ -334,13 +341,8 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     Window_t windowCostText;
     windowCreateFrom(&windowCostText, drawWindow, 0, 0, drawWindow->Width, difficultyCostHeight, TEXT_ALIGN_BOTTOMLEFT);
     
-    RaidsPlayerBank_t* localBank = bankGetLocalBank();
-    int level = getLevelFromXp(localBank->Account.Experience);
-    char selectChar = gameAmIHost() ? '\x10' : '\x08';
-    int cost = levelselectDrawState.SelectedMapExtraData.Cost[levelselectDrawState.SelectedDifficulty];
-    int canAfford = cost <= localBank->Account.Bolts;
-    int hasMinLevel = (level + 1) >= levelselectDrawState.SelectedMapExtraData.MinPlayerLevel;
-    if (!hasMinLevel) snprintf(strBuf, sizeof(strBuf), "\x0EYou must be at least level %d", levelselectDrawState.SelectedMapExtraData.MinPlayerLevel);
+    if (cost < 0) snprintf(strBuf, sizeof(strBuf), "\x0EInaccessible");
+    else if (!hasMinLevel) snprintf(strBuf, sizeof(strBuf), "\x0EYou must be at least level %d", levelselectDrawState.SelectedMapExtraData.MinPlayerLevel);
     else if (cost > 0) snprintf(strBuf, sizeof(strBuf), "%c VISIT %c%'d", canAfford ? selectChar : '\x0E', canAfford ? '\x0A' : '\x0E', cost);
     else snprintf(strBuf, sizeof(strBuf), "%c VISIT\x0A FREE", selectChar);
     windowDrawText(&windowCostText, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLECENTER);

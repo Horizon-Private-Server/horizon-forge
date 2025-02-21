@@ -569,7 +569,8 @@ void zombieDoAction(Moby* moby)
 		case ZOMBIE_ACTION_ATTACK:
 		{
       int attack1AnimId = ZOMBIE_ANIM_SLAP;
-      int nextAnimId = mobGetAnimIf(moby, ZOMBIE_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
+      int defaultAnimId = mobHasVelocity(pvars) ? ZOMBIE_ANIM_RUN : ZOMBIE_ANIM_IDLE;
+      int nextAnimId = mobGetAnimIf(moby, defaultAnimId, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
 			mobTransAnim(moby, nextAnimId, 0);
 
 			float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1, 1, 5);
@@ -751,7 +752,7 @@ int zombieIsIdling(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int zombieCanAttack(struct MobPVar* pvars)
 {
-	return pvars->MobVars.AttackCooldownTicks == 0;
+	return pvars->MobVars.AttackCooldownTicks == 0 && pvars->MobVars.Action != ZOMBIE_ACTION_ATTACK;
 }
 
 //--------------------------------------------------------------------------

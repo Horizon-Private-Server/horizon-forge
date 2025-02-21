@@ -1360,6 +1360,7 @@ Moby* mobGetNextTarget(Moby* moby)
   VECTOR forward;
 	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
 	Moby * bestTargetMoby = NULL;
+  int bestHasAggroZone = 0;
 	float closestTargetDist = 100000;
 
   // check other targets first
@@ -1405,8 +1406,9 @@ Moby* mobGetNextTarget(Moby* moby)
         dist *= (1.0 / 3.0); // factor of 3 favor current target
       
       // pick closest target
-      if (dist < closestTargetDist) {
+      if ((bestHasAggroZone == inAggroZone && dist < closestTargetDist) || (!bestHasAggroZone && inAggroZone)) {
         bestTargetMoby = pTargetMoby;
+        bestHasAggroZone = inAggroZone;
         closestTargetDist = dist;
       }
 		}

@@ -21,12 +21,12 @@
 #include "checkpoint.h"
 #include "mob.h"
 #include "game.h"
+#include "badges.h"
 #include "shared.h"
 #include "maputils.h"
 
 extern struct RaidsMapConfig MapConfig;
 
-int mapCachedRefreshInvFlag = 0;
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
 
 MobyGetGuberObject_func baseGetGuberFunc = NULL;
@@ -44,6 +44,12 @@ void mapOnMobUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void mapOnMobDamaged(Moby* moby, struct MobDamageEventArgs* args)
+{
+  if (!moby || !moby->PVar) return;
+}
+
+//--------------------------------------------------------------------------
 void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
 {
   if (!moby || !moby->PVar) return;
@@ -51,6 +57,17 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource sourc
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
     spawnerOnChildMobKilled(moby->PParent, moby, pvars->MobVars.Userdata, killedByPlayerId, source);
+  }
+
+  if (killedByPlayerId >= 0) {
+    Player* killedByPlayer = playerGetAll()[killedByPlayerId];
+    float willOWispStrength = bankGetEquippedBadgeEffectStrength(killedByPlayerId, RAIDS_BADGE_TYPE_EXPLODING_ENEMIES);
+    if (killedByPlayer && willOWispStrength > 0) {
+      u32 damageFlags = mobAmIOwner(moby) ? 0x00081801 : 0;
+      float radius = willOWispStrength * BADGES_EXPLODINGENEMIES_RADIUS_MULT;
+      float damage = pvars->MobVars.LastHitByDamage * willOWispStrength * BADGES_EXPLODINGENEMIES_DAMAGE_MULT;
+      spawnExplosionDamage(moby->Position, radius, 0x800000C0, killedByPlayer->PlayerMoby, damage, damageFlags);
+    }
   }
 }
 
@@ -365,16 +382,11 @@ void mapStart(void)
 //--------------------------------------------------------------------------
 void mapTick(void)
 {
-  RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  mapCachedRefreshInvFlag = localBank->Inventory.RefreshLocalInventory;
 }
 
 //--------------------------------------------------------------------------
 void mapTickEnd(void)
 {
-  RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  if (mapCachedRefreshInvFlag)
-    localBank->Inventory.RefreshLocalInventory = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -426,6 +438,10 @@ void mapInit(void)
 
   // fix bolt crank moby (1A27) resetting itself on capture
   POKE_U32(0x003D74C0, 0);
+  POKE_U16(0x003D7844, 0xBF80);
+  POKE_U32(0x003D7848, 0);
+  POKE_U16(0x003D7850, 0x3F80);
+  POKE_U32(0x003D7854, 0);
 
   // hook when MobyPlayDesiredSound plays a sound for a moby
   // lets us reduce the # of mob sounds

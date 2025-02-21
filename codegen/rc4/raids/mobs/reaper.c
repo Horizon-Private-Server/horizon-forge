@@ -650,7 +650,8 @@ void reaperDoAction(Moby* moby)
 		case REAPER_ACTION_ATTACK:
 		{
       int attack1AnimId = REAPER_ANIM_SWING;
-      int nextAnimId = mobGetAnimIf(moby, REAPER_ANIM_IDLE, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
+      int defaultAnimId = mobHasVelocity(pvars) ? REAPER_ANIM_RUN : REAPER_ANIM_IDLE;
+      int nextAnimId = mobGetAnimIf(moby, defaultAnimId, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
 			mobTransAnim(moby, nextAnimId, 0);
 
       float damageMult = ((pvars->MobVars.LastAction == REAPER_ACTION_AGGRO) ? REAPER_AGGRO_DAMAGE_MULTIPLIER : 1);
@@ -842,7 +843,7 @@ int reaperIsIdling(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int reaperCanAttack(struct MobPVar* pvars)
 {
-	return pvars->MobVars.AttackCooldownTicks == 0;
+	return pvars->MobVars.AttackCooldownTicks == 0 && pvars->MobVars.Action != REAPER_ACTION_ATTACK;
 }
 
 //--------------------------------------------------------------------------

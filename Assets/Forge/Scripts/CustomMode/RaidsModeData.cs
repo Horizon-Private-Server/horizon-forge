@@ -193,6 +193,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
+        state.InitBody.Add($"MapConfig.OnMobDamagedFunc = &mapOnMobDamaged;");
         state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
         state.InitBody.Add($"MapConfig.OnMobDestroyedFunc = &mapOnMobDestroyed;");
         state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");

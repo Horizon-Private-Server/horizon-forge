@@ -339,7 +339,10 @@ public static class UnityHelper
                     InitializePVarField(mapConfig, pvarOverlay, pvarObject, "", def);
                 }
             }
-            catch (Exception ex) { Debug.LogError(ex); }
+            catch (Exception ex)
+            {
+                Debug.LogError(ex);
+            }
         }
     }
 
@@ -532,32 +535,35 @@ public static class UnityHelper
             case "messagecontainer":
             case "varstringcontainer":
                 {
-                    // initialize first value if array doesn't fit
-                    // this should only occur on newly imported pathgraphs
-                    var strCount = BitConverter.ToInt32(pvars, offset);
-                    if (strCount > PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT) strCount = PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT;
-                    if (strings == null || strCount > strings.Length)
+                    if (pvarObject.GetPVarStrings() == null)
                     {
-                        int lastLen = strings?.Length ?? 0;
-
-                        // increase array size
-                        if (strings == null)
-                            strings = new string[strCount];
-                        else
-                            Array.Resize(ref strings, strCount);
-
-                        // find init values
-                        for (int i = lastLen; i < strCount; ++i)
+                        // initialize first value if array doesn't fit
+                        // this should only occur on newly imported pathgraphs
+                        var strCount = BitConverter.ToInt32(pvars, offset);
+                        if (strCount > PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT) strCount = PvarOverlay.VARSTRING_CONTAINER_MAX_COUNT;
+                        if (strings == null || strCount > strings.Length)
                         {
-                            strings[i] = null;
-                            var strLen = BitConverter.ToInt16(pvars, offset + 4 + (i * 8));
-                            var strOff = BitConverter.ToInt32(pvars, offset + 4 + (i * 8) + 4);
-                            if (strLen > 0 && strOff > 0)
-                                strings[i] = BinaryHelper.RatchetStrToStr(Encoding.ASCII.GetString(pvars, strOff, strLen));
-                        }
-                    }
+                            int lastLen = strings?.Length ?? 0;
 
-                    pvarObject.SetPVarStrings(strings);
+                            // increase array size
+                            if (strings == null)
+                                strings = new string[strCount];
+                            else
+                                Array.Resize(ref strings, strCount);
+
+                            // find init values
+                            for (int i = lastLen; i < strCount; ++i)
+                            {
+                                strings[i] = null;
+                                var strLen = BitConverter.ToInt16(pvars, offset + 4 + (i * 8));
+                                var strOff = BitConverter.ToInt32(pvars, offset + 4 + (i * 8) + 4);
+                                if (strLen > 0 && strOff > 0)
+                                    strings[i] = BinaryHelper.RatchetStrToStr(Encoding.ASCII.GetString(pvars, strOff, strLen));
+                            }
+                        }
+
+                        pvarObject.SetPVarStrings(strings);
+                    }
                     break;
                 }
             case "mobyrefpvarvalue":
