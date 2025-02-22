@@ -1,5 +1,6 @@
 using GLTFast.Export;
 using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -186,6 +187,11 @@ public static class MapExporter
 
             return true;
         }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+            return false;
+        }
         finally
         {
             // cleanup generators
@@ -237,6 +243,12 @@ public static class MapExporter
         // Go through all mesh filters and establish the mapping between the materials and all mesh filters using it.
         foreach (var meshFilter in meshFilters)
         {
+            // empty mesh
+            if (!meshFilter || !meshFilter.sharedMesh || meshFilter.sharedMesh.vertexCount <= 0)
+            {
+                continue;
+            }
+
             var meshRenderer = meshFilter.GetComponent<MeshRenderer>();
             if (meshRenderer == null)
             {
@@ -384,7 +396,7 @@ public static class MapExporter
             }
 
             // store emission
-            if (entry.Key.IsKeywordEnabled("_EMISSION") || entry.Key.GetInteger("_Emission") > 0)
+            if (entry.Key.IsKeywordEnabled("_EMISSION") || (entry.Key.HasInteger("_Emission") && entry.Key.GetInteger("_Emission") > 0))
             {
                 float intensity = entry.Key.GetColor("_EmissionColor").maxColorComponent;
                 newMat.EnableKeyword("_EMISSION");
