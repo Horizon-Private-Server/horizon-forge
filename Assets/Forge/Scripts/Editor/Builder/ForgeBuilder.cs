@@ -1932,11 +1932,11 @@ public static class ForgeBuilder
 
         // export glb
         // export metadata on success
-        await MapExporter.ExportSceneForDZO(outGlbFile, outMetadataFile);
-
-        CopyToBuildFolders(EditorSceneManager.GetActiveScene());
-
-        Debug.Log("DZO build complete");
+        if (await MapExporter.ExportSceneForDZO(outGlbFile, outMetadataFile))
+        {
+            CopyToBuildFolders(EditorSceneManager.GetActiveScene());
+            Debug.Log("DZO build complete");
+        }
     }
 
     private static void WritePVarData(string outFilePath, byte[] pvars)
