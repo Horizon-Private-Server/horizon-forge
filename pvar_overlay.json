@@ -520,13 +520,9 @@
         "Offset": 24
       },
       {
-        "Name": "Overlay Direction 2",
-        "DataType": "Vector2",
-        "Offset": 28
-      },
-      {
         "Name": "Directional Fade 1",
         "DataType": "Integer",
+        "DataSize": 1,
         "Offset": 32,
         "Min": 0,
         "Max": 255
@@ -534,6 +530,7 @@
       {
         "Name": "Directional Fade 2",
         "DataType": "Integer",
+        "DataSize": 1,
         "Offset": 33,
         "Min": 0,
         "Max": 255
@@ -541,6 +538,7 @@
       {
         "Name": "Glow",
         "DataType": "Integer",
+        "DataSize": 1,
         "Offset": 34,
         "Min": 0,
         "Max": 255,
