@@ -77,6 +77,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public void Configure(string buildFolder, CodeGenState state)
     {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var isRaidsMap = mapConfig.DLForceCustomMode == DLCustomModeIds.Raids;
         var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
         var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
         var enabledMobs = Mobs.Where(x => !x.Disabled);
@@ -168,13 +170,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
 
-        state.InitBody.Add($"configInit();");
-        state.InitBody.Add($"bankInit();");
-        state.InitBody.Add($"inventoryInit();");
-        state.InitBody.Add($"mapInit();");
-        state.InitBody.Add($"mobInit();");
-        state.InitBody.Add($"levelselectInit();");
-        state.InitBody.Add($"spawnerInit();");
+        if (isRaidsMap)
+        {
+            state.InitBody.Add($"configInit();");
+            state.InitBody.Add($"bankInit();");
+            state.InitBody.Add($"inventoryInit();");
+            state.InitBody.Add($"mapInit();");
+            state.InitBody.Add($"mobInit();");
+            state.InitBody.Add($"levelselectInit();");
+            state.InitBody.Add($"spawnerInit();");
+            state.InitBody.Add($"vendorInit();");
+            state.InitBody.Add($"ammodropInit();");
+            state.InitBody.Add($"badgesInit();");
+            state.InitBody.Add($"collectibleInit();");
+        }
         state.InitBody.Add($"moverInit();");
         state.InitBody.Add($"controllerInit();");
         state.InitBody.Add($"gateInit();");
@@ -183,13 +192,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"checkpointInit();");
         state.InitBody.Add($"laserInit();");
         state.InitBody.Add($"pvarpokeInit();");
-        state.InitBody.Add($"vendorInit();");
-        state.InitBody.Add($"badgesInit();");
-        state.InitBody.Add($"ammodropInit();");
         state.InitBody.Add($"hackerorbInit();");
         state.InitBody.Add($"blipInit();");
         state.InitBody.Add($"dummyInit();");
-        state.InitBody.Add($"collectibleInit();");
 
         state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
         state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
@@ -205,25 +210,31 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.InitBody.Add("respawnAllPlayers();");
 
-        state.MainBodyReady.Add("mapStart();");
-        state.MainBodyReady.Add("levelselectStart();");
-        state.MainBodyReady.Add("spawnerStart();");
+        if (isRaidsMap)
+        {
+            state.MainBodyReady.Add("mapStart();");
+            state.MainBodyReady.Add("levelselectStart();");
+            state.MainBodyReady.Add("spawnerStart();");
+            state.MainBodyReady.Add("checkpointStart();");
+            state.MainBodyReady.Add("vendorStart();");
+            state.MainBodyReady.Add("badgesStart();");
+            state.MainBodyReady.Add("ammodropStart();");
+        }
         state.MainBodyReady.Add("moverStart();");
         state.MainBodyReady.Add("controllerStart();");
         state.MainBodyReady.Add("gateStart();");
         state.MainBodyReady.Add("npcStart();");
-        state.MainBodyReady.Add("checkpointStart();");
         state.MainBodyReady.Add("laserStart();");
         state.MainBodyReady.Add("pvarpokeStart();");
-        state.MainBodyReady.Add("vendorStart();");
-        state.MainBodyReady.Add("badgesStart();");
-        state.MainBodyReady.Add("ammodropStart();");
         state.MainBodyReady.Add("dummyStart();");
 
         state.MainBody.Add("mapTick();");
-        state.MainBody.Add("bankTick();");
-        state.MainBody.Add("inventoryTick();");
-        state.MainBody.Add("mobTick();");
+        if (isRaidsMap)
+        {
+            state.MainBody.Add("bankTick();");
+            state.MainBody.Add("inventoryTick();");
+            state.MainBody.Add("mobTick();");
+        }
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
         state.MainBody.Add("mapTickEnd();");
