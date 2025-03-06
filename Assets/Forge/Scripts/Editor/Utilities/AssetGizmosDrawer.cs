@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 
+[DefaultExecutionOrder(-1000)]
 public static class AssetGizmosDrawer
 {
     public static bool Disabled = false;

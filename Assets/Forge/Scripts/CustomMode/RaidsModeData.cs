@@ -315,12 +315,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var mapConfig = FindObjectOfType<MapConfig>();
         var mobys = mapConfig.GetMobys(RCVER.DL);
         var goldBoltCount = mobys.Count(x => x.OClass == GOLDBOLT_OCLASS);
+        var challengesCount = Challenges != null ? Challenges.Count : 0;
         var baseOffset = writer.BaseStream.Position;
 
         writer.Write(RAIDS_VERSION);
         writer.Write(MinLevelRequired);
         writer.Write(goldBoltCount);
-        writer.Write(Challenges.Count);
+        writer.Write(challengesCount);
         writer.Write(Cost1Star);
         writer.Write(Cost2Star);
         writer.Write(Cost3Star);
@@ -334,14 +335,17 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         // prewrite header
         var offsets = new List<int>();
         var headerOffset = writer.BaseStream.Position;
-        writer.Write(new byte[8 * Challenges.Count]);
+        writer.Write(new byte[8 * challengesCount]);
 
-        foreach (var challenge in Challenges)
+        if (Challenges != null)
         {
-            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
-            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Name));
-            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
-            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Description));
+            foreach (var challenge in Challenges)
+            {
+                offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+                writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Name));
+                offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+                writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Description));
+            }
         }
 
         var endOffset = writer.BaseStream.Position;
