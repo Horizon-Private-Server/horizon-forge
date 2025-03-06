@@ -9,7 +9,14 @@ using UnityEngine;
 [ExecuteInEditMode]
 public class BezierSpline : Spline
 {
+    public enum BezierSplineGenMode
+    {
+        FixedCount,
+        Curvature
+    }
+
     [Header("Spline")]
+    public BezierSplineGenMode Mode = BezierSplineGenMode.FixedCount;
     [Min(2)]
     public int NumPoints = 2;
 
@@ -72,7 +79,8 @@ public class BezierSpline : Spline
         vert0.SetOffsets(Vector3.forward * -5, Vector3.forward * 5);
         vert1.SetOffsets(Vector3.forward * -5, Vector3.forward * 5);
 
-        bezier.NumPoints = 10;
+        bezier.Mode = BezierSplineGenMode.Curvature;
+        bezier.NumPoints = 20;
         bezier.Curvature = 0.9f;
 
         // place under selected object
@@ -286,22 +294,43 @@ public class BezierSpline : Spline
             length += GetSegmentLength(vertices[i], vertices[i + 1], 0, 1);
 
         // iterate by length
-        var lengthStep = length / (NumPoints - 1);
-        var currentLength = 0f;
-        while (currentLength < length)
+        if (Mode == BezierSplineGenMode.Curvature)
         {
-            var point = GetPointOnPath(currentLength);
-            var pos = GetPosition(point.a, point.b, point.time);
+            for (int i = 0; i < (vertices.Length - 1); ++i)
+            {
+                var a = vertices[i];
+                var b = vertices[i + 1];
+                var t = 0f;
+                var step = 1 / 10f;
+                while (t < 1)
+                {
+                    var point = (a, b, t);
+                    var pos = GetPosition(point.a, point.b, point.t);
 
-            pointsT.Add(point);
-            currentLength += lengthStep;
+                    pointsT.Add(point);
+                    t += step;
+                }
+            }
+        }
+        else
+        {
+            var lengthStep = length / (NumPoints - 1);
+            var currentLength = 0f;
+            while (currentLength < length)
+            {
+                var point = GetPointOnPath(currentLength);
+                var pos = GetPosition(point.a, point.b, point.time);
+
+                pointsT.Add(point);
+                currentLength += lengthStep;
+            }
         }
 
         // add end
         pointsT.Add((vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1));
 
         // increase density of points around curves
-        if (Curvature > 0)
+        if (Mode == BezierSplineGenMode.Curvature)
         {
             var idx = 1;
             while (idx < (pointsT.Count - 1))
@@ -442,6 +471,7 @@ public class BezierSpline : Spline
             var normal = Vector3.up; // GetNormal(Points[i], Points[i + 1], t);
             var bitangent = Vector3.Cross(tan, normal);
             var rot = Quaternion.LookRotation(tan, normal);
+            normal = -Vector3.Cross(tan, bitangent);
 
             Gizmos.color = Color.white;
             Gizmos.DrawLine(pos, pos2);

@@ -51,11 +51,13 @@ public class BezierSplineVertex : MonoBehaviour
 
     private void DrawGizmos()
     {
-        Gizmos.color = Color.blue;
+        var alpha = Selection.activeGameObject == this.gameObject ? 1f : 0.5f;
+
+        Gizmos.color = Color.blue * alpha;
         Gizmos.DrawSphere(transform.position, 1f);
-        Gizmos.color = Color.green;
+        Gizmos.color = Color.green * alpha;
         Gizmos.DrawSphere(HandleIn, 0.5f);
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.red * alpha;
         Gizmos.DrawSphere(HandleOut, 0.5f);
     }
 
