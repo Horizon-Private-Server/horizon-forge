@@ -117,6 +117,10 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
 
     private int[] GetLayerCollisionIds(TerrainData terrainData)
     {
+        // default when no layers configured
+        if (terrainData.terrainLayers.Length == 0)
+            return new int[] { 0x2f };
+
         var collisionIds = new int[terrainData.terrainLayers.Length];
         var defaultColId = CollisionHelper.ParseId(m_MaterialId);
         for (int i = 0; i < terrainData.terrainLayers.Length; ++i)

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,7 +19,8 @@ public static class TfragHelper
         var msphereCnt = def[0x2c];
 
         // invalid
-        if (texIndices.Count() != texCnt) throw new InvalidOperationException($"Attempting to set tfrag chunk texture indices of size {texIndices.Count()} for chunk with {texCnt} textures");
+        if (texIndices.Count() != texCnt)
+            throw new InvalidOperationException($"Attempting to set tfrag chunk texture indices of size {texIndices.Count()} for chunk with {texCnt} textures");
 
         using (var ms = new MemoryStream(data, true))
         {
@@ -348,12 +350,12 @@ public static class TfragHelper
 
     // 2x2
     static readonly int[] GENERATE_TFRAG_DATA_2X2_LODOFS = new[] { 0x260, 0x314 };
-    static readonly int[] GENERATE_TFRAG_DATA_2X2_STRIPOFS = new[] { 0x1C, 0x2F4 };
+    static readonly int[] GENERATE_TFRAG_DATA_2X2_STRIPOFS = new[] { 0x1C, 0x2F4, 0x36C };
     static readonly string GENERATE_TFRAG_DATA_2X2 = "AAAAMDUAAAA1AAAANQAAADUAAAABAAAFRcAEbgABAgMJBAoFBgcLDA0IDg8AAAAFSYAFboQAAACEAAUAhAAKAIQADwAA////AAAAAAAAAAAAwAVtCQAHAAAAAAAAAAAAHQA1AD4ARQBFAEUARQBFAEUARQBFAEUASQAJAAmAFGwCAAAAAAAAAAYAAAAAAAAAd/8AAAQAAAAUAAAAAAAARQAAAAAAAAAACAAAAAAAAAAAAAAAAAAAADQAAAAAAAAAAAAAAAAAAAA2AAAAAAAAAAMAAAAAAAAABgAAAAAAAAB3/wAABAAAABQAAAAAAABFAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAAAAADYAAAAAAAAAEQAAAAAAAAAGAAAAAAAAAHf/AAAEAAAAFAAAAAAAAEUBAAAAAQAAAAgAAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAAAAAAANgAAAAAAAAAMAAAAAAAAAAYAAAAAAAAAd/8AAAQAAAAUAAAAAAAARQAAAAABAAAACAAAAAAAAAAAAAAAAAAAADQAAAAAAAAAAAAAAAAAAAA2AAAAAAAAAAAAADAAAABFAAAARQAAAAAdAAAAAQAABTWAEG0AEAAAABAAAAAgAAAAEAIAABAAEAAQBAAAIAAQABAGAAAQAAAAEAgAABAAEAAQCgAAAAAAABAMAAAQAAAAEA4AABAAAAAQEAAAAAAAABACAAAAABAAEAYAAAAAEAAQAAAAEAAQABACAAAAAAAAEA4AAAAAEAAQAgAAEAAQABAIAAAAADDdCAYAAR0IAOmaAQAAAAAAAgEAAR2ACWn/H+z/1f/0/+7/1f8gIBYg7P8WAAcg1f/z3+3/1f8Y4PQf1f/pH+zfpADe/+vfXP/g3+vf1f8AAAQEAAEAAAAFAAAAAAAAAABJgAVuhAAAAIQABQCEAAoAhAAPAAD///8AAAAwNQAAADUAAAA1AAAANQAAAAEAAAVFwARuAAECAwkECgUGBwsMDQgODwAAAAAAAAAAAAAAAAAAADDdCAYAAR0IAOmaAQAAAAAAAgEAAQAAAAAAAAAAAAAABQQEAAFJgAVuhAAAAIQABQCEAAoAhAAPAAD///8AAAAwNQAAADUAAAA1AAAANQAAAAEAAAVFwARuAAECAwkECgUGBwsMDQgODwAAAAVDRTuANzkxgDs+NIBXWk2ARUg9gE9RRYAvMSqAODsygFFUR4AAAAAAAAAAAAAAAADdCAYAAR0IAOmaAQAAAAAAAHqBPgidAAADeYpA5pgAAAN9ej/nmAAAA3qPQGqlAAADeilAKJ0AAAN6oEBJoQAAA31aPcWUAAADeD0+55gAAAN5OT1KoQAAAAAAAAAAAADrHMNINdACSflkzUe+Fv8CQxy/SLPPAklQX81Hthb/A4cZw0jUzgBJCkHNR6wW/xHtGL9I3M4ASVBfzUeoFv8Mohf1IGsGAACkGPUgbgYAAKMX8x9vBgAApBjzH28GAACjF/QgawYAAKQY9SBpBgAAoxfzH2kGAACkGPMfaQYAAA==";
 
     // 1x2
     static readonly int[] GENERATE_TFRAG_DATA_1X2_LODOFS = new[] { 0x170, 0x204 };
-    static readonly int[] GENERATE_TFRAG_DATA_1X2_STRIPOFS = new[] { 0x1C, 0x254 };
+    static readonly int[] GENERATE_TFRAG_DATA_1X2_STRIPOFS = new[] { 0x1C, 0x1EC, 0x254 };
     static readonly string GENERATE_TFRAG_DATA_1X2 = "AAAAMCMAAAAjAAAAIwAAACMAAAABAAAFK8ACbgABAgMEBQYHAAAABS2AA26EAAAAhAAFAAD///8AAAAAAAAAAADABW0GAAIAAAAAAAAAAAATACMAKQArACsAKwArACsAKwArACsAKwAtAAkACYAKbBEAAAAAAAAABgAAAAAAAAB3/wAABAAAABQAAAAAAABFAQAAAAEAAAAIAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAAAAADYAAAAAAAAAEwAAAAAAAAAGAAAAAAAAAHf/AAAEAAAAFAAAAAAAAEUBAAAAAQAAAAgAAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAAAAAAANgAAAAAAAAAAAAAwAAAARQAAAEUAAAAAEwAAAAEAAAUjgAhtAAAAAAAQAAAAEAAAABACAAAAABAAEAQAABAAEAAQBgAAAAAAABAIAAAQAAAAEAoAAAAAEAAQAAAAEAAQABACAAAAADBSGQcA69wHAJymAQAAAAAAAgEAAROABmkfEAkAhf4K8AUAiAEeEAsgaP0J8AUgSv77DwTglwLh7/XfnwEEBAABAAAABQAAAAAAAAAAAAAAAC2AA26EAAAAhAAFAAD///8AAAAwIwAAACMAAAAjAAAAIwAAAAEAAAUrwAJuAAECAwQFBgcAAAAAAAAAAAAAAAAAAAAwUhkHAOvcBwCcpgEAAAAAAAIBAAEAAAAAAAAAAAAAAAUEBAABLYADboQAAACEAAUAAP///wAAADAjAAAAIwAAACMAAAAjAAAAAQAABSvAAm4AAQIDBAUGBwAAAAU4OjGAS05DgC4wKYA0Ni6AOjwzgExPRIAAAAAAAAAAAFIZBwDr3AcAnKYBAAAAAAAAfy0855gAAAN/WTspoQAAA4AyOcWUAAADe1c3xpQAAAOAOTrnmAAAA31IOSmhAADGLONIYp79SDUK00fBFv8RSCrjSFid+UhYV9NHyhb/E4AczR+ZBgAAphzzHqUGAAAkHPQfpQYAACQc8x6lBgAAphz1H5AGAACmHJQfkAYAACQc9B+QBgAAJRzzHqEGAAA=";
 
     static readonly Vector3[] CUBE_AXES = new Vector3[]
@@ -541,12 +543,14 @@ public static class TfragHelper
         List<int> baseCounts = new List<int>();
         List<TfragVertexEx> orderedVertices = new List<TfragVertexEx>();
         List<int[]> orderedQuads = new List<int[]>();
+        List<bool> orderedQuadsIsHole = new List<bool>();
 
         // add base vertices first
         foreach (var quad in quads.Take(quadCount))
         {
             for (int i = 0; i < 4; ++i)
             {
+                var baseRemap = new Dictionary<int, int>();
                 var vertex = vertices.ElementAtOrDefault(quad[i]).SwizzleXZY();
                 var normal = normals.ElementAtOrDefault(quad[i]).SwizzleXZY();
                 var color = colors.ElementAtOrDefault(quad[i]);
@@ -574,6 +578,7 @@ public static class TfragHelper
         // add rest of vertices and build quads
         foreach (var quad in quads.Take(quadCount))
         {
+            //var isHole = false;
             var orderedQuad = new int[4];
             for (int i = 0; i < 4; ++i)
             {
@@ -601,9 +606,11 @@ public static class TfragHelper
                 }
 
                 // add
+                //isHole = color.a == 0;
                 orderedQuad[i] = vertexIdx;
             }
 
+            orderedQuadsIsHole.Add(colors.ElementAtOrDefault(quad[1]).a == 0);
             orderedQuads.Add(orderedQuad);
         }
 
@@ -611,7 +618,8 @@ public static class TfragHelper
         for (int i = 0; i < baseColors.Count; ++i)
             baseColors[i] /= baseCounts[i];
 
-        if (baseVertices.Count != expectedVertices) throw new Exception($"Base vertices does not matched expected {expectedVertices}.");
+        if (baseVertices.Count != expectedVertices)
+            throw new Exception($"Base vertices does not matched expected {expectedVertices} got {baseVertices.Count}.");
 
         using (var defMs = new MemoryStream(def, true))
         using (var dataMs = new MemoryStream(data, true))
@@ -660,9 +668,16 @@ public static class TfragHelper
             foreach (var stripOfs in stripOffsets)
             {
                 dataMs.Position = stripOfs;
-                foreach (var quad in orderedQuads)
+                for (int q = 0; q < orderedQuads.Count; ++q)
+                {
+                    var quad = orderedQuads[q];
+                    var isHole = orderedQuadsIsHole[q];
                     for (int i = 0; i < 4; ++i)
-                        dataWriter.Write((byte)quad[i]);
+                    {
+                        var b = (byte)(isHole ? quad[0] : quad[i]);
+                        dataWriter.Write(b);
+                    }
+                }
             }
 
             // update positions of both lods

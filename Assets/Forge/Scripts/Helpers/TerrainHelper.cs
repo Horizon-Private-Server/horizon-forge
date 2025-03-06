@@ -65,7 +65,7 @@ public static class TerrainHelper
         var vertices = new List<Vector3>();
         var triangles = new int[3 * 2 * facePerColumn * facePerRow];
         var normals = new Vector3[vertexPerRow * vertexPerColumn];
-        var submeshTriangles = new List<int>[terrainCollider.terrainData.terrainLayers.Length];
+        var submeshTriangles = new List<int>[Math.Max(1, terrainCollider.terrainData.terrainLayers.Length)];
 
         // construct mesh
         for (int y = 0; y < vertexPerColumn; ++y)
@@ -74,6 +74,8 @@ public static class TerrainHelper
             {
                 var tx = x / (float)facePerRow;
                 var ty = y / (float)facePerColumn;
+                var txp = (x - 1) / (float)facePerRow;
+                var typ = (y - 1) / (float)facePerColumn;
                 var height = terrainData.GetInterpolatedHeight(tx, ty);
                 var normal = terrainData.GetInterpolatedNormal(tx, ty);
                 var vertex = new Vector3(tx * terrainData.size.x, height, ty * terrainData.size.z);
@@ -81,28 +83,57 @@ public static class TerrainHelper
 
                 if (y > 0 && x > 0)
                 {
+                    var isHole = terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
+                        //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
+                        //|| terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
+                        //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
+                        ;
                     var idx = ((y - 1) * facePerRow + (x - 1)) * 6;
                     var rowS1 = ((y - 1) * vertexPerRow) + (x - 1);
                     var rowE1 = ((y - 0) * vertexPerRow) + (x - 1);
 
-                    triangles[idx + 0] = rowE1 + 0;
-                    triangles[idx + 1] = rowE1 + 1;
-                    triangles[idx + 2] = rowS1 + 0;
-                    triangles[idx + 3] = rowE1 + 1;
-                    triangles[idx + 4] = rowS1 + 1;
-                    triangles[idx + 5] = rowS1 + 0;
+                    if (isHole)
+                    {
+                        triangles[idx + 0] = rowE1 + 0;
+                        triangles[idx + 1] = rowE1 + 1;
+                        triangles[idx + 2] = rowE1 + 1;
+                        triangles[idx + 3] = rowE1 + 1;
+                        triangles[idx + 4] = rowS1 + 1;
+                        triangles[idx + 5] = rowS1 + 1;
 
-                    // get submesh
-                    int submeshIdx = GetDominateLayer(terrainCollider.terrainData, new Rect(tx, ty, 1f / facePerRow, 1f / facePerColumn), 0);
+                        // get submesh
+                        int submeshIdx = GetDominateLayer(terrainCollider.terrainData, new Rect(tx, ty, 1f / facePerRow, 1f / facePerColumn), 0);
 
-                    // set submesh triangle
-                    if (submeshTriangles[submeshIdx] == null) submeshTriangles[submeshIdx] = new List<int>();
-                    submeshTriangles[submeshIdx].Add(rowE1 + 0);
-                    submeshTriangles[submeshIdx].Add(rowE1 + 1);
-                    submeshTriangles[submeshIdx].Add(rowS1 + 0);
-                    submeshTriangles[submeshIdx].Add(rowE1 + 1);
-                    submeshTriangles[submeshIdx].Add(rowS1 + 1);
-                    submeshTriangles[submeshIdx].Add(rowS1 + 0);
+                        // set submesh triangle
+                        if (submeshTriangles[submeshIdx] == null) submeshTriangles[submeshIdx] = new List<int>();
+                        submeshTriangles[submeshIdx].Add(rowE1 + 0);
+                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowS1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowS1 + 1);
+                    }
+                    else
+                    {
+                        triangles[idx + 0] = rowE1 + 0;
+                        triangles[idx + 1] = rowE1 + 1;
+                        triangles[idx + 2] = rowS1 + 0;
+                        triangles[idx + 3] = rowE1 + 1;
+                        triangles[idx + 4] = rowS1 + 1;
+                        triangles[idx + 5] = rowS1 + 0;
+
+                        // get submesh
+                        int submeshIdx = GetDominateLayer(terrainCollider.terrainData, new Rect(tx, ty, 1f / facePerRow, 1f / facePerColumn), 0);
+
+                        // set submesh triangle
+                        if (submeshTriangles[submeshIdx] == null) submeshTriangles[submeshIdx] = new List<int>();
+                        submeshTriangles[submeshIdx].Add(rowE1 + 0);
+                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowS1 + 0);
+                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowS1 + 1);
+                        submeshTriangles[submeshIdx].Add(rowS1 + 0);
+                    }
                 }
 
                 var vIdx = (y * vertexPerRow) + x;
@@ -271,7 +302,7 @@ public static class TerrainHelper
         meshRenderer.sharedMaterials = materials.ToArray();
     }
 
-    public static void ToMesh(this Terrain terrain, out Vector3[] vertices, out Vector3[] normals, out Vector2[] uvs, out int[] triangles, out Texture2D[] textures, float faceSize = 4f, float splatRamp = 1f, bool splatReduce = true, TextureSize textureSize = TextureSize._64)
+    public static void ToMesh(this Terrain terrain, out Vector3[] vertices, out Vector3[] normals, out Vector2[] uvs, out Color[] colors, out int[] triangles, out Texture2D[] textures, float faceSize = 4f, float splatRamp = 1f, bool splatReduce = true, TextureSize textureSize = TextureSize._64)
     {
         var uvCenter = Vector2.one * 0.5f;
 
@@ -282,11 +313,13 @@ public static class TerrainHelper
         var facePerColumn = vertexPerColumn - 1;
         var iFacePerRow = 1f / facePerRow;
         var iFacePerColumn = 1f / facePerColumn;
+        var holeColor = new Color(1, 1, 1, 0);
 
         vertices = new Vector3[4 * facePerColumn * facePerRow];
         triangles = new int[3 * 2 * facePerColumn * facePerRow];
         normals = new Vector3[4 * facePerColumn * facePerRow];
         uvs = new Vector2[4 * facePerColumn * facePerRow];
+        colors = new Color[4 * facePerColumn * facePerRow];
         textures = new Texture2D[2 * facePerColumn * facePerRow];
         var splatClassifications = new int[QUANTIZATION_RESOLUTION * vertexPerRow * QUANTIZATION_RESOLUTION * vertexPerColumn];
 
@@ -314,12 +347,14 @@ public static class TerrainHelper
                         {
                             var tx = (x + vx) / (float)facePerRow;
                             var ty = (y + vy) / (float)facePerColumn;
+                            var isHole = terrain.terrainData.IsHole((int)(tx * (terrain.terrainData.holesResolution - 1)), (int)(ty * (terrain.terrainData.holesResolution - 1)));
 
                             var height = terrain.terrainData.GetInterpolatedHeight(tx, ty);
                             var vertex = new Vector3(tx * terrain.terrainData.size.x, height, ty * terrain.terrainData.size.z);
 
                             vertices[vIdx] = vertex;
                             uvs[vIdx] = (new Vector2(vx, vy) - uvCenter) + uvCenter;
+                            colors[vIdx] = isHole ? holeColor : Color.white;
                             normals[vIdx] = terrain.terrainData.GetInterpolatedNormal(tx, ty);
                             ++vIdx;
                         }

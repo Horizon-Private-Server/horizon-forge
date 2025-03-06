@@ -109,6 +109,12 @@ bpy.ops.object.select_all(action='DESELECT')
 C.view_layer.objects.active = root
 root.select_set(state=True)
 
+# remove loose vertices
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.mesh.select_all(action='SELECT')
+bpy.ops.mesh.delete_loose(use_verts=True, use_edges=True, use_faces=False)
+bpy.ops.object.editmode_toggle()
+
 # remove duplicate vertices
 #bpy.ops.object.mode_set(mode='EDIT')
 #bpy.ops.mesh.select_all(action='SELECT')
