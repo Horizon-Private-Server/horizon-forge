@@ -31,6 +31,7 @@ u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_
 
 MobyGetGuberObject_func baseGetGuberFunc = NULL;
 MobyEventHandler_func baseHandleGuberEventFunc = NULL;
+MobyGetInterface_func baseGetInterfaceFunc = NULL;
 
 //--------------------------------------------------------------------------
 void mapOnMobUpdate(Moby* moby)
@@ -181,13 +182,45 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
+struct MobyFunctions* mapGetMobyInterface(int mobyId, int arg2, int arg3)
+{
+  switch (mobyId)
+  {
+    case SPAWNER_OCLASS:
+    case MOVER_OCLASS:
+    case CONTROLLER_OCLASS:
+    case CHECKPOINT_MANAGER_OCLASS:
+    case CHECKPOINT_OCLASS:
+    case DUMMY_OCLASS:
+    case MOBY_ID_HACKER_ORB:
+#if MOB_DZSTRIKER
+    case MOBY_ID_DZ_STRIKER_TORSO_RED:
+#endif
+#if GATE
+    case GATE_OCLASS:
+#endif
+    {
+      return NULL;
+    }
+    default:
+    {
+      if (baseGetInterfaceFunc)
+        return baseGetInterfaceFunc(mobyId, arg2, arg3);
+    }
+  }
+
+  return NULL;
+}
+
+//--------------------------------------------------------------------------
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
 {
   if (!baseGetGuberFunc) baseGetGuberFunc = mobyFunctions->GetGuberObject;
   if (!baseHandleGuberEventFunc) baseHandleGuberEventFunc = mobyFunctions->MobyEventHandler;
+  if (!baseGetInterfaceFunc) baseGetInterfaceFunc = mobyFunctions->GetMobyInterface;
 
   mobyFunctions->GetGuberObject = &mapGetGuber;
-  mobyFunctions->GetMobyInterface = NULL;
+  mobyFunctions->GetMobyInterface = &mapGetMobyInterface;
   mobyFunctions->MobyEventHandler = &mapHandleEvent;
 }
 
