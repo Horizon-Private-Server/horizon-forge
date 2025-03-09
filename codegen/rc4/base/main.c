@@ -55,6 +55,8 @@ int main(void)
   // init
   initialize();
 
+  if (!isInGame()) return 0;
+
   // check if all clients have loaded
   int clientsReady = 0;
   if (PATCH_INTEROP && PATCH_INTEROP->PatchStateContainer) {

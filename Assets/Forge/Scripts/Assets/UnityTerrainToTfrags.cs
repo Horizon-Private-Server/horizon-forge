@@ -132,8 +132,9 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                         uvs.Add(terrainUvs[vIdx]);
 
                         // calculate color
+                        var vertexWorldSpace = m_Terrain.transform.localToWorldMatrix.MultiplyPoint(terrainVertices[vIdx]);
                         var shading = Mathf.Pow(Mathf.Clamp01(Mathf.Abs(Vector3.Dot(terrainNormals[vIdx], Vector3.up))), m_Shading * 10);
-                        var noise = Mathf.Pow(Mathf.PerlinNoise(terrainVertices[vIdx].x / m_NoiseScale, terrainVertices[vIdx].z / m_NoiseScale), m_Noise * 3f);
+                        var noise = Mathf.Pow(Mathf.Clamp01(Mathf.PerlinNoise(vertexWorldSpace.x / m_NoiseScale, vertexWorldSpace.z / m_NoiseScale)), m_Noise * 3f);
                         var color = terrainColors[vIdx] * m_Tint * 0.5f * shading * noise;
                         colors.Add(color);
                     }

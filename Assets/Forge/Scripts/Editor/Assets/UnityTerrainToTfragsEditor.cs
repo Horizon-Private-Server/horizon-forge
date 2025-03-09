@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(UnityTerrainToTfrags))]
+[CustomEditor(typeof(UnityTerrainToTfrags)), CanEditMultipleObjects]
 public class UnityTerrainToTfragsEditor : Editor
 {
     private void OnEnable()
@@ -18,7 +18,37 @@ public class UnityTerrainToTfragsEditor : Editor
     {
         base.OnInspectorGUI();
 
-        if (target is UnityTerrainToTfrags tfragGen)
+        if (this.targets != null && this.targets.Length > 1)
+        {
+            var firstTfragGen = this.targets[0] as UnityTerrainToTfrags;
+
+            GUILayout.Space(20);
+            EditorGUILayout.LabelField("Generation", EditorStyles.boldLabel);
+            if (firstTfragGen.m_RenderGenerated != EditorGUILayout.Toggle("Render Generated", firstTfragGen.m_RenderGenerated))
+            {
+                var render = !firstTfragGen.m_RenderGenerated;
+                foreach (var target in this.targets)
+                {
+                    if (target is UnityTerrainToTfrags tfragGen)
+                    {
+                        tfragGen.m_RenderGenerated = render;
+                        tfragGen.SetVisible(tfragGen.m_RenderGenerated);
+                    }
+                }
+            }
+
+            if (GUILayout.Button("Generate"))
+            {
+                foreach (var target in this.targets)
+                {
+                    if (target is UnityTerrainToTfrags tfragGen)
+                    {
+                        tfragGen.Regenerate();
+                    }
+                }
+            }
+        }
+        else if (target is UnityTerrainToTfrags tfragGen)
         {
             if (tfragGen.GetComponent<Terrain>() is Terrain terrain && terrain)
             {

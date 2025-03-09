@@ -121,6 +121,8 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
         if (terrainData.terrainLayers.Length == 0)
             return new int[] { 0x2f };
 
+        if (m_TerrainLayerCollisionIds == null) m_TerrainLayerCollisionIds = new List<TfragLayerToCollisionId>();
+
         var collisionIds = new int[terrainData.terrainLayers.Length];
         var defaultColId = CollisionHelper.ParseId(m_MaterialId);
         for (int i = 0; i < terrainData.terrainLayers.Length; ++i)
