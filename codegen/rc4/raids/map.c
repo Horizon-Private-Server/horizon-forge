@@ -184,6 +184,9 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
 //--------------------------------------------------------------------------
 struct MobyFunctions* mapGetMobyInterface(int mobyId, int arg2, int arg3)
 {
+  if (baseGetInterfaceFunc)
+    return baseGetInterfaceFunc(mobyId, arg2, arg3);
+
   switch (mobyId)
   {
     case SPAWNER_OCLASS:
@@ -220,7 +223,7 @@ void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
   if (!baseGetInterfaceFunc) baseGetInterfaceFunc = mobyFunctions->GetMobyInterface;
 
   mobyFunctions->GetGuberObject = &mapGetGuber;
-  mobyFunctions->GetMobyInterface = &mapGetMobyInterface;
+  //mobyFunctions->GetMobyInterface = &mapGetMobyInterface;
   mobyFunctions->MobyEventHandler = &mapHandleEvent;
 }
 
