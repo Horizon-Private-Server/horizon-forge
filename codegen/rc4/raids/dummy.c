@@ -230,9 +230,11 @@ void dummyUpdate(Moby* moby)
   }
 
   // register target if friendly and targetable
+#if RAIDS
   if (!pvars->Config.IsOnEnemyTeam && pvars->Config.MobTargetType != DUMMY_MOB_AGGRO_IGNORE) {
     mobRegisterTarget(moby);
   }
+#endif
 
   // healthbar
   if (pvars->Config.Healthbar) {

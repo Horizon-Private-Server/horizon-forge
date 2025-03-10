@@ -32,6 +32,8 @@ u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_
 MobyGetGuberObject_func baseGetGuberFunc = NULL;
 MobyEventHandler_func baseHandleGuberEventFunc = NULL;
 
+#if RAIDS
+
 //--------------------------------------------------------------------------
 void mapOnMobUpdate(Moby* moby)
 {
@@ -93,6 +95,8 @@ void mapOnMobSpawned(Moby* moby)
   }
 }
 
+#endif
+
 //--------------------------------------------------------------------------
 struct Guber* mapGetGuber(Moby* moby)
 {
@@ -100,7 +104,9 @@ struct Guber* mapGetGuber(Moby* moby)
 
   switch (moby->OClass)
   {
+#if RAIDS
     case SPAWNER_OCLASS: return spawnerGetGuber(moby);
+#endif
     case MOVER_OCLASS: return moverGetGuber(moby);
     case CONTROLLER_OCLASS: return controllerGetGuber(moby);
     case CHECKPOINT_MANAGER_OCLASS:
@@ -146,7 +152,9 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
 
     switch (moby->OClass)
     {
+#if RAIDS
       case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;
+#endif
       case MOVER_OCLASS: moverHandleEvent(moby, event); break;
       case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;
       case CHECKPOINT_MANAGER_OCLASS:
