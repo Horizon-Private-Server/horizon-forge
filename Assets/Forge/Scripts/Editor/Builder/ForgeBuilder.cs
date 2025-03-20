@@ -1583,7 +1583,8 @@ public static class ForgeBuilder
             if (RebuildLevelProgress(ctx, $"Rebuilding Splines ({i + 1}/{splines.Length})", (float)i / splines.Length))
                 return;
 
-            // create cuboid .bin
+            // create spline .bin
+            spline.RefreshVertices();
             using (var fs = File.Create(Path.Combine(splinesFolder, $"{i:D4}.bin")))
             {
                 using (var writer = new BinaryWriter(fs))

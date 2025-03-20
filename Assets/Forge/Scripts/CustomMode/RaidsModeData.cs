@@ -77,6 +77,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public void Configure(string buildFolder, CodeGenState state)
     {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var isRaidsMap = mapConfig.DLForceCustomMode == DLCustomModeIds.Raids;
         var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
         var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
         var enabledMobs = Mobs.Where(x => !x.Disabled);
@@ -93,33 +95,38 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
 
+        if (isRaidsMap)
+        {
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
+        }
+
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/map.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gate.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/checkpoint.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mover.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laser.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pvarpoke.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
 
         state.LDFlags.Add("-DGATE");
+        if (isRaidsMap) state.LDFlags.Add("-DRAIDS");
         var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
@@ -161,69 +168,116 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Declarations.Add("void configInit(void);");
         state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,  .TrackWhitelist = NULL,\r\n};");
 
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+        if (isRaidsMap)
+        {
+            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
+            state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
+            state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
+            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+        }
+
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
 
-        state.InitBody.Add($"configInit();");
-        state.InitBody.Add($"bankInit();");
-        state.InitBody.Add($"inventoryInit();");
-        state.InitBody.Add($"mapInit();");
-        state.InitBody.Add($"mobInit();");
-        state.InitBody.Add($"levelselectInit();");
-        state.InitBody.Add($"spawnerInit();");
+        if (isRaidsMap)
+        {
+            state.InitBody.Add($"configInit();");
+            state.InitBody.Add($"bankInit();");
+            state.InitBody.Add($"inventoryInit();");
+            state.InitBody.Add($"mapInit();");
+            state.InitBody.Add($"mobInit();");
+            state.InitBody.Add($"levelselectInit();");
+            state.InitBody.Add($"spawnerInit();");
+            state.InitBody.Add($"vendorInit();");
+            state.InitBody.Add($"ammodropInit();");
+            state.InitBody.Add($"badgesInit();");
+            state.InitBody.Add($"collectibleInit();");
+            state.InitBody.Add($"npcInit();");
+        }
         state.InitBody.Add($"moverInit();");
         state.InitBody.Add($"controllerInit();");
         state.InitBody.Add($"gateInit();");
-        state.InitBody.Add($"npcInit();");
         state.InitBody.Add($"messagerInit();");
         state.InitBody.Add($"checkpointInit();");
         state.InitBody.Add($"laserInit();");
         state.InitBody.Add($"pvarpokeInit();");
-        state.InitBody.Add($"vendorInit();");
-        state.InitBody.Add($"badgesInit();");
-        state.InitBody.Add($"ammodropInit();");
         state.InitBody.Add($"hackerorbInit();");
         state.InitBody.Add($"blipInit();");
         state.InitBody.Add($"dummyInit();");
-        state.InitBody.Add($"collectibleInit();");
 
-        state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
-        state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
-        state.InitBody.Add($"MapConfig.OnMobDamagedFunc = &mapOnMobDamaged;");
-        state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
-        state.InitBody.Add($"MapConfig.OnMobDestroyedFunc = &mapOnMobDestroyed;");
-        state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
-        state.InitBody.Add($"MapConfig.CreateAmmoDropAtFunc = &ammodropCreateAt;");
-        state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
+        // get gubers
+        if (isRaidsMap)
+        {
+            state.GetGuberCase.Add("case SPAWNER_OCLASS: return spawnerGetGuber(moby);");
+            state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
+        }
+        state.GetGuberCase.Add("case GATE_OCLASS: return gateGetGuber(moby);");
+        state.GetGuberCase.Add("case MOVER_OCLASS: return moverGetGuber(moby);");
+        state.GetGuberCase.Add("case CONTROLLER_OCLASS: return controllerGetGuber(moby);");
+        state.GetGuberCase.Add("case CHECKPOINT_MANAGER_OCLASS: return checkpointGetGuber(moby);");
+        state.GetGuberCase.Add("case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);");
+        state.GetGuberCase.Add("case DUMMY_OCLASS: return dummyGetGuber(moby);");
+        state.GetGuberCase.Add("case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);");
+
+        // handle events
+        if (isRaidsMap)
+        {
+            state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
+            state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
+        }
+        state.HandleGuberEventCase.Add("case GATE_OCLASS: gateHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case MOVER_OCLASS: moverHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case CHECKPOINT_MANAGER_OCLASS: checkpointHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;");
+
+        if (isRaidsMap)
+        {
+            state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
+            state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
+            state.InitBody.Add($"MapConfig.OnMobDamagedFunc = &mapOnMobDamaged;");
+            state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
+            state.InitBody.Add($"MapConfig.OnMobDestroyedFunc = &mapOnMobDestroyed;");
+            state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
+            state.InitBody.Add($"MapConfig.CreateAmmoDropAtFunc = &ammodropCreateAt;");
+            state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
+        }
 
         state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
         state.InitBody.Add($"HOOK_JAL(0x0051f648, &onBeforeUpdateHeroes2);");
 
-        state.InitBody.Add("respawnAllPlayers();");
+        if (isRaidsMap)
+        {
+            state.InitBody.Add("respawnAllPlayers();");
+        }
 
-        state.MainBodyReady.Add("mapStart();");
-        state.MainBodyReady.Add("levelselectStart();");
-        state.MainBodyReady.Add("spawnerStart();");
+        if (isRaidsMap)
+        {
+            state.MainBodyReady.Add("mapStart();");
+            state.MainBodyReady.Add("levelselectStart();");
+            state.MainBodyReady.Add("spawnerStart();");
+            state.MainBodyReady.Add("checkpointStart();");
+            state.MainBodyReady.Add("vendorStart();");
+            state.MainBodyReady.Add("badgesStart();");
+            state.MainBodyReady.Add("ammodropStart();");
+            state.MainBodyReady.Add("npcStart();");
+        }
         state.MainBodyReady.Add("moverStart();");
         state.MainBodyReady.Add("controllerStart();");
         state.MainBodyReady.Add("gateStart();");
-        state.MainBodyReady.Add("npcStart();");
-        state.MainBodyReady.Add("checkpointStart();");
         state.MainBodyReady.Add("laserStart();");
         state.MainBodyReady.Add("pvarpokeStart();");
-        state.MainBodyReady.Add("vendorStart();");
-        state.MainBodyReady.Add("badgesStart();");
-        state.MainBodyReady.Add("ammodropStart();");
         state.MainBodyReady.Add("dummyStart();");
 
         state.MainBody.Add("mapTick();");
-        state.MainBody.Add("bankTick();");
-        state.MainBody.Add("inventoryTick();");
-        state.MainBody.Add("mobTick();");
+        if (isRaidsMap)
+        {
+            state.MainBody.Add("bankTick();");
+            state.MainBody.Add("inventoryTick();");
+            state.MainBody.Add("mobTick();");
+        }
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
         state.MainBody.Add("mapTickEnd();");
@@ -304,12 +358,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var mapConfig = FindObjectOfType<MapConfig>();
         var mobys = mapConfig.GetMobys(RCVER.DL);
         var goldBoltCount = mobys.Count(x => x.OClass == GOLDBOLT_OCLASS);
+        var challengesCount = Challenges != null ? Challenges.Count : 0;
         var baseOffset = writer.BaseStream.Position;
 
         writer.Write(RAIDS_VERSION);
         writer.Write(MinLevelRequired);
         writer.Write(goldBoltCount);
-        writer.Write(Challenges.Count);
+        writer.Write(challengesCount);
         writer.Write(Cost1Star);
         writer.Write(Cost2Star);
         writer.Write(Cost3Star);
@@ -323,14 +378,17 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         // prewrite header
         var offsets = new List<int>();
         var headerOffset = writer.BaseStream.Position;
-        writer.Write(new byte[8 * Challenges.Count]);
+        writer.Write(new byte[8 * challengesCount]);
 
-        foreach (var challenge in Challenges)
+        if (Challenges != null)
         {
-            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
-            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Name));
-            offsets.Add((int)(writer.BaseStream.Position - baseOffset));
-            writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Description));
+            foreach (var challenge in Challenges)
+            {
+                offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+                writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Name));
+                offsets.Add((int)(writer.BaseStream.Position - baseOffset));
+                writer.WriteCString(BinaryHelper.StrToRatchetStr(challenge.Description));
+            }
         }
 
         var endOffset = writer.BaseStream.Position;

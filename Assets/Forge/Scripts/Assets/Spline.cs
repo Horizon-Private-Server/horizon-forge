@@ -12,17 +12,17 @@ public class Spline : MonoBehaviour
 
     public List<SplineVertex> Vertices;
 
-    private void Start()
+    protected virtual void Start()
     {
         RefreshVertices();
     }
 
-    private void OnValidate()
+    protected virtual void OnValidate()
     {
         RefreshVertices();
     }
 
-    public void RefreshVertices()
+    public virtual void RefreshVertices()
     {
         Vertices = GetComponentsInChildren<SplineVertex>().ToList();
     }
@@ -64,7 +64,7 @@ public class Spline : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmos()
+    protected virtual void OnDrawGizmos()
     {
         if (DrawSplineGizmos)
         {
@@ -73,7 +73,7 @@ public class Spline : MonoBehaviour
         }
     }
 
-    private void DrawGizmos()
+    protected virtual void DrawGizmos()
     {
         if (Vertices != null)
         {
@@ -87,7 +87,7 @@ public class Spline : MonoBehaviour
         }
     }
 
-    public List<Vector3> ReadSpline(BinaryReader reader)
+    public virtual List<Vector3> ReadSpline(BinaryReader reader)
     {
         var vertices = new List<Vector3>();
         var count = reader.ReadInt32();
@@ -102,7 +102,7 @@ public class Spline : MonoBehaviour
         return vertices;
     }
 
-    public void Write(BinaryWriter writer)
+    public virtual void Write(BinaryWriter writer)
     {
         writer.Write(Vertices.Count);
         writer.Write(0);

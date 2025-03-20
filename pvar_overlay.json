@@ -518,6 +518,66 @@
         "Name": "Overlay Direction",
         "DataType": "Vector2",
         "Offset": 24
+      },
+      {
+        "Name": "Directional Fade 1",
+        "DataType": "Integer",
+        "DataSize": 1,
+        "Offset": 32,
+        "Min": 0,
+        "Max": 255
+      },
+      {
+        "Name": "Directional Fade 2",
+        "DataType": "Integer",
+        "DataSize": 1,
+        "Offset": 33,
+        "Min": 0,
+        "Max": 255
+      },
+      {
+        "Name": "Glow",
+        "DataType": "Integer",
+        "DataSize": 1,
+        "Offset": 34,
+        "Min": 0,
+        "Max": 255,
+        "Tooltip": "Values below 128 have no effect."
+      },
+      {
+        "Name": "Circular Rotation Speed",
+        "DataType": "Float",
+        "Offset": 36,
+        "Tooltip": "Changing this makes the overlay texture rotate in a circle. Use negative values to invert direction."
+      },
+      {
+        "Name": "Rotate at Moby Origin",
+        "DataType": "Bool",
+        "Offset": 40,
+        "Tooltip": "Enabling this makes the center of the rotation circle equal to the Water Tripstrip coordinates."
+      },
+      {
+        "Name": "Tiling X",
+        "DataType": "Float",
+        "Offset": 44,
+        "Min": 0
+      },
+      {
+        "Name": "Tiling Y",
+        "DataType": "Float",
+        "Offset": 48,
+        "Min": 0
+      },
+      {
+        "Name": "Oscillation Speed",
+        "DataType": "Float",
+        "Offset": 56
+      },
+      {
+        "Name": "Oscillation Distance",
+        "DataType": "Integer",
+        "Offset": 60,
+        "Min": 0
       }
     ]
   },
@@ -1165,108 +1225,80 @@
   },
   {
     "Name": "Water Tristrip",
-    "RCVersion": 4,
-    "MobyOClass": 6576,
+    "RCVersion": 3,
+    "MobyOClass": 2366,
     "Length": 112,
-    "Default": "FFFFFFFF050000001912057D2D1E190F010000009A99993E6F12033A6F12033A000000000000000000000000CDCCCC3ECDCCCC3E000000000000000078000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "Default": "0B120E6C0B120E6020202460202024200100000002000000000000420000000000506B44000080C200001644000000000AD7A33C00000000FFFFFFFFFFFFFFFF0000803F0000000000000000000000000000000001000000FFFFFFFF0000000000000000000000000000000000000000",
     "Overlay": [
       {
-        "Name": "Spline",
-        "DataType": "SplineRef",
+        "Name": "Underlay Color 1",
+        "DataType": "ColorRGBA",
         "Offset": 0
       },
       {
-        "Name": "Overlay FX Texture",
-        "DataType": "Enum",
-        "OptionsLookupKey": "LevelFXTex",
+        "Name": "Underlay Color 2",
+        "DataType": "ColorRGBA",
         "Offset": 4
       },
       {
-        "Name": "Underlay Color",
+        "Name": "Overlay Color 1",
         "DataType": "ColorRGBA",
         "Offset": 8
       },
       {
-        "Name": "Overlay Color",
+        "Name": "Overlay Color 2",
         "DataType": "ColorRGBA",
         "Offset": 12
       },
       {
-        "Name": "Invert Overlay Color",
-        "DataType": "Bool",
+        "Name": "Overlay FX Texture",
+        "DataType": "LevelFXTex",
         "Offset": 16
+      },
+      {
+        "Name": "Underlay FX Texture",
+        "DataType": "LevelFXTex",
+        "Offset": 20
+      },
+      {
+        "Name": "Tiling Density",
+        "DataType": "Float",
+        "Offset": 24
+      },
+      {
+        "Name": "Z Position",
+        "DataType": "Float",
+        "Offset": 32
+      },
+      {
+        "Name": "Fog Far Distance",
+        "DataType": "Float",
+        "Offset": 40
+      },
+      {
+        "Name": "Wave Surge",
+        "DataType": "Float",
+        "Offset": 48
       },
       {
         "Name": "Overlay Speed",
         "DataType": "Float",
-        "Offset": 20
+        "Offset": 64
       },
       {
-        "Name": "Overlay Direction",
-        "DataType": "Vector2",
-        "Offset": 24
-      },
-      {
-        "Name": "Overlay Direction 2",
-        "DataType": "Vector2",
-        "Offset": 28
-      },
-      {
-        "Name": "Directional Fade 1",
-        "DataType": "Integer",
-        "Offset": 32,
-        "Min": 0,
-        "Max": 255
-      },
-      {
-        "Name": "Directional Fade 2",
-        "DataType": "Integer",
-        "Offset": 33,
-        "Min": 0,
-        "Max": 255
-      },
-      {
-        "Name": "Glow",
-        "DataType": "Integer",
-        "Offset": 34,
-        "Min": 0,
-        "Max": 255,
-        "Tooltip": "Values below 128 have no effect."
-      },
-      {
-        "Name": "Circular Rotation Speed",
+        "Name": "Underlay Speed",
         "DataType": "Float",
-        "Offset": 36,
-        "Tooltip": "Changing this makes the overlay texture rotate in a circle. Use negative values to invert direction."
+        "Offset": 68
       },
       {
-        "Name": "Rotate at Moby Origin",
+        "Name": "Underlay Direction Variance",
+        "DataType": "Float",
+        "Offset": 72
+      },
+      {
+        "Name": "Overlay Additive",
         "DataType": "Bool",
-        "Offset": 40,
-        "Tooltip": "Enabling this makes the center of the rotation circle equal to the Water Tripstrip coordinates."
-      },
-      {
-        "Name": "Tiling X",
-        "DataType": "Float",
-        "Offset": 44,
-        "Min": 0
-      },
-      {
-        "Name": "Tiling Y",
-        "DataType": "Float",
-        "Offset": 48,
-        "Min": 0
-      },
-      {
-        "Name": "Oscillation Speed",
-        "DataType": "Float",
-        "Offset": 56
-      },
-      {
-        "Name": "Oscillation Distance",
-        "DataType": "Integer",
-        "Offset": 60,
-        "Min": 0
+        "Offset": 80
       }
     ]
   },

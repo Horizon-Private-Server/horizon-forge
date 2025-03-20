@@ -27,9 +27,78 @@
 #include <libdl/moby.h>
 ##INCLUDES##
 
+MobyGetGuberObject_func baseGetGuberFunc = NULL;
+MobyEventHandler_func baseHandleGuberEventFunc = NULL;
+
 ##DECLARATIONS##
 
 ##FUNCTIONS##
+
+//--------------------------------------------------------------------------
+struct Guber* mapGetGuber(Moby* moby)
+{
+#if RAIDS || SURVIVAL
+  if (mobyIsMob(moby)) return (Guber*)moby->GuberMoby;
+#endif
+
+  switch (moby->OClass)
+  {
+##GETGUBERCASES##
+    default:
+    {
+      // pass to overwritten game func
+      if (baseGetGuberFunc) { 
+        //DPRINTF("base get guber object %08X %04X\n", moby, moby->OClass);
+        return baseGetGuberFunc(moby);
+      }
+
+      // unhandled
+      DPRINTF("unhandled get guber for moby %04X at %08X\n", moby->OClass, (u32)moby);
+      return NULL;
+    }
+  }
+	
+	return 0;
+}
+
+//--------------------------------------------------------------------------
+void mapHandleEvent(Moby* moby, GuberEvent* event)
+{
+	if (!moby || !event)
+		return;
+
+	if (isInGame() && !mobyIsDestroyed(moby)) {
+
+    switch (moby->OClass)
+    {
+  ##HANDLEEVENTCASES##
+      default:
+			{
+        // pass to overwritten game func
+        if (baseHandleGuberEventFunc) {
+          //DPRINTF("base handle guber event %08X %04X\n", moby, moby->OClass);
+          baseHandleGuberEventFunc(moby, event);
+          return;
+        }
+
+        // unhandled
+        DPRINTF("unhandled guber event %d for moby %04X at %08X\n", event->NetEvent.EventID, moby->OClass, (u32)moby);
+				break;
+			}
+    }
+	}
+}
+
+//--------------------------------------------------------------------------
+void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
+{
+  if (!baseGetGuberFunc) baseGetGuberFunc = mobyFunctions->GetGuberObject;
+  //if (!baseHandleGuberEventFunc) baseHandleGuberEventFunc = mobyFunctions->MobyEventHandler;
+
+  mobyFunctions->GetGuberObject = &mapGetGuber;
+  mobyFunctions->GetMobyInterface = NULL;
+  mobyFunctions->MobyEventHandler = &mapHandleEvent;
+}
 
 //--------------------------------------------------------------------------
 void initialize(void)
@@ -54,6 +123,8 @@ int main(void)
 
   // init
   initialize();
+
+  if (!isInGame()) return 0;
 
   // check if all clients have loaded
   int clientsReady = 0;

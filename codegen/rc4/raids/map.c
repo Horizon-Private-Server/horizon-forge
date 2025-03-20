@@ -29,8 +29,7 @@ extern struct RaidsMapConfig MapConfig;
 
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
 
-MobyGetGuberObject_func baseGetGuberFunc = NULL;
-MobyEventHandler_func baseHandleGuberEventFunc = NULL;
+#if RAIDS
 
 //--------------------------------------------------------------------------
 void mapOnMobUpdate(Moby* moby)
@@ -93,103 +92,7 @@ void mapOnMobSpawned(Moby* moby)
   }
 }
 
-//--------------------------------------------------------------------------
-struct Guber* mapGetGuber(Moby* moby)
-{
-  if (mobyIsMob(moby)) return (Guber*)moby->GuberMoby;
-
-  switch (moby->OClass)
-  {
-    case SPAWNER_OCLASS: return spawnerGetGuber(moby);
-    case MOVER_OCLASS: return moverGetGuber(moby);
-    case CONTROLLER_OCLASS: return controllerGetGuber(moby);
-    case CHECKPOINT_MANAGER_OCLASS:
-    case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);
-    case DUMMY_OCLASS: return dummyGetGuber(moby);
-    case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);
-#if MOB_DZSTRIKER
-      case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);
 #endif
-#if GATE
-    case GATE_OCLASS: return gateGetGuber(moby);
-#endif
-    default:
-    {
-      // pass up to mode
-      if (MapConfig.OnGetGuberFunc) {
-        struct Guber* guber = MapConfig.OnGetGuberFunc(moby);
-        if (guber) return guber;
-      }
-
-      // pass to overwritten game func
-      if (baseGetGuberFunc) { 
-        //DPRINTF("base get guber object %08X %04X\n", moby, moby->OClass);
-        return baseGetGuberFunc(moby);
-      }
-
-      // unhandled
-      DPRINTF("unhandled get guber for moby %04X at %08X\n", moby->OClass, (u32)moby);
-      return NULL;
-    }
-  }
-	
-	return 0;
-}
-
-//--------------------------------------------------------------------------
-void mapHandleEvent(Moby* moby, GuberEvent* event)
-{
-	if (!moby || !event)
-		return;
-
-	if (isInGame() && !mobyIsDestroyed(moby)) {
-
-    switch (moby->OClass)
-    {
-      case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;
-      case MOVER_OCLASS: moverHandleEvent(moby, event); break;
-      case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;
-      case CHECKPOINT_MANAGER_OCLASS:
-      case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;
-      case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;
-      case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;
-#if MOB_DZSTRIKER
-      case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;
-#endif
-#if GATE
-    case GATE_OCLASS: gateHandleEvent(moby, event); break;
-#endif
-      default:
-			{
-        // pass up to mode
-        if (MapConfig.OnGuberEventFunc && MapConfig.OnGuberEventFunc(moby, event))
-          return;
-        
-        // pass to overwritten game func
-        if (baseHandleGuberEventFunc) {
-          //DPRINTF("base handle guber event %08X %04X\n", moby, moby->OClass);
-          baseHandleGuberEventFunc(moby, event);
-          return;
-        }
-
-        // unhandled
-        DPRINTF("unhandled guber event %d for moby %04X at %08X\n", event->NetEvent.EventID, moby->OClass, (u32)moby);
-				break;
-			}
-    }
-	}
-}
-
-//--------------------------------------------------------------------------
-void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
-{
-  if (!baseGetGuberFunc) baseGetGuberFunc = mobyFunctions->GetGuberObject;
-  //if (!baseHandleGuberEventFunc) baseHandleGuberEventFunc = mobyFunctions->MobyEventHandler;
-
-  mobyFunctions->GetGuberObject = &mapGetGuber;
-  mobyFunctions->GetMobyInterface = NULL;
-  mobyFunctions->MobyEventHandler = &mapHandleEvent;
-}
 
 //--------------------------------------------------------------------------
 int mapWhoKilledMeHook(Player* player, Moby* moby, int b)

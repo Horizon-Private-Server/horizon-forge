@@ -79,7 +79,7 @@ public static class BinaryHelper
 
     public static void WriteString(this BinaryWriter writer, string value, int fixedLength)
     {
-        var bytes = Encoding.ASCII.GetBytes(value);
+        var bytes = Encoding.ASCII.GetBytes(value ?? string.Empty);
 
         if (bytes.Length < fixedLength)
         {
@@ -94,7 +94,7 @@ public static class BinaryHelper
 
     public static void WriteCString(this BinaryWriter writer, string value)
     {
-        var bytes = Encoding.ASCII.GetBytes(value);
+        var bytes = Encoding.ASCII.GetBytes(value ?? string.Empty);
         writer.Write(bytes);
         writer.Write((byte)0);
     }

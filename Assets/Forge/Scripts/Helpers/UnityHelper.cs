@@ -1915,6 +1915,16 @@ public static class UnityHelper
         return Hash128.Compute(pixels);
     }
 
+    public static uint GetColor(this Color32 rgba, byte? forceAlpha = null)
+    {
+        return (uint)(
+            (rgba.r << 0) |
+            (rgba.g << 8) |
+            (rgba.b << 16) |
+            ((forceAlpha ?? rgba.a) << 24)
+            );
+    }
+
     public static Color32 GetColor(this uint rgba)
     {
         return new Color32(

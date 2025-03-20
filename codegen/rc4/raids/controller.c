@@ -320,6 +320,7 @@ int controllerIsXORConditionTrue(Moby* moby, int conditionIdx)
 //--------------------------------------------------------------------------
 int controllerIsNpcTargetConditionTrue(Moby* moby, int conditionIdx)
 {
+#if RAIDS
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
   int cuboidIdx = condition->NPCTarget.CuboidIdx;
@@ -340,6 +341,9 @@ int controllerIsNpcTargetConditionTrue(Moby* moby, int conditionIdx)
 
   int isInside = spawnPointIsPointInside(triggerCuboid, npcTargetMoby->Position, NULL);
   return condition->NPCTarget.InteractType != isInside;
+#else
+  return 0;
+#endif
 }
 
 //--------------------------------------------------------------------------
@@ -678,7 +682,9 @@ int controllerControlMobyState(Moby* moby, struct ControllerTarget* target)
 
   // handle special cases
   switch (targetMoby->OClass) {
+#if RAIDS
     case SPAWNER_OCLASS: if (controllerAmIOwner(moby)) { spawnerBroadcastNewState(targetMoby, state); }; break;
+#endif
     case MOVER_OCLASS: if (controllerAmIOwner(moby)) { moverBroadcastNewState(targetMoby, state); } break;
     case CONTROLLER_OCLASS: if (controllerAmIOwner(moby)) { controllerBroadcastNewState(targetMoby, state); } break;
 #if GATE
@@ -754,6 +760,7 @@ int controllerControlCuboidMove(Moby* moby, struct ControllerTarget* target)
 //--------------------------------------------------------------------------
 int controllerControlNPCTarget(Moby* moby, struct ControllerTarget* target)
 {
+#if RAIDS
   Moby* npcMoby = target->Moby.Moby;
   Moby* npcTargetMoby = target->Moby.NPCTargetMoby;
   if (!npcMoby || mobyIsDestroyed(npcMoby) || !npcMoby->PVar) return 0;
@@ -765,11 +772,15 @@ int controllerControlNPCTarget(Moby* moby, struct ControllerTarget* target)
     return 1;
   }
   return 0;
+#else
+  return 0;
+#endif
 }
 
 //--------------------------------------------------------------------------
 int controllerControlNPCTargetTriggered(Moby* moby, struct ControllerTarget* target)
 {
+#if RAIDS
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   Moby* npcMoby = target->Moby.Moby;
   Moby* npcTargetMoby = pvars->State.TriggeredByMoby;
@@ -782,6 +793,9 @@ int controllerControlNPCTargetTriggered(Moby* moby, struct ControllerTarget* tar
     return 1;
   }
   return 0;
+#else
+  return 0;
+#endif
 }
 
 //--------------------------------------------------------------------------
@@ -936,6 +950,7 @@ int controllerControlSetMusicTrack(Moby* moby, struct ControllerTarget* target)
 //--------------------------------------------------------------------------
 int controllerControlUpdateChallenge(Moby* moby, struct ControllerTarget* target)
 {
+#if RAIDS
   if (!MapConfig.State) return 0;
   
   int challengeIndex = target->Challenge.ChallengeIdx;
@@ -972,6 +987,9 @@ int controllerControlUpdateChallenge(Moby* moby, struct ControllerTarget* target
   }
 
   return 1;
+#else
+  return 0;
+#endif
 }
 
 //--------------------------------------------------------------------------

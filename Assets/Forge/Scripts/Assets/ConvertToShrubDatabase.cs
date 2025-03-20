@@ -368,9 +368,13 @@ public class ConvertToShrubDatabase : ScriptableObject
                         var mIdx = texOffset + m;
                         if (mIdx >= materials.Count) break;
 
+                        var clampX = (materials[mIdx].mainTexture && materials[mIdx].mainTexture.wrapModeU == TextureWrapMode.Clamp);
+                        var clampY = (materials[mIdx].mainTexture && materials[mIdx].mainTexture.wrapModeV == TextureWrapMode.Clamp);
+
                         writer.WriteLine("");
                         writer.WriteLine($"\t\tMaterial {m} {{");
                         writer.WriteLine($"\t\t\tname: \"{materials[mIdx].name}\"");
+                        writer.WriteLine($"\t\t\twrap_mode: [\"{(clampX ? "clamp" : "repeat")}\" \"{(clampY ? "clamp" : "repeat")}\"]");
                         writer.WriteLine("\t\t\tTexture diffuse {");
                         writer.WriteLine($"\t\t\t\tsrc: \"tex.{m:D4}.0.png\"");
                         writer.WriteLine("\t\t\t}");
