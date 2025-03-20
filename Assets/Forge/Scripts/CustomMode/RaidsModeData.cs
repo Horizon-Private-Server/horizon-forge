@@ -205,6 +205,34 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add($"blipInit();");
         state.InitBody.Add($"dummyInit();");
 
+        // get gubers
+        if (isRaidsMap)
+        {
+            state.GetGuberCase.Add("case SPAWNER_OCLASS: return spawnerGetGuber(moby);");
+            state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
+        }
+        state.GetGuberCase.Add("case GATE_OCLASS: return gateGetGuber(moby);");
+        state.GetGuberCase.Add("case MOVER_OCLASS: return moverGetGuber(moby);");
+        state.GetGuberCase.Add("case CONTROLLER_OCLASS: return controllerGetGuber(moby);");
+        state.GetGuberCase.Add("case CHECKPOINT_MANAGER_OCLASS: return checkpointGetGuber(moby);");
+        state.GetGuberCase.Add("case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);");
+        state.GetGuberCase.Add("case DUMMY_OCLASS: return dummyGetGuber(moby);");
+        state.GetGuberCase.Add("case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);");
+
+        // handle events
+        if (isRaidsMap)
+        {
+            state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
+            state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
+        }
+        state.HandleGuberEventCase.Add("case GATE_OCLASS: gateHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case MOVER_OCLASS: moverHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case CHECKPOINT_MANAGER_OCLASS: checkpointHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;");
+
         if (isRaidsMap)
         {
             state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");

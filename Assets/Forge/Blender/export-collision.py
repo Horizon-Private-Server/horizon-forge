@@ -124,7 +124,7 @@ bpy.ops.object.editmode_toggle()
 #bpy.ops.object.editmode_toggle()
 
 # subdivide as necessary
-if True:
+if False:
     bm = bmesh.new()
     bm.from_mesh(root.data)
     bm.edges.ensure_lookup_table()
@@ -216,6 +216,12 @@ for s in remove_slots:
         print('removing slot %s' % s)
         root.active_material_index = [x.material.name for x in root.material_slots].index(s)
         bpy.ops.object.material_slot_remove()
+
+# convert tris to quads
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.mesh.select_all(action='SELECT')
+bpy.ops.mesh.tris_convert_to_quads()
+bpy.ops.object.mode_set(mode='OBJECT')
 
 if export_filepath:
     bpy.ops.wm.collada_export(filepath=export_filepath, check_existing=False, selected=True, triangulate=False)

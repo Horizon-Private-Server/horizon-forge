@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6bccec18de83d814197e61e752811b3c, type: 3}
-  m_Name: Raids Mob Config
+  m_Script: {fileID: 11500000, guid: a68a1478ce333244cb9454d46350dcc4, type: 3}
+  m_Name: Survival Mob Config
   m_EditorClassIdentifier: 
   Mobs:
   - Mob: 0
@@ -52,17 +52,18 @@ MonoBehaviour:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 5
-    Bolts: 100
+    Behaviors:
+    - Normal
+    Xp: 15
+    Bolts: 220
     Damage: 10
     DamageMax: 0
-    DamageScale: 1
-    Speed: 2.5
-    SpeedMax: 7.5
-    SpeedScale: 0.1
-    Health: 15
-    HealthMax: 0
+    DamageScale: 1.05
+    Speed: 3
+    SpeedMax: 6
+    SpeedScale: 0.5
+    Health: 30
+    HealthMax: 100000000
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
@@ -95,17 +96,18 @@ MonoBehaviour:
       - OClass: 9952
         SourceMapId: 1
         SourceMissionId: 14
-    Behaviors: []
-    Xp: 3
-    Bolts: 50
-    Damage: 4
+    Behaviors:
+    - Normal
+    Xp: 5
+    Bolts: 55
+    Damage: 2
     DamageMax: 0
     DamageScale: 1
-    Speed: 2
-    SpeedMax: 5
+    Speed: 2.4
+    SpeedMax: 6
     SpeedScale: 0.5
-    Health: 5
-    HealthMax: 0
+    Health: 10.5
+    HealthMax: 50000000
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
@@ -124,17 +126,18 @@ MonoBehaviour:
       - OClass: 9215
         SourceMapId: 4
         SourceMissionId: -1
-    Behaviors: []
+    Behaviors:
+    - Normal
     Xp: 5
-    Bolts: 100
-    Damage: 7
+    Bolts: 75
+    Damage: 4
     DamageMax: 0
     DamageScale: 1
     Speed: 2
-    SpeedMax: 5
+    SpeedMax: 6
     SpeedScale: 0.5
-    Health: 5
-    HealthMax: 0
+    Health: 10.5
+    HealthMax: 50000000
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
@@ -143,67 +146,61 @@ MonoBehaviour:
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 3
-    BlipType: 3
+    BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
-      OClass: 8250
+      OClass: 0
       Bangles: 0
       Dependencies:
-      - OClass: 8304
+      - OClass: 0
         SourceMapId: 1
-        SourceMissionId: 24
-      - OClass: 8248
-        SourceMapId: 46
-        SourceMissionId: -1
+        SourceMissionId: 0
     Behaviors: []
-    Xp: 25
-    Bolts: 500
+    Xp: 5
+    Bolts: 50
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 1
-    SpeedMax: 10
+    Speed: 3
+    SpeedMax: 15
     SpeedScale: 1
-    Health: 200
+    Health: 30
     HealthMax: 0
-    HealthScale: 1.1
+    HealthScale: 1
     TurnSpeed: 1
-    AttackRadius: 50
+    AttackRadius: 5
     HitRadius: 0.5
-    CollRadius: 1
+    CollRadius: 0.5
     ReactionDelaySeconds: 0.25
-    AttackCooldownSeconds: 0
+    AttackCooldownSeconds: 2
   - Mob: 4
-    BlipType: 3
+    BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
-      OClass: 8388
-      Bangles: 8191
+      OClass: 0
+      Bangles: 0
       Dependencies:
-      - OClass: 8388
-        SourceMapId: 4
-        SourceMissionId: -1
-    Behaviors:
-    - Normal
-    - Aggressive (Chase)
-    - Evasive (Ranged)
-    Xp: 15
-    Bolts: 250
+      - OClass: 0
+        SourceMapId: 1
+        SourceMissionId: 0
+    Behaviors: []
+    Xp: 5
+    Bolts: 50
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 5
-    SpeedMax: 20
-    SpeedScale: 0.1
-    Health: 100
+    Speed: 3
+    SpeedMax: 15
+    SpeedScale: 1
+    Health: 30
     HealthMax: 0
-    HealthScale: 1.1
+    HealthScale: 1
     TurnSpeed: 1
-    AttackRadius: 4
+    AttackRadius: 5
     HitRadius: 0.5
-    CollRadius: 2
+    CollRadius: 0.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 5
@@ -211,56 +208,30 @@ MonoBehaviour:
     BlipTeam: 1
     Variants:
     - Name: Normal
-      OClass: 8496
-      Bangles: 31
+      OClass: 0
+      Bangles: 0
       Dependencies:
-      - OClass: 8496
+      - OClass: 0
         SourceMapId: 1
-        SourceMissionId: 24
-      - OClass: 8499
-        SourceMapId: 1
-        SourceMissionId: -1
-    - Name: Sniper
-      OClass: 8496
-      Bangles: 286
-      Dependencies:
-      - OClass: 8496
-        SourceMapId: 1
-        SourceMissionId: 24
-      - OClass: 8499
-        SourceMapId: 1
-        SourceMissionId: -1
-    - Name: Blaster
-      OClass: 8496
-      Bangles: 542
-      Dependencies:
-      - OClass: 8496
-        SourceMapId: 1
-        SourceMissionId: 24
-      - OClass: 8499
-        SourceMapId: 1
-        SourceMissionId: -1
-    Behaviors:
-    - Normal
-    - Hold Position
-    - Flying
+        SourceMissionId: 0
+    Behaviors: []
     Xp: 5
     Bolts: 50
-    Damage: 5
+    Damage: 10
     DamageMax: 0
     DamageScale: 1
     Speed: 3
-    SpeedMax: 7
-    SpeedScale: 0.6
-    Health: 20
+    SpeedMax: 15
+    SpeedScale: 1
+    Health: 30
     HealthMax: 0
     HealthScale: 1
     TurnSpeed: 1
-    AttackRadius: 4
-    HitRadius: 0.75
-    CollRadius: 1.25
+    AttackRadius: 5
+    HitRadius: 0.5
+    CollRadius: 0.5
     ReactionDelaySeconds: 0.25
-    AttackCooldownSeconds: 10
+    AttackCooldownSeconds: 2
   - Mob: 6
     BlipType: 3
     BlipTeam: 1
@@ -272,18 +243,21 @@ MonoBehaviour:
       - OClass: 8353
         SourceMapId: 6
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 15
-    Bolts: 250
-    Damage: 10
+    Behaviors:
+    - Normal
+    - Melee
+    - Ranged
+    Xp: 500
+    Bolts: 660
+    Damage: 15
     DamageMax: 0
-    DamageScale: 1
-    Speed: 2
-    SpeedMax: 25
-    SpeedScale: 0.2
-    Health: 100
-    HealthMax: 0
-    HealthScale: 1.1
+    DamageScale: 1.2
+    Speed: 2.55
+    SpeedMax: 6
+    SpeedScale: 0.5
+    Health: 150
+    HealthMax: 200000000
+    HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 0.5
@@ -301,17 +275,18 @@ MonoBehaviour:
       - OClass: 9584
         SourceMapId: 13
         SourceMissionId: 0
-    Behaviors: []
-    Xp: 15
-    Bolts: 200
-    Damage: 15
+    Behaviors:
+    - Normal
+    Xp: 150
+    Bolts: 440
+    Damage: 10
     DamageMax: 0
-    DamageScale: 1
-    Speed: 3
-    SpeedMax: 15
-    SpeedScale: 0.2
-    Health: 80
-    HealthMax: 0
+    DamageScale: 1.2
+    Speed: 1.5
+    SpeedMax: 3
+    SpeedScale: 0.5
+    Health: 90
+    HealthMax: 100000000
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
@@ -330,19 +305,20 @@ MonoBehaviour:
       - OClass: 9427
         SourceMapId: 5
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 10
-    Bolts: 75
-    Damage: 10
+    Behaviors:
+    - Normal
+    Xp: 30
+    Bolts: 330
+    Damage: 7
     DamageMax: 0
-    DamageScale: 0.2
-    Speed: 10
-    SpeedMax: 35
-    SpeedScale: 0.1
-    Health: 15
-    HealthMax: 0
-    HealthScale: 0.75
-    TurnSpeed: 2
+    DamageScale: 0.3
+    Speed: 6
+    SpeedMax: 9
+    SpeedScale: 0.5
+    Health: 18
+    HealthMax: 100000000
+    HealthScale: 1
+    TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 1
     CollRadius: 1

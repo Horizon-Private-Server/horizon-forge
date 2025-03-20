@@ -88,6 +88,8 @@ public class CodeManager : MonoBehaviour
             .Replace("##INITBODY##", string.Join("\n", state.InitBody.Select(x => Indent(x, 1))))
             .Replace("##MAINBODYREADY##", string.Join("\n", state.MainBodyReady.Select(x => Indent(x, 2))))
             .Replace("##MAINBODY##", string.Join("\n", state.MainBody.Select(x => Indent(x, 1))))
+            .Replace("##GETGUBERCASES##", string.Join("\n", state.GetGuberCase.Select(x => Indent(x, 2))))
+            .Replace("##HANDLEEVENTCASES##", string.Join("\n", state.HandleGuberEventCase.Select(x => Indent(x, 2))))
             ;
         File.WriteAllText(cMainPath, cMainContent);
 
@@ -186,6 +188,8 @@ public class CodeGenState
     public List<string> InitBody { get; set; } = new List<string>();
     public List<string> MainBodyReady { get; set; } = new List<string>();
     public List<string> MainBody { get; set; } = new List<string>();
+    public List<string> HandleGuberEventCase { get; set; } = new List<string>();
+    public List<string> GetGuberCase { get; set; } = new List<string>();
 
     // makefile
     public List<string> ObjectFiles { get; set; } = new List<string>();

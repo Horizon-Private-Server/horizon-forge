@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 public enum DLMapIds
@@ -116,7 +117,9 @@ public enum DLCustomModeIds
     HideAndSeek,
     DreadBall,
     Tag,
-    Raids
+    Raids,
+    OneInTheChamber,
+    ObstacleCourse
 }
 
 public enum DLTeamIds
@@ -156,6 +159,63 @@ public enum DLBlipTypes
     Star,
     Hill2,
     NodeBase,
+}
+
+public enum DLGadgetIds
+{
+    Undefined = 0,
+    Wrench,
+    DualVipers,
+    MagmaCannon,
+    Arbiter,
+    FusionRifle,
+    MineLauncher,
+    B6,
+    Holoshield,
+    Miniturret,
+    Harbinger,
+    Grindrail,
+    EMP,
+    HackerRay,
+    Swingshot,
+    Flail,
+    ShieldLink,
+    Chargeboots,
+    Magnetboots,
+    Grindboots,
+}
+
+[Flags]
+public enum DLGadgetMask
+{
+    Wrench = 1 << 1,
+    DualVipers = 1 << 2,
+    MagmaCannon = 1 << 3,
+    Arbiter = 1 << 4,
+    FusionRifle = 1 << 5,
+    MineLauncher = 1 << 6,
+    B6 = 1 << 7,
+    Holoshield = 1 << 8,
+    Miniturret = 1 << 9,
+    Harbinger = 1 << 10,
+    Grindrail = 1 << 11,
+    EMP = 1 << 12,
+    HackerRay = 1 << 13,
+    Swingshot = 1 << 14,
+    Flail = 1 << 15,
+    ShieldLink = 1 << 16,
+    Chargeboots = 1 << 17,
+    Magnetboots = 1 << 18,
+    Grindboots = 1 << 19,
+}
+
+public enum DLGameRules
+{
+    Conquest = 0,
+    CTF,
+    Deathmatch,
+    KOTH,
+    Juggernaut
 }
 
 public enum DLFXTextureIds
