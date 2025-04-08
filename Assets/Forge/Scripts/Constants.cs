@@ -533,7 +533,7 @@ public enum DLMusicTracks
 
 public static class Constants
 {
-    public static readonly string ForgeVersion = "v2.1.4";
+    public static readonly string ForgeVersion = "v2.1.5";
 
     public static readonly string RepoUrl = "https://github.com/Horizon-Private-Server/horizon-forge";
     public static readonly string WikiUrl = $"{RepoUrl}/wiki";
