@@ -26,7 +26,7 @@ public class CodeManager : MonoBehaviour
         if (!manager.ContainerReady()) return false;
 
         var folder = FolderNames.GetMapCodeBuildFolder(map, racVersion);
-        var res = await manager.ExecuteAsync("/bin/sh", "-c", $"cd /{folder} && make clean && make");
+        var res = await manager.ExecuteAsync("/bin/sh", "-c", $"cd \"/{folder}\" && make clean && make");
         if (res.ExitCode != 0)
         {
             Dispatcher.RunOnMainThread(() =>

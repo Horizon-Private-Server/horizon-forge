@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 [AddComponentMenu("")]
@@ -7,8 +8,8 @@ public class Area : MonoBehaviour
 {
     public float BSphereRadius;
 
-    public List<Spline> Splines;
-    public List<Cuboid> Cuboids;
+    public List<Spline> Splines = new List<Spline>();
+    public List<Cuboid> Cuboids = new List<Cuboid>();
 
     private void OnDrawGizmosSelected()
     {
@@ -28,4 +29,14 @@ public class Area : MonoBehaviour
 
         Gizmos.DrawWireSphere(this.transform.position, BSphereRadius);
     }
+
+
+    [MenuItem("GameObject/Forge/Misc/Area", priority = 10)]
+    public static void CreateNew()
+    {
+        var go = new GameObject("Area");
+        var moby = go.AddComponent<Area>();
+        UnityHelper.OnAfterCreateGameObject(go);
+    }
+
 }

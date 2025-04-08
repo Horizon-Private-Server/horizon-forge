@@ -124,7 +124,7 @@ bpy.ops.object.editmode_toggle()
 #bpy.ops.object.editmode_toggle()
 
 # subdivide as necessary
-if False:
+if True:
     bm = bmesh.new()
     bm.from_mesh(root.data)
     bm.edges.ensure_lookup_table()

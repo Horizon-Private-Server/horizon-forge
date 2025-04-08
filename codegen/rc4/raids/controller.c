@@ -819,10 +819,11 @@ int controllerControlGivePlayerAmmo(Moby* moby, struct ControllerTarget* target)
       for (j = 1; j < WEAPON_SLOT_COUNT; ++j) {
         int gadgetId = weaponSlotToId(j);
         int maxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
+        int amount = target->GivePlayer.IsPercent ? ((target->GivePlayer.Amount / 100.0) * maxAmmo) : target->GivePlayer.Amount;
         int newAmmo = player->GadgetBox->Gadgets[gadgetId].Ammo;
 
-        if (target->GivePlayer.Amount == 0) newAmmo = maxAmmo;
-        else newAmmo += target->GivePlayer.Amount;
+        if (amount == 0) newAmmo = maxAmmo;
+        else newAmmo += amount;
         if (newAmmo < 0) newAmmo = 0;
         else if (newAmmo > maxAmmo) newAmmo = maxAmmo;
         
@@ -852,9 +853,10 @@ int controllerControlGivePlayerHealth(Moby* moby, struct ControllerTarget* targe
     if ((target->RespawnPlayer.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
       if (target->GivePlayer.LivingOnly && playerIsDead(player)) continue;
       
-      if (target->GivePlayer.Amount >= 0 && playerIsDead(player)) playerRespawn(player);
-      if (target->GivePlayer.Amount == 0) playerSetHealth(player, player->MaxHealth);
-      else playerSetHealth(player, clamp(player->Health + target->GivePlayer.Amount, 0, player->MaxHealth));
+      float amount = target->GivePlayer.IsPercent ? ((target->GivePlayer.Amount / 100.0) * player->MaxHealth) : target->GivePlayer.Amount;
+      if (amount >= 0 && playerIsDead(player)) playerRespawn(player); // respawn if dead and giving health
+      if (amount == 0) playerSetHealth(player, player->MaxHealth);    // set to max if amount is 0
+      else playerSetHealth(player, clamp(player->Health + amount, 0, player->MaxHealth));
       
       count++;
     }

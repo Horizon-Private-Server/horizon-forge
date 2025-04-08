@@ -104,7 +104,6 @@ void checkpointUpdate(Moby* moby)
 int checkpointSetActive(Moby* checkpointMoby)
 {
   if (!checkpointManagerMoby) return 0;
-  if (!checkpointSetActive) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
 
@@ -121,6 +120,7 @@ int checkpointSetActive(Moby* checkpointMoby)
 
   DLOG_MNGR(checkpointManagerMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
   DLOG_CHPT(checkpointMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
+  uiShowPopup(0, "Checkpoint");
   
   // update checkpoint locally
   mobySetState(checkpointManagerMoby, idx, -1);

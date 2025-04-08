@@ -118,4 +118,21 @@ public class Spline : MonoBehaviour
             writer.Write(0f);
         }
     }
+
+
+    [MenuItem("GameObject/Forge/Misc/Spline", priority = 10)]
+    public static void CreateNew()
+    {
+        var go = new GameObject("Spline");
+        var spline = go.AddComponent<Spline>();
+        var vertGo = new GameObject("0");
+        vertGo.AddComponent<SplineVertex>();
+        vertGo.transform.SetParent(go.transform, false);
+        var vertGo2 = new GameObject("1");
+        vertGo2.AddComponent<SplineVertex>();
+        vertGo2.transform.SetParent(go.transform, false);
+        vertGo2.transform.localPosition = Vector3.forward;
+        UnityHelper.OnAfterCreateGameObject(go);
+    }
+
 }

@@ -204,6 +204,25 @@ public class TieEditor : Editor
             Undo.FlushUndoRecordObjects();
         }
 
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Copy Octants"))
+        {
+            OcclusionBaker.ClipboardOcclusionData = (target as Tie)?.Octants?.ToArray() ?? new Vector3[0];
+        }
+        EditorGUI.BeginDisabledGroup(OcclusionBaker.ClipboardOcclusionData == null);
+        if (GUILayout.Button("Paste Octants"))
+        {
+            var data = OcclusionBaker.ClipboardOcclusionData;
+            Undo.RecordObjects(targets, "Paste Octants" + (OcclusionBaker.ClipboardOcclusionData != null ? $" ({OcclusionBaker.ClipboardOcclusionData.Length})" : ""));
+            foreach (Tie tie in targets)
+            {
+                tie.Octants = data.ToArray();
+            }
+            Undo.FlushUndoRecordObjects();
+        }
+        EditorGUI.EndDisabledGroup();
+        GUILayout.EndHorizontal();
+
         // clear octants
         if (GUILayout.Button($"Clear Octants"))
         {
