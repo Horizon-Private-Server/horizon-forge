@@ -262,7 +262,7 @@ struct ControllerTarget
     // give player
     struct {
       int PlayerMask;
-      char TriggeredOnly;
+      char IsPercent;
       char LivingOnly;
       short Amount;
     } GivePlayer;

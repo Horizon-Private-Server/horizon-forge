@@ -371,4 +371,15 @@ public class Cuboid : RenderSelectionBase
 
         return false;
     }
+
+
+    [MenuItem("GameObject/Forge/Misc/Cuboid", priority = 10)]
+    public static void CreateNew()
+    {
+        var go = new GameObject("Cuboid");
+        var cuboid = go.AddComponent<Cuboid>();
+        cuboid._version = CUBOID_VERSION;
+        UnityHelper.OnAfterCreateGameObject(go);
+    }
+
 }

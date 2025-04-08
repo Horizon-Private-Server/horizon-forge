@@ -1554,6 +1554,18 @@ public static class UnityHelper
 
     #endregion
 
+    public static void OnAfterCreateGameObject(GameObject go)
+    {
+        // place under selected object
+        // or try and spawn on top of scene camera
+        if (Selection.activeGameObject)
+            go.transform.SetParent(Selection.activeGameObject.transform, false);
+        else if (SceneView.lastActiveSceneView.camera)
+            go.transform.position = SceneView.lastActiveSceneView.camera.transform.position + (SceneView.lastActiveSceneView.camera.transform.forward * 5);
+
+        Selection.activeGameObject = go;
+    }
+
     public static void MarkActiveSceneDirty()
     {
         Dispatcher.RunOnMainThread(() =>

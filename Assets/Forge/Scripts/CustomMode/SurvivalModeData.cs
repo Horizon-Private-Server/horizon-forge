@@ -9,7 +9,7 @@ using UnityEngine;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 0;
+    public static readonly int SURVIVAL_VERSION = 3;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;

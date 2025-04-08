@@ -10,6 +10,8 @@ using UnityEngine;
 
 public static class OcclusionBaker
 {
+    public static Vector3[] ClipboardOcclusionData = null;
+
     [MenuItem("Forge/Tools/Occlusion/Bake Occlusion")]
     public static void BakeOcclusion()
     {

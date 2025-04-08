@@ -130,7 +130,8 @@
     "Default": "0000F04100000000FFFFFFFF000000000000000000000000FFFFFFFF000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     "States": {
       "On": 0,
-      "Off": 1
+      "Off": 1,
+      "On Cuboid": 3
     },
     "Overlay": [
       {
@@ -4420,6 +4421,7 @@
               "Player/Give Ammo": 8,
               "Player/Give Health": 9,
               "Player/Respawn": 10,
+              "Player/Teleport": 19,
               "Update Counter": 18
             }
           },
@@ -4530,7 +4532,15 @@
               "Host (Local if No Sync)": 1024
             },
             "DisplayIf": [
-              { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
+              { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10", "19" ] }
+            ]
+          },
+          {
+            "Name": "Is Percent",
+            "DataType": "Bool",
+            "Offset": 8,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "in", "Values": [ "8", "9" ] }
             ]
           },
           {
@@ -4538,7 +4548,7 @@
             "DataType": "Bool",
             "Offset": 8,
             "DisplayIf": [
-              { "Field": "Type", "Op": "in", "Values": [ "8", "9", "10" ] }
+              { "Field": "Type", "Op": "in", "Values": [ "10", "19" ] }
             ]
           },
           {
@@ -4566,6 +4576,14 @@
             "Offset": 9,
             "DisplayIf": [
               { "Field": "Type", "Op": "in", "Values": [ "10" ] }
+            ]
+          },
+          {
+            "Name": "Teleport To",
+            "DataType": "CuboidRef",
+            "Offset": 12,
+            "DisplayIf": [
+              { "Field": "Type", "Op": "==", "Value": "19" }
             ]
           },
           {
@@ -5644,6 +5662,86 @@
         "Name": "Value",
         "DataType": "Float",
         "Offset": 0
+      }
+    ]
+  },
+  {
+    "Name": "Raids Soul Collector",
+    "RCVersion": 4,
+    "MobyOClass": 16400,
+    "Length": 56,
+    "States": {
+      "Destroyed": -1,
+      "Off": 0,
+      "On": 1,
+      "Target Reached": 2,
+      "Reset": 3
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 0,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Value",
+        "DataType": "Integer",
+        "Offset": 4
+      },
+      {
+        "Name": "Target Value",
+        "DataType": "Integer",
+        "Offset": 8
+      },
+      {
+        "Name": "Target Moby",
+        "DataType": "MobyRef",
+        "Offset": 12
+      },
+      {
+        "Name": "Moby On State",
+        "DataType": "MobyRefState",
+        "DataSize": 1,
+        "Ref": "Target Moby",
+        "Offset": 2
+      },
+      {
+        "Name": "Moby Off State",
+        "DataType": "MobyRefState",
+        "DataSize": 1,
+        "Ref": "Target Moby",
+        "Offset": 3
+      },
+      {
+        "Name": "Decay Rate",
+        "DataType": "Float",
+        "Offset": 16
+      },
+      {
+        "Name": "Time Before Decay Starts",
+        "DataType": "Float",
+        "Offset": 20
+      },
+      {
+        "Name": "Cuboid",
+        "DataType": "CuboidRef",
+        "Count": 4,
+        "Offset": 28
+      },
+      {
+        "Name": "Print Cuboid",
+        "DataType": "CuboidRef",
+        "Offset": 44
       }
     ]
   }

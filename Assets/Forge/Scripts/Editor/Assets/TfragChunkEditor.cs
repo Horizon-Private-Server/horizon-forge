@@ -39,6 +39,25 @@ public class TfragChunkEditor : Editor
             Undo.FlushUndoRecordObjects();
         }
 
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Copy Octants"))
+        {
+            OcclusionBaker.ClipboardOcclusionData = (target as TfragChunk)?.Octants?.ToArray() ?? new Vector3[0];
+        }
+        EditorGUI.BeginDisabledGroup(OcclusionBaker.ClipboardOcclusionData == null);
+        if (GUILayout.Button("Paste Octants" + (OcclusionBaker.ClipboardOcclusionData != null ? $" ({OcclusionBaker.ClipboardOcclusionData.Length})" : "")))
+        {
+            var data = OcclusionBaker.ClipboardOcclusionData;
+            Undo.RecordObjects(targets, "Paste Octants");
+            foreach (TfragChunk tfrag in targets)
+            {
+                tfrag.Octants = data.ToArray();
+            }
+            Undo.FlushUndoRecordObjects();
+        }
+        EditorGUI.EndDisabledGroup();
+        GUILayout.EndHorizontal();
+
         // clear octants
         if (GUILayout.Button($"Clear Octants"))
         {

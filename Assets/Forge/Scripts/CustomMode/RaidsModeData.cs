@@ -26,6 +26,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int DUMMY_OCLASS = 0x400D;
     public static readonly int GOLDBOLT_OCLASS = 0x400E;
     public static readonly int COUNTER_OCLASS = 0x400F;
+    public static readonly int SOULCOLLECTOR_OCLASS = 0x4010;
 
     public static readonly float[] DIFFICULTY_FACTORS = new float[]
     {
@@ -613,6 +614,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "13", RCVER.DL, includeGlobal: true);
         moby.PrefabOverrideTransformation = Matrix4x4.TRS(Vector3.zero, Quaternion.FromToRotation(Vector3.right, Vector3.up), Vector3.one * 3);
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Raids/Soul Collector Moby", priority = 10)]
+    public static void CreateSoulCollectorMoby()
+    {
+        var go = new GameObject("Soul Collector Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = SOULCOLLECTOR_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Soul Collector");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }
