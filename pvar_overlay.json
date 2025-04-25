@@ -3293,7 +3293,7 @@
     "MobyOClass": 6889,
     "Length": 32,
     "Default": "FFFFFFFF00000000000000000000000000000000000000000000000000000000",
-    "Pointers": "8,0",
+    "Pointers": "",
     "Overlay": [
       {
         "Name": "Parent Node",
