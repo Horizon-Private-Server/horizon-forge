@@ -138,6 +138,7 @@ enum RaidsCustomMenus
   RAIDS_CUSTOM_MENU_LEVELSELECT,
   RAIDS_CUSTOM_MENU_STORE,
   RAIDS_CUSTOM_MENU_SKILLS,
+  RAIDS_CUSTOM_MENU_UPGRADE,
 };
 
 enum RaidsDifficultys
@@ -155,6 +156,13 @@ enum RaidsMissionStatus
   RAIDS_MISSION_ACTIVE = 0,
   RAIDS_MISSION_FAILED = 1,
   RAIDS_MISSION_COMPLETED = 2,
+};
+
+enum RaidsMissionTypes
+{
+  RAIDS_MISSION_HUB = 0,
+  RAIDS_MISSION_OPEN_WORLD = 1,
+  RAIDS_MISSION_RAID = 2,
 };
 
 enum MobDamageSource
@@ -208,10 +216,10 @@ struct RaidsPlayerState
 {
   u32 Bolts;
   float Experience;
+	int Level;
 	int Kills;
 	int Deaths;
 	int AllKills[MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS];
-  u16 Skills[RAIDS_SKILLS_COUNT];
 };
 
 struct RaidsPlayer
@@ -256,6 +264,7 @@ struct RaidsState
   int OnHubWorld;
 	struct RaidsPlayer* LocalPlayerState;
 	int GameOver;
+  int MissionType;
   int MissionStatus;
   int MissionStartTime;
   int MissionCompleteTime;
@@ -318,9 +327,16 @@ struct RaidsMapConfig
   FrameTick_func OnFrameTickFunc;
 };
 
+struct RaidsDifficultyZone
+{
+  int CuboidIdx;
+  int Difficulty;
+};
+
 struct RaidsCustomMapExtraData
 {
   int RaidsVersion;
+  int MissionType;
   int MinPlayerLevel;
   int CollectiblesCount;
   int ChallengesCount;
@@ -347,5 +363,8 @@ struct RaidsSnackItem
 
 struct Guber* getGuber(Moby* moby);
 int handleEvent(Moby* moby, GuberEvent* event);
+
+extern struct RaidsDifficultyZone mapDifficultyZones[];
+extern int mapDifficultyZonesCount;
 
 #endif // RAIDS_GAME_H

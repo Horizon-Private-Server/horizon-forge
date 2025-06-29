@@ -10,6 +10,7 @@
 #include <libdl/utils.h>
 #include <libdl/net.h>
 #include <libdl/ui.h>
+#include <libdl/hud.h>
 #include <libdl/graphics.h>
 #include "maputils.h"
 #include "game.h"
@@ -38,11 +39,11 @@ InventoryDrawState_t inventoryDrawState = {
 };
 
 char* inventoryRarityNames[] = {
-  "Common",
-  "Uncommon",
-  "Rare",
-  "Legendary",
-  "Mythic"
+  [RAIDS_ITEM_RARITY_COMMON] "Common",
+  [RAIDS_ITEM_RARITY_UNCOMMON] "Uncommon",
+  [RAIDS_ITEM_RARITY_RARE] "Rare",
+  [RAIDS_ITEM_RARITY_LEGENDARY] "Legendary",
+  [RAIDS_ITEM_RARITY_MYTHIC] "Mythic"
 };
 
 char* inventoryPaintNames[] = {
@@ -66,16 +67,17 @@ char* inventoryPaintSpecialNames[] = {
   "Glow Ghost"
 };
 
-char* inventoryOmegaNames[] = {
-  "None",
-  "Napalm",
-  "Time Bomb",
-  "Freeze",
-  "Mini Bomb",
-  "Morph",
-  "Brainwash",
-  "Acid",
-  "Shock"
+char* inventoryModNames[] = {
+  [RAIDS_WEAPON_MOD_NONE] "None",
+  [RAIDS_WEAPON_MOD_NAPALM] "Napalm",
+  [RAIDS_WEAPON_MOD_TIME_BOMB] "Time Bomb",
+  [RAIDS_WEAPON_MOD_FREEZE] "Freeze",
+  [RAIDS_WEAPON_MOD_MINI_BOMB] "Mini Bomb",
+  [RAIDS_WEAPON_MOD_MORPH] "Morph",
+  [RAIDS_WEAPON_MOD_BRAINWASH] "Brainwash",
+  [RAIDS_WEAPON_MOD_ACID] "Acid",
+  [RAIDS_WEAPON_MOD_SHOCK] "Shock",
+  [RAIDS_WEAPON_MOD_WILL_O_WISP] "Will-O-Wisp"
 };
 
 char inventoryAlphaModSpriteIds[] = {
@@ -113,13 +115,6 @@ char inventoryWeaponSpriteDims[] = {
   [WEAPON_SLOT_FLAIL] 32,
 };
 
-char inventorySkillSpriteIds[] = {
-  [RAIDS_SKILLS_HEALTH] 15,
-  [RAIDS_SKILLS_DAMAGE] 9,
-  [RAIDS_SKILLS_SPEED] 52,
-  [RAIDS_SKILLS_UNUSED] 0
-};
-
 char* inventoryBadgeNames[] = {
   [RAIDS_BADGE_TYPE_HEALTH_REGEN] "Health Regen",
   [RAIDS_BADGE_TYPE_AMMO_REGEN] "Ammo Regen",
@@ -133,13 +128,6 @@ char* inventoryBadgeNames[] = {
   [RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF] "High-Impact Rounds",
   [RAIDS_BADGE_TYPE_EXPLODING_ENEMIES] "Detonating Enemies",
   [RAIDS_BADGE_TYPE_COUNT] NULL,
-};
-
-char* inventorySkillNames[] = {
-  [RAIDS_SKILLS_HEALTH] "Health",
-  [RAIDS_SKILLS_DAMAGE] "Damage",
-  [RAIDS_SKILLS_SPEED] "Speed",
-  [RAIDS_SKILLS_UNUSED] NULL,
 };
 
 //--------------------------------------------------------------------------
@@ -287,11 +275,11 @@ void inventoryDrawAccountInfo(InventoryDrawState_t* drawState)
   snprintf(strBuf, sizeof(strBuf), "Bolts: %'d", localBank->Account.Bolts);
   gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   offY += 12;
-  snprintf(strBuf, sizeof(strBuf), "Level: %d", getLevelFromXp(localBank->Account.Experience) + 1);
+  snprintf(strBuf, sizeof(strBuf), "Level: %d", bankGetLevel() + 1);
   gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   offY += 12;
-  snprintf(strBuf, sizeof(strBuf), "Skill Points: %d", localBank->Account.SkillPoints);
-  gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+  // snprintf(strBuf, sizeof(strBuf), "Skill Points: %d", localBank->Account.SkillPoints);
+  // gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   offY += 12;
 
   // item proficiency
@@ -308,13 +296,13 @@ void inventoryDrawAccountInfo(InventoryDrawState_t* drawState)
   offY += 22;
   
   // skills
-  offX = 5;
-  for (i = 0; i < RAIDS_SKILLS_UNUSED; ++i) {
-    gfxHelperDrawSprite(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 16, 16, 32, 32, inventorySkillSpriteIds[i], spriteColor, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
-    snprintf(strBuf, sizeof(strBuf), "%d", localBank->Account.Skills[i]);
-    gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + 0, offY + 10, 0.7, brightTextColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
-    offX += 25;
-  }
+  // offX = 5;
+  // for (i = 0; i < RAIDS_SKILLS_UNUSED; ++i) {
+  //   gfxHelperDrawSprite(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 16, 16, 32, 32, inventorySkillSpriteIds[i], spriteColor, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+  //   snprintf(strBuf, sizeof(strBuf), "%d", localBank->Account.Skills[i]);
+  //   gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + 0, offY + 10, 0.7, brightTextColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+  //   offX += 25;
+  // }
   offY += 18;
   gfxDoGifPaging();
 }
@@ -355,7 +343,7 @@ void inventoryDrawItemInfo(InventoryDrawState_t* drawState)
   if (isBadge) {
 
     float height = 100;
-    if (missionIsActive()) {
+    if (missionIsActive() && missionIsBossRaid()) {
       gfxHelperDrawTextWindow(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY + 80, fw - 10, 20, 5, 5, 0.7, textRedColor, "Cannot equip Class Mods in the middle of a mission.", -1, TEXT_ALIGN_TOPLEFT, FONT_WINDOW_FLAGS_NO_SCISSOR, COMMON_DZO_DRAW_NORMAL);
       height = 80;
     }
@@ -395,12 +383,12 @@ void inventoryDrawItemInfo(InventoryDrawState_t* drawState)
 
   // stats
   offX = 10;
-  snprintf(strBuf, sizeof(strBuf), "Damage: %d", baseItem->WeaponData.Damage);
+  snprintf(strBuf, sizeof(strBuf), "Damage: %d", (int)bankGetWeaponDamage(baseItem));
   gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   if (hasComparison) {
     float strW = gfxGetFontWidth(strBuf, -1, 0.7);
-    snprintf(strBuf, sizeof(strBuf), "> %d", selectedItem->WeaponData.Damage);
-    gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + strW + 5, offY, 0.7, inventoryDrawGetCompareColor(selectedItem->WeaponData.Damage - baseItem->WeaponData.Damage), strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+    snprintf(strBuf, sizeof(strBuf), "> %d", (int)bankGetWeaponDamage(selectedItem));
+    gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + strW + 5, offY, 0.7, inventoryDrawGetCompareColor(bankGetWeaponDamage(selectedItem) - bankGetWeaponDamage(baseItem)), strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   }
   offY += 12;
   snprintf(strBuf, sizeof(strBuf), "Critical Hit: %.f%%", (baseItem->WeaponData.CritChance / 255.0) * 100);
@@ -437,14 +425,21 @@ void inventoryDrawItemInfo(InventoryDrawState_t* drawState)
     gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + strW + 5, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   }
   offY += 12;
-  snprintf(strBuf, sizeof(strBuf), "Omega: %s", inventoryOmegaNames[baseItem->WeaponData.OmegaMod]);
+  snprintf(strBuf, sizeof(strBuf), "Mod: %s", inventoryModNames[baseItem->WeaponData.ModType]);
   gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   if (hasComparison) {
     float strW = gfxGetFontWidth(strBuf, -1, 0.7);
-    snprintf(strBuf, sizeof(strBuf), "> %s", inventoryOmegaNames[selectedItem->WeaponData.OmegaMod]);
+    snprintf(strBuf, sizeof(strBuf), "> %s", inventoryModNames[selectedItem->WeaponData.ModType]);
     gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + strW + 5, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
   }
   offY += 12;
+  snprintf(strBuf, sizeof(strBuf), "Upgrades: %d/%d", baseItem->WeaponData.Upgrades, baseItem->WeaponData.MaxUpgrades);
+  gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+  if (hasComparison) {
+    float strW = gfxGetFontWidth(strBuf, -1, 0.7);
+    snprintf(strBuf, sizeof(strBuf), "> %d/%d", selectedItem->WeaponData.Upgrades, selectedItem->WeaponData.MaxUpgrades);
+    gfxHelperDrawText(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX + strW + 5, offY, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+  }
   offY += 12; // since Speed is hidden
 
   // alpha mods
@@ -552,8 +547,10 @@ void inventoryDrawItem(InventoryDrawState_t* drawState, int row, int col, RaidsI
   }
 
   // draw omega
-  if (isWeapon &&item->WeaponData.OmegaMod) {
-    u32 omegaColor = ((u32 (*)(int))0x00541fd0)(item->WeaponData.OmegaMod);
+  if (isWeapon && item->WeaponData.ModType) {
+    u32 omegaColor = hudGetTeamColor(TEAM_RED, 0);
+    if (item->WeaponData.ModType <= RAIDS_WEAPON_MOD_SHOCK)
+      omegaColor = ((u32 (*)(int))0x00541fd0)(item->WeaponData.ModType);
     gfxHelperDrawSprite(INVENTORY_DRAW_CENTER_X, INVENTORY_DRAW_CENTER_Y, offX+w/2-2, offY+h/2-2, 12, 12, 32, 32, 79, omegaColor | 0x80000000, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
   }
 
@@ -622,7 +619,7 @@ void inventoryGetSelectedItemInteraction(int* canSell, int* alreadyEquipped, int
       *canSell = selectedItem->WeaponData.GadgetId && equippedWeapon != selectedItem && selectedItem->Notify != RAIDS_ITEM_NOTIFY_FAV; // can't sell equipped
     } else {
       RaidsInventoryItem_t* equippedBadge = bankGetLocalEquippedBadge();
-      int badgeAndMissionActive = missionIsActive();
+      int badgeAndMissionActive = missionIsActive() && missionIsBossRaid();
       *tooStrong = 0;
       *alreadyEquipped = equippedBadge == selectedItem;
       *canEquip = !*alreadyEquipped && !badgeAndMissionActive; // already equipped

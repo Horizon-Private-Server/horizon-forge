@@ -12,6 +12,7 @@
 #include <libdl/collision.h>
 #include <libdl/ui.h>
 #include <libdl/utils.h>
+#include <libdl/spawnpoint.h>
 #include "spawner.h"
 #include "mover.h"
 #include "gate.h"
@@ -60,11 +61,12 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource sourc
 
   if (killedByPlayerId >= 0) {
     Player* killedByPlayer = playerGetAll()[killedByPlayerId];
-    float willOWispStrength = bankGetEquippedBadgeEffectStrength(killedByPlayerId, RAIDS_BADGE_TYPE_EXPLODING_ENEMIES);
-    if (killedByPlayer && willOWispStrength > 0) {
+    int weaponId = getWeaponIdFromDamageSource(source);
+    int modStrength = bankGetEquippedWeaponModStrength(killedByPlayerId, weaponId, RAIDS_WEAPON_MOD_WILL_O_WISP);
+    if (killedByPlayer && modStrength > 0) {
       u32 damageFlags = mobAmIOwner(moby) ? 0x00081801 : 0;
-      float radius = willOWispStrength * BADGES_EXPLODINGENEMIES_RADIUS_MULT;
-      float damage = pvars->MobVars.LastHitByDamage * willOWispStrength * BADGES_EXPLODINGENEMIES_DAMAGE_MULT;
+      float radius = modStrength * BADGES_EXPLODINGENEMIES_RADIUS_MULT;
+      float damage = pvars->MobVars.LastHitByDamage * modStrength * BADGES_EXPLODINGENEMIES_DAMAGE_MULT;
       spawnExplosionDamage(moby->Position, radius, 0x800000C0, killedByPlayer->PlayerMoby, damage, damageFlags);
     }
   }
@@ -209,7 +211,7 @@ void mapOnV10VipersHitSurface(Moby* moby)
   if (player && player->GadgetBox) {
     RaidsInventoryItem_t* item = bankGetLocalEquippedWeapon(WEAPON_ID_VIPERS);
     if (item && bankGetRarityFromQuality(item->Quality) == RAIDS_ITEM_RARITY_MYTHIC) {
-      ((void (*)(float radius, float damage, VECTOR p, u32 damageFlags, Moby* moby, Moby* hitMoby))0x003c3a48)(item->WeaponData.AlphaModCounts[ALPHA_MOD_AREA-1] * 0.5, item->WeaponData.Damage * 0.25, moby->Position, 0x801, moby, NULL);
+      ((void (*)(float radius, float damage, VECTOR p, u32 damageFlags, Moby* moby, Moby* hitMoby))0x003c3a48)(item->WeaponData.AlphaModCounts[ALPHA_MOD_AREA-1] * 0.5, bankGetWeaponDamage(item) * 0.25, moby->Position, 0x801, moby, NULL);
     }
   }
 }
@@ -269,6 +271,50 @@ Moby* mapOnSetPlayerTargetMoby(void)
 }
 
 //--------------------------------------------------------------------------
+Moby* mapOnGuberEventCreateMoby(int oclass, int pvarSize)
+{
+  if (mobyGetNumSpawnableMobys() < 50) {
+    Moby* m = mobyFindNextByOClass(mobyListGetStart(), 0x13A1);
+    if (!m) return NULL;
+    if (m) {
+      mobyDestroy(m);
+      m->CollCnt = 0; // lets the moby be reused instantly
+    }
+  }
+
+  return mobySpawn(oclass, pvarSize);
+}
+
+//--------------------------------------------------------------------------
+void mapApplyFixes(void)
+{
+  HOOK_JAL(0x0061c3ec, &mapOnGuberEventCreateMoby);
+}
+
+//--------------------------------------------------------------------------
+void mapApplyZoning(void)
+{
+  Player* player = playerGetFromSlot(0);
+  if (!player || !MapConfig.State) return;
+
+  int i;
+  for (i = 0; i < mapDifficultyZonesCount; ++i) {
+    int cuboidIdx = mapDifficultyZones[i].CuboidIdx;
+    if (cuboidIdx < 0) continue;
+
+    SpawnPoint* cuboid = spawnPointGet(cuboidIdx);
+    if (!cuboid) continue;
+
+    if (spawnPointIsPointInside(cuboid, player->PlayerPosition, NULL)) {
+      MapConfig.State->DifficultyStars = mapDifficultyZones[i].Difficulty;
+    }
+  }
+  
+  MapConfig.State->Difficulty = 1;
+  MapConfig.State->LivesLeft = 2;
+}
+
+//--------------------------------------------------------------------------
 void mapStart(void)
 {
   // tick down mob sound cooldown
@@ -285,6 +331,7 @@ void mapStart(void)
 //--------------------------------------------------------------------------
 void mapTick(void)
 {
+  mapApplyFixes();
 }
 
 //--------------------------------------------------------------------------

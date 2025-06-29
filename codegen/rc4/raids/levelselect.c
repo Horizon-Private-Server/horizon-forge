@@ -27,6 +27,12 @@ LevelselectDrawState_t levelselectDrawState = {
   .InputCooldownTicks = 10
 };
 
+char* levelselectMissionTypes[] = {
+  [RAIDS_MISSION_OPEN_WORLD] "Open World",
+  [RAIDS_MISSION_HUB] "Hub",
+  [RAIDS_MISSION_RAID] "Raid",
+};
+
 //--------------------------------------------------------------------------
 void levelselectOpen(void)
 {
@@ -63,7 +69,7 @@ void levelselectGo(LevelselectDrawState_t* drawState)
 #if !DEBUG
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   int cost = drawState->SelectedMapExtraData.Cost[drawState->SelectedDifficulty];
-  int level = getLevelFromXp(localBank->Account.Experience);
+  int level = bankGetLevel();
   int hasMinLevel = (level + 1) >= levelselectDrawState.SelectedMapExtraData.MinPlayerLevel;
   if (cost < 0 || cost > localBank->Account.Bolts || !hasMinLevel) {
     playEquipRejectSound(playerGetFromSlot(0));
@@ -184,10 +190,13 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
   static int drawItemsFrom = 0;
   u32 bgColor = 0x70000000; // dark gray
   u32 textColor = 0x80FFFFFF; // white
+  u32 headerTextColor = 0x80C0C0FF; // light red
   u32 selectedColor = 0x40008080; // yellow
   const int lineHeight = 16;
+  const int headerLineHeight = 20;
   int totalMapDefCount = 0;
   int numMaps = 0;
+  int lastMissionType = 0;
   int i;
 
   // draw box
@@ -207,6 +216,7 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
     for (; i < totalMapDefCount; ++i) {
       if (!windowHasArea(drawWindow)) break;
       
+      Window_t windowLine;
       CustomMapDef_t* def = PATCH_INTEROP->GetCustomMapDef(i);
       if (!def) continue;
       if (def->ForcedCustomModeId != CUSTOM_MODE_RAIDS) continue;
@@ -215,7 +225,14 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
       if (!init && MapConfig.State && def == MapConfig.State->CurrentMapDef) levelselectDrawState.SelectedIdx = numMaps;
       if (i < drawItemsFrom) { ++numMaps; continue; }
 
-      Window_t windowLine;
+      int missionType = def->Subsort / 10000;
+      if (lastMissionType != missionType) {
+        windowCreateFrom(&windowLine, drawWindow, 0, 0, drawWindow->Width, headerLineHeight, TEXT_ALIGN_TOPRIGHT);
+        windowDrawText(&windowLine, TEXT_ALIGN_BOTTOMCENTER, 5, -1, 1.0, headerTextColor, levelselectMissionTypes[missionType], -1, TEXT_ALIGN_BOTTOMCENTER);
+        windowMove(drawWindow, 0, headerLineHeight);
+        if (!windowHasArea(drawWindow)) break;
+      }
+
       windowCreateFrom(&windowLine, drawWindow, 0, 0, drawWindow->Width, lineHeight, TEXT_ALIGN_TOPRIGHT);
       
       // draw selection line
@@ -251,22 +268,30 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
   u32 yellowColor = 0x8000C0C0;
   u32 greenColor = 0x8000C000;
   const int authorHeight = 16;
+  const int missionTypeHeight = 16;
   const int descHeight = 128;
   const int progressHeight = 40;
   const int difficultySelectHeight = 32;
   const int difficultyCostHeight = 24;
   const int starHeight = 24;
   const int starSpacing = 5;
+  const int descFullHeight = descHeight + starHeight + difficultySelectHeight;
   int totalMapDefCount = 0;
   int numMaps = 0;
   int i;
   char strBuf[128];
-  int isHub = strncmp(levelselectDrawState.SelectedMapFilename, RAIDS_HUB_MAPFILENAME, sizeof(levelselectDrawState.SelectedMapFilename)) == 0;
+  int missionType = levelselectDrawState.SelectedMapExtraData.MissionType;
+  int isBossRaid = missionType == RAIDS_MISSION_RAID;
 
   if (levelselectDrawState.NumPlanets > 0 && levelselectDrawState.SelectedMapFilename[0]) {
 
+    // force to 1 star difficulty
+    if (!isBossRaid) {
+      levelselectDrawState.SelectedDifficulty = 0;
+    }
+
     RaidsPlayerBank_t* localBank = bankGetLocalBank();
-    int level = getLevelFromXp(localBank->Account.Experience);
+    int level = bankGetLevel();
     char selectChar = gameAmIHost() ? '\x10' : '\x08';
     int cost = levelselectDrawState.SelectedMapExtraData.Cost[levelselectDrawState.SelectedDifficulty];
     int canAfford = cost <= localBank->Account.Bolts;
@@ -279,15 +304,22 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     snprintf(strBuf, sizeof(strBuf), "Author: %s", levelselectDrawState.SelectedMapExtraData.Author);
     windowDrawText(&windowAuthor, TEXT_ALIGN_MIDDLELEFT, 5, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
     
+    // mission type
+    Window_t windowMissionType;
+    windowCreateFrom(&windowMissionType, drawWindow, 0, authorHeight, drawWindow->Width, missionTypeHeight, TEXT_ALIGN_TOPLEFT);
+    windowFill(&windowMissionType, 0x70000040);
+    snprintf(strBuf, sizeof(strBuf), "Mission Type: %s", levelselectMissionTypes[missionType]);
+    windowDrawTextWindow(&windowMissionType, TEXT_ALIGN_TOPLEFT, 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
+    
     // description
     Window_t windowDescription;
-    windowCreateFrom(&windowDescription, drawWindow, 0, authorHeight, drawWindow->Width, descHeight, TEXT_ALIGN_TOPLEFT);
+    windowCreateFrom(&windowDescription, drawWindow, 0, authorHeight + missionTypeHeight, drawWindow->Width, isBossRaid ? descHeight : descFullHeight, TEXT_ALIGN_TOPLEFT);
     windowFill(&windowDescription, 0x60101010);
     windowDrawTextWindow(&windowDescription, TEXT_ALIGN_TOPLEFT, 5, 5, 0.7, textColor, levelselectDrawState.SelectedMapExtraData.Description, -1, TEXT_ALIGN_TOPLEFT);
     
     // progress
     Window_t windowProgress;
-    windowCreateFrom(&windowProgress, drawWindow, 0, -(difficultyCostHeight + difficultySelectHeight), drawWindow->Width, progressHeight, TEXT_ALIGN_BOTTOMLEFT);
+    windowCreateFrom(&windowProgress, drawWindow, 0, isBossRaid ? -(difficultyCostHeight + difficultySelectHeight) : -5, drawWindow->Width, progressHeight, TEXT_ALIGN_BOTTOMLEFT);
     windowFill(&windowProgress, 0x20000000);
 
     // gold bolts
@@ -311,7 +343,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPCENTER, 0, 5, 1.0, progressColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
 
     // best time
-    if (!isHub && cost >= 0) {
+    if (isBossRaid && cost >= 0) {
       int bestTimeMs = levelselectDrawState.MapStats.BestTimeMsPerDifficulty[levelselectDrawState.SelectedDifficulty];
       int bestTimeSeconds = bestTimeMs / 1000;
       int bestTimeMinutes = bestTimeSeconds / 60;
@@ -324,7 +356,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     }
     
     // star select
-    if (!isHub) {
+    if (isBossRaid) {
       Window_t windowStars;
       windowCreateFrom(&windowStars, drawWindow, 0, -difficultyCostHeight, drawWindow->Width, difficultySelectHeight, TEXT_ALIGN_BOTTOMLEFT);
       windowFill(&windowStars, 0x30404040);
@@ -404,7 +436,7 @@ void levelselectDraw(void)
   Window_t windowTitle;
   windowCreateFrom(&windowTitle, &drawWindow, 0, 0, drawWindow.Width, titleHeight, TEXT_ALIGN_TOPCENTER);
   windowFill(&windowTitle, borderColor);
-  windowDrawText(&windowTitle, TEXT_ALIGN_MIDDLECENTER, 0, 0, 1.1, textColor, "Mission Select", -1, TEXT_ALIGN_MIDDLECENTER);
+  windowDrawText(&windowTitle, TEXT_ALIGN_MIDDLECENTER, 0, 0, 1.1, textColor, "Planet Select", -1, TEXT_ALIGN_MIDDLECENTER);
   //windowMove(&drawWindow, 0, titleHeight);
 
   // draw map list

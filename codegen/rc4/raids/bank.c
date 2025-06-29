@@ -41,6 +41,8 @@ struct BankVTable bankVTable = {
   .HasPendingAccountRequest = &bankHasPendingAccountRequest,
 
   .GetXP = &bankGetXP,
+  .AddXP = &bankAddXP,
+  .GetLevel = &bankGetLevel,
   .GetBolts = &bankGetBolts,
   .AddBolts = &bankAddBolts,
   .SubBolts = &bankSubtractBolts,
@@ -122,7 +124,7 @@ int bankOnSetPlayerAccountRemote(void * connection, void * data)
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     if (gs->PlayerClients[i] != msg.ClientId) continue;
 
-    memcpy(state->PlayerStates[i].State.Skills, msg.Account.Skills, sizeof(state->PlayerStates[i].State.Skills));
+    state->PlayerStates[i].State.Level = getLevelFromXp(msg.Account.Experience);
   }
 
   return sizeof(msg);
@@ -276,6 +278,18 @@ void bankSendAccountToServer(void)
 }
 
 //--------------------------------------------------------------------------
+void bankRequestAccountReset(void)
+{
+  RaidsPlayerBank_t* localBank = bankGetLocalBank();
+  if (!localBank) return;
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_RESET_ACCOUNT_REQUEST, 0, NULL);
+  DPRINTF("sent account reset request\n");
+}
+
+//--------------------------------------------------------------------------
 void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest)
 {
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
@@ -334,18 +348,19 @@ u32 bankSubtractBolts(u32 amount)
 }
 
 //--------------------------------------------------------------------------
-u32 bankGetXP(void) { return bankLocalBank.Account.Experience; }
-u32 bankAddXP(u32 amount)
+u64 bankGetXP(void) { return bankLocalBank.Account.Experience; }
+u64 bankAddXP(u64 amount)
 {
+  int level = bankGetLevel();
+
   // add xp
-  u32 xp = bankLocalBank.Account.Experience;
+  u64 xp = bankLocalBank.Account.Experience;
   bankLocalBank.Account.Experience += amount;
 
-  int level = getLevelFromXp(xp);
-  int nextLevel = getLevelFromXp(xp + amount);
+  int nextLevel = bankGetLevel();
   //printf("add xp %'d (+%'d)\n", xp, amount);
   if (nextLevel > level) {
-    bankLocalBank.Account.SkillPoints += 1;
+    //bankLocalBank.Account.SkillPoints += 1;
 
     snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached level %d", nextLevel + 1);
     pushSnack(0, bankLevelUpBuf, 120);
@@ -353,6 +368,19 @@ u32 bankAddXP(u32 amount)
   }
 
   return bankLocalBank.Account.Experience;
+}
+
+//--------------------------------------------------------------------------
+int bankGetLevel(void)
+{
+  static u64 lastXp = 0;
+  static int lastLevel = 0;
+
+  u64 xp = bankLocalBank.Account.Experience;
+  if (xp == lastXp) return lastLevel;
+
+  lastXp = xp;
+  return lastLevel = getLevelFromXp(xp);
 }
 
 //--------------------------------------------------------------------------
@@ -370,7 +398,7 @@ double bankAddWeaponXP(double amount, int gadgetId)
   int nextLevel = getProficiencyFromXp(xp + amount);
   if (nextLevel > level) {
     struct GadgetDef* gadgetDef = weaponGetDef(gadgetId, 0);
-    bankAddXP(LEVELUP_PLAYER_INCREMENT_AMOUNT);
+    //bankAddXP(LEVELUP_PLAYER_INCREMENT_AMOUNT);
     snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached %s P%d", uiMsgString(gadgetDef->quickSelectTag), nextLevel + 1);
     pushSnack(0, bankLevelUpBuf, 120);
     bankSendAccountToServer(); // send to server
@@ -532,6 +560,19 @@ float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effec
 }
 
 //--------------------------------------------------------------------------
+int bankGetEquippedWeaponModStrength(int playerId, int gadgetId, enum RaidsWeaponModType modType)
+{
+  struct RaidsState* state = MapConfig.State;
+  if (!state) return 0;
+
+  RaidsInventoryItem_t* weapon = &state->PlayerStates[playerId].Inventory.Items[gadgetId];
+  if (!weapon || weapon->Type != RAIDS_ITEM_WEAPON) return 0;
+  if (weapon->WeaponData.ModType != modType) return 0;
+
+  return weapon->WeaponData.ModStrength;
+}
+
+//--------------------------------------------------------------------------
 int bankGetAlphaModCount(GadgetBox* gadgetBox, int gadgetId, int alphaModId)
 {
   int extra = 0;
@@ -543,13 +584,13 @@ int bankGetAlphaModCount(GadgetBox* gadgetBox, int gadgetId, int alphaModId)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gadgetBox, gadgetId);
   if (!bankWeapon) return 0;
 
-  switch (alphaModId)
-  {
-    case ALPHA_MOD_AMMO: extra = (int)ceilf(BADGE_AMMO_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF)); break;
-    case ALPHA_MOD_AREA: extra = (int)ceilf(BADGE_AREA_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF)); break;
-    case ALPHA_MOD_SPEED: extra = (int)ceilf(BADGE_SPEED_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF)); break;
-    case ALPHA_MOD_IMPACT: extra = (int)ceilf(BADGE_IMPACT_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF)); break;
-  }
+  // switch (alphaModId)
+  // {
+  //   case ALPHA_MOD_AMMO: extra = (int)ceilf(BADGE_AMMO_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF)); break;
+  //   case ALPHA_MOD_AREA: extra = (int)ceilf(BADGE_AREA_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF)); break;
+  //   case ALPHA_MOD_SPEED: extra = (int)ceilf(BADGE_SPEED_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF)); break;
+  //   case ALPHA_MOD_IMPACT: extra = (int)ceilf(BADGE_IMPACT_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF)); break;
+  // }
 
   return extra + bankWeapon->WeaponData.AlphaModCounts[alphaModId-1];
 }
@@ -560,7 +601,7 @@ float bankGetArbiterNapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_ARBITER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_NAPALM_DMG_PERC;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
 float bankGetArbiterMinibombDamage(Player* player)
@@ -568,7 +609,7 @@ float bankGetArbiterMinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_ARBITER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -577,7 +618,7 @@ float bankGetMineLauncherNapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_MINE_LAUNCHER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_NAPALM_DMG_PERC;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -586,7 +627,7 @@ float bankGetMineLauncherMinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_MINE_LAUNCHER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -595,7 +636,7 @@ float bankGetB6NapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_B6);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_NAPALM_DMG_PERC;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -604,7 +645,7 @@ float bankGetB6MinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_B6);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -638,10 +679,26 @@ void bankSpawnMinibombs(Moby* pParent, int count, VECTOR rootVel, float randSpee
 float bankGetGadgetDamage(GadgetBox* gbox, int gadgetId, int damageType, int multiplier)
 {
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
-  if (bankWeapon) return bankWeapon->WeaponData.Damage * multiplier;
+  if (bankWeapon) return bankGetWeaponDamage(bankWeapon) * multiplier;
 
   int level = gbox->Gadgets[gadgetId].Level;
   return ((float (*)(int gadgetId, int level, int damageType, int multiplier))0x00627520)(gadgetId, level, damageType, multiplier);
+}
+
+//--------------------------------------------------------------------------
+float bankGetWeaponDamage(RaidsInventoryItem_t* item)
+{
+  if (!item) return 0;
+  if (!bankItemIsWeapon(item)) return 0;
+  
+  // base
+  float damage = item->WeaponData.Damage;
+
+  // upgrades
+  damage += 5 * item->WeaponData.Upgrades;
+  damage *= 1 + (0.025) * item->WeaponData.Upgrades * (bankGetRarityFromQuality(item->Quality)+1);
+
+  return damage;
 }
 
 //--------------------------------------------------------------------------
@@ -741,7 +798,11 @@ void bankApplyItem(Player* player, RaidsInventoryItem_t* item)
     bankApplyGadgetMoby(player, item, player->Gadgets[0].pMoby2);
   }
 
-  gbox->Gadgets[gadgetId].OmegaMod = item->WeaponData.OmegaMod;
+  // apply weapon omega mod
+  if (item->WeaponData.ModType > RAIDS_WEAPON_MOD_NONE && item->WeaponData.ModType <= RAIDS_WEAPON_MOD_SHOCK)
+    gbox->Gadgets[gadgetId].OmegaMod = item->WeaponData.ModType;
+  else
+    gbox->Gadgets[gadgetId].OmegaMod = OMEGA_MOD_EMPTY;
 }
 
 //--------------------------------------------------------------------------
@@ -756,8 +817,8 @@ void bankUpdateLocalState(Player * player)
   int playerId = player->PlayerId;
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
 
-  // save skill points
-  memcpy(state->PlayerStates[playerId].State.Skills, localBank->Account.Skills, sizeof(state->PlayerStates[playerId].State.Skills));
+  // save level
+  state->PlayerStates[playerId].State.Level = bankGetLevel();
 
   // save to equipped
   int i;

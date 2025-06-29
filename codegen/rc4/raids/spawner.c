@@ -54,22 +54,63 @@ int spawnerSpawnRequestsCount = 0;
 struct SpawnerSpawnRequest spawnerSpawnRequests[SPAWNER_MAX_SPAWN_REQUESTS];
 
 //--------------------------------------------------------------------------
+int spawnerGetDifficultyStars(Moby* moby)
+{
+  if (!MapConfig.State) return 0;
+  if (!missionIsOpenWorld()) return MapConfig.State->DifficultyStars;
+
+  // if we're in an open world
+  // use zone to determine difficulty mult
+  int i;
+  for (i = 0; i < mapDifficultyZonesCount; ++i) {
+    int cuboidIdx = mapDifficultyZones[i].CuboidIdx;
+    if (cuboidIdx < 0) continue;
+
+    SpawnPoint* cuboid = spawnPointGet(cuboidIdx);
+    if (!cuboid) continue;
+
+    if (spawnPointIsPointInside(cuboid, moby->Position, NULL)) {
+      return mapDifficultyZones[i].Difficulty;
+    }
+  }
+
+  return MapConfig.State->DifficultyStars;
+}
+
+//--------------------------------------------------------------------------
 struct SpawnerSpawnConfig* spawnerGetConfig(Moby* moby)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
-  return &pvars->Config[MapConfig.State ? MapConfig.State->DifficultyStars : 0];
+  return &pvars->Config[spawnerGetDifficultyStars(moby)];
 }
 
 //--------------------------------------------------------------------------
 void spawnerRequestSpawn(Moby* moby, struct MobCreateArgs* args)
 {
-  // should iterate requests and replace the spawner the furthest from any player
-  if (spawnerSpawnRequestsCount >= SPAWNER_MAX_SPAWN_REQUESTS)
-    return;
+  int idx = spawnerSpawnRequestsCount;
 
-  spawnerSpawnRequests[spawnerSpawnRequestsCount].Spawner = moby;
-  memcpy(&spawnerSpawnRequests[spawnerSpawnRequestsCount].SpawnArgs, args, sizeof(spawnerSpawnRequests[spawnerSpawnRequestsCount].SpawnArgs));
-  spawnerSpawnRequestsCount++;
+  // should iterate requests and replace the spawner the furthest from any player
+  if (idx >= SPAWNER_MAX_SPAWN_REQUESTS) {
+    for (idx = 0; idx < SPAWNER_MAX_SPAWN_REQUESTS; ++idx) {
+      if (!spawnerIsPointNearPlayer(spawnerSpawnRequests[idx].SpawnArgs.Position, SPAWNER_SPAWN_NEAR_DISTANCE*0.8))
+        break;
+    }
+  } else {
+    int j;
+    for (j = 0; j < spawnerSpawnRequestsCount; ++j) {
+      if (spawnerSpawnRequests[j].Spawner == moby) {
+        idx = j;
+        break;
+      }
+    }
+  }
+
+  if (idx >= SPAWNER_MAX_SPAWN_REQUESTS) return;
+
+  spawnerSpawnRequests[idx].Spawner = moby;
+  spawnerSpawnRequests[idx].Time = gameGetTime();
+  memcpy(&spawnerSpawnRequests[idx].SpawnArgs, args, sizeof(spawnerSpawnRequests[idx].SpawnArgs));
+  if (idx == spawnerSpawnRequestsCount) spawnerSpawnRequestsCount++;
 }
 
 //--------------------------------------------------------------------------
@@ -195,6 +236,12 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
     .SpawnFromUID = fromUid,
   };
 
+  // if we're in an open world
+  // use zone to determine difficulty mult
+  if (missionIsOpenWorld()) {
+    args.DifficultyMult *= Difficulties[spawnerGetDifficultyStars(moby)];
+  }
+
   if (spawnerGetRandomSpawnPoint(moby, mobParamsIdx, args.Position, &args.Yaw)) {
     spawnerRequestSpawn(moby, &args);
     DLOG(moby, "request spawn %d\n", gameGetTime());
@@ -214,6 +261,7 @@ int spawnerSpawnRandom(Moby* moby)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
   struct SpawnerSpawnConfig* config = spawnerGetConfig(moby);
+  int difficultyStars = spawnerGetDifficultyStars(moby);
 
   if (config->SpawnRateMultiplier <= 0.000001)
     return 0;
@@ -231,7 +279,7 @@ int spawnerSpawnRandom(Moby* moby)
   if (MapConfig.State && mobParams->MaxCanAliveAtOnce > 0 && mobParams->MaxCanAliveAtOnce <= pvars->State.NumAlive[spawnerMobIdx])
     return 0;
 
-  if (MapConfig.State && (mobParams->StarsMask & (1 << MapConfig.State->DifficultyStars)) == 0)
+  if (MapConfig.State && (mobParams->StarsMask & (1 << difficultyStars)) == 0)
     return 0;
 
   if (pvars->State.Cooldown[spawnerMobIdx] > 0)
@@ -734,6 +782,8 @@ void spawnerTryDespawnMob(Moby* moby, float maxMobsAllocatedPerSpawner)
         int destroy = mobPVars->MobVars.ClosestDistToPlayer > (SPAWNER_SPAWN_NEAR_DISTANCE*SPAWNER_SPAWN_NEAR_DISTANCE);
         if (destroy) {
           if (spawnerDestroyMob(parent, m, mobPVars->MobVars.Userdata, 0)) {
+            int totalAlive = MapConfig.State ? (MapConfig.State->MobStats.TotalAlive + MapConfig.State->MobStats.TotalSpawning) : 0;
+            DPRINTF("despawning mob %08X (%04X) from spawner %d for spawner %d (alive:%d spawning:%d)\n", m, m->OClass, parent->UID, moby->UID, MapConfig.State->MobStats.TotalAlive, MapConfig.State->MobStats.TotalSpawning);
             spawnerTicksSinceLastDelete = 0;
             return;
           }
@@ -768,6 +818,9 @@ void spawnerStart(void)
   spawnerInitialized = 1;
   spawnerNumLastActive = spawnerNumActive;
   spawnerNumActive = 0;
+  //int hasDespawnedThisTick = 0;
+  struct SpawnerSpawnRequest deferredRequests[SPAWNER_MAX_SPAWN_REQUESTS];
+  int deferredRequestsCount = 0;
 
   int i;
   int countHasPlayerIsNear = 0;
@@ -781,9 +834,9 @@ void spawnerStart(void)
     }
   }
 
-  int totalAlive = MapConfig.State ? MapConfig.State->MobStats.TotalAlive : 0;
-  int restrictSpawning = totalAlive >= (MAX_MOBS_ALIVE_REAL*0.9);
   for (i = 0; i < spawnerSpawnRequestsCount; ++i) {
+    int totalAlive = MapConfig.State ? (MapConfig.State->MobStats.TotalAlive + MapConfig.State->MobStats.TotalSpawning) : 0;
+    int restrictSpawning = totalAlive >= (MAX_MOBS_ALIVE_REAL*0.9);
     struct SpawnerSpawnRequest* request = &spawnerSpawnRequests[i];
     Moby* moby = request->Spawner;
     struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
@@ -796,6 +849,7 @@ void spawnerStart(void)
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;
       }
+      DPRINTF("respawning mob %08X %04X for spawner %d (alive:%d spawning:%d)\n", request->SpawnArgs.SpawnFromUID, MapConfig.MobSpawnParams[request->SpawnArgs.SpawnParamsIdx].OClass, moby->UID, MapConfig.State->MobStats.TotalAlive, MapConfig.State->MobStats.TotalSpawning);
       continue;
     }
 
@@ -808,21 +862,27 @@ void spawnerStart(void)
       // check that the spawn is near a player
       // only if we are near the max # of mobs visible
       // if its been awhile since we've delete a mob, then we can try and spawn a mob that isn't near the player
-      // we just want to avoid rapidly spawning/despawning mobs until they converge near the player\
+      // we just want to avoid rapidly spawning/despawning mobs until they converge near the player
       // given that the despawn mechanism only despawns far-away mobs
       int isSpawnNearPlayer = spawnerIsPointNearPlayer(request->SpawnArgs.Position, SPAWNER_SPAWN_NEAR_DISTANCE*0.8);
-      if (spawnerTicksSinceLastDelete < 10 && restrictSpawning && !isSpawnNearPlayer)
+      if (spawnerTicksSinceLastDelete < TPS && restrictSpawning && !isSpawnNearPlayer)
         continue;
 
       // we need to despawn other mobs
       if (totalAlive >= MAX_MOBS_ALIVE_REAL) {
 
         //if (pvars->State.PlayerIsNear)
-        if (isSpawnNearPlayer)
+        if (isSpawnNearPlayer) {
           spawnerTryDespawnMob(moby, MAX_MOBS_ALIVE_REAL / (float)countHasPlayerIsNear);
-
-        continue;
+          
+          totalAlive = MapConfig.State ? (MapConfig.State->MobStats.TotalAlive + MapConfig.State->MobStats.TotalSpawning) : 0;
+          if (totalAlive >= MAX_MOBS_ALIVE_REAL) continue;
+        } else {
+          continue;
+        }
       }
+      
+      DPRINTF("spawning mob %04X for spawner %d (alive:%d spawning:%d)\n", MapConfig.MobSpawnParams[request->SpawnArgs.SpawnParamsIdx].OClass, moby->UID, MapConfig.State->MobStats.TotalAlive, MapConfig.State->MobStats.TotalSpawning);
 
       // don't spawn
       //if (countHasPlayerIsNear && !pvars->State.PlayerIsNear)
@@ -832,11 +892,16 @@ void spawnerStart(void)
       VECTOR spawnFrom, spawnTo, up={0,0,0.01,0}, down = {0,0,-30,0};
       vector_add(spawnFrom, request->SpawnArgs.Position, up);
       vector_add(spawnTo, request->SpawnArgs.Position, down);
-      if (!CollLine_Fix(spawnFrom, spawnTo, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL))
+      if (!CollLine_Fix(spawnFrom, spawnTo, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL)) {
+        memcpy(&deferredRequests[deferredRequestsCount], request, sizeof(struct SpawnerSpawnRequest));
+        deferredRequestsCount++;
         continue;
+      }
 
       // verify point is walkable
       if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId())) {
+        memcpy(&deferredRequests[deferredRequestsCount], request, sizeof(struct SpawnerSpawnRequest));
+        deferredRequestsCount++;
         //DPRINTF("bad collision %02X\n", CollLine_Fix_GetHitCollisionId());
         continue;
       }
@@ -846,6 +911,8 @@ void spawnerStart(void)
       vector_normalize(groundNormal, CollLine_Fix_GetHitNormal());
       float groundSlope = acosf(vector_innerproduct(groundUp, groundNormal));
       if (fabsf(groundSlope) > (35*MATH_DEG2RAD)) {
+        memcpy(&deferredRequests[deferredRequestsCount], request, sizeof(struct SpawnerSpawnRequest));
+        deferredRequestsCount++;
 #if DEBUG
         printf("bad slope %f.. ", groundSlope);
         vector_print(groundNormal);
@@ -865,7 +932,8 @@ void spawnerStart(void)
     }
   }
 
-  spawnerSpawnRequestsCount = 0;
+  memcpy(spawnerSpawnRequests, deferredRequests, deferredRequestsCount * sizeof(struct SpawnerSpawnRequest));
+  spawnerSpawnRequestsCount = deferredRequestsCount;
   spawnerMinClosestDistToPlayerSqr = -1;
   spawnerMaxClosestDistToPlayerSqr = 1;
 }

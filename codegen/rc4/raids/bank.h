@@ -59,13 +59,19 @@ enum RaidsBadgeType
   RAIDS_BADGE_TYPE_COUNT
 };
 
-enum RaidsSkills
+enum RaidsWeaponModType
 {
-  RAIDS_SKILLS_HEALTH = 0,
-  RAIDS_SKILLS_DAMAGE = 1,
-  RAIDS_SKILLS_SPEED = 2,
-  RAIDS_SKILLS_UNUSED = 3,
-  RAIDS_SKILLS_COUNT
+  RAIDS_WEAPON_MOD_NONE = 0,
+  RAIDS_WEAPON_MOD_NAPALM,
+  RAIDS_WEAPON_MOD_TIME_BOMB,
+  RAIDS_WEAPON_MOD_FREEZE,
+  RAIDS_WEAPON_MOD_MINI_BOMB,
+  RAIDS_WEAPON_MOD_MORPH,
+  RAIDS_WEAPON_MOD_BRAINWASH,
+  RAIDS_WEAPON_MOD_ACID,
+  RAIDS_WEAPON_MOD_SHOCK,
+  RAIDS_WEAPON_MOD_WILL_O_WISP,
+  RAIDS_WEAPON_MOD_COUNT
 };
 
 enum RaidsItemTypes
@@ -81,7 +87,9 @@ enum RaidsItemUpdateAction
   RAIDS_ITEM_UPDATE_SELL,
   RAIDS_ITEM_UPDATE_SET_NOTIFY,
   RAIDS_ITEM_UPDATE_EQUIP,
-  RAIDS_ITEM_UPDATE_UNEQUIP
+  RAIDS_ITEM_UPDATE_UNEQUIP,
+  RAIDS_ITEM_UPDATE_UPGRADE,
+  RAIDS_ITEM_UPDATE_DESTROY,
 };
 
 typedef struct RaidsInventoryItem
@@ -96,14 +104,15 @@ typedef struct RaidsInventoryItem
     struct {
       int Damage; // damage
       u8 GadgetId;
-      u8 Paint; // 0=none, 1=blue, etc (teams)
-      u8 PaintSpecialMask; // RaidsGadgetPaintSpecialMask
+      u8 Paint : 4; // 0=none, 1=blue, etc (teams)
+      u8 PaintSpecialMask : 4; // RaidsGadgetPaintSpecialMask
       u8 Proficiency; // what proficiency the item was created at (v1-v99)
       u8 CritChance; // 0-255 (0-100%) chance crit
-      u8 OmegaMod;
+      u8 ModType; // RaidsWeaponModType
+      u8 ModStrength; // 1-5
       u8 AlphaModCounts[ALPHA_MOD_COUNT-1];
-      u8 Effect;
-      u8 EffectStrength;
+      u8 Upgrades;
+      u8 MaxUpgrades;
     } WeaponData;
 
     struct {
@@ -129,10 +138,8 @@ typedef struct RaidsPlayerInventoryPage
 typedef struct RaidsPlayerAccount
 {
   double WeaponXp[WEAPON_SLOT_COUNT-1];
-  u32 Experience;
+  u64 Experience;
   u32 Bolts;
-  u32 SkillPoints;
-  u16 Skills[RAIDS_SKILLS_COUNT];
 } RaidsPlayerAccount_t;
 
 typedef struct RaidsPlayerEquippedInventory
@@ -231,7 +238,9 @@ typedef int (*BankHasPendingEquippedInventoryRequest_func)(void);
 typedef int (*BankGetHasAccount_func)(void);
 typedef int (*BankHasPendingAccountRequest_func)(void);
 
-typedef u32 (*BankGetXP_func)(void);
+typedef u64 (*BankGetXP_func)(void);
+typedef u64 (*BankAddXP_func)(u64 amt);
+typedef int (*BankGetLevel_func)(void);
 typedef u32 (*BankGetBolts_func)(void);
 typedef u32 (*BankAddBolts_func)(u32 amt);
 typedef u32 (*BankSubBolts_func)(u32 amt);
@@ -259,6 +268,8 @@ struct BankVTable
   BankHasPendingAccountRequest_func HasPendingAccountRequest;
   
   BankGetXP_func GetXP;
+  BankAddXP_func AddXP;
+  BankGetLevel_func GetLevel;
   BankGetBolts_func GetBolts;
   BankAddBolts_func AddBolts;
   BankSubBolts_func SubBolts;
@@ -278,16 +289,19 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize);
 u32 bankGetBolts(void);
 u32 bankAddBolts(u32 amount);
 u32 bankSubtractBolts(u32 amount);
-u32 bankGetXP(void);
-u32 bankAddXP(u32 amount);
+u64 bankGetXP(void);
+u64 bankAddXP(u64 amount);
+int bankGetLevel(void);
 double bankGetWeaponXP(int gadgetId);
 double bankAddWeaponXP(double amount, int gadgetId);
+float bankGetWeaponDamage(RaidsInventoryItem_t* item);
 
 void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page);
 void bankSendInventoryItemToServer(RaidsInventoryItem_t* item, enum RaidsItemUpdateAction action);
 void bankRequestEquippedInventoryFromServer(void);
 void bankRequestAccountFromServer(void);
 void bankSendAccountToServer(void);
+void bankRequestAccountReset(void);
 void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest);
 void bankSendMapStats(struct RaidsBankMapStats* mapStats);
 
@@ -306,6 +320,7 @@ RaidsInventoryItem_t* bankGetEquippedBadgeFromGadgetBox(GadgetBox* gbox);
 RaidsInventoryItem_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int gadgetId);
 enum RaidsItemRarity bankGetRarityFromQuality(u8 quality);
 float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect);
+int bankGetEquippedWeaponModStrength(int playerId, int gadgetId, enum RaidsWeaponModType modType);
 
 void bankTick(void);
 void bankInit(void);

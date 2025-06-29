@@ -157,15 +157,15 @@ MonoBehaviour:
         SourceMapId: 46
         SourceMissionId: -1
     Behaviors: []
-    Xp: 25
+    Xp: 50
     Bolts: 500
-    Damage: 10
+    Damage: 5
     DamageMax: 0
     DamageScale: 1
     Speed: 1
     SpeedMax: 10
     SpeedScale: 1
-    Health: 200
+    Health: 300
     HealthMax: 0
     HealthScale: 1.1
     TurnSpeed: 1
@@ -189,7 +189,7 @@ MonoBehaviour:
     - Normal
     - Aggressive (Chase)
     - Evasive (Ranged)
-    Xp: 15
+    Xp: 25
     Bolts: 250
     Damage: 10
     DamageMax: 0
@@ -244,7 +244,7 @@ MonoBehaviour:
     - Normal
     - Hold Position
     - Flying
-    Xp: 5
+    Xp: 10
     Bolts: 50
     Damage: 5
     DamageMax: 0
@@ -273,7 +273,7 @@ MonoBehaviour:
         SourceMapId: 6
         SourceMissionId: -1
     Behaviors: []
-    Xp: 15
+    Xp: 25
     Bolts: 250
     Damage: 10
     DamageMax: 0

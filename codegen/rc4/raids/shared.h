@@ -23,6 +23,8 @@ enum MOB_DO_DAMAGE_HIT_FLAGS
 struct MobPVar;
 struct MobStateUpdateEventArgs;
 
+extern float Difficulties[RAIDS_DIFFICULTY_COUNT];
+
 void mapOnMobUpdate(Moby* moby);
 void mapOnMobDamaged(Moby* moby, struct MobDamageEventArgs* args);
 void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
@@ -31,6 +33,7 @@ void mapOnMobSpawned(Moby* moby);
 struct Guber* mapGetGuber(Moby* moby);
 void mapHandleEvent(Moby* moby, GuberEvent* event);
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);
+void mapApplyZoning(void);
 void mapStart(void);
 void mapTick(void);
 void mapTickEnd(void);

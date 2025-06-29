@@ -35,6 +35,7 @@ enum SpawnerState {
 struct SpawnerSpawnRequest
 {
   Moby* Spawner;
+  int Time;
   struct MobCreateArgs SpawnArgs;
 };
 

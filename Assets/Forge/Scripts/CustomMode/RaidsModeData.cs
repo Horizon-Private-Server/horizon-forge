@@ -37,11 +37,19 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         1250
     };
 
+    public enum RAIDS_MISSION_TYPES
+    {
+        Hub,
+        OpenWorld,
+        Raid
+    }
+
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
     public int CodeGenOrder => 99999999;
 
     public bool Enabled = true;
+    public RAIDS_MISSION_TYPES MissionType = RAIDS_MISSION_TYPES.OpenWorld;
     [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
     [Tooltip("Minimum player level required to visit planet.")] public uint MinLevelRequired = 0;
     public int Cost1Star = 0;
@@ -51,6 +59,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public int Cost5Star = 0;
     public string Author;
     [Multiline] public string Description;
+
+    [Header("Zones (Open World Only)")]
+    public List<RaidsZone> Zones;
 
     [Header("Challenges")]
     public List<RaidsChallenge> Challenges;
@@ -210,7 +221,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (isRaidsMap)
         {
             state.GetGuberCase.Add("case SPAWNER_OCLASS: return spawnerGetGuber(moby);");
-            state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
+            if (mobTypes.Contains(RaidsMob.DZStriker))
+                state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
         }
         state.GetGuberCase.Add("case GATE_OCLASS: return gateGetGuber(moby);");
         state.GetGuberCase.Add("case MOVER_OCLASS: return moverGetGuber(moby);");
@@ -224,7 +236,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (isRaidsMap)
         {
             state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
-            state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
+            if (mobTypes.Contains(RaidsMob.DZStriker))
+                state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
         }
         state.HandleGuberEventCase.Add("case GATE_OCLASS: gateHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case MOVER_OCLASS: moverHandleEvent(moby, event); break;");
@@ -264,6 +277,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.MainBodyReady.Add("badgesStart();");
             state.MainBodyReady.Add("ammodropStart();");
             state.MainBodyReady.Add("npcStart();");
+            if (MissionType == RAIDS_MISSION_TYPES.OpenWorld)
+                state.MainBodyReady.Add("mapApplyZoning();");
         }
         state.MainBodyReady.Add("moverStart();");
         state.MainBodyReady.Add("controllerStart();");
@@ -336,6 +351,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine("");
 
+        sb.AppendLine("struct RaidsDifficultyZone mapDifficultyZones[] = {");
+        foreach (var zone in Zones)
+            sb.AppendLine(zone.GetDef());
+        sb.AppendLine("};");
+        sb.AppendLine($"int mapDifficultyZonesCount = {Zones.Count};");
+        sb.AppendLine("");
+
         sb.AppendLine($"int musicTrackWhitelistEnabled = {(OverrideTrackList ? 1 : 0)};");
         sb.AppendLine($"int musicTrackWhitelistCount = {TrackWhitelist.Count};");
         sb.AppendLine("int musicTrackWhitelist[] = {");
@@ -363,6 +385,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var baseOffset = writer.BaseStream.Position;
 
         writer.Write(RAIDS_VERSION);
+        writer.Write((int)MissionType);
         writer.Write(MinLevelRequired);
         writer.Write(goldBoltCount);
         writer.Write(challengesCount);
@@ -402,6 +425,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         writer.BaseStream.Position = endOffset;
     }
 
+    public uint GetSubSort()
+    {
+        return MinLevelRequired + (uint)((int)MissionType * 10000);
+    }
 
     #region Menu Items
 
@@ -817,4 +844,29 @@ public class RaidsChallenge
 {
     public string Name;
     public string Description;
+}
+
+[Serializable]
+public class RaidsZone
+{
+    public string Name;
+    public Cuboid Cuboid;
+    public DLRaidsDifficulties Difficulty;
+
+    public string GetDef()
+    {
+        var sb = new StringBuilder();
+
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var cuboidIdx = mapConfig.GetIndexOfCuboid(this.Cuboid);
+        if (cuboidIdx < 0)
+            Debug.LogWarning($"Missing cuboid for Zone {this.Name}");
+
+        sb.AppendLine("  {");
+        sb.AppendLine($"    .CuboidIdx = {cuboidIdx},");
+        sb.AppendLine($"    .Difficulty = {(int)this.Difficulty}");
+        sb.AppendLine("  },");
+
+        return sb.ToString();
+    }
 }

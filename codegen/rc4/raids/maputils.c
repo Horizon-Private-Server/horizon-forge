@@ -37,6 +37,14 @@
 char LocalPlayerStrBuffer[2][64];
 extern struct RaidsMapConfig MapConfig;
 
+float Difficulties[RAIDS_DIFFICULTY_COUNT] = {
+  [RAIDS_DIFFICULTY_1STAR] 0,
+  [RAIDS_DIFFICULTY_2STAR] 25.0,
+  [RAIDS_DIFFICULTY_3STAR] 150.0,
+  [RAIDS_DIFFICULTY_4STAR] 500.0,
+  [RAIDS_DIFFICULTY_5STAR] 1250.0,
+};
+
 /* 
  * reusable menu sound def
  */
@@ -180,6 +188,24 @@ float getSignedSlope(VECTOR forward, VECTOR normal)
   vector_normalize(hForward, hForward);
   vector_outerproduct(up, hForward, normal);
   return atan2f(vector_length(up), vector_innerproduct(hForward, normal)) - MATH_PI/2;
+}
+
+//--------------------------------------------------------------------------
+enum WEAPON_IDS getWeaponIdFromDamageSource(enum MobDamageSource source)
+{
+  switch (source)
+  {
+    case MOB_DAMAGE_SOURCE_WRENCH: return WEAPON_ID_WRENCH;
+    case MOB_DAMAGE_SOURCE_DUAL_VIPERS: return WEAPON_ID_VIPERS;
+    case MOB_DAMAGE_SOURCE_MAGMA_CANNON: return WEAPON_ID_MAGMA_CANNON;
+    case MOB_DAMAGE_SOURCE_ARBITER: return WEAPON_ID_ARBITER;
+    case MOB_DAMAGE_SOURCE_FUSION_RIFLE: return WEAPON_ID_FUSION_RIFLE;
+    case MOB_DAMAGE_SOURCE_MINE_LAUNCHER: return WEAPON_ID_MINE_LAUNCHER;
+    case MOB_DAMAGE_SOURCE_B6_OBLITERATOR: return WEAPON_ID_B6;
+    case MOB_DAMAGE_SOURCE_SCORPION_FLAIL: return WEAPON_ID_FLAIL;
+    case MOB_DAMAGE_SOURCE_HOLOSHIELD: return WEAPON_ID_OMNI_SHIELD;
+    default: return WEAPON_ID_EMPTY;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -432,6 +458,18 @@ int missionIsActive(void)
 }
 
 //--------------------------------------------------------------------------
+int missionIsBossRaid(void)
+{
+  return MapConfig.State && MapConfig.State->MissionType == RAIDS_MISSION_RAID;
+}
+
+//--------------------------------------------------------------------------
+int missionIsOpenWorld(void)
+{
+  return MapConfig.State && MapConfig.State->MissionType == RAIDS_MISSION_OPEN_WORLD;
+}
+
+//--------------------------------------------------------------------------
 int isOnHubWorld(void)
 {
   return MapConfig.State && MapConfig.State->OnHubWorld;
@@ -454,36 +492,21 @@ int bankTryChargeLocalAccount(Player* player, u32 cost)
 }
 
 //--------------------------------------------------------------------------
-int getLevelFromXp(u32 xp)
+int getLevelFromXp(u64 xp)
 {
   if (xp < 0) return 0;
 
   int level = 0;
-  while (getXpForLevel(level+1) < xp)
+  while (getXpForLevel(level+1) <= xp)
     ++level;
 
   return level;
-
-  //int level = (int)xp / LEVELUP_PLAYER_LINEAR_FACTOR;
-  //if (level > LEVELUP_MAX_LEVEL) return LEVELUP_MAX_LEVEL;
-  //if (level < 0) return 0;
-  //return level;
 }
 
 //--------------------------------------------------------------------------
-u32 getXpForLevel(int level)
+u64 getXpForLevel(int level)
 {
-  if (level > LEVELUP_MAX_LEVEL) level = LEVELUP_MAX_LEVEL;
-  if (level <= 0) return 0;
-  
-  int i = 0;
-  u32 xp = 0;
-  while (i < level) {
-    i++;
-    xp += LEVELUP_PLAYER_LINEAR_FACTOR + floorf(i / (float)LEVELUP_PLAYER_STEP_EVERY)*LEVELUP_PLAYER_STEP_FACTOR;
-  }
-
-  return xp;
+  return (u64)(10 * (double)powf(level, 2.5) + 100*level);
 }
 
 //--------------------------------------------------------------------------

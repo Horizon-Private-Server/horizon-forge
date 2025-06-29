@@ -369,7 +369,7 @@ public static class ForgeBuilder
                 // write header
                 if (ctx.RacVersion == RCVER.DL)
                 {
-                    var subsort = (customModeDatas.FirstOrDefault(x => x is RaidsModeData) as RaidsModeData)?.MinLevelRequired ?? 0;
+                    var subsort = (customModeDatas.FirstOrDefault(x => x is RaidsModeData) as RaidsModeData)?.GetSubSort() ?? 0;
 
                     writer.Write(mapConfig.MapVersion);
                     writer.Write((int)mapConfig.DLBaseMap);

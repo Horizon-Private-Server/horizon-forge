@@ -31,6 +31,7 @@ void destroyParticle(struct PartInstance* particle);
 
 float getSignedSlope(VECTOR forward, VECTOR normal);
 float getSignedRelativeSlope(VECTOR forward, VECTOR normal);
+enum WEAPON_IDS getWeaponIdFromDamageSource(enum MobDamageSource source);
 
 u8 decTimerU8(u8* timeValue);
 u16 decTimerU16(u16* timeValue);
@@ -38,8 +39,8 @@ u32 decTimerU32(u32* timeValue);
 
 int getProficiencyFromXp(double xp);
 double getXpForProficiency(int level);
-int getLevelFromXp(u32 xp);
-u32 getXpForLevel(int level);
+int getLevelFromXp(u64 xp);
+u64 getXpForLevel(int level);
 
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive);
 void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
@@ -66,6 +67,8 @@ int isOnHubWorld(void);
 int missionIsFailed(void);
 int missionIsComplete(void);
 int missionIsActive(void);
+int missionIsBossRaid(void);
+int missionIsOpenWorld(void);
 
 int bankTryChargeLocalAccount(Player* player, u32 cost);
 

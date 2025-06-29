@@ -1064,6 +1064,7 @@ int controllerIterate(Moby* moby)
 void controllerOnStateChanged(Moby* moby)
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  DLOG(moby, "NEW STATE %d\n", moby->State);
 
   switch (moby->State)
   {
@@ -1090,7 +1091,6 @@ void controllerBroadcastNewState(Moby* moby, enum ControllerState state)
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   if (pvars->NoSync) {
-    pvars->Init = 1;
     mobySetState(moby, state, -1);
     return;
   }
@@ -1100,6 +1100,19 @@ void controllerBroadcastNewState(Moby* moby, enum ControllerState state)
   if (guberEvent) {
     guberEventWrite(guberEvent, &state, 4);
   }
+}
+
+//--------------------------------------------------------------------------
+void controllerBroadcastInit(Moby* moby)
+{
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  if (pvars->NoSync) {
+    pvars->Init = 1;
+    return;
+  }
+
+	// create event
+	guberCreateEvent(moby, CONTROLLER_EVENT_INIT);
 }
 
 //--------------------------------------------------------------------------
@@ -1145,10 +1158,17 @@ void controllerUpdate(Moby* moby)
   // initialize by sending first state
   if (!pvars->Init) {
     if (controllerAmIOwner(moby) && controllerInitialized) {
-      controllerBroadcastNewState(moby, pvars->DefaultState);
+      //controllerBroadcastNewState(moby, pvars->DefaultState);
+      controllerBroadcastInit(moby);
     }
     
     return;
+  }
+
+  // set default state after init
+  if (pvars->Init == 1 && controllerAmIOwner(moby) && controllerInitialized && pvars->DefaultState) {
+    pvars->Init = 2;
+    controllerBroadcastNewState(moby, pvars->DefaultState);
   }
 
   // detect when state was changed
@@ -1262,7 +1282,6 @@ int controllerHandleEvent_SetState(Moby* moby, GuberEvent* event)
   
 	// read event
 	guberEventRead(event, &state, 4);
-  pvars->Init = 1;
   mobySetState(moby, state, -1);
   return 0;
 }
@@ -1312,6 +1331,19 @@ int controllerHandleEvent_Iterate(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
+int controllerHandleEvent_Init(Moby* moby, GuberEvent* event)
+{
+  if (!moby || !moby->PVar)
+    return 0;
+
+  struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
+  
+	// read event
+  pvars->Init = 1;
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 struct Guber* controllerGetGuber(Moby* moby)
 {
 	if (moby->OClass == CONTROLLER_OCLASS && moby->PVar)
@@ -1333,6 +1365,7 @@ int controllerHandleEvent(Moby* moby, GuberEvent* event)
 		{
       case CONTROLLER_EVENT_SET_STATE: { return controllerHandleEvent_SetState(moby, event); }
       case CONTROLLER_EVENT_ITERATE: { return controllerHandleEvent_Iterate(moby, event); }
+      case CONTROLLER_EVENT_INIT: { return controllerHandleEvent_Init(moby, event); }
 			default:
 			{
 				DLOG(moby, "unhandle controller event %d\n", upgradeEvent);

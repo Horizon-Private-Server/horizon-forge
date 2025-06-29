@@ -16,8 +16,8 @@
 
 #define BADGES_BERSERKER_RANGED_DAMAGE_MULT         (2.0)
 
-#define BADGES_EXPLODINGENEMIES_DAMAGE_MULT         (0.3)
-#define BADGES_EXPLODINGENEMIES_RADIUS_MULT         (5.0)
+#define BADGES_EXPLODINGENEMIES_DAMAGE_MULT         (0.2)
+#define BADGES_EXPLODINGENEMIES_RADIUS_MULT         (4.0)
 
 void badgesStart(void);
 void badgesInit(void);
