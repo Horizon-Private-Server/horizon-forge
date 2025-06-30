@@ -577,7 +577,7 @@ void stalkerturretDoAction(Moby* moby)
 	VECTOR t;
   float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
-  float freezeFactor = (!stalkerturretIsDying(moby) && pvars->MobVars.FreezeEffectActiveTicks > 0) ? MOB_POSTFX_FREEZE_FACTOR : 1;
+  float freezeFactor = !stalkerturretIsDying(moby) ? mobGetFreezeSpeedFactor(moby) : 1;
   float turnSpeed = pvars->MobVars.Config.TurnSpeed * speed * freezeFactor * STALKERTURRET_TURN_RADIANS_PER_SEC;
 
   if (MapConfig.State)

@@ -26,6 +26,7 @@ struct BankVTable bankVTable = {
   .GetItemName = &bankGetItemName,
   .GetRarityFromQuality = &bankGetRarityFromQuality,
   .GetEquippedBadgeEffectStrength = &bankGetEquippedBadgeEffectStrength,
+  .GetEquippedWeaponModRarity = &bankGetEquippedWeaponModRarity,
   .GetEquippedWeaponFromGadgetBox = &bankGetEquippedWeaponFromGadgetBox,
 
   .RequestInventoryFromServer = &bankRequestInventoryFromServer,
@@ -290,7 +291,7 @@ void bankRequestAccountReset(void)
 }
 
 //--------------------------------------------------------------------------
-void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest)
+void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest, int missionType)
 {
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   if (!localBank) return;
@@ -300,7 +301,8 @@ void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest)
   struct RaidsBankGetMapStatsRequest msg = {
     .ResponseAddress = (u32)dest,
     .ChallengesCount = dest->ChallengesCount,
-    .CollectiblesCount = dest->CollectiblesCount
+    .CollectiblesCount = dest->CollectiblesCount,
+    .MissionType = missionType
   };
 
   strncpy(msg.MapFilename, mapFilename, sizeof(msg.MapFilename));
@@ -365,6 +367,7 @@ u64 bankAddXP(u64 amount)
     snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached level %d", nextLevel + 1);
     pushSnack(0, bankLevelUpBuf, 120);
     bankSendAccountToServer(); // send to server
+    bankUpdateLocalState(playerGetFromSlot(0));
   }
 
   return bankLocalBank.Account.Experience;
@@ -381,6 +384,20 @@ int bankGetLevel(void)
 
   lastXp = xp;
   return lastLevel = getLevelFromXp(xp);
+}
+
+//--------------------------------------------------------------------------
+float bankGetLevelProgress(void)
+{
+  u64 xp = bankLocalBank.Account.Experience;
+  int level = getLevelFromXp(xp);
+  if (level >= LEVELUP_MAX_PLAYER_LEVEL) return 1.0f;
+
+  u64 lastXp = getXpForLevel(level);
+  u64 nextXp = getXpForLevel(level + 1);
+  if (xp < lastXp) xp = lastXp;
+  float xpPerc = (float)((xp - lastXp) / (double)(nextXp - lastXp));
+  return xpPerc;
 }
 
 //--------------------------------------------------------------------------
@@ -439,7 +456,7 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize)
     snprintf(buf, bufSize, "%cClass Mod\x08", bankRarityCode[rarity]);
   } else {
     struct GadgetDef* gadgetDef = weaponGetDef(item->WeaponData.GadgetId, 0);
-    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity >= RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
+    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity > RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
   }
 }
 
@@ -542,6 +559,34 @@ u32 bankGetGadgetColor(int localPlayerIndex, int gadgetId)
 }
 
 //--------------------------------------------------------------------------
+u32 bankGetOmegaModColor(int omegaMod)
+{
+  switch (omegaMod)
+  {
+    case OMEGA_MOD_NAPALM: return hudGetTeamColor(TEAM_ORANGE, 1);
+    case OMEGA_MOD_TIME_BOMB: return hudGetTeamColor(TEAM_BLUE, 0);
+    case OMEGA_MOD_FREEZE: return hudGetTeamColor(TEAM_BLUE, 3);
+    case OMEGA_MOD_MINI_BOMB: return hudGetTeamColor(TEAM_WHITE, 2);
+    case OMEGA_MOD_MORPH: return hudGetTeamColor(TEAM_PURPLE, 0);
+    case OMEGA_MOD_BRAINWASH: return hudGetTeamColor(TEAM_ORANGE, 0);
+    case OMEGA_MOD_ACID: return hudGetTeamColor(TEAM_GREEN, 1);
+    case OMEGA_MOD_SHOCK: return hudGetTeamColor(TEAM_AQUA, 0);
+    case RAIDS_WEAPON_MOD_WILL_O_WISP: return hudGetTeamColor(TEAM_RED, 1);
+    case RAIDS_WEAPON_MOD_LIGHTFOOT: return hudGetTeamColor(TEAM_WHITE, 0);
+    default: return 0;
+  }
+}
+
+//--------------------------------------------------------------------------
+u32 bankGetWeaponOmegaModColor(RaidsInventoryItem_t* item)
+{
+  if (!item) return 0;
+  if (!bankItemIsWeapon(item)) return 0;
+
+  return bankGetOmegaModColor(item->WeaponData.ModType);
+}
+
+//--------------------------------------------------------------------------
 float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect)
 {
   struct RaidsState* state = MapConfig.State;
@@ -560,16 +605,19 @@ float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effec
 }
 
 //--------------------------------------------------------------------------
-int bankGetEquippedWeaponModStrength(int playerId, int gadgetId, enum RaidsWeaponModType modType)
+int bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType)
 {
   struct RaidsState* state = MapConfig.State;
-  if (!state) return 0;
+  if (!state) return -1;
 
-  RaidsInventoryItem_t* weapon = &state->PlayerStates[playerId].Inventory.Items[gadgetId];
-  if (!weapon || weapon->Type != RAIDS_ITEM_WEAPON) return 0;
-  if (weapon->WeaponData.ModType != modType) return 0;
+  int slotId = bankGetEquipSlotFromGadgetId(gadgetId);
+  if (slotId < 0) return -1;
 
-  return weapon->WeaponData.ModStrength;
+  RaidsInventoryItem_t* weapon = &state->PlayerStates[playerId].Inventory.Items[slotId];
+  if (!weapon || weapon->Type != RAIDS_ITEM_WEAPON) return -1;
+  if (weapon->WeaponData.ModType != modType) return -1;
+
+  return (int)bankGetRarityFromQuality(weapon->WeaponData.ModQuality);
 }
 
 //--------------------------------------------------------------------------
@@ -601,7 +649,8 @@ float bankGetArbiterNapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_ARBITER);
   if (!bankWeapon) return 0;
 
-  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_ARBITER, RAIDS_WEAPON_MOD_NAPALM) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC * strength;
 }
 
 float bankGetArbiterMinibombDamage(Player* player)
@@ -609,7 +658,8 @@ float bankGetArbiterMinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_ARBITER);
   if (!bankWeapon) return 0;
 
-  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_ARBITER, RAIDS_WEAPON_MOD_MINI_BOMB) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC * strength;
 }
 
 //--------------------------------------------------------------------------
@@ -618,6 +668,7 @@ float bankGetMineLauncherNapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_MINE_LAUNCHER);
   if (!bankWeapon) return 0;
 
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_MINE_LAUNCHER, RAIDS_WEAPON_MOD_NAPALM) + 1;
   return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
@@ -627,6 +678,7 @@ float bankGetMineLauncherMinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_MINE_LAUNCHER);
   if (!bankWeapon) return 0;
 
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_MINE_LAUNCHER, RAIDS_WEAPON_MOD_MINI_BOMB) + 1;
   return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
@@ -636,6 +688,7 @@ float bankGetB6NapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_B6);
   if (!bankWeapon) return 0;
 
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_B6, RAIDS_WEAPON_MOD_NAPALM) + 1;
   return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
@@ -645,6 +698,7 @@ float bankGetB6MinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_B6);
   if (!bankWeapon) return 0;
 
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_B6, RAIDS_WEAPON_MOD_MINI_BOMB) + 1;
   return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
@@ -788,7 +842,7 @@ void bankApplyItem(Player* player, RaidsInventoryItem_t* item)
     playerGiveWeapon(gbox, gadgetId, 0, 1);
     bankTryAddGadgetToQuickSelect(player, gadgetId);
   }
-  gbox->Gadgets[gadgetId].Level = bankGetRarityFromQuality(item->Quality) >= RAIDS_ITEM_RARITY_LEGENDARY ? 9 : 0;
+  gbox->Gadgets[gadgetId].Level = bankGetRarityFromQuality(item->Quality) > RAIDS_ITEM_RARITY_LEGENDARY ? 9 : 0;
   gbox->Gadgets[gadgetId].UNK_10 = (gbox->Gadgets[gadgetId].UNK_10 & 0xFF) | (rarity << 8) | (item->WeaponData.Proficiency << 16);
   gbox->Gadgets[gadgetId].Experience = (int)(bankGetWeaponXpProgressFromGadgetBox(gbox, gadgetId) * 100000);
 
@@ -799,10 +853,7 @@ void bankApplyItem(Player* player, RaidsInventoryItem_t* item)
   }
 
   // apply weapon omega mod
-  if (item->WeaponData.ModType > RAIDS_WEAPON_MOD_NONE && item->WeaponData.ModType <= RAIDS_WEAPON_MOD_SHOCK)
-    gbox->Gadgets[gadgetId].OmegaMod = item->WeaponData.ModType;
-  else
-    gbox->Gadgets[gadgetId].OmegaMod = OMEGA_MOD_EMPTY;
+  gbox->Gadgets[gadgetId].OmegaMod = item->WeaponData.ModType;
 }
 
 //--------------------------------------------------------------------------
@@ -990,6 +1041,7 @@ void bankInit(void)
   POKE_U8(0x00171b66, 1); // challenge mode
   HOOK_J_OP(0x00627600, &bankGetGadgetDamage, 0);
   HOOK_J_OP(0x00542078, &bankGetGadgetColor, 0);
+  HOOK_J_OP(0x00541fd0, &bankGetOmegaModColor, 0);
   //HOOK_JAL(0x003F29AC, &bankGetArbiterSpeed);
   //POKE_U32(0x003F2984, 0x0240202D);
   HOOK_J(0x006299A8, &bankGetAlphaModCount);

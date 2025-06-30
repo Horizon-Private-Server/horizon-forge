@@ -62,7 +62,7 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource sourc
   if (killedByPlayerId >= 0) {
     Player* killedByPlayer = playerGetAll()[killedByPlayerId];
     int weaponId = getWeaponIdFromDamageSource(source);
-    int modStrength = bankGetEquippedWeaponModStrength(killedByPlayerId, weaponId, RAIDS_WEAPON_MOD_WILL_O_WISP);
+    int modStrength = bankGetEquippedWeaponModRarity(killedByPlayerId, weaponId, RAIDS_WEAPON_MOD_WILL_O_WISP) + 1;
     if (killedByPlayer && modStrength > 0) {
       u32 damageFlags = mobAmIOwner(moby) ? 0x00081801 : 0;
       float radius = modStrength * BADGES_EXPLODINGENEMIES_RADIUS_MULT;

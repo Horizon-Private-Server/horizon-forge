@@ -66,6 +66,13 @@ void levelselectGo(LevelselectDrawState_t* drawState)
     return;
   }
 
+  // force to 1 star difficulty for non-raids
+  int missionType = drawState->SelectedMapExtraData.MissionType;
+  int isBossRaid = missionType == RAIDS_MISSION_RAID;
+  if (!isBossRaid) {
+    drawState->SelectedDifficulty = 0;
+  }
+
 #if !DEBUG
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   int cost = drawState->SelectedMapExtraData.Cost[drawState->SelectedDifficulty];
@@ -268,7 +275,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
   u32 yellowColor = 0x8000C0C0;
   u32 greenColor = 0x8000C000;
   const int authorHeight = 16;
-  const int missionTypeHeight = 16;
+  const int missionTypeHeight = 0; //16;
   const int descHeight = 128;
   const int progressHeight = 40;
   const int difficultySelectHeight = 32;
@@ -282,18 +289,14 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
   char strBuf[128];
   int missionType = levelselectDrawState.SelectedMapExtraData.MissionType;
   int isBossRaid = missionType == RAIDS_MISSION_RAID;
+  int difficulty = isBossRaid ? levelselectDrawState.SelectedDifficulty : 0;
 
   if (levelselectDrawState.NumPlanets > 0 && levelselectDrawState.SelectedMapFilename[0]) {
-
-    // force to 1 star difficulty
-    if (!isBossRaid) {
-      levelselectDrawState.SelectedDifficulty = 0;
-    }
 
     RaidsPlayerBank_t* localBank = bankGetLocalBank();
     int level = bankGetLevel();
     char selectChar = gameAmIHost() ? '\x10' : '\x08';
-    int cost = levelselectDrawState.SelectedMapExtraData.Cost[levelselectDrawState.SelectedDifficulty];
+    int cost = levelselectDrawState.SelectedMapExtraData.Cost[difficulty];
     int canAfford = cost <= localBank->Account.Bolts;
     int hasMinLevel = (level + 1) >= levelselectDrawState.SelectedMapExtraData.MinPlayerLevel;
 
@@ -305,11 +308,11 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
     windowDrawText(&windowAuthor, TEXT_ALIGN_MIDDLELEFT, 5, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
     
     // mission type
-    Window_t windowMissionType;
-    windowCreateFrom(&windowMissionType, drawWindow, 0, authorHeight, drawWindow->Width, missionTypeHeight, TEXT_ALIGN_TOPLEFT);
-    windowFill(&windowMissionType, 0x70000040);
-    snprintf(strBuf, sizeof(strBuf), "Mission Type: %s", levelselectMissionTypes[missionType]);
-    windowDrawTextWindow(&windowMissionType, TEXT_ALIGN_TOPLEFT, 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
+    //Window_t windowMissionType;
+    //windowCreateFrom(&windowMissionType, drawWindow, 0, authorHeight, drawWindow->Width, missionTypeHeight, TEXT_ALIGN_TOPLEFT);
+    //windowFill(&windowMissionType, 0x70000040);
+    //snprintf(strBuf, sizeof(strBuf), "Mission Type: %s", levelselectMissionTypes[missionType]);
+    //windowDrawTextWindow(&windowMissionType, TEXT_ALIGN_TOPLEFT, 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
     
     // description
     Window_t windowDescription;
@@ -344,7 +347,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
 
     // best time
     if (isBossRaid && cost >= 0) {
-      int bestTimeMs = levelselectDrawState.MapStats.BestTimeMsPerDifficulty[levelselectDrawState.SelectedDifficulty];
+      int bestTimeMs = levelselectDrawState.MapStats.BestTimeMsPerDifficulty[difficulty];
       int bestTimeSeconds = bestTimeMs / 1000;
       int bestTimeMinutes = bestTimeSeconds / 60;
       if (bestTimeMs > 0) {
@@ -452,7 +455,8 @@ void levelselectDraw(void)
       PATCH_INTEROP->ReadCustomMapExtraData(def->Filename, levelselectDrawState.SelectedMapExtraDataBuf, sizeof(levelselectDrawState.SelectedMapExtraDataBuf), CUSTOM_MODE_RAIDS);
       levelselectDrawState.MapStats.ChallengesCount = levelselectDrawState.SelectedMapExtraData.ChallengesCount;
       levelselectDrawState.MapStats.CollectiblesCount = levelselectDrawState.SelectedMapExtraData.CollectiblesCount;
-      bankRequestMapStats(def->Filename, &levelselectDrawState.MapStats);
+      int missionType = levelselectDrawState.SelectedMapExtraData.MissionType;
+      bankRequestMapStats(def->Filename, &levelselectDrawState.MapStats, missionType);
     }
   }
 

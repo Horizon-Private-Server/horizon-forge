@@ -31,6 +31,24 @@ void windowMove(Window_t* out, float x, float y)
 }
 
 //--------------------------------------------------------------------------
+void windowCrop(Window_t* out, float left, float top, float right, float bottom)
+{
+  if (left < 0) left = 0;
+  if (top < 0) top = 0;
+  if (right < 0) right = 0;
+  if (bottom < 0) bottom = 0;
+
+  out->Position[0] += left;
+  out->Position[1] += top;
+
+  out->Width -= (left + right);
+  out->Height -= (top + bottom);
+
+  if (out->Width < 0) out->Width = 0;
+  if (out->Height < 0) out->Height = 0;
+}
+
+//--------------------------------------------------------------------------
 void windowResolve(float* x, float *y, Window_t* window, float offsetX, float offsetY, enum TextAlign alignment)
 {
   *x = window->WindowPoint[0] + window->Position[0] + offsetX;
@@ -155,4 +173,38 @@ void windowCreate(Window_t* out, float anchorX, float anchorY, float offsetX, fl
   out->Width = width;
   out->Height = height;
   out->AnchorAlign = anchorAlignment;
+}
+
+//--------------------------------------------------------------------------
+void windowDrawDialog(Window_t* drawWindow, char* titleStr, char* subtitleStr, char* bodyStr, char* buttonStr)
+{
+  u32 textColor = 0x80FFFFFF; // white
+  Window_t window;
+  windowCreateFrom(&window, drawWindow, 0, 0, drawWindow->Width - 6, drawWindow->Height, TEXT_ALIGN_MIDDLECENTER);
+
+  // draw frame
+  windowFill(drawWindow, 0x80101030);
+  windowBorder(drawWindow, 0x80000000, 2, 2, 2, 2);
+
+  // draw title text
+  if (titleStr) {
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.9, textColor, titleStr, -1, TEXT_ALIGN_TOPCENTER);
+    windowMove(&window, 0, 20);
+    window.Height -= 20;
+  }
+
+  // draw subtitle text
+  if (subtitleStr) {
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 20, 0.7, textColor, subtitleStr, -1, TEXT_ALIGN_TOPCENTER);
+    windowMove(&window, 0, 14);
+    window.Height -= 14;
+  }
+  
+  // draw body text
+  if (bodyStr) {
+    windowDrawTextWindow(&window, TEXT_ALIGN_TOPCENTER, 0, 0, 0.75, textColor, bodyStr, -1, TEXT_ALIGN_TOPCENTER);
+  }
+  
+  // footer buttons
+  windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMCENTER, 0, -4, 0.9, textColor, buttonStr, -1, TEXT_ALIGN_BOTTOMCENTER);
 }

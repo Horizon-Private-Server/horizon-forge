@@ -155,8 +155,6 @@ void leviathanPostUpdate(Moby* moby)
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.5;
 	float animSpeed = baseSpeed;
-  if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
-
   if (moby->AnimSeqId == LEVIATHAN_ANIM_JUMP) {
     animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
     if (pvars->MobVars.MoveVars.Grounded) {

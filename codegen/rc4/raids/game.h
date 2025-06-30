@@ -76,7 +76,7 @@
 #define MOB_POSTFX_ACID_FREQ_TICKS            ((int)(TPS * 0.5))
 #define MOB_POSTFX_ACID_DMG_PERC              (0.05)
 #define MOB_POSTFX_FREEZE_DUR_TICKS           (TPS * 5)
-#define MOB_POSTFX_FREEZE_FACTOR              (0.75)
+#define MOB_POSTFX_FREEZE_FACTOR              (0.10)
 #define MOB_POSTFX_NAPALM_DMG_PERC            (0.10)
 #define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.25)
 
@@ -85,7 +85,8 @@
 #define NANOLEECH_HEALTH											(5)
 #define NANOLEECH_CHANCE											(0.01)
 
-#define LEVELUP_MAX_LEVEL                     (98)
+#define LEVELUP_MAX_PROF_LEVEL                (98)
+#define LEVELUP_MAX_PLAYER_LEVEL              (98)
 #define LEVELUP_PLAYER_LINEAR_FACTOR          (100)
 #define LEVELUP_PLAYER_STEP_FACTOR            (50)
 #define LEVELUP_PLAYER_STEP_EVERY             (10)

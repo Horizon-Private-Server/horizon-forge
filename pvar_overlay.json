@@ -3414,12 +3414,12 @@
         "Offset": 72
       },
       {
-        "Name": "Limit Despawn Percent",
+        "Name": "Despawn Radius",
         "DataType": "Float",
-        "Tooltip": "Limits despawn logic to never despawn more than this percent of mobs.",
+        "Tooltip": "How far a mob from this spawner can be from any player before it can be despawned.\n0 = default controlled by Raids Mode.",
         "Offset": 76,
         "Min": 0,
-        "Max": 1
+        "Default": 50
       },
       {
         "Name": "Emission",

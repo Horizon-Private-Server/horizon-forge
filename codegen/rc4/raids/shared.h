@@ -76,6 +76,7 @@ int mobIsProjectileComing(Moby* moby);
 
 int mobCollisionIdIsLethal(int collisionId);
 int mobCollisionIdIsWalkable(int collisionId);
+float mobGetFreezeSpeedFactor(Moby* moby);
 
 void mobInit(void);
 void mobTick(void);
