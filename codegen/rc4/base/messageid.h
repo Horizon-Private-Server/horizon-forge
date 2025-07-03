@@ -348,6 +348,31 @@ enum CustomMessageId
     CUSTOM_MSG_ID_RAIDS_RESET_ACCOUNT_REQUEST = 63,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_CONTRACTS_REQUEST = 64,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_ACTION_CONTRACT_REQUEST = 65,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_UPDATE_CONTRACT_STATS_REQUEST = 66,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_METADATA_REQUEST = 67,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST = 68,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,

@@ -34,12 +34,16 @@ struct BankVTable bankVTable = {
   .RequestEquippedInventoryFromServer = &bankRequestEquippedInventoryFromServer,
   .RequestAccountFromServer = &bankRequestAccountFromServer,
   .SendAccountToServer = &bankSendAccountToServer,
+  .RequestContractsFromServer = &bankRequestContractsFromServer,
+  .SendContractStatsToServer = &bankSendContractStatsToServer,
   .RequestMapStats = &bankRequestMapStats,
 
   .GetHasEquippedInventory = &bankGetHasEquippedInventory,
   .HasPendingEquippedInventoryRequest = &bankHasPendingEquippedInventoryRequest,
   .GetHasAccount = &bankGetHasAccount,
   .HasPendingAccountRequest = &bankHasPendingAccountRequest,
+  .GetHasContracts = &bankGetHasContracts,
+  .HasPendingContractsRequest = &bankHasPendingContractsRequest,
 
   .GetXP = &bankGetXP,
   .AddXP = &bankAddXP,
@@ -75,8 +79,10 @@ u32 bankPaintColors[] = {
 
 int bankHasEquippedInventory = 0;
 int bankHasAccount = 0;
+int bankHasContracts = 0;
 long bankLastEquippedInventoryRequestTime = 0;
 long bankLastAccountRequestTime = 0;
+long bankLastContractsRequestTime = 0;
 char bankLevelUpBuf[64];
 
 char bankRarityCode[] = {
@@ -194,6 +200,19 @@ int bankHasPendingAccountRequest(void)
 }
 
 //--------------------------------------------------------------------------
+int bankGetHasContracts(void)
+{
+  return bankHasContracts;
+}
+
+//--------------------------------------------------------------------------
+int bankHasPendingContractsRequest(void)
+{
+  long dtMs = (timerGetSystemTime() - bankLastContractsRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
+  return bankLastContractsRequestTime && dtMs < (2*TIME_SECOND);
+}
+
+//--------------------------------------------------------------------------
 void bankRequestEquippedInventoryFromServer(void)
 {
   void* connection = netGetLobbyServerConnection();
@@ -291,7 +310,55 @@ void bankRequestAccountReset(void)
 }
 
 //--------------------------------------------------------------------------
-void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest, int missionType)
+void bankRequestContractsFromServer(void)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  struct RaidsGetContractsRequest msg = {
+    .DestAddress = (u32)&bankLocalBank.Contracts,
+    .DestHasFlagAddress = (u32)&bankHasContracts,
+  };
+
+  // when requesting contracts
+  // we want to avoid a situation where our local progress is overwritten by the server
+  // so send the current stats over to make sure the server has the latest
+  if (bankHasContracts) {
+    int i;
+    for (i = 0; i < BANK_MAX_CONTRACTS; ++i) {
+      RaidsContract_t* contract = &bankLocalBank.Contracts[i];
+      if (!contract->Uid || !contract->Activated) continue;
+
+      msg.ContractStats[i].ContractUid = contract->Uid;
+      msg.ContractStats[i].Kills = contract->Kills;
+      msg.ContractStats[i].CompletedTimeMs = contract->CompletedTimeMs;
+    }
+  }
+
+  bankLastContractsRequestTime = timerGetSystemTime();
+  bankHasContracts = 0;
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_CONTRACTS_REQUEST, sizeof(msg), &msg);
+  DPRINTF("request contracts\n");
+}
+
+//--------------------------------------------------------------------------
+void bankSendContractStatsToServer(RaidsContract_t* contract)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+  if (!contract) return;
+
+  struct RaidsUpdateContractStatsRequest msg = {
+    .ContractUid = contract->Uid,
+    .Kills = contract->Kills,
+    .CompletedTimeMs = contract->CompletedTimeMs
+  };
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_CONTRACT_STATS_REQUEST, sizeof(msg), &msg);
+  DPRINTF("send contract stats\n");
+}
+
+//--------------------------------------------------------------------------
+void bankRequestMapStats(char* mapFilename, char* mapName, struct RaidsBankMapStats* dest, int missionType)
 {
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   if (!localBank) return;
@@ -306,6 +373,7 @@ void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest, int 
   };
 
   strncpy(msg.MapFilename, mapFilename, sizeof(msg.MapFilename));
+  strncpy(msg.MapName, mapName, sizeof(msg.MapName));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_GET_MAP_STATS_REQUEST, sizeof(msg), &msg);
 }
 
@@ -324,6 +392,46 @@ void bankSendMapStats(struct RaidsBankMapStats* mapStats)
   strncpy(msg.MapFilename, mapStats->MapFilename, sizeof(msg.MapFilename));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_SET_MAP_STATS_REQUEST, sizeof(msg), &msg);
   DPRINTF("sent map stats\n");
+}
+
+//--------------------------------------------------------------------------
+int bankSendMapContractRules(void)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return 0;
+  if (!MapConfig.State || !MapConfig.State->CurrentMapDef || !MapConfig.State->CurrentMapDef->Filename[0]) return 0;
+
+  struct RaidsBankUpdateMapContractRulesRequest
+  {
+    char MapFilename[64];
+    struct RaidsMobContractRule ContractRules[16];
+  };
+
+  struct RaidsBankUpdateMapContractRulesRequest msg;
+  memset(&msg, 0, sizeof(msg));
+  strncpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+  memcpy(msg.ContractRules, MapConfig.MobContractRules, sizeof(struct RaidsMobContractRule) * MapConfig.MobContractRulesCount);
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST, sizeof(msg), &msg);
+  DPRINTF("bankSendMapContractRules\n");
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+void bankSendMapMobMetadata(int mobOClass, int difficultyStars)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+  if (!isInGame() || !missionIsActive()) return;
+  if (!MapConfig.State) return;
+  if (!MapConfig.State->CurrentMapDef) return;
+
+  struct RaidsBankUpdateMapMetadataRequest msg = {
+    .AddMobOClass = mobOClass,
+    .AddMobOClassAtDifficulty = difficultyStars
+  };
+  strncpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_METADATA_REQUEST, sizeof(msg), &msg);
+  DPRINTF("bankSendMapMobMetadata\n");
 }
 
 //--------------------------------------------------------------------------
@@ -1011,6 +1119,11 @@ void bankOnResurrectGiveMeRandomWeapons(Player* player, int weaponCount)
 void bankTick(void)
 {
   int i;
+
+  static int sentContractRules = 0;
+  if (!sentContractRules) {
+    sentContractRules = bankSendMapContractRules();
+  }
 
   // handle new inventory change
   if (bankLocalBank.EquippedInventory.RefreshLocalInventory) {

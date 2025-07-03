@@ -456,7 +456,7 @@ void levelselectDraw(void)
       levelselectDrawState.MapStats.ChallengesCount = levelselectDrawState.SelectedMapExtraData.ChallengesCount;
       levelselectDrawState.MapStats.CollectiblesCount = levelselectDrawState.SelectedMapExtraData.CollectiblesCount;
       int missionType = levelselectDrawState.SelectedMapExtraData.MissionType;
-      bankRequestMapStats(def->Filename, &levelselectDrawState.MapStats, missionType);
+      bankRequestMapStats(def->Filename, def->Name, &levelselectDrawState.MapStats, missionType);
     }
   }
 

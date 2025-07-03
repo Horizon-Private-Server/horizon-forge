@@ -9,6 +9,7 @@
 #include <libdl/math3d.h>
 
 #define BANK_MAX_ITEMS                 (64)
+#define BANK_MAX_CONTRACTS             (3)
 #define BANK_UPDATE_SIZE               (16)
 #define BANK_BADGE_EFFECT_COUNT        (8)
 
@@ -124,6 +125,40 @@ typedef struct RaidsInventoryItem
   };
 } RaidsInventoryItem_t;
 
+typedef struct RaidsContract {
+  u32 Uid;
+  int Activated;
+  int RequiredDifficultyStars;
+
+  // kills to complete
+  u32 RequiredKills;
+  int RequiredKillsMobOClass;
+  int RequiredKillsGadgetId;
+
+  // if raid - time to complete
+  u32 RequiredRaidTimeMs;
+
+  // reward
+  u32 RewardBolts;
+  u32 RewardPlayerXp;
+  u32 RewardWeaponXp;
+
+  // expiration
+  int RefreshInMinutes;
+  int ExpiresInMinutes;
+
+  // stats
+  u32 Kills;
+  u32 CompletedTimeMs;
+
+  // map
+  char MapFilename[64];
+  char MapName[32];
+  
+  // corresponding RequiredKillsMobOClass mob name
+  char MobName[32];
+} RaidsContract_t;
+
 typedef struct RaidsPlayerInventoryPage
 {
   RaidsInventoryItem_t Items[BANK_MAX_ITEMS];
@@ -155,6 +190,7 @@ typedef struct RaidsPlayerBank
 {
   RaidsPlayerAccount_t Account;
   RaidsPlayerEquippedInventory_t EquippedInventory;
+  RaidsContract_t Contracts[BANK_MAX_CONTRACTS];
 } RaidsPlayerBank_t;
 
 struct RaidsGetBankRequest
@@ -164,6 +200,20 @@ struct RaidsGetBankRequest
   u32 DestTimeFlagAddress;
   int Filter;
   int Page;
+};
+
+struct RaidsUpdateContractStatsRequest
+{
+  u32 ContractUid;
+  u32 Kills;
+  u32 CompletedTimeMs;
+};
+
+struct RaidsGetContractsRequest
+{
+  u32 DestAddress;
+  u32 DestHasFlagAddress;
+  struct RaidsUpdateContractStatsRequest ContractStats[BANK_MAX_CONTRACTS];
 };
 
 struct RaidsUpdateBankInventoryItemRequest
@@ -188,6 +238,7 @@ struct RaidsBankGetMapStatsRequest
   int ChallengesCount;
   int MissionType;
   char MapFilename[64];
+  char MapName[32];
 };
 
 struct RaidsBankMapStats
@@ -209,6 +260,13 @@ struct RaidsBankSetMapStatsRequest
   int ChallengesCount;
   u32 ChallengesMask;
   char MapFilename[64];
+};
+
+struct RaidsBankUpdateMapMetadataRequest
+{
+  char MapFilename[64];
+  int AddMobOClass;
+  int AddMobOClassAtDifficulty;
 };
 
 struct RaidsBankSetPlayerEquippedInventoryMsg
@@ -235,12 +293,17 @@ typedef void (*BankSendInventoryItemToServer_func)(RaidsInventoryItem_t* item, e
 typedef void (*BankRequestEquippedInventoryFromServer_func)(void);
 typedef void (*BankRequestAccountFromServer_func)(void);
 typedef void (*BankSendAccountToServer_func)(void);
-typedef void (*BankRequestMapStats_func)(char* mapFilename, struct RaidsBankMapStats* dest, int missionType);
+typedef void (*BankRequestContractsFromServer_func)(void);
+typedef void (*BankSendContractStatsToServer_func)(RaidsContract_t* contract);
+typedef void (*BankRequestMapStats_func)(char* mapFilename, char* mapName, struct RaidsBankMapStats* dest, int missionType);
 
 typedef int (*BankGetHasEquippedInventory_func)(void);
 typedef int (*BankHasPendingEquippedInventoryRequest_func)(void);
 typedef int (*BankGetHasAccount_func)(void);
 typedef int (*BankHasPendingAccountRequest_func)(void);
+typedef int (*BankGetHasContracts_func)(void);
+typedef int (*BankHasPendingContractsRequest_func)(void);
+
 
 typedef u64 (*BankGetXP_func)(void);
 typedef u64 (*BankAddXP_func)(u64 amt);
@@ -265,12 +328,16 @@ struct BankVTable
   BankRequestEquippedInventoryFromServer_func RequestEquippedInventoryFromServer;
   BankRequestAccountFromServer_func RequestAccountFromServer;
   BankSendAccountToServer_func SendAccountToServer;
+  BankRequestContractsFromServer_func RequestContractsFromServer;
+  BankSendContractStatsToServer_func SendContractStatsToServer;
   BankRequestMapStats_func RequestMapStats;
 
   BankGetHasEquippedInventory_func GetHasEquippedInventory;
   BankHasPendingEquippedInventoryRequest_func HasPendingEquippedInventoryRequest;
   BankGetHasAccount_func GetHasAccount;
   BankHasPendingAccountRequest_func HasPendingAccountRequest;
+  BankGetHasContracts_func GetHasContracts;
+  BankHasPendingContractsRequest_func HasPendingContractsRequest;
   
   BankGetXP_func GetXP;
   BankAddXP_func AddXP;
@@ -286,6 +353,8 @@ int bankGetHasEquippedInventory(void);
 int bankHasPendingEquippedInventoryRequest(void);
 int bankGetHasAccount(void);
 int bankHasPendingAccountRequest(void);
+int bankGetHasContracts(void);
+int bankHasPendingContractsRequest(void);
 
 int bankItemIsWeapon(RaidsInventoryItem_t* item);
 int bankItemIsBadge(RaidsInventoryItem_t* item);
@@ -308,8 +377,11 @@ void bankRequestEquippedInventoryFromServer(void);
 void bankRequestAccountFromServer(void);
 void bankSendAccountToServer(void);
 void bankRequestAccountReset(void);
-void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest, int missionType);
+void bankRequestContractsFromServer(void);
+void bankSendContractStatsToServer(RaidsContract_t* contract);
+void bankRequestMapStats(char* mapFilename, char* mapName, struct RaidsBankMapStats* dest, int missionType);
 void bankSendMapStats(struct RaidsBankMapStats* mapStats);
+void bankSendMapMobMetadata(int mobOClass, int difficultyStars);
 
 RaidsPlayerBank_t* bankGetLocalBank(void);
 RaidsInventoryItem_t* bankGetLocalItemFromBank(int index);

@@ -5744,5 +5744,132 @@
         "Offset": 44
       }
     ]
+  },
+  {
+    "Name": "Platform Flipper",
+    "RCVersion": 4,
+    "MobyOClass": 8432,
+    "Length": 64,
+    "States": {
+      "Destroyed": -1,
+      "Up": 0,
+      "Down": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "Options": {
+          "Up": 0,
+          "Down": 1
+        }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Type",
+        "DataType": "Enum",
+        "Offset": 2,
+        "Options": {
+          "Static": 0,
+          "Hover": 1,
+          "Flip": 2,
+          "Fall": 3
+        }
+      },
+      {
+        "Name": "Delay (seconds)",
+        "Tooltip": "Can be used to have a sequence of platforms run at different times.",
+        "DataType": "Float",
+        "Offset": 28,
+        "Default": 0,
+        "Min": 0
+      },
+      {
+        "Name": "Flip After (seconds)",
+        "Tooltip": "0 = no flip",
+        "DataType": "Float",
+        "Offset": 32,
+        "Default": 5,
+        "Min": 0
+      },
+      {
+        "Name": "Unflip After (seconds)",
+        "Tooltip": "0 = no unflip",
+        "DataType": "Float",
+        "Offset": 36,
+        "Default": 0.1,
+        "Min": 0
+      },
+      {
+        "Name": "Fall Distance",
+        "DataType": "Float",
+        "Offset": 40,
+        "Default": 50
+      },
+      {
+        "Name": "Fall Reset Time (seconds)",
+        "Tooltip": "0 = no reset",
+        "DataType": "Float",
+        "Offset": 44,
+        "Default": 5,
+        "Min": 0
+      }
+    ]
+  },
+  {
+    "Name": "Platform Pivot",
+    "RCVersion": 4,
+    "MobyOClass": 9355,
+    "Length": 64,
+    "States": {
+      "Destroyed": -1,
+      "On": 0,
+      "Off": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "Options": {
+          "On": 0,
+          "Off": 1
+        }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
+        "Name": "Pivot Factor",
+        "Tooltip": "Relative amount of rotation applied when player(s) are on top. Default is 1.",
+        "DataType": "Float",
+        "Offset": 28,
+        "Default": 1,
+        "Min": 0
+      },
+      {
+        "Name": "Sink Distance",
+        "Tooltip": "Distance platform will sink with player(s) on top.",
+        "DataType": "Float",
+        "Offset": 32,
+        "Default": 1,
+        "Min": 0
+      },
+      {
+        "Name": "Sink Speed",
+        "Tooltip": "Speed platform will sink with player(s) on top.",
+        "DataType": "Float",
+        "Offset": 36,
+        "Default": 1,
+        "Min": 0
+      }
+    ]
   }
 ]

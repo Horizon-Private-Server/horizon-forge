@@ -23,6 +23,7 @@ public class BezierSpline : Spline
     [Range(0f, 0.99f)]
     public float Curvature = 0f;
     public bool Loop = false;
+    public bool RemoveLastVertex = false;
 
     [ReadOnly] public int ComputedNumPoints = 0;
 
@@ -129,16 +130,21 @@ public class BezierSpline : Spline
 
         // add vertices
         Vertices.Clear();
-        for (int i = 0; i < (path.Length - 1); ++i)
+        var count = path.Length - (RemoveLastVertex ? 1 : 0);
+        for (int i = 0; i < count; ++i)
         {
+            var nextI = i + 1;
             var pos = path[i];
-            var pos2 = path[i + 1];
+            var pos2 = nextI >= count ? path[0] : path[nextI];
+            if (nextI >= count && !Loop) pos2 = pos;
+            var tan = (pos2 - pos).normalized;
+            if (tan == Vector3.zero) tan = i > 0 ? (path[i] - path[i - 1]).normalized : this.transform.forward;
             var go = new GameObject(i.ToString());
             var vertex = go.AddComponent<SplineVertex>();
             go.transform.SetParent(this.transform.transform, false);
 
             go.transform.position = pos;
-            go.transform.rotation = Quaternion.LookRotation((pos2 - pos).normalized, Vector3.up);
+            go.transform.rotation = Quaternion.LookRotation(tan, Vector3.up);
             go.hideFlags = HideFlags.HideAndDontSave;
 
             Vertices.Add(vertex);
@@ -462,12 +468,16 @@ public class BezierSpline : Spline
 
         var path = ComputePath();
         if (path == null) return;
-
-        for (int i = 0; i < (path.Length-1); ++i)
+        
+        var count = path.Length - (RemoveLastVertex ? 1 : 0);
+        for (int i = 0; i < count; ++i)
         {
+            var nextI = i + 1;
             var pos = path[i];
-            var pos2 = path[i + 1];
+            var pos2 = nextI >= count ? path[0] : path[nextI];
+            if (nextI >= count && !Loop) pos2 = pos;
             var tan = (pos2 - pos).normalized;
+            if (tan == Vector3.zero) tan = i > 0 ? (path[i] - path[i - 1]).normalized : this.transform.forward;
             var normal = Vector3.up; // GetNormal(Points[i], Points[i + 1], t);
             var bitangent = Vector3.Cross(tan, normal);
             var rot = Quaternion.LookRotation(tan, normal);
@@ -479,6 +489,7 @@ public class BezierSpline : Spline
             if (DrawPoints)
             {
                 Gizmos.DrawSphere(pos, 0.3f);
+                Handles.Label(pos + Vector3.up * 0.4f, $"{i}");
             }
 
             // draw rotation

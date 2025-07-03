@@ -53,6 +53,8 @@ float spawnerMaxClosestDistToPlayerSqr = 0;
 int spawnerSpawnRequestsCount = 0;
 struct SpawnerSpawnRequest spawnerSpawnRequests[SPAWNER_MAX_SPAWN_REQUESTS];
 
+int spawnerIsPointNearPlayer(VECTOR position, float radius);
+
 //--------------------------------------------------------------------------
 int spawnerGetDifficultyStars(Moby* moby)
 {
@@ -546,6 +548,25 @@ void spawnerOnChildMobSpawned(Moby* moby, Moby* childMoby, u32 userdata)
 void spawnerOnChildMobKilled(Moby* moby, Moby* childMoby, u32 userdata, int killedByPlayerId, enum MobDamageSource source)
 {
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+
+  // tell server mob exists at difficulty
+  if (mobyIsMob(childMoby)) {
+    struct MobPVar* mobPVars = (struct MobPVar*)childMoby->PVar;
+    int difficultyStars = spawnerGetDifficultyStars(moby);
+    int mobOClass = childMoby->OClass;
+    int mobIdx = mobPVars->MobVars.SpawnParamsIdx;
+
+    // make sure we haven't already sent
+    static u8 mobsSentHistory[MAX_MOB_SPAWN_PARAMS] = {};
+    u8 history = mobsSentHistory[mobIdx];
+    int bit = 1 << difficultyStars;
+
+    // send
+    if ((history & bit) == 0) {
+      mobsSentHistory[mobIdx] |= bit;
+      bankSendMapMobMetadata(mobOClass, difficultyStars);
+    }
+  }
 
   // log kill
   if (killedByPlayerId >= 0) {

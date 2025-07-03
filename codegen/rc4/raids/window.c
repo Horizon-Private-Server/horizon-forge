@@ -207,4 +207,5 @@ void windowDrawDialog(Window_t* drawWindow, char* titleStr, char* subtitleStr, c
   
   // footer buttons
   windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMCENTER, 0, -4, 0.9, textColor, buttonStr, -1, TEXT_ALIGN_BOTTOMCENTER);
+  windowReset(drawWindow);
 }
