@@ -158,7 +158,12 @@ if True:
         bmesh.ops.subdivide_edges(bm, edges=edges, cuts=1, use_grid_fill=True)
         bm.edges.ensure_lookup_table()
         
-    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    # Select n-gons (faces with more than 4 verts)
+    ngon_faces = [f for f in bm.faces if len(f.verts) > 4]
+    tri_result = bmesh.ops.triangulate(bm, faces=ngon_faces, quad_method='BEAUTY', ngon_method='BEAUTY')
+    new_tris = [f for f in tri_result.get('faces', []) if f.is_valid]
+    bmesh.ops.join_triangles(bm, faces=new_tris, angle_face_threshold=0.01, angle_shape_threshold=0.785)
+    #bmesh.update_edit_mesh(obj.data)
     bm.to_mesh(root.data)
     
 
@@ -218,10 +223,11 @@ for s in remove_slots:
         bpy.ops.object.material_slot_remove()
 
 # convert tris to quads
-bpy.ops.object.mode_set(mode='EDIT')
-bpy.ops.mesh.select_all(action='SELECT')
-bpy.ops.mesh.tris_convert_to_quads()
-bpy.ops.object.mode_set(mode='OBJECT')
+# not used anymore because the subdivider uses quads
+#bpy.ops.object.mode_set(mode='EDIT')
+#bpy.ops.mesh.select_all(action='SELECT')
+#bpy.ops.mesh.tris_convert_to_quads()
+#bpy.ops.object.mode_set(mode='OBJECT')
 
 if export_filepath:
     bpy.ops.wm.collada_export(filepath=export_filepath, check_existing=False, selected=True, triangulate=False)

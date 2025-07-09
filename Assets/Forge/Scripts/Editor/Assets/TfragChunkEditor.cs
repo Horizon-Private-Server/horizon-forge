@@ -19,7 +19,7 @@ public class TfragChunkEditor : Editor
         var octantCount = targets.Sum(x => (x as TfragChunk)?.Octants?.Length ?? 0);
 
         GUILayout.Label("");
-        GUILayout.Label($"Occlusion ({octantCount} Total Octants)", EditorStyles.boldLabel);
+        GUILayout.Label($"Occlusion ({octantCount} Total Octants) (id={(target as TfragChunk).OcclusionId})", EditorStyles.boldLabel);
         TfragChunk.RenderOctants = GUILayout.Toggle(TfragChunk.RenderOctants, "Render Octants");
         GUILayout.Label("");
 

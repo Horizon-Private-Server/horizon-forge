@@ -15,12 +15,15 @@ public static class TfragHelper
     {
         var texOff = BitConverter.ToInt16(def, 0x1c);
         var texCnt = def[0x28];
+        var texIdxCnt = texIndices.Count();
         var msphereOff = BitConverter.ToInt16(def, 0x2e);
         var msphereCnt = def[0x2c];
 
         // invalid
-        if (texIndices.Count() != texCnt)
+        if (texIdxCnt == 0)
             throw new InvalidOperationException($"Attempting to set tfrag chunk texture indices of size {texIndices.Count()} for chunk with {texCnt} textures");
+        //if (texIndices.Count() != texCnt)
+        //    throw new InvalidOperationException($"Attempting to set tfrag chunk texture indices of size {texIndices.Count()} for chunk with {texCnt} textures");
 
         using (var ms = new MemoryStream(data, true))
         {
@@ -32,7 +35,7 @@ public static class TfragHelper
                 {
                     ms.Position = texOff + (i * 0x50);
                     var ogValue = BitConverter.ToInt32(data, (int)ms.Position);
-                    var newValue = texIndices.ElementAt(i);
+                    var newValue = texIndices.ElementAt(i % texIdxCnt);
                     remap.Add(ogValue, newValue);
                     writer.Write(newValue);
                 }
@@ -379,7 +382,7 @@ public static class TfragHelper
     /// <param name="quadTextures"></param>
     /// <param name="def"></param>
     /// <param name="data"></param>
-    public static void GenerateTfrag_2x2(IEnumerable<Vector3> vertices, IEnumerable<Vector3> normals, IEnumerable<Color> colors, IEnumerable<Vector2> uvs, IEnumerable<int[]> quads, IEnumerable<int> quadTextures, out byte[] def, out byte[] data)
+    public static void GenerateTfrag_2x2(IEnumerable<Vector3> vertices, IEnumerable<Vector3> normals, IEnumerable<Color> colors, IEnumerable<Vector2> uvs, IEnumerable<int[]> quads, IEnumerable<int> quadTextures, IEnumerable<bool> textureClamps, out byte[] def, out byte[] data)
     {
         data = Convert.FromBase64String(GENERATE_TFRAG_DATA_2X2);
         var header = new TfragHeader()
@@ -417,7 +420,7 @@ public static class TfragHelper
             mip_dist = short.MinValue
         };
 
-        GenerateTfrag(4, 9, GENERATE_TFRAG_DATA_2X2_STRIPOFS, GENERATE_TFRAG_DATA_2X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, header, data, out def);
+        GenerateTfrag(4, 9, GENERATE_TFRAG_DATA_2X2_STRIPOFS, GENERATE_TFRAG_DATA_2X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
     }
 
     /// <summary>
@@ -429,7 +432,7 @@ public static class TfragHelper
     /// <param name="quadTextures"></param>
     /// <param name="def"></param>
     /// <param name="data"></param>
-    public static void GenerateTfrag_1x2(IEnumerable<Vector3> vertices, IEnumerable<Vector3> normals, IEnumerable<Color> colors, IEnumerable<Vector2> uvs, IEnumerable<int[]> quads, IEnumerable<int> quadTextures, out byte[] def, out byte[] data)
+    public static void GenerateTfrag_1x2(IEnumerable<Vector3> vertices, IEnumerable<Vector3> normals, IEnumerable<Color> colors, IEnumerable<Vector2> uvs, IEnumerable<int[]> quads, IEnumerable<int> quadTextures, IEnumerable<bool> textureClamps, out byte[] def, out byte[] data)
     {
         data = Convert.FromBase64String(GENERATE_TFRAG_DATA_1X2);
         var header = new TfragHeader()
@@ -467,7 +470,7 @@ public static class TfragHelper
             mip_dist = short.MinValue
         };
 
-        GenerateTfrag(2, 6, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, header, data, out def);
+        GenerateTfrag(2, 6, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
     }
 
     /// <summary>
@@ -479,8 +482,39 @@ public static class TfragHelper
     /// <param name="quadTextures"></param>
     /// <param name="def"></param>
     /// <param name="data"></param>
-    public static void GenerateTfrag_1x1(IEnumerable<Vector3> vertices, IEnumerable<Vector3> normals, IEnumerable<Color> colors, IEnumerable<Vector2> uvs, IEnumerable<int[]> quads, IEnumerable<int> quadTextures, out byte[] def, out byte[] data)
+    public static void GenerateTfrag_1x1(IEnumerable<Vector3> vertices, IEnumerable<Vector3> normals, IEnumerable<Color> colors, IEnumerable<Vector2> uvs, IEnumerable<int[]> quads, IEnumerable<int> quadTextures, IEnumerable<bool> textureClamps, out byte[] def, out byte[] data)
     {
+        int[] VOFF = new[] { 6, 7, 4, 5 };
+
+        // put 1x1 into 1x2
+        var nVertices = new Vector3[8];
+        var nNormals = new Vector3[8];
+        var nColors = new Color[8];
+        var nUVs = new Vector2[8];
+        var nQuads = new List<int[]>();
+        for (int i = 0; i < 4; ++i)
+            nVertices[i] = vertices.ElementAt(i);
+        for (int i = 0; i < 2; ++i)
+            nVertices[i+4] = vertices.ElementAt(i + 2);
+        for (int i = 0; i < 2; ++i)
+            nVertices[i + 6] = vertices.ElementAt(i + 2) + Vector3.forward;
+        for (int i = 0; i < 4; ++i)
+        {
+            var fIdx = VOFF[i];
+
+            nNormals[fIdx] = nNormals[i] = normals.ElementAt(i);
+            nColors[fIdx] = nColors[i] = colors.ElementAt(i);
+            nColors[fIdx].a = 0;
+            nUVs[fIdx] = nUVs[i] = uvs.ElementAt(i);
+            nNormals[fIdx] = nNormals[i] = normals.ElementAt(i);
+        }
+        nQuads.Add(quads.ElementAt(0));
+        nQuads.Add(new int[4] { 4, 5, 6, 7 });
+        
+
+        GenerateTfrag_1x2(nVertices, nNormals, nColors, nUVs, nQuads, quadTextures, textureClamps, out def, out data);
+        return;
+
         data = Convert.FromBase64String(GENERATE_TFRAG_DATA_1X2);
         var header = new TfragHeader()
         {
@@ -517,11 +551,11 @@ public static class TfragHelper
             mip_dist = short.MinValue
         };
 
-        GenerateTfrag(1, 4, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, header, data, out def);
+        GenerateTfrag(1, 4, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
     }
 
-    private static void GenerateTfrag(int quadCount,
-                                      int expectedVertices,
+    private static void GenerateTfrag(int expectedQuadCount,
+                                      int expectedVertexCount,
                                       int[] stripOffsets,
                                       int[] lodPosOffsets,
                                       IEnumerable<Vector3> vertices,
@@ -530,6 +564,7 @@ public static class TfragHelper
                                       IEnumerable<Vector2> uvs,
                                       IEnumerable<int[]> quads,
                                       IEnumerable<int> quadTextures,
+                                      IEnumerable<bool> textureClamps,
                                       TfragHeader header,
                                       byte[] data,
                                       out byte[] def)
@@ -546,7 +581,7 @@ public static class TfragHelper
         List<bool> orderedQuadsIsHole = new List<bool>();
 
         // add base vertices first
-        foreach (var quad in quads.Take(quadCount))
+        foreach (var quad in quads.Take(expectedQuadCount))
         {
             for (int i = 0; i < 4; ++i)
             {
@@ -576,7 +611,7 @@ public static class TfragHelper
         }
 
         // add rest of vertices and build quads
-        foreach (var quad in quads.Take(quadCount))
+        foreach (var quad in quads.Take(expectedQuadCount))
         {
             //var isHole = false;
             var orderedQuad = new int[4];
@@ -610,7 +645,7 @@ public static class TfragHelper
                 orderedQuad[i] = vertexIdx;
             }
 
-            orderedQuadsIsHole.Add(colors.ElementAtOrDefault(quad[1]).a == 0);
+            orderedQuadsIsHole.Add(quad.All(v => colors.ElementAtOrDefault(v).a == 0));
             orderedQuads.Add(orderedQuad);
         }
 
@@ -618,8 +653,8 @@ public static class TfragHelper
         for (int i = 0; i < baseColors.Count; ++i)
             baseColors[i] /= baseCounts[i];
 
-        if (baseVertices.Count != expectedVertices)
-            throw new Exception($"Base vertices does not matched expected {expectedVertices} got {baseVertices.Count}.");
+        if (baseVertices.Count != expectedVertexCount)
+            throw new Exception($"Base vertices does not matched expected {expectedVertexCount} got {baseVertices.Count}.");
 
         using (var defMs = new MemoryStream(def, true))
         using (var dataMs = new MemoryStream(data, true))
@@ -671,7 +706,7 @@ public static class TfragHelper
                 for (int q = 0; q < orderedQuads.Count; ++q)
                 {
                     var quad = orderedQuads[q];
-                    var isHole = orderedQuadsIsHole[q];
+                    var isHole = orderedQuadsIsHole.ElementAtOrDefault(q);
                     for (int i = 0; i < 4; ++i)
                     {
                         var b = (byte)(isHole ? quad[0] : quad[i]);
@@ -712,9 +747,10 @@ public static class TfragHelper
             // clamp textures
             for (int i = 0; i < header.tex_cnt; ++i)
             {
+                var clamp = textureClamps.ElementAtOrDefault(i);
                 dataMs.Position = header.tex_ofs + (0x50 * i) + 0x20;
-                dataWriter.Write(1); // clamp U
-                dataWriter.Write(1); // clamp V
+                dataWriter.Write(clamp ? 1 : 0); // clamp U
+                dataWriter.Write(clamp ? 1 : 0); // clamp V
             }
 
             // write header
@@ -791,8 +827,31 @@ public static class TfragHelper
         if (uv.x < 0) uv.x *= 2;
         if (uv.y < 0) uv.y *= 2;
 
-        writer.Write((short)Mathf.Round(uv.x * 4096f));
-        writer.Write((short)Mathf.Round(uv.y * 4096f));
+        var uvx = Mathf.Round(uv.x * 4096f);
+        var uvy = Mathf.Round(uv.y * 4096f);
+        if (uvx > short.MaxValue)
+        {
+            Debug.LogWarning($"Tfrag UV too large {uv.x} must be <= {Mathf.FloorToInt(short.MaxValue / 4096f)}");
+            uvx = short.MaxValue;
+        }
+        else if (uvx < short.MinValue)
+        {
+            Debug.LogWarning($"Tfrag UV too small {uv.x} must be >= {Mathf.CeilToInt(short.MinValue / 4096f)}");
+            uvx = short.MinValue;
+        }
+        if (uvy > short.MaxValue)
+        {
+            Debug.LogWarning($"Tfrag UV too large {uv.y} must be <= {Mathf.FloorToInt(short.MaxValue / 4096f)}");
+            uvy = short.MaxValue;
+        }
+        else if (uvy < short.MinValue)
+        {
+            Debug.LogWarning($"Tfrag UV too small {uv.y} must be >= {Mathf.CeilToInt(short.MinValue / 4096f)}");
+            uvy = short.MinValue;
+        }
+
+        writer.Write((short)uvx);
+        writer.Write((short)uvy);
     }
 
     #endregion

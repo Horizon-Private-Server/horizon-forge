@@ -16,7 +16,10 @@ public static class TieHelper
 
         // if gc tie, we need to fix the backface culling
         if (fromRacVersion == RCVER.GC)
+        {
             FixTieGc(fixedTieData);
+            FixTieMipmaps(fixedTieData, mmin: 5, mmag: 1, lcm: 1); // LINEAR LINEAR, LINEAR, FRACTIONAL
+        }
 
         // dl ties have 16 byte header at the top of the normals data block
         if (toRacVersion == RCVER.DL)
@@ -99,6 +102,63 @@ public static class TieHelper
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        using (var ms = new MemoryStream(data, true))
+        {
+            using (var writer = new BinaryWriter(ms))
+            {
+                foreach (var patch in patches)
+                {
+                    ms.Position = patch.Item1;
+                    writer.Write(patch.Item2);
+                }
+            }
+        }
+    }
+
+    public static void FixTieMipmaps(byte[] data, uint? mmin = null, uint? mmag = null, uint? lcm = null, uint? mipLevel = null, int? bias = null)
+    {
+        List<(int, uint)> patches = new List<(int, uint)>();
+
+        using (var ms = new MemoryStream(data))
+        {
+            using (var reader = new BinaryReader(ms))
+            {
+                // correct mipmaps
+                reader.BaseStream.Position = 0x1C;
+                var adgifsOffset = reader.ReadInt32();
+                reader.BaseStream.Position = 0x0F;
+                var adgifsCount = reader.ReadByte();
+
+                for (int i = 0; i < adgifsCount; ++i)
+                {
+                    var targetOffset = adgifsOffset + (i * 0x50) + 0x10;
+
+                    // read value
+                    reader.BaseStream.Position = targetOffset;
+                    var low = reader.ReadUInt32();
+
+                    // update TEX1 to 0xFF77
+                    reader.BaseStream.Position = targetOffset + 8;
+                    var destAddr = reader.ReadByte();
+
+                    if (destAddr == 0x14)
+                    {
+                        var newLow = low;
+                        if (mmin.HasValue) newLow = (uint)((low & ~0b11100) | ((mmin.Value & 7) << 2));  // MMIN
+                        if (mmag.HasValue) newLow = (uint)((newLow & ~0b100000) | ((mmag.Value & 1) << 5)); // MMAG
+                        if (mipLevel.HasValue) newLow = (uint)((newLow & ~0b11000000) | ((mipLevel.Value & 3) << 6)); // MIPLEVEL
+                        if (lcm.HasValue) newLow = (uint)((newLow & ~0b1) | ((lcm.Value & 1) << 0)); // LCM
+                        //if (bias.HasValue)
+                        //{
+                        //    var biasValue = (int)Math.Clamp(bias.Value, -8, 7);
+                        //    newLow = (uint)((newLow & ~0b11110000000000) | ((uint)(biasValue & 15) << 10)); // BIAS
+                        //}
+                        patches.Add((targetOffset, newLow));
                     }
                 }
             }

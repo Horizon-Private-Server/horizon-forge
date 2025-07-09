@@ -32,7 +32,7 @@ public static class TerrainHelper
 
             foreach (var tex in terrainData.alphamapTextures)
                 if (tex)
-                    hash.Append(tex.GetPixelBilinear(x, y));
+                    hash = hash.Append(tex.GetPixelBilinear(x, y));
         }
         hash.Append(sum);
 
@@ -52,6 +52,7 @@ public static class TerrainHelper
     {
         var hash = terrainCollider.terrainData.ComputeHash();
         hash.Append(faceSize);
+        hash.Append(terrainCollider.GetHashCode());
         if (!force && _terrainColliderMeshCache.TryGetValue(hash, out var mesh) && mesh)
             return mesh;
 
@@ -83,10 +84,15 @@ public static class TerrainHelper
 
                 if (y > 0 && x > 0)
                 {
-                    var isHole = terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
+                    //var isHole = terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
                         //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
                         //|| terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
                         //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
+                        ;
+                    var isHole = terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
+                        && terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
+                        && terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
+                        && terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
                         ;
                     var idx = ((y - 1) * facePerRow + (x - 1)) * 6;
                     var rowS1 = ((y - 1) * vertexPerRow) + (x - 1);
@@ -353,7 +359,7 @@ public static class TerrainHelper
                             var vertex = new Vector3(tx * terrain.terrainData.size.x, height, ty * terrain.terrainData.size.z);
 
                             vertices[vIdx] = vertex;
-                            uvs[vIdx] = (new Vector2(vx, vy) - uvCenter) + uvCenter;
+                            uvs[vIdx] = new Vector2(vx, vy); // (new Vector2(vx, vy) - uvCenter) + uvCenter;
                             colors[vIdx] = isHole ? holeColor : Color.white;
                             normals[vIdx] = terrain.terrainData.GetInterpolatedNormal(tx, ty);
                             ++vIdx;

@@ -286,7 +286,7 @@ public class LevelImporterWindow : EditorWindow
         // create chunk select dropdown
         root.BuildRow("Chunk", (container) =>
         {
-            var choices = new List<string>() { "Core Level", "Chunk 1" };
+            var choices = new List<string>() { "Core Level", "Chunk 1", "Chunk 2" };
 
             var dropdown = new DropdownField();
             dropdown.choices = choices;
@@ -1195,6 +1195,9 @@ public class LevelImporterWindow : EditorWindow
             {
                 { $"level{levelId}.1.wad", $"sound.bnk" },
                 { $"level{levelId}.2.wad", $"level{levelId}.2.wad" }, // gameplay
+                { $"level{levelId}.4.wad", $"chunk0.wad" },
+                { $"level{levelId}.5.wad", $"chunk1.wad" },
+                { $"level{levelId}.6.wad", $"chunk2.wad" },
             };
 
             var expectedWad = Path.Combine(outDir, $"level{levelId}.0.wad");
@@ -1229,6 +1232,9 @@ public class LevelImporterWindow : EditorWindow
         var unpackOcclusion = importTies > 0 || importTfrags > 0 || importMobys > 0;
         var unpackWorldInstances = importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
         var unpackCollision = importCollision > 0;
+
+        if (racVersion == RCVER.UYA)
+            unpackGameplay |= unpackWorldInstances;
 
         // decompress and unpack level wad
         UpdateImportProgressBar(ImportStage.Unpacking_Level_WAD);

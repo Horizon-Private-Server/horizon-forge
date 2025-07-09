@@ -212,7 +212,7 @@ public class MapConfig : MonoBehaviour
 
     public Spline[] GetSplines()
     {
-        return HierarchicalSorting.Sort(FindObjectsOfType<Spline>());
+        return HierarchicalSorting.Sort(FindObjectsOfType<Spline>().Where(x => x.IncludeInExport()).ToArray());
     }
 
     public Spline GetSplineAtIndex(int idx)

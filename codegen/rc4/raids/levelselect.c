@@ -28,9 +28,9 @@ LevelselectDrawState_t levelselectDrawState = {
 };
 
 char* levelselectMissionTypes[] = {
-  [RAIDS_MISSION_OPEN_WORLD] "Open World",
   [RAIDS_MISSION_HUB] "Hub",
-  [RAIDS_MISSION_RAID] "Raid",
+  [RAIDS_MISSION_OPEN_WORLD] "Planets",
+  [RAIDS_MISSION_RAID] "Raids",
 };
 
 //--------------------------------------------------------------------------
@@ -234,6 +234,7 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
 
       int missionType = def->Subsort / 10000;
       if (lastMissionType != missionType) {
+        lastMissionType = missionType;
         windowCreateFrom(&windowLine, drawWindow, 0, 0, drawWindow->Width, headerLineHeight, TEXT_ALIGN_TOPRIGHT);
         windowDrawText(&windowLine, TEXT_ALIGN_BOTTOMCENTER, 5, -1, 1.0, headerTextColor, levelselectMissionTypes[missionType], -1, TEXT_ALIGN_BOTTOMCENTER);
         windowMove(drawWindow, 0, headerLineHeight);

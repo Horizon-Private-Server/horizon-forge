@@ -398,7 +398,7 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
     if (distSqr <= rangedAttackRadiusSqr && leviathanVars->AttackLaserCooldownTicks == 0 && (MapConfig.State ? MapConfig.State->DifficultyStars : 0) > 0) {
       float theta = acosf(vector_innerproduct(dt, moby->M0_03));
       if (!isLaserAction && fabsf(theta) < (30 * MATH_DEG2RAD))
-        return rand(20 / (MapConfig.State->DifficultyStars+1)) ? LEVIATHAN_ACTION_ATTACK_LASER : LEVIATHAN_ACTION_ATTACK_LASER_LOCKON;
+        return LEVIATHAN_ACTION_ATTACK_LASER; // rand(20 / (MapConfig.State->DifficultyStars+1)) ? LEVIATHAN_ACTION_ATTACK_LASER : LEVIATHAN_ACTION_ATTACK_LASER_LOCKON;
     }
 
     return -1;

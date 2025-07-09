@@ -841,8 +841,8 @@ public static class ForgeBuilder
                             writer.Write(lodmid);
                             writer.Write(lodhigh);
 
-                            ms.Position = 0x48;
-                            writer.Write(BitConverter.ToSingle(coreBinBytes, (int)ms.Position) * tieData.MipDistanceMultiplier);
+                            //ms.Position = 0x48;
+                            //writer.Write(BitConverter.ToSingle(coreBinBytes, (int)ms.Position) * tieData.MipDistanceMultiplier);
                         }
                     }
                 }
