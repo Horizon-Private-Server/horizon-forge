@@ -1229,6 +1229,10 @@ public class LevelImporterWindow : EditorWindow
         var unpackSounds = importMobys > 0;
         var unpackAssets = importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
         var unpackGameplay = importMobys > 0 || importWorldConfig > 0 || importMisc > 0;
+        if (racVersion == RCVER.UYA)
+        {
+            unpackGameplay = importMobys > 0 || importWorldConfig > 0 || importMisc > 0 || importTies > 0 || importShrubs > 0;
+        }
         var unpackOcclusion = importTies > 0 || importTfrags > 0 || importMobys > 0;
         var unpackWorldInstances = importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
         var unpackCollision = importCollision > 0;

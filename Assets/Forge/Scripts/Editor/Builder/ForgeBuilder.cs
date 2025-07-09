@@ -1468,8 +1468,30 @@ public static class ForgeBuilder
         }
 
         // clear moby instance dir
-        if (Directory.Exists(mobyInstancesFolder)) Directory.Delete(mobyInstancesFolder, true);
-        Directory.CreateDirectory(mobyInstancesFolder);
+		if (Directory.Exists(mobyInstancesFolder))
+		{
+			try
+			{
+				Directory.Delete(mobyInstancesFolder, true);
+			}
+			catch (IOException ex)
+			{
+				Debug.LogError($"Failed to delete mobyInstancesFolder: {mobyInstancesFolder}\nReason: {ex.Message}");
+				EditorUtility.DisplayDialog("File Lock Error", 
+					$"Could not delete mobyInstancesFolder.\nSome files may be in use.\n\n{ex.Message}", "OK");
+				return;
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				Debug.LogError($"Access denied while deleting mobyInstancesFolder: {mobyInstancesFolder}\nReason: {ex.Message}");
+				EditorUtility.DisplayDialog("Permission Error", 
+					$"Access denied when trying to delete mobyInstancesFolder.\n\n{ex.Message}", "OK");
+				return;
+			}
+		}
+
+		Directory.CreateDirectory(mobyInstancesFolder);
+
 
         // build mobys
         int i = 0;
