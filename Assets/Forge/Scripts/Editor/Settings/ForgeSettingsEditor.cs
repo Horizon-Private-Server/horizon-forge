@@ -17,7 +17,7 @@ public class ForgeSettingsEditor : Editor
         EditorGUI.BeginChangeCheck();
         GUILayout.Label("Blender");
         var blenderTitle = "Blender executable path";
-        var blenderExt = new string[] { "All Files", "*" };
+        string[] blenderExt = null;
 #if UNITY_STANDALONE_WIN
         blenderExt = new string[] { "Exe", "exe" };
         blenderTitle = "Blender executable path (optional)";
@@ -178,9 +178,13 @@ public class ForgeSettingsEditor : Editor
 
         if (openFileDialog)
         {
-            var openPath = EditorUtility.OpenFilePanelWithFilters(title, newPath, extensions);
-            if (!string.IsNullOrEmpty(openPath))
-                newPath = openPath;
+            string openPath = null;
+            if (extensions == null)
+                openPath = EditorUtility.OpenFilePanel(title, newPath, "");
+            else
+                openPath = EditorUtility.OpenFilePanelWithFilters(title, newPath, extensions);
+                
+            if (!string.IsNullOrEmpty(openPath)) newPath = openPath;
         }
 
         if (newPath != path) EditorUtility.SetDirty(target);

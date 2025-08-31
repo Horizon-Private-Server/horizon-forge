@@ -90,7 +90,7 @@ public class ForgeStartupWindow : EditorWindow
 
         // refresh
         var blenderTitle = "Blender executable path";
-        var blenderExt = new string[] { "All Files", "*" };
+        string[] blenderExt = null;
 #if UNITY_STANDALONE_WIN
         blenderExt = new string[] { "Exe", "exe" };
         blenderTitle = "Blender executable path (optional)";
@@ -291,7 +291,7 @@ public class ForgeStartupWindow : EditorWindow
 
     #region Install Validation Helpers
 
-    private bool HasBlender() => !string.IsNullOrEmpty(BlenderHelper.GetBlenderPath()) && File.Exists(BlenderHelper.GetBlenderPath());
+    private bool HasBlender() => File.Exists(forgeSettings.PathToBlender) || File.Exists(BlenderHelper.GetBlenderPath(forceFindBlenderPath: true));
 
     private bool HasPacker() => PackerHelper.IsInstalled();
 
@@ -448,7 +448,12 @@ public class ForgeStartupWindow : EditorWindow
         browse.style.width = new Length(10, LengthUnit.Percent);
         browse.clicked += () =>
         {
-            var newPath = EditorUtility.OpenFilePanelWithFilters(title, textbox.value, extensions);
+            string newPath = null;
+            if (extensions == null)
+                newPath = EditorUtility.OpenFilePanel(title, textbox.value, "");
+            else
+                newPath = EditorUtility.OpenFilePanelWithFilters(title, textbox.value, extensions);
+                
             if (!string.IsNullOrEmpty(newPath)) textbox.value = newPath;
         };
         row.Add(browse);

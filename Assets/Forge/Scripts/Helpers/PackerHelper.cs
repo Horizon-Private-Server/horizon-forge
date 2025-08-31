@@ -143,7 +143,11 @@ public static class PackerHelper
 
     public static bool CanRun()
     {
-        return RunPacker(null, true, out _) == PACKER_STATUS_CODES.COMMAND_LINE_PARSER_FAILED;
+        // run packer with no args
+        // should return COMMAND_LINE_PARSER_FAILED
+        return RunPacker(null, true, out var output) != PACKER_STATUS_CODES.SUCCESS
+                && output != null
+                && output.Contains($"FAIL: {PACKER_STATUS_CODES.COMMAND_LINE_PARSER_FAILED}");
     }
 
     public static string GetAssetOClassFolderName(int oClass)
@@ -167,6 +171,7 @@ public static class PackerHelper
             throw new System.Exception("Packer not found in tools directory!");
         }
 
+        var packerFileInfo = new FileInfo(packerPath);
         var processArgs = args == null ? "" : string.Join(" ", args.Select(x => "\"" + x.Replace("\\", "/") + "\""));
         var startInfo = new System.Diagnostics.ProcessStartInfo(Path.GetFullPath(packerPath), processArgs)
         {
@@ -174,7 +179,7 @@ public static class PackerHelper
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
-            UseShellExecute = false,
+            UseShellExecute = false
         };
 
         var p = new System.Diagnostics.Process() { StartInfo = startInfo };
@@ -186,8 +191,9 @@ public static class PackerHelper
         p.WaitForExit();
 
         output = consoleData;
-        if (p.ExitCode < 0 && !silent)
+        if (p.ExitCode != 0 && !silent)
             Debug.Log(output);
+
         return (PACKER_STATUS_CODES)p.ExitCode;
     }
 

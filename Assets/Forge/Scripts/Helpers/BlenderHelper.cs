@@ -9,11 +9,14 @@ using UnityEngine;
 
 public static class BlenderHelper
 {
-    public static string GetBlenderPath()
+    public static string GetBlenderPath(bool forceFindBlenderPath = false)
     {
-        var forgeSettings = ForgeSettings.Load();
-        if (forgeSettings != null && !string.IsNullOrEmpty(forgeSettings.PathToBlender))
-            return forgeSettings.PathToBlender;
+        if (!forceFindBlenderPath)
+        {
+            var forgeSettings = ForgeSettings.Load();
+            if (forgeSettings != null && !string.IsNullOrEmpty(forgeSettings.PathToBlender))
+                return forgeSettings.PathToBlender;
+        }
 
 #if UNITY_STANDALONE_WIN
         return Win32Helper.AssocQueryString(Win32Helper.AssocStr.Executable, ".blend");
