@@ -128,4 +128,7 @@ void ammodropInit(void)
 
   // double ammo pickup amount
   POKE_F32(0x003978C0, 0.3);
+
+  // disable b6 halving of ammo amount
+  POKE_U16(0x003ac2c4, 0x0);
 }

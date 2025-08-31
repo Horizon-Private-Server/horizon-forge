@@ -143,7 +143,6 @@ void reaperPostUpdate(Moby* moby)
   // adjust animSpeed by speed and by animation
   float baseSpeed = 1.0;
 	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
-  if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   if (reaperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
     animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   } else if (reaperIsDying(moby)) {

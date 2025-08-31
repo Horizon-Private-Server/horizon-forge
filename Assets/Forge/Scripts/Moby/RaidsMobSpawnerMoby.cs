@@ -14,6 +14,7 @@ public class RaidsMobSpawnerMoby : MonoBehaviour, IRenderHandlePrefab
     private float m_YawMax;
     private Cuboid m_YawFaceCuboid;
     private bool m_YawInvert;
+    private float m_DespawnRadius;
 
     void Start()
     {
@@ -44,6 +45,7 @@ public class RaidsMobSpawnerMoby : MonoBehaviour, IRenderHandlePrefab
         float.TryParse(m_Moby.PVarValues[".Emission.Random Rotation Max"], out m_YawMax);
         bool.TryParse(m_Moby.PVarValues[".Emission.Rotation Invert"], out m_YawInvert);
         m_YawFaceCuboid = m_Moby.PVarReferences[".Emission.Rotation Face Cuboid"] as Cuboid;
+        float.TryParse(m_Moby.PVarValues[".Despawn Radius"], out m_DespawnRadius);
     }
 
     public void DrawGizmos()
@@ -73,6 +75,11 @@ public class RaidsMobSpawnerMoby : MonoBehaviour, IRenderHandlePrefab
         if (!hasSpawnCuboid)
         {
             DrawSpawnZone(this.transform.position, this.transform.rotation);
+        }
+
+        if (m_DespawnRadius > 0)
+        {
+            Gizmos.DrawWireSphere(this.transform.position, m_DespawnRadius);
         }
     }
 

@@ -1741,15 +1741,21 @@ public static class UnityHelper
         return GameObject.FindObjectsOfType<MonoBehaviour>().Where(x => x is IOcclusionData).Select(x => x as IOcclusionData).ToList();
     }
 
-    public static List<Vector3> GetAllOctants()
+    public static List<Vector3> GetAllOctants(bool useCache = true)
     {
         var volumes = GameObject.FindObjectsOfType<OcclusionVolume>();
         var rawOctants = GameObject.FindObjectsOfType<OcclusionOctant>();
-        var octants = volumes.Where(x => !x.Negate).SelectMany(x => x.GetOctants()).Union(rawOctants.SelectMany(x => x.Octants ?? new List<Vector3>())).Distinct().ToList();
+        var octants = rawOctants.SelectMany(x => x.Octants ?? new List<Vector3>()).ToList();
+        foreach (var volume in volumes)
+        {
+            if (volume.Negate) continue;
+            octants.AddRange(useCache ? volume.GetCachedOctants() : volume.GetOctants());
+        }
+
         var negativeOctants = volumes.Where(x => x.Negate).ToList();
         octants.RemoveAll(x => negativeOctants.Any(o => o.Contains(x)));
 
-        return octants;
+        return octants.Distinct().ToList();
     }
 
     public static void DrawLine(Vector3 from, Vector3 to, Color color, float thickness)
@@ -1880,12 +1886,12 @@ public static class UnityHelper
         return result;
     }
 
-    public static Texture2D CloneTexture(Texture2D src, bool hasAlpha = true, Color? tint = null)
+    public static Texture2D CloneTexture(Texture2D src, bool hasAlpha = true, Color? tint = null, int? resizeWidth = null, int? resizeHeight = null)
     {
         if (!src) return null;
 
-        var width = src.width;
-        var height = src.height;
+        var width = resizeWidth ?? src.width;
+        var height = resizeHeight ?? src.height;
         var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
         rt.Create();
         try
@@ -1927,6 +1933,21 @@ public static class UnityHelper
         return Hash128.Compute(pixels);
     }
 
+    public static Hash128 Append(this Hash128 hash, Vector3 value)
+    {
+        hash.Append(value.x);
+        hash.Append(value.y);
+        hash.Append(value.z);
+        return hash;
+    }
+
+    public static Hash128 Append(this Hash128 hash, Matrix4x4 value)
+    {
+        for (int i = 0; i < 16; ++i)
+            hash.Append(value[i]);
+        return hash;
+    }
+
     public static uint GetColor(this Color32 rgba, byte? forceAlpha = null)
     {
         return (uint)(
@@ -1962,6 +1983,11 @@ public static class UnityHelper
         return new Color(color.r * factor, color.g * factor, color.b * factor, color.a);
     }
 
+    public static Color SetAlpha(this Color color, float alpha)
+    {
+        return new Color(color.r, color.g, color.b, alpha);
+    }
+
     static int ForceDimensionPowerOfTwo(int dimension)
     {
         float exp = Mathf.Log(dimension, 2);
@@ -1970,9 +1996,10 @@ public static class UnityHelper
         return (int)Mathf.Pow(2, Mathf.CeilToInt(exp));
     }
 
-    public static void Append(this Hash128 hash, Color color)
+    public static Hash128 Append(this Hash128 hash, Color color)
     {
         hash.Append(color.ToString());
+        return hash;
     }
 
     public static int ComputeHash(this Mesh mesh)
@@ -1985,6 +2012,46 @@ public static class UnityHelper
             hash = hash ^ v.GetHashCode();
 
         return hash;
+    }
+
+    public static Vector2 ClampUV(this Vector2 uv)
+    {
+        return new Vector2(uv.x % 1, uv.y % 1);
+    }
+
+    public static Vector2 Round(this Vector2 uv, int decimals = 3)
+    {
+        var precision = Mathf.Pow(10, decimals);
+        return new Vector2(Mathf.Round(uv.x * precision) / precision, Mathf.Round(uv.y * precision) / precision);
+    }
+
+    public static Vector2 ClampUVRelativeTo(this Vector2 uv, Vector2 relativeTo, Vector2 direction)
+    {
+        var clamped = uv; //.ClampUV();
+
+        var dx = Mathf.Round((clamped.x - relativeTo.x) * 1024) / 1024f;
+        var dy = Mathf.Round((clamped.y - relativeTo.y) * 1024) / 1024f;
+
+        if (Math.Sign(dx) != Math.Sign(direction.x) && direction.x != 0)
+            clamped.x += 1;
+        if (Math.Sign(dy) != Math.Sign(direction.y) && direction.y != 0)
+            clamped.y += 1;
+
+        return clamped;
+    }
+
+    public static Vector2 RotateAround(this Vector2 point, float radians, Vector2 pivot)
+    {
+        var dir = point - pivot;
+        float cos = Mathf.Cos(radians);
+        float sin = Mathf.Sin(radians);
+
+        Vector2 rotatedDir = new Vector2(
+            dir.x * cos - dir.y * sin,
+            dir.x * sin + dir.y * cos
+        );
+
+        return pivot + rotatedDir;
     }
 
     public static Mesh BuildQuad()
@@ -2120,6 +2187,36 @@ public static class UnityHelper
         foreach (var assetGenerator in assetGenerators)
         {
             assetGenerator.OnPostBake(type);
+        }
+    }
+
+    public static void RunColliderOcclusionPreBake()
+    {
+        // get instanced collision
+        var instancedColliders = new List<IInstancedCollider>();
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Tie>(includeInactive: false) ?? new Tie[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Shrub>(includeInactive: false) ?? new Shrub[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<InstancedMeshCollider>(includeInactive: false) ?? new InstancedMeshCollider[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<UnityColliderToInstancedCollider>(includeInactive: false) ?? new UnityColliderToInstancedCollider[0]);
+
+        foreach (var instancedCollider in instancedColliders)
+        {
+            instancedCollider.GetInstancedCollider()?.OnOcclusionPreBake();
+        }
+    }
+
+    public static void RunColliderOcclusionPostBake()
+    {
+        // get instanced collision
+        var instancedColliders = new List<IInstancedCollider>();
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Tie>(includeInactive: false) ?? new Tie[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Shrub>(includeInactive: false) ?? new Shrub[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<InstancedMeshCollider>(includeInactive: false) ?? new InstancedMeshCollider[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<UnityColliderToInstancedCollider>(includeInactive: false) ?? new UnityColliderToInstancedCollider[0]);
+
+        foreach (var instancedCollider in instancedColliders)
+        {
+            instancedCollider.GetInstancedCollider()?.OnOcclusionPostBake();
         }
     }
 }

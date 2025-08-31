@@ -688,6 +688,20 @@ int mobCollisionIdIsWalkable(int collisionId)
 }
 
 //--------------------------------------------------------------------------
+float mobGetFreezeSpeedFactor(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  if (!pvars) return 1.0;
+
+  // if freeze effect is active, apply freeze factor
+  if (pvars->MobVars.FreezeEffectActiveTicks > 0 && pvars->MobVars.FreezeEffectStrength > 0) {
+    return 0.9 - (MOB_POSTFX_FREEZE_FACTOR * pvars->MobVars.FreezeEffectStrength);
+  }
+
+  return 1.0;
+}
+
+//--------------------------------------------------------------------------
 void mobMove(Moby* moby)
 {
   VECTOR targetVelocity;
@@ -764,7 +778,7 @@ void mobMove(Moby* moby)
     vector_add(pvars->MobVars.MoveVars.Velocity, pvars->MobVars.MoveVars.Velocity, pvars->MobVars.MoveVars.AddVelocity);
 
     // compute simulated velocity by multiplying velocity by number of ticks to simulate
-    float freezeFactor = pvars->MobVars.FreezeEffectActiveTicks > 0 ? MOB_POSTFX_FREEZE_FACTOR : 1;
+    float freezeFactor = mobGetFreezeSpeedFactor(moby);
     vector_scale(targetVelocity, pvars->MobVars.MoveVars.Velocity, (float)moveStep * freezeFactor);
 
     // slow speed in short freeze
@@ -1143,7 +1157,7 @@ float mobGetCurrentMoveSpeed(Moby* moby)
   VECTOR hVelocity;
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   vector_projectonhorizontal(hVelocity, pvars->MobVars.MoveVars.Velocity);
-  return (vector_length(hVelocity) / (pvars->MobVars.Config.Speed * MATH_DT));
+  return (vector_length(hVelocity) / (pvars->MobVars.Config.Speed * MATH_DT)) * mobGetFreezeSpeedFactor(moby);
 }
 
 //--------------------------------------------------------------------------

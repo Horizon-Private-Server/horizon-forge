@@ -428,6 +428,28 @@ public enum DLPadMask
     Square = 0x8000,
 }
 
+[Flags]
+public enum  CollisionIdMask
+{
+    None = 0,
+    Swimmable_Water_00 = 1 << 0,
+    Acid_01 = 1 << 1,
+    Magnet_Wall_02 = 1 << 2,
+    Water_03 = 1 << 3,
+    DreadZone_OOB_04 = 1 << 4,
+    Electricity_05 = 1 << 5,
+    Nonwalkable_Magnet_Wall_06 = 1 << 6,
+    Walkable_Surface_1_07 = 1 << 7,
+    Nonwalkable_Surface_1_08 = 1 << 8,
+    Walkable_Surface_2_09 = 1 << 9,
+    Walkable_Surface_3_0A = 1 << 10,
+    Lethal_Water_0B = 1 << 11,
+    Nonwalkable_Surface_2_0C = 1 << 12,
+    Lethal_Water_Ice_Cube_0D = 1 << 13,
+    Water_Trail_0E = 1 << 14,
+    Walkable_Surface_4_0F = 1 << 15,
+}
+
 public enum DLRaidsDifficulties
 {
     _1Star = 0,

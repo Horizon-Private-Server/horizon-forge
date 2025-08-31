@@ -23,7 +23,7 @@ public static class OcclusionBaker
 
         var renderResolution = 1024; // (int)Mathf.Pow(2, (int)bakeSettings.Resolution + 5);
         //var clipPixelCount = (int)Math.Max(bakeSettings.ClipPixelCount, bakeSettings.ClipPercent * renderResolution * renderResolution);
-        var octants = UnityHelper.GetAllOctants();
+        var octants = UnityHelper.GetAllOctants(useCache: false);
         var graph = GameObject.FindObjectOfType<OcclusionGraph>();
 
         var shader = Shader.Find("Shader Graphs/OcclusionBakeRender");
@@ -74,6 +74,9 @@ public static class OcclusionBaker
                 EditorUtility.DisplayDialog("Occlusion Builder", "No objects with occlusion to bake!", "Ok");
                 return;
             }
+
+            // update colliders
+            UnityHelper.RunColliderOcclusionPreBake();
 
             // pass pre event to OcclusionData
             var occlusionDatas = allOcclusionDatas; // GameObject.FindObjectsOfType<OcclusionData>();
@@ -247,6 +250,7 @@ public static class OcclusionBaker
         {
             // cleanup generators
             UnityHelper.RunGeneratorsPostBake(BakeType.OCCLUSION);
+            UnityHelper.RunColliderOcclusionPostBake();
 
             Shader.DisableKeyword("_OCCLUSION");
             rtColor.Release();

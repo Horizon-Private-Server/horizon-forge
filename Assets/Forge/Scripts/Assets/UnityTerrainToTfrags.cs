@@ -9,17 +9,18 @@ using UnityEngine;
 [RequireComponent(typeof(UnityColliderToInstancedCollider))]
 public class UnityTerrainToTfrags : BaseAssetGenerator
 {
+    public static bool m_RenderGenerated = false;
+
     [Range(4f, 8f)] public float m_TfragSize = 4f;
     [Range(0f, 4f)] public float m_TfragTextureClassificationSharpness = 1f;
     public TextureSize m_TextureSize = TextureSize._128;
+    public bool m_FlatNormal = false;
 
     [Header("Vertex Colors")]
     [ColorUsage(showAlpha: false)] public Color m_Tint = Color.white;
     [Range(0f, 1f)] public float m_Shading = 0f;
     [Range(0f, 1f)] public float m_Noise = 0f;
     [Range(1f, 50f)] public float m_NoiseScale = 20f;
-
-    public bool m_RenderGenerated { get; set; }
 
     private Terrain m_Terrain;
     [SerializeField, HideInInspector] private Hash128 m_LastGeneratedHash;
@@ -60,11 +61,12 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             var chunkPerColumn = Mathf.CeilToInt(facePerColumn / 2f);
             var textures = new List<Texture2D>();
             var materials = new List<Material>();
+            var uvCenter = Vector2.one * 0.5f;
             List<Vector3> allOctants = null;
             chunkCount = chunkPerRow * chunkPerColumn;
 
             // check if we need to regenerate
-            if (chunkCount == chunks.Length && m_LastGeneratedHash.isValid && TerrainHelper.ComputeHash(m_Terrain.terrainData) == m_LastGeneratedHash)
+            if (m_LastGeneratedHash.isValid && TerrainHelper.ComputeHash(m_Terrain.terrainData) == m_LastGeneratedHash)
                 return;
 
             // convert
@@ -73,27 +75,11 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             // generate
             for (int i = 0; i < chunkCount; ++i)
             {
-                var chunk = chunks.ElementAtOrDefault(i);
+                var chunk = chunks.FirstOrDefault(c => c.name == i.ToString());
+                bool isNew = !chunk;
                 MeshFilter chunkMeshFilter = null;
                 MeshRenderer chunkMeshRenderer = null;
-                if (!chunk)
-                {
-                    if (allOctants == null) allOctants = UnityHelper.GetAllOctants();
-
-                    var go = new GameObject(i.ToString());
-                    go.transform.SetParent(this.transform, false);
-                    Hide(go, m_RenderGenerated);
-                    chunkMeshFilter = go.AddComponent<MeshFilter>();
-                    chunkMeshRenderer = go.AddComponent<MeshRenderer>();
-                    chunk = go.AddComponent<TfragChunk>();
-                    chunk.Octants = allOctants.ToArray();
-                }
-                else
-                {
-                    chunkMeshFilter = chunk.GetComponent<MeshFilter>();
-                    chunkMeshRenderer = chunk.GetComponent<MeshRenderer>();
-                }
-
+              
                 byte[] headerBytes = null;
                 byte[] dataBytes = null;
                 var quadValid = new List<bool>();
@@ -103,6 +89,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                 var normals = new List<Vector3>();
                 var uvs = new List<Vector2>();
                 var texs = new List<int>();
+                var texClamps = new List<bool>();
                 var newMesh = new Mesh();
 
                 // select faces in groups of 2x2s
@@ -128,7 +115,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
 
                         quad[t] = vertices.Count;
                         vertices.Add(terrainVertices[vIdx]);
-                        normals.Add(terrainNormals[vIdx]);
+                        normals.Add(m_FlatNormal ? Vector3.up : terrainNormals[vIdx]);
                         uvs.Add(terrainUvs[vIdx]);
 
                         // calculate color
@@ -154,24 +141,26 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                         materials.Add(mat);
                     }
 
+                    texClamps.Add(tex.wrapMode == TextureWrapMode.Clamp);
                     texs.Add(texIdx);
                     quads.Add(quad);
                     quadValid.Add(isValid);
                 }
 
-                var quadsWithNoHole = quads.Count(x => colors[x[1]].a != 0);
+                var quadsWithNoHole = quads.Count(x => x.Any(v => colors[v].a != 0));
                 if (quadsWithNoHole == 0)
                 {
-                    Dispatcher.RunOnMainThread(() => GameObject.DestroyImmediate(chunk.gameObject));
+                    if (chunk) GameObject.DestroyImmediate(chunk.gameObject);
+                    //Dispatcher.RunOnMainThread(() => GameObject.DestroyImmediate(chunk.gameObject));
                     continue;
                 }
 
                 if (quads.Count == 4)
-                    TfragHelper.GenerateTfrag_2x2(vertices, normals, colors, uvs, quads, texs, out headerBytes, out dataBytes);
+                    TfragHelper.GenerateTfrag_2x2(vertices, normals, colors, uvs, quads, texs, texClamps, out headerBytes, out dataBytes);
                 else if (quads.Count == 2)
-                    TfragHelper.GenerateTfrag_1x2(vertices, normals, colors, uvs, quads, texs, out headerBytes, out dataBytes);
+                    TfragHelper.GenerateTfrag_1x2(vertices, normals, colors, uvs, quads, texs, texClamps, out headerBytes, out dataBytes);
                 else if (quads.Count == 1)
-                    TfragHelper.GenerateTfrag_1x1(vertices, normals, colors, uvs, quads, texs, out headerBytes, out dataBytes);
+                    TfragHelper.GenerateTfrag_1x1(vertices, normals, colors, uvs, quads, texs, texClamps, out headerBytes, out dataBytes);
                 else if (quads.Count == 0)
                     continue;
                 else
@@ -185,10 +174,28 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                 for (int f = 0; f < quads.Count; ++f)
                 {
                     var quad = quads[f];
-                    //if (quad.Any(x => colors[x].a == 0)) continue;
-                    if (colors[quad[1]].a == 0)
+                    if (quad.All(x => colors[x].a == 0))
                         continue;
+                    //if (colors[quad[f]].a == 0) continue;
                     newMesh.SetIndices(new int[] { quad[0], quad[1], quad[2], quad[1], quad[3], quad[2] }, MeshTopology.Triangles, f);
+                }
+
+                if (!chunk)
+                {
+                    if (allOctants == null) allOctants = UnityHelper.GetAllOctants();
+
+                    var go = new GameObject(i.ToString());
+                    go.transform.SetParent(this.transform, false);
+                    Hide(go, m_RenderGenerated);
+                    chunkMeshFilter = go.AddComponent<MeshFilter>();
+                    chunkMeshRenderer = go.AddComponent<MeshRenderer>();
+                    chunk = go.AddComponent<TfragChunk>();
+                    chunk.Octants = allOctants.ToArray();
+                }
+                else
+                {
+                    chunkMeshFilter = chunk.GetComponent<MeshFilter>();
+                    chunkMeshRenderer = chunk.GetComponent<MeshRenderer>();
                 }
 
                 chunk.gameObject.name = i.ToString();
@@ -254,8 +261,12 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             }
         }
 
+        // always disable collider
+        var collider = GetComponent<TerrainCollider>();
+        collider.enabled = false;
+
         m_Terrain = GetComponent<Terrain>();
-        if (m_Terrain) m_Terrain.enabled = !visible;
+        if (m_Terrain) m_Terrain.drawHeightmap = !visible;
     }
 
     private void Hide(GameObject go, bool visible)

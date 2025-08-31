@@ -155,8 +155,6 @@ void leviathanPostUpdate(Moby* moby)
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.5;
 	float animSpeed = baseSpeed;
-  if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
-
   if (moby->AnimSeqId == LEVIATHAN_ANIM_JUMP) {
     animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
     if (pvars->MobVars.MoveVars.Grounded) {
@@ -400,7 +398,7 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
     if (distSqr <= rangedAttackRadiusSqr && leviathanVars->AttackLaserCooldownTicks == 0 && (MapConfig.State ? MapConfig.State->DifficultyStars : 0) > 0) {
       float theta = acosf(vector_innerproduct(dt, moby->M0_03));
       if (!isLaserAction && fabsf(theta) < (30 * MATH_DEG2RAD))
-        return rand(20 / (MapConfig.State->DifficultyStars+1)) ? LEVIATHAN_ACTION_ATTACK_LASER : LEVIATHAN_ACTION_ATTACK_LASER_LOCKON;
+        return LEVIATHAN_ACTION_ATTACK_LASER; // rand(20 / (MapConfig.State->DifficultyStars+1)) ? LEVIATHAN_ACTION_ATTACK_LASER : LEVIATHAN_ACTION_ATTACK_LASER_LOCKON;
     }
 
     return -1;

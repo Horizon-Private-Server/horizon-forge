@@ -37,9 +37,11 @@ public class CollisionRenderHandle
     public CollisionRenderHandleNormalMode Normals { get => _normals; set { _regenerate |= value != _normals; _normals = value; } }
     public float RecalculateNormalsFactor { get => _recalculateNormalsFactor; set { _regenerate |= value != _recalculateNormalsFactor; _recalculateNormalsFactor = value; } }
     public IEnumerable<ColliderIdOverride> CollisionIdOverrides { get => _idOverrides; set { _regenerate |= value != _idOverrides; _idOverrides = value; } }
+    public bool OcclusionIgnore { get => _occlusionIgnore; set => _occlusionIgnore = value; }
 
     private bool _changed = false;
     private bool _regenerate = false;
+    private bool _occlusionIgnore = false;
     private Matrix4x4 _reflection = Matrix4x4.identity;
     private Quaternion _rotation = Quaternion.identity;
     private Vector3 _offset = Vector3.zero;
@@ -52,6 +54,7 @@ public class CollisionRenderHandle
     private Color _idColor = Color.clear;
     private IEnumerable<ColliderIdOverride> _idOverrides = null;
     private GameObject _prefab = null;
+    private GameObject _parent = null;
     private Mesh _mesh = null;
     private Action<Renderer, MaterialPropertyBlock> _updateRenderer;
     private Dictionary<Renderer, Material[]> _instancedMaterials = null;
@@ -169,6 +172,8 @@ public class CollisionRenderHandle
         var layer = LayerMask.NameToLayer("COLLISION");
 
         DestroyColliderAsset();
+
+        _parent = parent;
 
         // destroy all hidden children
         for (int i = 0; i < parent.transform.childCount; ++i)
@@ -490,6 +495,23 @@ public class CollisionRenderHandle
         }
 
         _instancedMaterialsNameBackup = null;
+    }
+
+    #endregion
+
+    #region Occlusion Bake
+
+    public void OnOcclusionPreBake()
+    {
+        if (!OcclusionIgnore) return;
+        DestroyColliderAsset();
+    }
+
+    public void OnOcclusionPostBake()
+    {
+        if (!OcclusionIgnore) return;
+
+        CreateColliderAsset(_parent);
     }
 
     #endregion

@@ -18,25 +18,35 @@ public class BezierSplineVertex : MonoBehaviour
     //[SerializeField]
     //private bool Disconnected;
 
-
+    private Hash128 _lastHash;
     private BezierSpline ParentSpline;
 
     private void Start()
     {
-        ParentSpline = GetComponentInParent<BezierSpline>();
-        if (ParentSpline)
-            ParentSpline.InvalidateCache();
+        SendRebuildUpstream();
     }
 
     private void OnValidate()
     {
+        SendRebuildUpstream();
+    }
+
+    private void SendRebuildUpstream()
+    {
         ParentSpline = GetComponentInParent<BezierSpline>();
         if (ParentSpline)
-            ParentSpline.InvalidateCache();
+            ParentSpline.RebuildSpline();
     }
 
     private void OnDrawGizmosSelected()
     {
+        var hash = ComputeHash();
+        if (hash != _lastHash)
+        {
+            _lastHash = hash;
+            SendRebuildUpstream();
+        }
+
         DrawGizmos();
     }
 
@@ -54,11 +64,22 @@ public class BezierSplineVertex : MonoBehaviour
         var alpha = Selection.activeGameObject == this.gameObject ? 1f : 0.5f;
 
         Gizmos.color = Color.blue * alpha;
-        Gizmos.DrawSphere(transform.position, 1f);
+        Gizmos.DrawSphere(transform.position, 0.2f);
         Gizmos.color = Color.green * alpha;
-        Gizmos.DrawSphere(HandleIn, 0.5f);
+        Gizmos.DrawSphere(HandleIn, 0.1f);
         Gizmos.color = Color.red * alpha;
-        Gizmos.DrawSphere(HandleOut, 0.5f);
+        Gizmos.DrawSphere(HandleOut, 0.1f);
+    }
+
+    private Hash128 ComputeHash()
+    {
+        Hash128 hash = new Hash128();
+
+        hash = hash.Append(Control);
+        hash = hash.Append(HandleIn);
+        hash = hash.Append(HandleOut);
+
+        return hash;
     }
 
     public void SetOffsets(Vector3 handleIn, Vector3 handleOut)

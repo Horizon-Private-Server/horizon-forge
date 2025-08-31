@@ -24,19 +24,17 @@ public class UnityTerrainToTfragsEditor : Editor
 
             GUILayout.Space(20);
             EditorGUILayout.LabelField("Generation", EditorStyles.boldLabel);
-            if (firstTfragGen.m_RenderGenerated != EditorGUILayout.Toggle("Render Generated", firstTfragGen.m_RenderGenerated))
+            if (UnityTerrainToTfrags.m_RenderGenerated != EditorGUILayout.Toggle("Render Generated", UnityTerrainToTfrags.m_RenderGenerated))
             {
-                var render = !firstTfragGen.m_RenderGenerated;
-                foreach (var target in this.targets)
+                var render = UnityTerrainToTfrags.m_RenderGenerated = !UnityTerrainToTfrags.m_RenderGenerated;
+                var allUTTs = FindObjectsOfType<UnityTerrainToTfrags>();
+                foreach (var tfragGen in allUTTs)
                 {
-                    if (target is UnityTerrainToTfrags tfragGen)
-                    {
-                        tfragGen.m_RenderGenerated = render;
-                        tfragGen.SetVisible(tfragGen.m_RenderGenerated);
-                    }
+                    tfragGen.SetVisible(render);
                 }
             }
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("Generate"))
             {
                 foreach (var target in this.targets)
@@ -47,6 +45,15 @@ public class UnityTerrainToTfragsEditor : Editor
                     }
                 }
             }
+            if (GUILayout.Button("Generate All"))
+            {
+                var allUTTs = FindObjectsOfType<UnityTerrainToTfrags>();
+                foreach (var utt in allUTTs)
+                {
+                    utt.Regenerate();
+                }
+            }
+            GUILayout.EndHorizontal();
         }
         else if (target is UnityTerrainToTfrags tfragGen)
         {
@@ -60,16 +67,30 @@ public class UnityTerrainToTfragsEditor : Editor
 
             GUILayout.Space(20);
             EditorGUILayout.LabelField("Generation", EditorStyles.boldLabel);
-            if (tfragGen.m_RenderGenerated != EditorGUILayout.Toggle("Render Generated", tfragGen.m_RenderGenerated))
+            if (UnityTerrainToTfrags.m_RenderGenerated != EditorGUILayout.Toggle("Render Generated", UnityTerrainToTfrags.m_RenderGenerated))
             {
-                tfragGen.m_RenderGenerated = !tfragGen.m_RenderGenerated;
-                tfragGen.SetVisible(tfragGen.m_RenderGenerated);
+                var render = UnityTerrainToTfrags.m_RenderGenerated = !UnityTerrainToTfrags.m_RenderGenerated;
+                var allUTTs = FindObjectsOfType<UnityTerrainToTfrags>();
+                foreach (var utt in allUTTs)
+                {
+                    utt.SetVisible(render);
+                }
             }
 
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("Generate"))
             {
                 tfragGen.Regenerate();
             }
+            if (GUILayout.Button("Generate All"))
+            {
+                var allUTTs = FindObjectsOfType<UnityTerrainToTfrags>();
+                foreach (var utt in allUTTs)
+                {
+                    utt.Regenerate();
+                }
+            }
+            GUILayout.EndHorizontal();
         }
     }
 

@@ -82,6 +82,7 @@ public class MapRender : MonoBehaviour
                 {
                     // maps after bwcity use index 0
                     var mapIdx = baseMapId - (int)UYAMapIds.MP_Bakisi_Isles;
+                    if (mapIdx < 0) break;
                     if (mapIdx > 6) mapIdx = 0;
 
                     reader.BaseStream.Position = GetUYAMinimapTableOffset((UYAMapIds)baseMapId, region) + (0x20 * mapIdx);

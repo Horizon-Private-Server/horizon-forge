@@ -9,6 +9,7 @@
 #include <libdl/math3d.h>
 
 #define BANK_MAX_ITEMS                 (64)
+#define BANK_MAX_CONTRACTS             (3)
 #define BANK_UPDATE_SIZE               (16)
 #define BANK_BADGE_EFFECT_COUNT        (8)
 
@@ -59,13 +60,20 @@ enum RaidsBadgeType
   RAIDS_BADGE_TYPE_COUNT
 };
 
-enum RaidsSkills
+enum RaidsWeaponModType
 {
-  RAIDS_SKILLS_HEALTH = 0,
-  RAIDS_SKILLS_DAMAGE = 1,
-  RAIDS_SKILLS_SPEED = 2,
-  RAIDS_SKILLS_UNUSED = 3,
-  RAIDS_SKILLS_COUNT
+  RAIDS_WEAPON_MOD_NONE = 0,
+  RAIDS_WEAPON_MOD_NAPALM,
+  RAIDS_WEAPON_MOD_TIME_BOMB,
+  RAIDS_WEAPON_MOD_FREEZE,
+  RAIDS_WEAPON_MOD_MINI_BOMB,
+  RAIDS_WEAPON_MOD_MORPH,
+  RAIDS_WEAPON_MOD_BRAINWASH,
+  RAIDS_WEAPON_MOD_ACID,
+  RAIDS_WEAPON_MOD_SHOCK,
+  RAIDS_WEAPON_MOD_WILL_O_WISP,
+  RAIDS_WEAPON_MOD_LIGHTFOOT,
+  RAIDS_WEAPON_MOD_COUNT
 };
 
 enum RaidsItemTypes
@@ -81,7 +89,10 @@ enum RaidsItemUpdateAction
   RAIDS_ITEM_UPDATE_SELL,
   RAIDS_ITEM_UPDATE_SET_NOTIFY,
   RAIDS_ITEM_UPDATE_EQUIP,
-  RAIDS_ITEM_UPDATE_UNEQUIP
+  RAIDS_ITEM_UPDATE_UNEQUIP,
+  RAIDS_ITEM_UPDATE_UPGRADE,
+  RAIDS_ITEM_UPDATE_UPGRADE_RARITY,
+  RAIDS_ITEM_UPDATE_DESTROY,
 };
 
 typedef struct RaidsInventoryItem
@@ -96,14 +107,15 @@ typedef struct RaidsInventoryItem
     struct {
       int Damage; // damage
       u8 GadgetId;
-      u8 Paint; // 0=none, 1=blue, etc (teams)
-      u8 PaintSpecialMask; // RaidsGadgetPaintSpecialMask
+      u8 Paint : 4; // 0=none, 1=blue, etc (teams)
+      u8 PaintSpecialMask : 4; // RaidsGadgetPaintSpecialMask
       u8 Proficiency; // what proficiency the item was created at (v1-v99)
       u8 CritChance; // 0-255 (0-100%) chance crit
-      u8 OmegaMod;
+      u8 ModType; // RaidsWeaponModType
+      u8 ModQuality; // 0-255
       u8 AlphaModCounts[ALPHA_MOD_COUNT-1];
-      u8 Effect;
-      u8 EffectStrength;
+      u8 Upgrades;
+      u8 MaxUpgrades;
     } WeaponData;
 
     struct {
@@ -112,6 +124,40 @@ typedef struct RaidsInventoryItem
     } BadgeData;
   };
 } RaidsInventoryItem_t;
+
+typedef struct RaidsContract {
+  u32 Uid;
+  int Activated;
+  int RequiredDifficultyStars;
+
+  // kills to complete
+  u32 RequiredKills;
+  int RequiredKillsMobOClass;
+  int RequiredKillsGadgetId;
+
+  // if raid - time to complete
+  u32 RequiredRaidTimeMs;
+
+  // reward
+  u32 RewardBolts;
+  u32 RewardPlayerXp;
+  u32 RewardWeaponXp;
+
+  // expiration
+  int RefreshInMinutes;
+  int ExpiresInMinutes;
+
+  // stats
+  u32 Kills;
+  u32 CompletedTimeMs;
+
+  // map
+  char MapFilename[64];
+  char MapName[32];
+  
+  // corresponding RequiredKillsMobOClass mob name
+  char MobName[32];
+} RaidsContract_t;
 
 typedef struct RaidsPlayerInventoryPage
 {
@@ -129,10 +175,8 @@ typedef struct RaidsPlayerInventoryPage
 typedef struct RaidsPlayerAccount
 {
   double WeaponXp[WEAPON_SLOT_COUNT-1];
-  u32 Experience;
+  u64 Experience;
   u32 Bolts;
-  u32 SkillPoints;
-  u16 Skills[RAIDS_SKILLS_COUNT];
 } RaidsPlayerAccount_t;
 
 typedef struct RaidsPlayerEquippedInventory
@@ -146,6 +190,7 @@ typedef struct RaidsPlayerBank
 {
   RaidsPlayerAccount_t Account;
   RaidsPlayerEquippedInventory_t EquippedInventory;
+  RaidsContract_t Contracts[BANK_MAX_CONTRACTS];
 } RaidsPlayerBank_t;
 
 struct RaidsGetBankRequest
@@ -155,6 +200,20 @@ struct RaidsGetBankRequest
   u32 DestTimeFlagAddress;
   int Filter;
   int Page;
+};
+
+struct RaidsUpdateContractStatsRequest
+{
+  u32 ContractUid;
+  u32 Kills;
+  u32 CompletedTimeMs;
+};
+
+struct RaidsGetContractsRequest
+{
+  u32 DestAddress;
+  u32 DestHasFlagAddress;
+  struct RaidsUpdateContractStatsRequest ContractStats[BANK_MAX_CONTRACTS];
 };
 
 struct RaidsUpdateBankInventoryItemRequest
@@ -177,7 +236,9 @@ struct RaidsBankGetMapStatsRequest
   u32 ResponseAddress;
   int CollectiblesCount;
   int ChallengesCount;
+  int MissionType;
   char MapFilename[64];
+  char MapName[32];
 };
 
 struct RaidsBankMapStats
@@ -201,6 +262,13 @@ struct RaidsBankSetMapStatsRequest
   char MapFilename[64];
 };
 
+struct RaidsBankUpdateMapMetadataRequest
+{
+  char MapFilename[64];
+  int AddMobOClass;
+  int AddMobOClassAtDifficulty;
+};
+
 struct RaidsBankSetPlayerEquippedInventoryMsg
 {
   int ClientId;
@@ -217,6 +285,7 @@ typedef RaidsPlayerBank_t* (*BankGetLocalBank_func)(void);
 typedef void (*BankGetItemName_func)(RaidsInventoryItem_t* item, char* buf, int bufSize);
 typedef enum RaidsItemRarity (*BankGetRarityFromQuality_func)(int quality);
 typedef float (*BankGetEquippedBadgeEffectStrength_func)(int playerId, enum RaidsBadgeType effect);
+typedef enum RaidsItemRarity (*BankGetEquippedWeaponModRarity_func)(int playerId, int gadgetId, enum RaidsWeaponModType modType);
 typedef RaidsInventoryItem_t* (*BankGetEquippedWeaponFromGadgetBox_func)(GadgetBox* gbox, int gadgetId);
 
 typedef void (*BankRequestInventoryFromServer_func)(RaidsPlayerInventoryPage_t* inventory, int filter, int page);
@@ -224,14 +293,21 @@ typedef void (*BankSendInventoryItemToServer_func)(RaidsInventoryItem_t* item, e
 typedef void (*BankRequestEquippedInventoryFromServer_func)(void);
 typedef void (*BankRequestAccountFromServer_func)(void);
 typedef void (*BankSendAccountToServer_func)(void);
-typedef void (*BankRequestMapStats_func)(char* mapFilename, struct RaidsBankMapStats* dest);
+typedef void (*BankRequestContractsFromServer_func)(void);
+typedef void (*BankSendContractStatsToServer_func)(RaidsContract_t* contract);
+typedef void (*BankRequestMapStats_func)(char* mapFilename, char* mapName, struct RaidsBankMapStats* dest, int missionType);
 
 typedef int (*BankGetHasEquippedInventory_func)(void);
 typedef int (*BankHasPendingEquippedInventoryRequest_func)(void);
 typedef int (*BankGetHasAccount_func)(void);
 typedef int (*BankHasPendingAccountRequest_func)(void);
+typedef int (*BankGetHasContracts_func)(void);
+typedef int (*BankHasPendingContractsRequest_func)(void);
 
-typedef u32 (*BankGetXP_func)(void);
+
+typedef u64 (*BankGetXP_func)(void);
+typedef u64 (*BankAddXP_func)(u64 amt);
+typedef int (*BankGetLevel_func)(void);
 typedef u32 (*BankGetBolts_func)(void);
 typedef u32 (*BankAddBolts_func)(u32 amt);
 typedef u32 (*BankSubBolts_func)(u32 amt);
@@ -244,6 +320,7 @@ struct BankVTable
   BankGetItemName_func GetItemName;
   BankGetRarityFromQuality_func GetRarityFromQuality;
   BankGetEquippedBadgeEffectStrength_func GetEquippedBadgeEffectStrength;
+  BankGetEquippedWeaponModRarity_func GetEquippedWeaponModRarity;
   BankGetEquippedWeaponFromGadgetBox_func GetEquippedWeaponFromGadgetBox;
 
   BankRequestInventoryFromServer_func RequestInventoryFromServer;
@@ -251,14 +328,20 @@ struct BankVTable
   BankRequestEquippedInventoryFromServer_func RequestEquippedInventoryFromServer;
   BankRequestAccountFromServer_func RequestAccountFromServer;
   BankSendAccountToServer_func SendAccountToServer;
+  BankRequestContractsFromServer_func RequestContractsFromServer;
+  BankSendContractStatsToServer_func SendContractStatsToServer;
   BankRequestMapStats_func RequestMapStats;
 
   BankGetHasEquippedInventory_func GetHasEquippedInventory;
   BankHasPendingEquippedInventoryRequest_func HasPendingEquippedInventoryRequest;
   BankGetHasAccount_func GetHasAccount;
   BankHasPendingAccountRequest_func HasPendingAccountRequest;
+  BankGetHasContracts_func GetHasContracts;
+  BankHasPendingContractsRequest_func HasPendingContractsRequest;
   
   BankGetXP_func GetXP;
+  BankAddXP_func AddXP;
+  BankGetLevel_func GetLevel;
   BankGetBolts_func GetBolts;
   BankAddBolts_func AddBolts;
   BankSubBolts_func SubBolts;
@@ -270,6 +353,8 @@ int bankGetHasEquippedInventory(void);
 int bankHasPendingEquippedInventoryRequest(void);
 int bankGetHasAccount(void);
 int bankHasPendingAccountRequest(void);
+int bankGetHasContracts(void);
+int bankHasPendingContractsRequest(void);
 
 int bankItemIsWeapon(RaidsInventoryItem_t* item);
 int bankItemIsBadge(RaidsInventoryItem_t* item);
@@ -278,18 +363,25 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize);
 u32 bankGetBolts(void);
 u32 bankAddBolts(u32 amount);
 u32 bankSubtractBolts(u32 amount);
-u32 bankGetXP(void);
-u32 bankAddXP(u32 amount);
+u64 bankGetXP(void);
+u64 bankAddXP(u64 amount);
+int bankGetLevel(void);
+float bankGetLevelProgress(void);
 double bankGetWeaponXP(int gadgetId);
 double bankAddWeaponXP(double amount, int gadgetId);
+float bankGetWeaponDamage(RaidsInventoryItem_t* item);
 
 void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page);
 void bankSendInventoryItemToServer(RaidsInventoryItem_t* item, enum RaidsItemUpdateAction action);
 void bankRequestEquippedInventoryFromServer(void);
 void bankRequestAccountFromServer(void);
 void bankSendAccountToServer(void);
-void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest);
+void bankRequestAccountReset(void);
+void bankRequestContractsFromServer(void);
+void bankSendContractStatsToServer(RaidsContract_t* contract);
+void bankRequestMapStats(char* mapFilename, char* mapName, struct RaidsBankMapStats* dest, int missionType);
 void bankSendMapStats(struct RaidsBankMapStats* mapStats);
+void bankSendMapMobMetadata(int mobOClass, int difficultyStars);
 
 RaidsPlayerBank_t* bankGetLocalBank(void);
 RaidsInventoryItem_t* bankGetLocalItemFromBank(int index);
@@ -306,6 +398,8 @@ RaidsInventoryItem_t* bankGetEquippedBadgeFromGadgetBox(GadgetBox* gbox);
 RaidsInventoryItem_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int gadgetId);
 enum RaidsItemRarity bankGetRarityFromQuality(u8 quality);
 float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect);
+int bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType);
+u32 bankGetWeaponOmegaModColor(RaidsInventoryItem_t* item);
 
 void bankTick(void);
 void bankInit(void);

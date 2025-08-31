@@ -163,7 +163,7 @@ void dzstrikerPostUpdate(Moby* moby)
   // adjust animSpeed by speed and by animation
   float baseSpeed = 0.5;
 	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
-  if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
+  animSpeed *= mobGetFreezeSpeedFactor(moby);
   if (moby->AnimSeqId == DZSTRIKER_LEGS_ANIM_JUMP) {
     animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
     if (pvars->MobVars.MoveVars.Grounded) {

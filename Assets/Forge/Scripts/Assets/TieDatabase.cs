@@ -37,6 +37,5 @@ public class TieData
 {
     [HideInInspector] public string OClassStr;
     [HideInInspector] public int OClass;
-    [Min(0.01f)] public float MipDistanceMultiplier = 1;
     [Min(0.01f)] public float LODDistanceMultiplier = 1;
 }

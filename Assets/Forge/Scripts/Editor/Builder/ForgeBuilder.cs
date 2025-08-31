@@ -369,7 +369,7 @@ public static class ForgeBuilder
                 // write header
                 if (ctx.RacVersion == RCVER.DL)
                 {
-                    var subsort = (customModeDatas.FirstOrDefault(x => x is RaidsModeData) as RaidsModeData)?.MinLevelRequired ?? 0;
+                    var subsort = (customModeDatas.FirstOrDefault(x => x is RaidsModeData) as RaidsModeData)?.GetSubSort() ?? 0;
 
                     writer.Write(mapConfig.MapVersion);
                     writer.Write((int)mapConfig.DLBaseMap);
@@ -662,7 +662,7 @@ public static class ForgeBuilder
                     var chunk = chunks[i];
                     if (chunk.HeaderBytes == null || chunk.HeaderBytes.Length != 0x40)
                     {
-                        Debug.LogError($"Unable to build tfrags. Chunk {chunk.name} has an invalid def. Please reimport the terrain to fix.");
+                        Debug.LogError($"Unable to build tfrags. Chunk {chunk.name} has an invalid def. Please reimport the terrain to fix.", chunk.transform);
                         ctx.Cancel = true;
                         return;
                     }
@@ -841,8 +841,8 @@ public static class ForgeBuilder
                             writer.Write(lodmid);
                             writer.Write(lodhigh);
 
-                            ms.Position = 0x48;
-                            writer.Write(BitConverter.ToSingle(coreBinBytes, (int)ms.Position) * tieData.MipDistanceMultiplier);
+                            //ms.Position = 0x48;
+                            //writer.Write(BitConverter.ToSingle(coreBinBytes, (int)ms.Position) * tieData.MipDistanceMultiplier);
                         }
                     }
                 }

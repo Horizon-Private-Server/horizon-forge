@@ -26,6 +26,7 @@ struct BankVTable bankVTable = {
   .GetItemName = &bankGetItemName,
   .GetRarityFromQuality = &bankGetRarityFromQuality,
   .GetEquippedBadgeEffectStrength = &bankGetEquippedBadgeEffectStrength,
+  .GetEquippedWeaponModRarity = &bankGetEquippedWeaponModRarity,
   .GetEquippedWeaponFromGadgetBox = &bankGetEquippedWeaponFromGadgetBox,
 
   .RequestInventoryFromServer = &bankRequestInventoryFromServer,
@@ -33,14 +34,20 @@ struct BankVTable bankVTable = {
   .RequestEquippedInventoryFromServer = &bankRequestEquippedInventoryFromServer,
   .RequestAccountFromServer = &bankRequestAccountFromServer,
   .SendAccountToServer = &bankSendAccountToServer,
+  .RequestContractsFromServer = &bankRequestContractsFromServer,
+  .SendContractStatsToServer = &bankSendContractStatsToServer,
   .RequestMapStats = &bankRequestMapStats,
 
   .GetHasEquippedInventory = &bankGetHasEquippedInventory,
   .HasPendingEquippedInventoryRequest = &bankHasPendingEquippedInventoryRequest,
   .GetHasAccount = &bankGetHasAccount,
   .HasPendingAccountRequest = &bankHasPendingAccountRequest,
+  .GetHasContracts = &bankGetHasContracts,
+  .HasPendingContractsRequest = &bankHasPendingContractsRequest,
 
   .GetXP = &bankGetXP,
+  .AddXP = &bankAddXP,
+  .GetLevel = &bankGetLevel,
   .GetBolts = &bankGetBolts,
   .AddBolts = &bankAddBolts,
   .SubBolts = &bankSubtractBolts,
@@ -72,8 +79,10 @@ u32 bankPaintColors[] = {
 
 int bankHasEquippedInventory = 0;
 int bankHasAccount = 0;
+int bankHasContracts = 0;
 long bankLastEquippedInventoryRequestTime = 0;
 long bankLastAccountRequestTime = 0;
+long bankLastContractsRequestTime = 0;
 char bankLevelUpBuf[64];
 
 char bankRarityCode[] = {
@@ -122,7 +131,7 @@ int bankOnSetPlayerAccountRemote(void * connection, void * data)
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     if (gs->PlayerClients[i] != msg.ClientId) continue;
 
-    memcpy(state->PlayerStates[i].State.Skills, msg.Account.Skills, sizeof(state->PlayerStates[i].State.Skills));
+    state->PlayerStates[i].State.Level = getLevelFromXp(msg.Account.Experience);
   }
 
   return sizeof(msg);
@@ -188,6 +197,19 @@ int bankHasPendingAccountRequest(void)
 {
   long dtMs = (timerGetSystemTime() - bankLastAccountRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
   return bankLastAccountRequestTime && dtMs < (2*TIME_SECOND);
+}
+
+//--------------------------------------------------------------------------
+int bankGetHasContracts(void)
+{
+  return bankHasContracts;
+}
+
+//--------------------------------------------------------------------------
+int bankHasPendingContractsRequest(void)
+{
+  long dtMs = (timerGetSystemTime() - bankLastContractsRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
+  return bankLastContractsRequestTime && dtMs < (2*TIME_SECOND);
 }
 
 //--------------------------------------------------------------------------
@@ -276,7 +298,67 @@ void bankSendAccountToServer(void)
 }
 
 //--------------------------------------------------------------------------
-void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest)
+void bankRequestAccountReset(void)
+{
+  RaidsPlayerBank_t* localBank = bankGetLocalBank();
+  if (!localBank) return;
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_RESET_ACCOUNT_REQUEST, 0, NULL);
+  DPRINTF("sent account reset request\n");
+}
+
+//--------------------------------------------------------------------------
+void bankRequestContractsFromServer(void)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  struct RaidsGetContractsRequest msg = {
+    .DestAddress = (u32)&bankLocalBank.Contracts,
+    .DestHasFlagAddress = (u32)&bankHasContracts,
+  };
+
+  // when requesting contracts
+  // we want to avoid a situation where our local progress is overwritten by the server
+  // so send the current stats over to make sure the server has the latest
+  if (bankHasContracts) {
+    int i;
+    for (i = 0; i < BANK_MAX_CONTRACTS; ++i) {
+      RaidsContract_t* contract = &bankLocalBank.Contracts[i];
+      if (!contract->Uid || !contract->Activated) continue;
+
+      msg.ContractStats[i].ContractUid = contract->Uid;
+      msg.ContractStats[i].Kills = contract->Kills;
+      msg.ContractStats[i].CompletedTimeMs = contract->CompletedTimeMs;
+    }
+  }
+
+  bankLastContractsRequestTime = timerGetSystemTime();
+  bankHasContracts = 0;
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_CONTRACTS_REQUEST, sizeof(msg), &msg);
+  DPRINTF("request contracts\n");
+}
+
+//--------------------------------------------------------------------------
+void bankSendContractStatsToServer(RaidsContract_t* contract)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+  if (!contract) return;
+
+  struct RaidsUpdateContractStatsRequest msg = {
+    .ContractUid = contract->Uid,
+    .Kills = contract->Kills,
+    .CompletedTimeMs = contract->CompletedTimeMs
+  };
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_CONTRACT_STATS_REQUEST, sizeof(msg), &msg);
+  DPRINTF("send contract stats\n");
+}
+
+//--------------------------------------------------------------------------
+void bankRequestMapStats(char* mapFilename, char* mapName, struct RaidsBankMapStats* dest, int missionType)
 {
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   if (!localBank) return;
@@ -286,10 +368,12 @@ void bankRequestMapStats(char* mapFilename, struct RaidsBankMapStats* dest)
   struct RaidsBankGetMapStatsRequest msg = {
     .ResponseAddress = (u32)dest,
     .ChallengesCount = dest->ChallengesCount,
-    .CollectiblesCount = dest->CollectiblesCount
+    .CollectiblesCount = dest->CollectiblesCount,
+    .MissionType = missionType
   };
 
   strncpy(msg.MapFilename, mapFilename, sizeof(msg.MapFilename));
+  strncpy(msg.MapName, mapName, sizeof(msg.MapName));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_GET_MAP_STATS_REQUEST, sizeof(msg), &msg);
 }
 
@@ -308,6 +392,46 @@ void bankSendMapStats(struct RaidsBankMapStats* mapStats)
   strncpy(msg.MapFilename, mapStats->MapFilename, sizeof(msg.MapFilename));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_SET_MAP_STATS_REQUEST, sizeof(msg), &msg);
   DPRINTF("sent map stats\n");
+}
+
+//--------------------------------------------------------------------------
+int bankSendMapContractRules(void)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return 0;
+  if (!MapConfig.State || !MapConfig.State->CurrentMapDef || !MapConfig.State->CurrentMapDef->Filename[0]) return 0;
+
+  struct RaidsBankUpdateMapContractRulesRequest
+  {
+    char MapFilename[64];
+    struct RaidsMobContractRule ContractRules[16];
+  };
+
+  struct RaidsBankUpdateMapContractRulesRequest msg;
+  memset(&msg, 0, sizeof(msg));
+  strncpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+  memcpy(msg.ContractRules, MapConfig.MobContractRules, sizeof(struct RaidsMobContractRule) * MapConfig.MobContractRulesCount);
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST, sizeof(msg), &msg);
+  DPRINTF("bankSendMapContractRules\n");
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+void bankSendMapMobMetadata(int mobOClass, int difficultyStars)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+  if (!isInGame() || !missionIsActive()) return;
+  if (!MapConfig.State) return;
+  if (!MapConfig.State->CurrentMapDef) return;
+
+  struct RaidsBankUpdateMapMetadataRequest msg = {
+    .AddMobOClass = mobOClass,
+    .AddMobOClassAtDifficulty = difficultyStars
+  };
+  strncpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_METADATA_REQUEST, sizeof(msg), &msg);
+  DPRINTF("bankSendMapMobMetadata\n");
 }
 
 //--------------------------------------------------------------------------
@@ -334,25 +458,54 @@ u32 bankSubtractBolts(u32 amount)
 }
 
 //--------------------------------------------------------------------------
-u32 bankGetXP(void) { return bankLocalBank.Account.Experience; }
-u32 bankAddXP(u32 amount)
+u64 bankGetXP(void) { return bankLocalBank.Account.Experience; }
+u64 bankAddXP(u64 amount)
 {
+  int level = bankGetLevel();
+
   // add xp
-  u32 xp = bankLocalBank.Account.Experience;
+  u64 xp = bankLocalBank.Account.Experience;
   bankLocalBank.Account.Experience += amount;
 
-  int level = getLevelFromXp(xp);
-  int nextLevel = getLevelFromXp(xp + amount);
+  int nextLevel = bankGetLevel();
   //printf("add xp %'d (+%'d)\n", xp, amount);
   if (nextLevel > level) {
-    bankLocalBank.Account.SkillPoints += 1;
+    //bankLocalBank.Account.SkillPoints += 1;
 
     snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached level %d", nextLevel + 1);
     pushSnack(0, bankLevelUpBuf, 120);
     bankSendAccountToServer(); // send to server
+    bankUpdateLocalState(playerGetFromSlot(0));
   }
 
   return bankLocalBank.Account.Experience;
+}
+
+//--------------------------------------------------------------------------
+int bankGetLevel(void)
+{
+  static u64 lastXp = 0;
+  static int lastLevel = 0;
+
+  u64 xp = bankLocalBank.Account.Experience;
+  if (xp == lastXp) return lastLevel;
+
+  lastXp = xp;
+  return lastLevel = getLevelFromXp(xp);
+}
+
+//--------------------------------------------------------------------------
+float bankGetLevelProgress(void)
+{
+  u64 xp = bankLocalBank.Account.Experience;
+  int level = getLevelFromXp(xp);
+  if (level >= LEVELUP_MAX_PLAYER_LEVEL) return 1.0f;
+
+  u64 lastXp = getXpForLevel(level);
+  u64 nextXp = getXpForLevel(level + 1);
+  if (xp < lastXp) xp = lastXp;
+  float xpPerc = (float)((xp - lastXp) / (double)(nextXp - lastXp));
+  return xpPerc;
 }
 
 //--------------------------------------------------------------------------
@@ -370,7 +523,7 @@ double bankAddWeaponXP(double amount, int gadgetId)
   int nextLevel = getProficiencyFromXp(xp + amount);
   if (nextLevel > level) {
     struct GadgetDef* gadgetDef = weaponGetDef(gadgetId, 0);
-    bankAddXP(LEVELUP_PLAYER_INCREMENT_AMOUNT);
+    //bankAddXP(LEVELUP_PLAYER_INCREMENT_AMOUNT);
     snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached %s P%d", uiMsgString(gadgetDef->quickSelectTag), nextLevel + 1);
     pushSnack(0, bankLevelUpBuf, 120);
     bankSendAccountToServer(); // send to server
@@ -411,7 +564,7 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize)
     snprintf(buf, bufSize, "%cClass Mod\x08", bankRarityCode[rarity]);
   } else {
     struct GadgetDef* gadgetDef = weaponGetDef(item->WeaponData.GadgetId, 0);
-    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity >= RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
+    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity > RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
   }
 }
 
@@ -514,6 +667,34 @@ u32 bankGetGadgetColor(int localPlayerIndex, int gadgetId)
 }
 
 //--------------------------------------------------------------------------
+u32 bankGetOmegaModColor(int omegaMod)
+{
+  switch (omegaMod)
+  {
+    case OMEGA_MOD_NAPALM: return hudGetTeamColor(TEAM_ORANGE, 1);
+    case OMEGA_MOD_TIME_BOMB: return hudGetTeamColor(TEAM_BLUE, 0);
+    case OMEGA_MOD_FREEZE: return hudGetTeamColor(TEAM_BLUE, 3);
+    case OMEGA_MOD_MINI_BOMB: return hudGetTeamColor(TEAM_WHITE, 2);
+    case OMEGA_MOD_MORPH: return hudGetTeamColor(TEAM_PURPLE, 0);
+    case OMEGA_MOD_BRAINWASH: return hudGetTeamColor(TEAM_ORANGE, 0);
+    case OMEGA_MOD_ACID: return hudGetTeamColor(TEAM_GREEN, 1);
+    case OMEGA_MOD_SHOCK: return hudGetTeamColor(TEAM_AQUA, 0);
+    case RAIDS_WEAPON_MOD_WILL_O_WISP: return hudGetTeamColor(TEAM_RED, 1);
+    case RAIDS_WEAPON_MOD_LIGHTFOOT: return hudGetTeamColor(TEAM_WHITE, 0);
+    default: return 0;
+  }
+}
+
+//--------------------------------------------------------------------------
+u32 bankGetWeaponOmegaModColor(RaidsInventoryItem_t* item)
+{
+  if (!item) return 0;
+  if (!bankItemIsWeapon(item)) return 0;
+
+  return bankGetOmegaModColor(item->WeaponData.ModType);
+}
+
+//--------------------------------------------------------------------------
 float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect)
 {
   struct RaidsState* state = MapConfig.State;
@@ -532,6 +713,22 @@ float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effec
 }
 
 //--------------------------------------------------------------------------
+int bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType)
+{
+  struct RaidsState* state = MapConfig.State;
+  if (!state) return -1;
+
+  int slotId = bankGetEquipSlotFromGadgetId(gadgetId);
+  if (slotId < 0) return -1;
+
+  RaidsInventoryItem_t* weapon = &state->PlayerStates[playerId].Inventory.Items[slotId];
+  if (!weapon || weapon->Type != RAIDS_ITEM_WEAPON) return -1;
+  if (weapon->WeaponData.ModType != modType) return -1;
+
+  return (int)bankGetRarityFromQuality(weapon->WeaponData.ModQuality);
+}
+
+//--------------------------------------------------------------------------
 int bankGetAlphaModCount(GadgetBox* gadgetBox, int gadgetId, int alphaModId)
 {
   int extra = 0;
@@ -543,13 +740,13 @@ int bankGetAlphaModCount(GadgetBox* gadgetBox, int gadgetId, int alphaModId)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gadgetBox, gadgetId);
   if (!bankWeapon) return 0;
 
-  switch (alphaModId)
-  {
-    case ALPHA_MOD_AMMO: extra = (int)ceilf(BADGE_AMMO_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF)); break;
-    case ALPHA_MOD_AREA: extra = (int)ceilf(BADGE_AREA_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF)); break;
-    case ALPHA_MOD_SPEED: extra = (int)ceilf(BADGE_SPEED_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF)); break;
-    case ALPHA_MOD_IMPACT: extra = (int)ceilf(BADGE_IMPACT_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF)); break;
-  }
+  // switch (alphaModId)
+  // {
+  //   case ALPHA_MOD_AMMO: extra = (int)ceilf(BADGE_AMMO_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AMMO_BUFF)); break;
+  //   case ALPHA_MOD_AREA: extra = (int)ceilf(BADGE_AREA_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_AREA_BUFF)); break;
+  //   case ALPHA_MOD_SPEED: extra = (int)ceilf(BADGE_SPEED_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_SPEED_BUFF)); break;
+  //   case ALPHA_MOD_IMPACT: extra = (int)ceilf(BADGE_IMPACT_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF)); break;
+  // }
 
   return extra + bankWeapon->WeaponData.AlphaModCounts[alphaModId-1];
 }
@@ -560,7 +757,8 @@ float bankGetArbiterNapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_ARBITER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_NAPALM_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_ARBITER, RAIDS_WEAPON_MOD_NAPALM) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC * strength;
 }
 
 float bankGetArbiterMinibombDamage(Player* player)
@@ -568,7 +766,8 @@ float bankGetArbiterMinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_ARBITER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_ARBITER, RAIDS_WEAPON_MOD_MINI_BOMB) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC * strength;
 }
 
 //--------------------------------------------------------------------------
@@ -577,7 +776,8 @@ float bankGetMineLauncherNapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_MINE_LAUNCHER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_NAPALM_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_MINE_LAUNCHER, RAIDS_WEAPON_MOD_NAPALM) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -586,7 +786,8 @@ float bankGetMineLauncherMinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_MINE_LAUNCHER);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_MINE_LAUNCHER, RAIDS_WEAPON_MOD_MINI_BOMB) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -595,7 +796,8 @@ float bankGetB6NapalmDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_B6);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_NAPALM_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_B6, RAIDS_WEAPON_MOD_NAPALM) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_NAPALM_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -604,7 +806,8 @@ float bankGetB6MinibombDamage(Player* player)
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, WEAPON_ID_B6);
   if (!bankWeapon) return 0;
 
-  return bankWeapon->WeaponData.Damage * MOB_POSTFX_MINIBOMB_DMG_PERC;
+  int strength = bankGetEquippedWeaponModRarity(player->PlayerId, WEAPON_ID_B6, RAIDS_WEAPON_MOD_MINI_BOMB) + 1;
+  return bankGetWeaponDamage(bankWeapon) * MOB_POSTFX_MINIBOMB_DMG_PERC;
 }
 
 //--------------------------------------------------------------------------
@@ -638,10 +841,26 @@ void bankSpawnMinibombs(Moby* pParent, int count, VECTOR rootVel, float randSpee
 float bankGetGadgetDamage(GadgetBox* gbox, int gadgetId, int damageType, int multiplier)
 {
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
-  if (bankWeapon) return bankWeapon->WeaponData.Damage * multiplier;
+  if (bankWeapon) return bankGetWeaponDamage(bankWeapon) * multiplier;
 
   int level = gbox->Gadgets[gadgetId].Level;
   return ((float (*)(int gadgetId, int level, int damageType, int multiplier))0x00627520)(gadgetId, level, damageType, multiplier);
+}
+
+//--------------------------------------------------------------------------
+float bankGetWeaponDamage(RaidsInventoryItem_t* item)
+{
+  if (!item) return 0;
+  if (!bankItemIsWeapon(item)) return 0;
+  
+  // base
+  float damage = item->WeaponData.Damage;
+
+  // upgrades
+  damage += 5 * item->WeaponData.Upgrades;
+  damage *= 1 + (0.025) * item->WeaponData.Upgrades * (bankGetRarityFromQuality(item->Quality)+1);
+
+  return damage;
 }
 
 //--------------------------------------------------------------------------
@@ -731,7 +950,7 @@ void bankApplyItem(Player* player, RaidsInventoryItem_t* item)
     playerGiveWeapon(gbox, gadgetId, 0, 1);
     bankTryAddGadgetToQuickSelect(player, gadgetId);
   }
-  gbox->Gadgets[gadgetId].Level = bankGetRarityFromQuality(item->Quality) >= RAIDS_ITEM_RARITY_LEGENDARY ? 9 : 0;
+  gbox->Gadgets[gadgetId].Level = bankGetRarityFromQuality(item->Quality) > RAIDS_ITEM_RARITY_LEGENDARY ? 9 : 0;
   gbox->Gadgets[gadgetId].UNK_10 = (gbox->Gadgets[gadgetId].UNK_10 & 0xFF) | (rarity << 8) | (item->WeaponData.Proficiency << 16);
   gbox->Gadgets[gadgetId].Experience = (int)(bankGetWeaponXpProgressFromGadgetBox(gbox, gadgetId) * 100000);
 
@@ -741,7 +960,8 @@ void bankApplyItem(Player* player, RaidsInventoryItem_t* item)
     bankApplyGadgetMoby(player, item, player->Gadgets[0].pMoby2);
   }
 
-  gbox->Gadgets[gadgetId].OmegaMod = item->WeaponData.OmegaMod;
+  // apply weapon omega mod
+  gbox->Gadgets[gadgetId].OmegaMod = item->WeaponData.ModType;
 }
 
 //--------------------------------------------------------------------------
@@ -756,8 +976,8 @@ void bankUpdateLocalState(Player * player)
   int playerId = player->PlayerId;
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
 
-  // save skill points
-  memcpy(state->PlayerStates[playerId].State.Skills, localBank->Account.Skills, sizeof(state->PlayerStates[playerId].State.Skills));
+  // save level
+  state->PlayerStates[playerId].State.Level = bankGetLevel();
 
   // save to equipped
   int i;
@@ -900,6 +1120,11 @@ void bankTick(void)
 {
   int i;
 
+  static int sentContractRules = 0;
+  if (!sentContractRules) {
+    sentContractRules = bankSendMapContractRules();
+  }
+
   // handle new inventory change
   if (bankLocalBank.EquippedInventory.RefreshLocalInventory) {
     for (i = 0; i < GAME_MAX_LOCALS; ++i) {
@@ -929,6 +1154,7 @@ void bankInit(void)
   POKE_U8(0x00171b66, 1); // challenge mode
   HOOK_J_OP(0x00627600, &bankGetGadgetDamage, 0);
   HOOK_J_OP(0x00542078, &bankGetGadgetColor, 0);
+  HOOK_J_OP(0x00541fd0, &bankGetOmegaModColor, 0);
   //HOOK_JAL(0x003F29AC, &bankGetArbiterSpeed);
   //POKE_U32(0x003F2984, 0x0240202D);
   HOOK_J(0x006299A8, &bankGetAlphaModCount);

@@ -12,25 +12,35 @@ public class BezierSpline : Spline
     public enum BezierSplineGenMode
     {
         FixedCount,
-        Curvature
+        Curvature,
+        NoBezier
     }
 
     [Header("Spline")]
     public BezierSplineGenMode Mode = BezierSplineGenMode.FixedCount;
     [Min(2)]
     public int NumPoints = 2;
+    public Vector3 AlignedNormal = Vector3.up;
 
     [Range(0f, 0.99f)]
     public float Curvature = 0f;
     public bool Loop = false;
+    [Tooltip("Use for internal Forge-only tools, where spline isn't needed in game.")]
+    public bool DoNotIncludeInBuild = false;
 
     [ReadOnly] public int ComputedNumPoints = 0;
+
+    [Header("Tristrip")]
+    public bool Tristrip;
+    public float TristripWidth = 5f;
 
     [Header("Gizmos")]
     public bool DrawPoints = false;
     public bool DrawRotation = false;
 
     private BezierSplineVertex[] _cachedVertices;
+    private List<(BezierSplineVertex a, BezierSplineVertex b, float time)> _cachedPath;
+    private Hash128 _cachedPathHash;
 
     public BezierSplineVertex[] GetVertices()
     {
@@ -47,6 +57,11 @@ public class BezierSpline : Spline
         return _cachedVertices;
     }
 
+    public override bool IncludeInExport()
+    {
+        return !DoNotIncludeInBuild;
+    }
+
     protected override void Start()
     {
         InvalidateCache();
@@ -54,8 +69,7 @@ public class BezierSpline : Spline
 
     protected override void OnValidate()
     {
-        InvalidateCache();
-        BuildSpline();
+        RebuildSpline();
     }
 
     #region Create Asset
@@ -99,12 +113,46 @@ public class BezierSpline : Spline
 
     public void InvalidateCache()
     {
+        _cachedPathHash = default;
+        _cachedPath = null;
         _cachedVertices = null;
+    }
+
+    private Hash128 ComputeHash()
+    {
+        var hash = new Hash128();
+        var vertices = GetVertices();
+
+        hash = hash.Append(this.transform.localToWorldMatrix);
+
+        // add vertices
+        foreach (var vertex in vertices)
+        {
+            hash = hash.Append(vertex.HandleIn);
+            hash = hash.Append(vertex.HandleOut);
+            hash = hash.Append(vertex.Control);
+        }
+
+        // add spline params
+        hash.Append((int)Mode);
+        hash.Append(Loop ? 1 : 0);
+        hash.Append(Curvature);
+
+        return hash;
     }
 
     #endregion
 
     #region Spline
+
+    public void RebuildSpline()
+    {
+        InvalidateCache();
+        BuildSpline();
+
+        var asset = GetComponent<IAsset>();
+        if (asset != null && asset.GameObject) asset.UpdateAsset();
+    }
 
     public override void RefreshVertices()
     {
@@ -128,17 +176,23 @@ public class BezierSpline : Spline
             return;
 
         // add vertices
+        Vertices ??= new List<SplineVertex>();
         Vertices.Clear();
-        for (int i = 0; i < (path.Length - 1); ++i)
+        var count = path.Length;
+        for (int i = 0; i < count; ++i)
         {
+            var nextI = i + 1;
             var pos = path[i];
-            var pos2 = path[i + 1];
+            var pos2 = nextI >= count ? path[0] : path[nextI];
+            if (nextI >= count && !Loop) pos2 = pos;
+            var tan = (pos2 - pos).normalized;
+            if (tan == Vector3.zero) tan = i > 0 ? (path[i] - path[i - 1]).normalized : this.transform.forward;
             var go = new GameObject(i.ToString());
             var vertex = go.AddComponent<SplineVertex>();
             go.transform.SetParent(this.transform.transform, false);
 
             go.transform.position = pos;
-            go.transform.rotation = Quaternion.LookRotation((pos2 - pos).normalized, Vector3.up);
+            go.transform.rotation = Quaternion.LookRotation(tan, Vector3.up);
             go.hideFlags = HideFlags.HideAndDontSave;
 
             Vertices.Add(vertex);
@@ -280,9 +334,13 @@ public class BezierSpline : Spline
         return distance;
     }
 
-    public Vector3[] ComputePath()
+    public List<(BezierSplineVertex a, BezierSplineVertex b, float time)> ComputePathPoints()
     {
-        List<(BezierSplineVertex a, BezierSplineVertex b, float time)> pointsT = new List<(BezierSplineVertex a, BezierSplineVertex b, float time)>();
+        var hash = ComputeHash();
+        if (hash == _cachedPathHash && _cachedPath != null)
+            return _cachedPath;
+
+        var pointsT = new List<(BezierSplineVertex a, BezierSplineVertex b, float time)>();
 
         var vertices = GetVertices();
         if (vertices == null || vertices.Length < 2)
@@ -312,11 +370,18 @@ public class BezierSpline : Spline
                 }
             }
         }
+        else if (Mode == BezierSplineGenMode.NoBezier)
+        {
+            for (int i = 0; i < (vertices.Length - 1); ++i)
+            {
+                pointsT.Add((vertices[i], vertices[i + 1], 0));
+            }
+        }
         else
         {
             var lengthStep = length / (NumPoints - 1);
             var currentLength = 0f;
-            while (currentLength < length)
+            while (currentLength < length && pointsT.Count < (NumPoints-1))
             {
                 var point = GetPointOnPath(currentLength);
                 var pos = GetPosition(point.a, point.b, point.time);
@@ -327,7 +392,9 @@ public class BezierSpline : Spline
         }
 
         // add end
-        pointsT.Add((vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1));
+        var lastPoint = pointsT.LastOrDefault();
+        if (lastPoint.b != vertices[vertices.Length - 1] || lastPoint.time < 1)
+            pointsT.Add((vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1));
 
         // increase density of points around curves
         if (Mode == BezierSplineGenMode.Curvature)
@@ -401,46 +468,111 @@ public class BezierSpline : Spline
             }
         }
 
+        _cachedPath = pointsT;
+        _cachedPathHash = hash;
+        return pointsT;
+    }
+
+    public Vector3[] ComputePath()
+    {
+        var pointsT = ComputePathPoints();
+        if (pointsT == null) return null;
+
         // build points
-        Vector3[] points = new Vector3[pointsT.Count];
-        for (int i = 0; i < pointsT.Count; ++i)
+        if (Tristrip)
         {
-            points[i] = GetPosition(pointsT[i].a, pointsT[i].b, pointsT[i].time);
-        }
+            Vector3[] points = new Vector3[pointsT.Count];
+            for (int i = 0; i < pointsT.Count; i++)
+            {
+                var idx = i;
+                var p0 = GetPosition(pointsT[i].a, pointsT[i].b, pointsT[i].time);
+                var bitangent = GetBitangent(pointsT[i].a, pointsT[i].b, pointsT[i].time);
 
-        return points;
-    }
+                points[idx + 0] = p0 + (bitangent * TristripWidth) * ((i % 2 == 0) ? 1 : -1);
+            }
 
-    private Vector3 GetPosition(BezierSplineVertex a, BezierSplineVertex b, float t)
-    {
-        float invT = 1 - t;
-        return (a.Control * Mathf.Pow(invT, 3)) +
-            (a.HandleOut * 3 * t * Mathf.Pow(invT, 2)) +
-            (b.HandleIn * 3 * Mathf.Pow(t, 2) * invT) +
-            (b.Control * Mathf.Pow(t, 3));
-    }
-
-    private Vector3 GetTangent(BezierSplineVertex a, BezierSplineVertex b, float t)
-    {
-        float delta = 0.001f;
-        if (t >= 1f)
-        {
-            return ((GetPosition(a, b, t) - GetPosition(a, b, t - delta)) / delta).normalized;
+            return points;
         }
         else
         {
-            return ((GetPosition(a, b, t + delta) - GetPosition(a, b, t)) / delta).normalized;
+            Vector3[] points = new Vector3[pointsT.Count];
+            for (int i = 0; i < pointsT.Count; ++i)
+            {
+                points[i] = GetPosition(pointsT[i].a, pointsT[i].b, pointsT[i].time);
+            }
+
+            return points;
         }
     }
 
-    private Vector3 GetNormal(BezierSplineVertex a, BezierSplineVertex b, float t)
+    public Vector3 GetPosition(BezierSplineVertex a, BezierSplineVertex b, float t)
     {
-        var tan = GetTangent(a, b, t);
-        var normal = Vector3.Cross(tan, Vector3.right);
+        if (Mode == BezierSplineGenMode.NoBezier) return t >= 1 ? b.Control : a.Control;
+        if (t <= 0) return a.Control;
+        if (t >= 1) return b.Control;
+
+        float u = 1 - t;
+        return (a.Control * Mathf.Pow(u, 3)) +
+            (a.HandleOut * 3 * t * Mathf.Pow(u, 2)) +
+            (b.HandleIn * 3 * Mathf.Pow(t, 2) * u) +
+            (b.Control * Mathf.Pow(t, 3));
+    }
+
+    public Vector3 GetTangent(BezierSplineVertex a, BezierSplineVertex b, float t)
+    {
+        if (Mode == BezierSplineGenMode.NoBezier) return (b.Control - a.Control).normalized;
+
+        var u = 1 - t;
+        var p0 = 3 * (a.HandleOut - a.Control);
+        var p1 = 3 * (b.HandleIn - a.HandleOut);
+        var p2 = 3 * (b.Control - b.HandleIn);
+        return p0 * Mathf.Pow(u, 2) +
+               2 * p1 * u * t +
+               p2 * Mathf.Pow(t, 2);
+    }
+
+    public Vector3 GetNormal(BezierSplineVertex a, BezierSplineVertex b, float t)
+    {
+        if (Mode == BezierSplineGenMode.NoBezier) return Vector3.Cross((b.Control - a.Control), Vector3.right).normalized;
+
+        var tangent = GetTangent(a, b, t);
+        float invT = 1 - t;
+        var secondDeriv = 6 * invT * (b.HandleIn - 2 * a.HandleOut + a.Control) +
+               6 * t * (b.Control - 2 * b.HandleIn + a.HandleOut);
+
+        return Vector3.Cross(Vector3.Cross(tangent, secondDeriv), tangent).normalized;
+    }
+
+    public Vector3 GetAlignedNormal(BezierSplineVertex a, BezierSplineVertex b, float t)
+    {
+        var alignedNormal = this.transform.rotation * AlignedNormal;
+        var vertices = this.GetVertices();
+        if (vertices.Length < 2) return alignedNormal;
+
+        var tangent = GetTangent(a, b, t);
+        var normal = Vector3.Cross(Vector3.Cross(alignedNormal, tangent), tangent).normalized;
         if (normal.sqrMagnitude == 0f)
-            return Vector3.Cross(tan, Vector3.up);
+        {
+            // fallback to cross product with right or forward
+            normal = Vector3.Cross(tangent, this.transform.right).normalized;
+            if (normal.sqrMagnitude == 0f) normal = Vector3.Cross(tangent, this.transform.forward).normalized;
+        }
+
+        //if (Mode == BezierSplineGenMode.NoBezier)
+        //{
+        //    if (normal.sqrMagnitude == 0f) normal = Vector3.Cross(vertices[1].Control - vertices[0].Control, this.transform.right).normalized;
+        //    if (normal.sqrMagnitude == 0f) normal = Vector3.Cross(vertices[1].Control - vertices[0].Control, this.transform.forward).normalized;
+        //    return Vector3.Cross((b.Control - a.Control), normal).normalized;
+        //}
 
         return normal;
+    }
+
+    public Vector3 GetBitangent(BezierSplineVertex a, BezierSplineVertex b, float t)
+    {
+        var tan = GetTangent(a, b, t);
+        var normal = GetAlignedNormal(a, b, t);
+        return Vector3.Cross(tan, normal).normalized;
     }
 
     #endregion
@@ -463,11 +595,15 @@ public class BezierSpline : Spline
         var path = ComputePath();
         if (path == null) return;
 
-        for (int i = 0; i < (path.Length-1); ++i)
+        var count = path.Length;
+        for (int i = 0; i < count; ++i)
         {
+            var nextI = i + 1;
             var pos = path[i];
-            var pos2 = path[i + 1];
+            var pos2 = nextI >= count ? path[0] : path[nextI];
+            if (nextI >= count && !Loop) pos2 = pos;
             var tan = (pos2 - pos).normalized;
+            if (tan == Vector3.zero) tan = i > 0 ? (path[i] - path[i - 1]).normalized : this.transform.forward;
             var normal = Vector3.up; // GetNormal(Points[i], Points[i + 1], t);
             var bitangent = Vector3.Cross(tan, normal);
             var rot = Quaternion.LookRotation(tan, normal);
@@ -478,7 +614,8 @@ public class BezierSpline : Spline
 
             if (DrawPoints)
             {
-                Gizmos.DrawSphere(pos, 0.3f);
+                Gizmos.DrawSphere(pos, 0.2f);
+                Handles.Label(pos + Vector3.up * 0.4f, $"{i}");
             }
 
             // draw rotation

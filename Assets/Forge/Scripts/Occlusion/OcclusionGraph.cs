@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
+[ExecuteInEditMode]
 public class OcclusionGraph : MonoBehaviour
 {
     static readonly Vector3[] corners = new Vector3[]
@@ -19,6 +21,11 @@ public class OcclusionGraph : MonoBehaviour
 
     [SerializeField]
     public List<OcclusionNode> _nodes;
+
+    private void OnEnable()
+    {
+        _nodes = GetComponentsInChildren<OcclusionNode>(true).ToList();
+    }
 
     public void RefreshCache()
     {

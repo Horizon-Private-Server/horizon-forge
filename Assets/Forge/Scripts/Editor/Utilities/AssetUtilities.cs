@@ -115,7 +115,7 @@ public static class AssetUtilities
 
             //if (clampX || clampY)
             {
-                Debug.Log($"CLAMP X:{clampX} Y:{clampY} {tex.name}");
+                //Debug.Log($"CLAMP X:{clampX} Y:{clampY} {tex.name}");
                 clampedTextures.Add((tex, clampX, clampY));
             }
         }

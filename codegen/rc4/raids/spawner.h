@@ -35,6 +35,7 @@ enum SpawnerState {
 struct SpawnerSpawnRequest
 {
   Moby* Spawner;
+  int Time;
   struct MobCreateArgs SpawnArgs;
 };
 
@@ -88,7 +89,7 @@ struct SpawnerPVar
   int AggroCuboidIds[SPAWNER_MAX_AGGRO_CUBOIDS];
   int RoamableCuboidIds[SPAWNER_MAX_ROAMABLE_CUBOIDS];
   int PathGraphIdx;
-  float LimitDespawnPercent;
+  float DespawnRadius;
   struct SpawnerEmitConfig Emission;
   struct SpawnerSpawnConfig Config[RAIDS_DIFFICULTY_COUNT];
   struct SpawnerMobParams SpawnableMobParam[SPAWNER_MAX_MOB_TYPES];

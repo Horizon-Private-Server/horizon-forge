@@ -143,7 +143,6 @@ void swarmerPostUpdate(Moby* moby)
 
   // adjust animSpeed by speed and by animation
 	float animSpeed = 0.9 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
-  if (pvars->MobVars.FreezeEffectActiveTicks > 0) animSpeed *= MOB_POSTFX_FREEZE_FACTOR;
   if (moby->AnimSeqId == SWARMER_ANIM_JUMP) {
     animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / 35, 2));
     if (pvars->MobVars.MoveVars.Grounded) {

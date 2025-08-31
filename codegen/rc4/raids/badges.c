@@ -191,6 +191,7 @@ void badgesUpdatePlayer(Player* player, enum RaidsBadgeType badgeType, int badge
 //--------------------------------------------------------------------------
 void badgesStart(void)
 {
+  return;
   if (!MapConfig.State) return;
 
   Player** players = playerGetAll();
@@ -223,6 +224,7 @@ void badgesStart(void)
 //--------------------------------------------------------------------------
 void badgesInit(void)
 {
+  return;
   // hook blessings
   HOOK_JAL(0x005E1DEC, &badgesOnPlayerGetHit);
 }

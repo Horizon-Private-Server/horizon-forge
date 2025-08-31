@@ -48,6 +48,12 @@ public class OcclusionViewer : MonoBehaviour
             mpb = new MaterialPropertyBlock();
 
         VisibleCount = 0;
+        FadeNotVisible_Ties(octant);
+        FadeNotVisible_Tfrags(octant);
+    }
+
+    void FadeNotVisible_Ties(Vector3 octant)
+    {
         var datas = FindObjectsOfType<Tie>();
         if (datas != null)
         {
@@ -71,15 +77,67 @@ public class OcclusionViewer : MonoBehaviour
         }
     }
 
+    void FadeNotVisible_Tfrags(Vector3 octant)
+    {
+        var datas = FindObjectsOfType<TfragChunk>();
+        if (datas != null)
+        {
+            foreach (var data in datas)
+            {
+                var inOctant = data.Octants.Contains(octant);
+                var mrs = data.GetComponents<MeshRenderer>();
+                if (mrs != null)
+                {
+                    foreach (var mr in mrs)
+                    {
+                        mr.GetPropertyBlock(mpb);
+                        mpb.SetInt("_Faded", inOctant ? 0 : 1);
+                        mr.SetPropertyBlock(mpb);
+                    }
+                }
+
+                if (inOctant)
+                    VisibleCount++;
+            }
+        }
+    }
+
     void RemoveFade()
     {
         VisibleCount = 0;
+        RemoveFade_Ties();
+        RemoveFade_Tfrags();
+    }
+
+    void RemoveFade_Ties()
+    {
         var datas = FindObjectsOfType<Tie>();
         if (datas != null)
         {
             foreach (var data in datas)
             {
                 var mrs = data.GetRenderers();
+                if (mrs != null)
+                {
+                    foreach (var mr in mrs)
+                    {
+                        mr.SetPropertyBlock(null);
+                    }
+                }
+            }
+
+            VisibleCount = datas.Length;
+        }
+    }
+
+    void RemoveFade_Tfrags()
+    {
+        var datas = FindObjectsOfType<TfragChunk>();
+        if (datas != null)
+        {
+            foreach (var data in datas)
+            {
+                var mrs = data.GetComponents<MeshRenderer>();
                 if (mrs != null)
                 {
                     foreach (var mr in mrs)

@@ -37,11 +37,19 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         1250
     };
 
+    public enum RAIDS_MISSION_TYPES
+    {
+        Hub,
+        OpenWorld,
+        Raid
+    }
+
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Raids;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
     public int CodeGenOrder => 99999999;
 
     public bool Enabled = true;
+    public RAIDS_MISSION_TYPES MissionType = RAIDS_MISSION_TYPES.OpenWorld;
     [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
     [Tooltip("Minimum player level required to visit planet.")] public uint MinLevelRequired = 0;
     public int Cost1Star = 0;
@@ -52,8 +60,14 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public string Author;
     [Multiline] public string Description;
 
+    [Header("Zones (Open World Only)")]
+    public List<RaidsZone> Zones;
+
     [Header("Challenges")]
     public List<RaidsChallenge> Challenges;
+
+    [Header("Contracts")]
+    public List<RaidsContractRule> ContractRules;
 
     [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 16.")]
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()
@@ -99,6 +113,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (isRaidsMap)
         {
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/contracts.o");
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
@@ -114,6 +129,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/checkpoint.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mover.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/platform.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laser.o");
@@ -154,6 +170,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"controller.h\"");
         state.Includes.Add("#include \"pvarpoke.h\"");
         state.Includes.Add("#include \"mover.h\"");
+        state.Includes.Add("#include \"platform.h\"");
         state.Includes.Add("#include \"mob.h\"");
         state.Includes.Add("#include \"shared.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
@@ -165,6 +182,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"dummy.h\"");
         state.Includes.Add("#include \"collectible.h\"");
         state.Includes.Add("#include \"levelselect.h\"");
+        state.Includes.Add("#include \"contracts.h\"");
 
         state.Declarations.Add("void configInit(void);");
         state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,  .TrackWhitelist = NULL,\r\n};");
@@ -174,7 +192,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
             state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
             state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  contractsFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
         }
 
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
@@ -188,6 +206,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"mapInit();");
             state.InitBody.Add($"mobInit();");
             state.InitBody.Add($"levelselectInit();");
+            state.InitBody.Add($"contractsInit();");
             state.InitBody.Add($"spawnerInit();");
             state.InitBody.Add($"vendorInit();");
             state.InitBody.Add($"ammodropInit();");
@@ -196,6 +215,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"npcInit();");
         }
         state.InitBody.Add($"moverInit();");
+        state.InitBody.Add($"platformInit();");
         state.InitBody.Add($"controllerInit();");
         state.InitBody.Add($"gateInit();");
         state.InitBody.Add($"messagerInit();");
@@ -210,10 +230,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (isRaidsMap)
         {
             state.GetGuberCase.Add("case SPAWNER_OCLASS: return spawnerGetGuber(moby);");
-            state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
+            if (mobTypes.Contains(RaidsMob.DZStriker))
+                state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
         }
         state.GetGuberCase.Add("case GATE_OCLASS: return gateGetGuber(moby);");
         state.GetGuberCase.Add("case MOVER_OCLASS: return moverGetGuber(moby);");
+        state.GetGuberCase.Add("case PLATFORM_FLIPPER_MOBY_OCLASS: return platformGetGuber(moby);");
+        state.GetGuberCase.Add("case PLATFORM_PIVOT_MOBY_OCLASS: return platformGetGuber(moby);");
         state.GetGuberCase.Add("case CONTROLLER_OCLASS: return controllerGetGuber(moby);");
         state.GetGuberCase.Add("case CHECKPOINT_MANAGER_OCLASS: return checkpointGetGuber(moby);");
         state.GetGuberCase.Add("case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);");
@@ -224,10 +247,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (isRaidsMap)
         {
             state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
-            state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
+            if (mobTypes.Contains(RaidsMob.DZStriker))
+                state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
         }
         state.HandleGuberEventCase.Add("case GATE_OCLASS: gateHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case MOVER_OCLASS: moverHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case PLATFORM_FLIPPER_MOBY_OCLASS: platformHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case PLATFORM_PIVOT_MOBY_OCLASS: platformHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case CHECKPOINT_MANAGER_OCLASS: checkpointHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;");
@@ -264,6 +290,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.MainBodyReady.Add("badgesStart();");
             state.MainBodyReady.Add("ammodropStart();");
             state.MainBodyReady.Add("npcStart();");
+            if (MissionType == RAIDS_MISSION_TYPES.OpenWorld)
+                state.MainBodyReady.Add("mapApplyZoning();");
         }
         state.MainBodyReady.Add("moverStart();");
         state.MainBodyReady.Add("controllerStart();");
@@ -277,6 +305,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         {
             state.MainBody.Add("bankTick();");
             state.MainBody.Add("inventoryTick();");
+            state.MainBody.Add("contractsTick();");
             state.MainBody.Add("mobTick();");
         }
         state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
@@ -336,6 +365,41 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine("");
 
+        sb.AppendLine("struct RaidsDifficultyZone mapDifficultyZones[] = {");
+        foreach (var zone in Zones)
+            sb.AppendLine(zone.GetDef());
+        sb.AppendLine("};");
+        sb.AppendLine($"int mapDifficultyZonesCount = {Zones.Count};");
+        sb.AppendLine("");
+
+        sb.AppendLine("struct RaidsMobContractRule mobContractRules[] = {");
+        var contractMobs = new HashSet<RaidsMob>();
+        foreach (var contractRule in ContractRules)
+        {
+            if (contractRule.Disabled) continue;
+            if (contractMobs.Count >= 16)
+            {
+                Debug.LogWarning($"Contract rules has more than the max of 16 entries.");
+                break;
+            }
+            if (!Mobs.Any(m => !m.Disabled && m.Mob == contractRule.Mob && m.Variant == contractRule.Variant))
+            {
+                Debug.LogWarning($"Contract rules has entry for unused mob {contractRule.Mob} variant {contractRule.Variant}");
+                continue;
+            }
+            if (contractMobs.Contains(contractRule.Mob))
+            {
+                Debug.LogWarning($"Contract rules has duplicate entry for mob {contractRule.Mob}");
+                continue;
+            }
+
+            contractMobs.Add(contractRule.Mob);
+            sb.AppendLine(contractRule.GetDef());
+        }
+        sb.AppendLine("};");
+        sb.AppendLine($"int mobContractRulesCount = {contractMobs.Count};");
+        sb.AppendLine("");
+
         sb.AppendLine($"int musicTrackWhitelistEnabled = {(OverrideTrackList ? 1 : 0)};");
         sb.AppendLine($"int musicTrackWhitelistCount = {TrackWhitelist.Count};");
         sb.AppendLine("int musicTrackWhitelist[] = {");
@@ -344,7 +408,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine("");
 
-        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n  MapConfig.TrackWhitelist = musicTrackWhitelist;\r\n  MapConfig.TrackWhitelistCount = musicTrackWhitelistCount;\r\n  MapConfig.TrackWhitelistEnabled = musicTrackWhitelistEnabled;\r\n}\r\n");
+        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n  MapConfig.MobContractRules = mobContractRules;\r\n  MapConfig.MobContractRulesCount = mobContractRulesCount;\r\n  MapConfig.TrackWhitelist = musicTrackWhitelist;\r\n  MapConfig.TrackWhitelistCount = musicTrackWhitelistCount;\r\n  MapConfig.TrackWhitelistEnabled = musicTrackWhitelistEnabled;\r\n}\r\n");
 
         return sb.ToString();
     }
@@ -363,6 +427,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var baseOffset = writer.BaseStream.Position;
 
         writer.Write(RAIDS_VERSION);
+        writer.Write((int)MissionType);
         writer.Write(MinLevelRequired);
         writer.Write(goldBoltCount);
         writer.Write(challengesCount);
@@ -402,6 +467,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         writer.BaseStream.Position = endOffset;
     }
 
+    public uint GetSubSort()
+    {
+        return MinLevelRequired + (uint)((int)MissionType * 10000);
+    }
 
     #region Menu Items
 
@@ -817,4 +886,68 @@ public class RaidsChallenge
 {
     public string Name;
     public string Description;
+}
+
+[Serializable]
+public class RaidsContractRule
+{
+    public RaidsMob Mob;
+
+    [Tooltip("Use to specify moby oclass. If variants use same oclass, all will be accepted by the contract.")]
+    public int Variant;
+
+    [Min(1)]
+    public ushort MinCount = 10;
+    [Min(1)]
+    public ushort MaxCount = 1000;
+    public float BaseXpPerMob = 1;
+    public float BaseBoltsPerMob = 1;
+    public ushort ExpirationTimeMinutes = 30;
+    public bool Disabled;
+
+    public string GetDef()
+    {
+        var sb = new StringBuilder();
+
+        // add mob oclasses
+        var mobConfig = RaidsMobsScriptableObject.Load();
+        var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == Mob);
+        var variant = mobDefaults.Variants.ElementAtOrDefault(Variant);
+
+        sb.AppendLine("  {");
+        sb.AppendLine($"    .MobOClass = {variant.OClass},");
+        sb.AppendLine($"    .MinCount = {MinCount},");
+        sb.AppendLine($"    .MaxCount = {MaxCount},");
+        sb.AppendLine($"    .XpMult = {BaseXpPerMob},");
+        sb.AppendLine($"    .BoltMult = {BaseBoltsPerMob},");
+        sb.AppendLine($"    .ExpirationMinutes = {ExpirationTimeMinutes}");
+        sb.AppendLine("  },");
+
+        return sb.ToString();
+    }
+}
+
+[Serializable]
+public class RaidsZone
+{
+    public string Name;
+    public Cuboid Cuboid;
+    public DLRaidsDifficulties Difficulty;
+
+    public string GetDef()
+    {
+        var sb = new StringBuilder();
+
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var cuboidIdx = mapConfig.GetIndexOfCuboid(this.Cuboid);
+        if (cuboidIdx < 0)
+            Debug.LogWarning($"Missing cuboid for Zone {this.Name}");
+
+        sb.AppendLine("  {");
+        sb.AppendLine($"    .CuboidIdx = {cuboidIdx},");
+        sb.AppendLine($"    .Difficulty = {(int)this.Difficulty}");
+        sb.AppendLine("  },");
+
+        return sb.ToString();
+    }
 }

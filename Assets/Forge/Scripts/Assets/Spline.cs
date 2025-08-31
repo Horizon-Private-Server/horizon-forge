@@ -12,6 +12,11 @@ public class Spline : MonoBehaviour
 
     public List<SplineVertex> Vertices;
 
+    public virtual bool IncludeInExport()
+    {
+        return true;
+    }
+
     protected virtual void Start()
     {
         RefreshVertices();

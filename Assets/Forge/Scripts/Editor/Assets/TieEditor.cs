@@ -140,13 +140,19 @@ public class TieEditor : Editor
                 EditorGUILayout.PropertyField(m_RenderInstancedColliderProperty);
                 EditorGUILayout.PropertyField(m_InstancedColliderOverrideProperty);
 
-                if (HasOneTarget && target is Tie tie)
+                //if (HasOneTarget && target is Tie tie)
+                //{
+                //    // draw collision id overrides if there isn't a model override already
+                //    if (!m_InstancedColliderOverrideProperty.objectReferenceValue)
+                //    {
+                //        DrawCollisionIdOverrides(tie);
+                //    }
+                //}
+
+                // draw collision id overrides if there isn't a model override already
+                if (!m_InstancedColliderOverrideProperty.objectReferenceValue)
                 {
-                    // draw collision id overrides if there isn't a model override already
-                    if (!m_InstancedColliderOverrideProperty.objectReferenceValue)
-                    {
-                        DrawCollisionIdOverrides(tie);
-                    }
+                    DrawCollisionIdOverrides();
                 }
             }
 
@@ -332,6 +338,58 @@ public class TieEditor : Editor
             if (changed)
             {
                 tie.UpdateAsset();
+                Undo.FlushUndoRecordObjects();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+    }
+
+    private void DrawCollisionIdOverrides()
+    {
+        var changed = false;
+        var tie = target as Tie;
+        var ties = targets.Select(x => x as Tie);
+
+        // 
+        ValidateCollisionOverrideMaterials(tie);
+
+        // editors
+        m_InstancedColliderIdOverridesProperty.isExpanded = EditorGUILayout.BeginFoldoutHeaderGroup(m_InstancedColliderIdOverridesProperty.isExpanded, "Collider ID Overrides");
+        if (m_InstancedColliderIdOverridesProperty.isExpanded)
+        {
+            var count = m_InstancedColliderIdOverridesProperty.arraySize;
+            for (int i = 0; i < count; ++i)
+            {
+                var elem = m_InstancedColliderIdOverridesProperty.GetArrayElementAtIndex(i);
+                var overrideIdProperty = elem.FindPropertyRelative("OverrideId");
+                var materialName = elem.FindPropertyRelative("MaterialName").stringValue;
+
+                EditorGUILayout.PropertyField(overrideIdProperty, new GUIContent(materialName));
+            }
+
+            // copy/paste
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Copy Overrides"))
+            {
+                _clipboardTie = tie;
+            }
+            EditorGUI.BeginDisabledGroup(!_clipboardTie || _clipboardTie.OClass != tie.OClass);
+            if (GUILayout.Button($"Paste Overrides{(_clipboardTie ? $" ({_clipboardTie.name})" : "")}"))
+            {
+                // copy refs
+                Undo.RecordObject(tie, "Paste Collision Id Overrides");
+                foreach (var t in ties)
+                    if (t.OClass == _clipboardTie.OClass)
+                        t.InstancedColliderIdOverrides = _clipboardTie.InstancedColliderIdOverrides.Select(x => new ColliderIdOverride(x)).ToArray();
+                changed = true;
+            }
+            EditorGUI.EndDisabledGroup();
+            GUILayout.EndHorizontal();
+
+            if (changed)
+            {
+                foreach (var t in ties)
+                    t.UpdateAsset();
                 Undo.FlushUndoRecordObjects();
             }
         }

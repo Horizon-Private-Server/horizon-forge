@@ -14,6 +14,8 @@ public class InstancedMeshCollider : RenderSelectionBase, IAsset, IInstancedColl
     public CollisionRenderHandleNormalMode m_Normals;
     [Range(-2f, 2f)]public float m_RecalculateNormalsFactor = 1;
     public bool m_Render = true;
+    public bool m_UseColliderIdOverrides;
+    public int[] m_ColliderIdOverrides;
 
     public GameObject GameObject => this ? this.gameObject : null;
     public bool IsHidden => collisionRenderHandle?.IsHidden ?? false;
@@ -69,7 +71,14 @@ public class InstancedMeshCollider : RenderSelectionBase, IAsset, IInstancedColl
             collisionRenderHandle.IsPicking = !SceneVisibilityManager.instance.IsPickingDisabled(this.gameObject);
             collisionRenderHandle.Normals = m_Normals;
             collisionRenderHandle.RecalculateNormalsFactor = m_RecalculateNormalsFactor;
-            collisionRenderHandle.Update(this.gameObject, m_MeshFilter.sharedMesh, CollisionHelper.ParseId(m_MaterialId));
+            if (m_UseColliderIdOverrides)
+            {
+                collisionRenderHandle.Update(this.gameObject, m_MeshFilter.sharedMesh, m_ColliderIdOverrides);
+            }
+            else
+            {
+                collisionRenderHandle.Update(this.gameObject, m_MeshFilter.sharedMesh, CollisionHelper.ParseId(m_MaterialId));
+            }
         }
         else
         {

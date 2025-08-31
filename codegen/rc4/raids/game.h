@@ -76,7 +76,7 @@
 #define MOB_POSTFX_ACID_FREQ_TICKS            ((int)(TPS * 0.5))
 #define MOB_POSTFX_ACID_DMG_PERC              (0.05)
 #define MOB_POSTFX_FREEZE_DUR_TICKS           (TPS * 5)
-#define MOB_POSTFX_FREEZE_FACTOR              (0.75)
+#define MOB_POSTFX_FREEZE_FACTOR              (0.10)
 #define MOB_POSTFX_NAPALM_DMG_PERC            (0.10)
 #define MOB_POSTFX_MINIBOMB_DMG_PERC          (0.25)
 
@@ -85,7 +85,8 @@
 #define NANOLEECH_HEALTH											(5)
 #define NANOLEECH_CHANCE											(0.01)
 
-#define LEVELUP_MAX_LEVEL                     (98)
+#define LEVELUP_MAX_PROF_LEVEL                (98)
+#define LEVELUP_MAX_PLAYER_LEVEL              (98)
 #define LEVELUP_PLAYER_LINEAR_FACTOR          (100)
 #define LEVELUP_PLAYER_STEP_FACTOR            (50)
 #define LEVELUP_PLAYER_STEP_EVERY             (10)
@@ -138,6 +139,8 @@ enum RaidsCustomMenus
   RAIDS_CUSTOM_MENU_LEVELSELECT,
   RAIDS_CUSTOM_MENU_STORE,
   RAIDS_CUSTOM_MENU_SKILLS,
+  RAIDS_CUSTOM_MENU_UPGRADE,
+  RAIDS_CUSTOM_MENU_CONTRACTS,
 };
 
 enum RaidsDifficultys
@@ -155,6 +158,13 @@ enum RaidsMissionStatus
   RAIDS_MISSION_ACTIVE = 0,
   RAIDS_MISSION_FAILED = 1,
   RAIDS_MISSION_COMPLETED = 2,
+};
+
+enum RaidsMissionTypes
+{
+  RAIDS_MISSION_HUB = 0,
+  RAIDS_MISSION_OPEN_WORLD = 1,
+  RAIDS_MISSION_RAID = 2,
 };
 
 enum MobDamageSource
@@ -208,10 +218,10 @@ struct RaidsPlayerState
 {
   u32 Bolts;
   float Experience;
+	int Level;
 	int Kills;
 	int Deaths;
 	int AllKills[MOB_DAMAGE_SOURCE_COUNT-1][MAX_MOB_SPAWN_PARAMS];
-  u16 Skills[RAIDS_SKILLS_COUNT];
 };
 
 struct RaidsPlayer
@@ -245,6 +255,16 @@ struct RaidsMobStats
   u8 NumAlive[MAX_MOB_SPAWN_PARAMS];
 };
 
+struct RaidsMobContractRule
+{
+  u16 MobOClass;
+  u16 MinCount;
+  u16 MaxCount;
+  u16 ExpirationMinutes;
+  float XpMult;
+  float BoltMult;
+};
+
 struct RaidsState
 {
 	int InitializedTime;
@@ -256,6 +276,7 @@ struct RaidsState
   int OnHubWorld;
 	struct RaidsPlayer* LocalPlayerState;
 	int GameOver;
+  int MissionType;
   int MissionStatus;
   int MissionStartTime;
   int MissionCompleteTime;
@@ -288,6 +309,8 @@ struct RaidsMapConfig
   struct RaidsState* State;
   struct MobSpawnParams* MobSpawnParams;
   int MobSpawnParamsCount;
+  struct RaidsMobContractRule* MobContractRules;
+  int MobContractRulesCount;
   int* TrackWhitelist;
   int TrackWhitelistCount;
   int TrackWhitelistEnabled;
@@ -318,9 +341,16 @@ struct RaidsMapConfig
   FrameTick_func OnFrameTickFunc;
 };
 
+struct RaidsDifficultyZone
+{
+  int CuboidIdx;
+  int Difficulty;
+};
+
 struct RaidsCustomMapExtraData
 {
   int RaidsVersion;
+  int MissionType;
   int MinPlayerLevel;
   int CollectiblesCount;
   int ChallengesCount;
@@ -347,5 +377,8 @@ struct RaidsSnackItem
 
 struct Guber* getGuber(Moby* moby);
 int handleEvent(Moby* moby, GuberEvent* event);
+
+extern struct RaidsDifficultyZone mapDifficultyZones[];
+extern int mapDifficultyZonesCount;
 
 #endif // RAIDS_GAME_H

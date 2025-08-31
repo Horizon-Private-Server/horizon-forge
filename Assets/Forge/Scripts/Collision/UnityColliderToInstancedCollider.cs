@@ -16,6 +16,7 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
     [Range(-2f, 2f)] public float m_RecalculateNormalsFactor = 1;
     [Range(0.1f, 4f), Delayed] public float m_Resolution = 1f;
     [Range(4f, 8f), Delayed] public float m_TfragSize = 4f;
+    public bool m_OcclusionBakeIgnore = false;
     public bool m_Render = true;
 
     [SerializeField, HideInInspector] public List<TfragLayerToCollisionId> m_TerrainLayerCollisionIds;
@@ -79,6 +80,7 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
             collisionRenderHandle.IsPicking = !SceneVisibilityManager.instance.IsPickingDisabled(this.gameObject);
             collisionRenderHandle.Normals = m_Normals;
             collisionRenderHandle.RecalculateNormalsFactor = m_RecalculateNormalsFactor;
+            collisionRenderHandle.OcclusionIgnore = m_OcclusionBakeIgnore;
             collisionRenderHandle.Update(this.gameObject, GetMesh(), GetMeshMaterials());
         }
         else

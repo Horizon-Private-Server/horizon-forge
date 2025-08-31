@@ -46,6 +46,13 @@ struct Guber* mapGetGuber(Moby* moby)
 ##GETGUBERCASES##
     default:
     {
+      #if RAIDS
+        if (MapConfig.OnGetGuberFunc) {
+          struct Guber* guber = MapConfig.OnGetGuberFunc(moby);
+          if (guber) return guber;
+        }
+      #endif
+    
       // pass to overwritten game func
       if (baseGetGuberFunc) { 
         //DPRINTF("base get guber object %08X %04X\n", moby, moby->OClass);
@@ -74,6 +81,13 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
   ##HANDLEEVENTCASES##
       default:
 			{
+        #if RAIDS
+          if (MapConfig.OnGuberEventFunc) {
+            MapConfig.OnGuberEventFunc(moby, event);
+            return;
+          }
+        #endif
+      
         // pass to overwritten game func
         if (baseHandleGuberEventFunc) {
           //DPRINTF("base handle guber event %08X %04X\n", moby, moby->OClass);
