@@ -90,9 +90,9 @@ public class ForgeStartupWindow : EditorWindow
 
         // refresh
         var blenderTitle = "Blender executable path";
-        var blenderExt = "*";
+        var blenderExt = new string[] { "All Files", "*" };
 #if UNITY_STANDALONE_WIN
-        blenderExt = "exe";
+        blenderExt = new string[] { "Exe", "exe" };
         blenderTitle = "Blender executable path (optional)";
 #endif
         CreateOpenFileBrowser(CreateValidationRow(groupBox, hasBlender), blenderTitle, forgeSettings.PathToBlender, (v) => OnBlenderPathUpdated(forgeSettings, v), blenderExt);

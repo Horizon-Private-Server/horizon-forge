@@ -17,9 +17,9 @@ public class ForgeSettingsEditor : Editor
         EditorGUI.BeginChangeCheck();
         GUILayout.Label("Blender");
         var blenderTitle = "Blender executable path";
-        var blenderExt = "*";
+        var blenderExt = new string[] { "All Files", "*" };
 #if UNITY_STANDALONE_WIN
-        blenderExt = "exe";
+        blenderExt = new string[] { "Exe", "exe" };
         blenderTitle = "Blender executable path (optional)";
 #endif
         CreateBrowseFileGUI(blenderTitle, forgeSettings.PathToBlender, blenderExt);
