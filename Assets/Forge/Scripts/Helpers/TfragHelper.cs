@@ -65,7 +65,7 @@ public static class TfragHelper
 
         var bSpherePosition = ReadVector3_1024(defReader);
         var bSphereRadius = defReader.ReadSingle() / 1024f;
-        var bSpherePost = bSpherePosition;
+        var points = new List<Vector3>();
 
         defReader.BaseStream.Position = 0x2C;
         var vCount = (int)defReader.ReadByte();
@@ -85,10 +85,6 @@ public static class TfragHelper
         dataReader.BaseStream.Position = pOffset;
         var originalBasePosition = ReadVector3_32(dataReader);
         var transformedBasePosition = transformationMatrix.MultiplyPoint(originalBasePosition);
-
-        // write bsphere
-        defWriter.BaseStream.Position = 0;
-        WriteVector3_1024(defWriter, bSpherePost = transformationMatrix.MultiplyPoint(bSpherePosition));
 
         // write vertices
         for (int v = 0; v < vCount; v++)
@@ -157,7 +153,9 @@ public static class TfragHelper
 
                         var displacement = ReadVector3_16_1024(dataReader);
                         var realPos = originalBasePosition + displacement;
-                        WriteVector3_16_1024(dataWriter, transformationMatrix.MultiplyPoint(realPos) - transformedBasePosition);
+                        var transformedRealPos = transformationMatrix.MultiplyPoint(realPos);
+                        points.Add(transformedRealPos);
+                        WriteVector3_16_1024(dataWriter, transformedRealPos - transformedBasePosition);
 
                         if (!match)
                         {
@@ -171,6 +169,12 @@ public static class TfragHelper
                 w += size - 4;
             }
         }
+
+        // write bsphere
+        var bSphere = GetBoundingSphere(points);
+        defWriter.BaseStream.Position = 0;
+        WriteVector3_1024(defWriter, bSphere.center);
+        defWriter.Write(bSphere.radius * 1024f * 1f);
     }
 
     public static void Collapse(byte[] def, byte[] data, Matrix4x4 inverseTransformationCuboid, Vector3 collapseTo, float falloffRadius = 1, float falloff = 0)
@@ -662,13 +666,12 @@ public static class TfragHelper
         using (var dataWriter = new BinaryWriter(dataMs))
         {
             // compute bsphere
-            var bCenter = orderedVertices.Select(x => x.position).Average();
-            var bRadius = orderedVertices.Max(x => Vector3.Distance(x.position, bCenter));
-            header.bSphere = bCenter.SwizzleXZY();
-            header.bSphere.w = bRadius * 2f;
+            var bSphere = GetBoundingSphere(orderedVertices.Select(x => x.position).ToList());
+            header.bSphere = bSphere.center;
+            header.bSphere.w = bSphere.radius;
 
             // compute bounds
-            var bounds = new Bounds(bCenter, Vector3.one / 8f);
+            var bounds = new Bounds(bSphere.center, Vector3.one / 8f);
             foreach (var vertex in orderedVertices) bounds.Encapsulate(vertex.position);
             var center = bounds.center.Quantize(1024);
 
@@ -691,11 +694,12 @@ public static class TfragHelper
             // update msphere
             for (int i = 0; i < header.msphere_cnt; ++i)
             {
-                var quadCenter = orderedQuads[i].Select(x => orderedVertices[x].position).Average();
-                var quadRadius = orderedQuads[i].Max(x => Vector3.Distance(orderedVertices[x].position, quadCenter)) * 0f;
+                var quadBSphere = GetBoundingSphere(orderedQuads[i].Select(x => orderedVertices[x].position).ToList());
+                //var quadCenter = orderedQuads[i].Select(x => orderedVertices[x].position).Average();
+                //var quadRadius = orderedQuads[i].Max(x => Vector3.Distance(orderedVertices[x].position, quadCenter)) * 0f;
 
                 dataMs.Position = header.msphere_ofs + (0x10 * i);
-                WriteVector3_1024(dataWriter, quadCenter);
+                WriteVector3_1024(dataWriter, quadBSphere.center);
                 //dataWriter.Write((ushort)(quadRadius * 1024f));
             }
 
@@ -892,6 +896,40 @@ public static class TfragHelper
     private static Vector2 LookupTrigValues(int idx)
     {
         return new Vector2(Mathf.Cos(idx * Mathf.PI / 128f), Mathf.Sin(idx * Mathf.PI / 128f));
+    }
+
+    #endregion
+
+    #region BSphere
+
+    private static (Vector3 center, float radius) GetBoundingSphere(List<Vector3> points)
+    {
+        if (points == null || points.Count == 0)
+            throw new ArgumentException("Points list is empty");
+
+        // Step 1: Find AABB
+        Vector3 min = points[0];
+        Vector3 max = points[0];
+
+        foreach (var p in points)
+        {
+            min = Vector3.Min(min, p);
+            max = Vector3.Max(max, p);
+        }
+
+        // Step 2: Center is midpoint of AABB
+        Vector3 center = (min + max) * 0.5f;
+
+        // Step 3: Radius is max distance to any point
+        float radius = 0f;
+        foreach (var p in points)
+        {
+            float distance = Vector3.Distance(center, p);
+            if (distance > radius)
+                radius = distance;
+        }
+
+        return (center, radius);
     }
 
     #endregion

@@ -1741,15 +1741,21 @@ public static class UnityHelper
         return GameObject.FindObjectsOfType<MonoBehaviour>().Where(x => x is IOcclusionData).Select(x => x as IOcclusionData).ToList();
     }
 
-    public static List<Vector3> GetAllOctants()
+    public static List<Vector3> GetAllOctants(bool useCache = true)
     {
         var volumes = GameObject.FindObjectsOfType<OcclusionVolume>();
         var rawOctants = GameObject.FindObjectsOfType<OcclusionOctant>();
-        var octants = volumes.Where(x => !x.Negate).SelectMany(x => x.GetOctants()).Union(rawOctants.SelectMany(x => x.Octants ?? new List<Vector3>())).Distinct().ToList();
+        var octants = rawOctants.SelectMany(x => x.Octants ?? new List<Vector3>()).ToList();
+        foreach (var volume in volumes)
+        {
+            if (volume.Negate) continue;
+            octants.AddRange(useCache ? volume.GetCachedOctants() : volume.GetOctants());
+        }
+
         var negativeOctants = volumes.Where(x => x.Negate).ToList();
         octants.RemoveAll(x => negativeOctants.Any(o => o.Contains(x)));
 
-        return octants;
+        return octants.Distinct().ToList();
     }
 
     public static void DrawLine(Vector3 from, Vector3 to, Color color, float thickness)
@@ -2021,7 +2027,7 @@ public static class UnityHelper
 
     public static Vector2 ClampUVRelativeTo(this Vector2 uv, Vector2 relativeTo, Vector2 direction)
     {
-        var clamped = uv.ClampUV();
+        var clamped = uv; //.ClampUV();
 
         var dx = Mathf.Round((clamped.x - relativeTo.x) * 1024) / 1024f;
         var dy = Mathf.Round((clamped.y - relativeTo.y) * 1024) / 1024f;
@@ -2181,6 +2187,36 @@ public static class UnityHelper
         foreach (var assetGenerator in assetGenerators)
         {
             assetGenerator.OnPostBake(type);
+        }
+    }
+
+    public static void RunColliderOcclusionPreBake()
+    {
+        // get instanced collision
+        var instancedColliders = new List<IInstancedCollider>();
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Tie>(includeInactive: false) ?? new Tie[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Shrub>(includeInactive: false) ?? new Shrub[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<InstancedMeshCollider>(includeInactive: false) ?? new InstancedMeshCollider[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<UnityColliderToInstancedCollider>(includeInactive: false) ?? new UnityColliderToInstancedCollider[0]);
+
+        foreach (var instancedCollider in instancedColliders)
+        {
+            instancedCollider.GetInstancedCollider()?.OnOcclusionPreBake();
+        }
+    }
+
+    public static void RunColliderOcclusionPostBake()
+    {
+        // get instanced collision
+        var instancedColliders = new List<IInstancedCollider>();
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Tie>(includeInactive: false) ?? new Tie[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<Shrub>(includeInactive: false) ?? new Shrub[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<InstancedMeshCollider>(includeInactive: false) ?? new InstancedMeshCollider[0]);
+        instancedColliders.AddRange(GameObject.FindObjectsOfType<UnityColliderToInstancedCollider>(includeInactive: false) ?? new UnityColliderToInstancedCollider[0]);
+
+        foreach (var instancedCollider in instancedColliders)
+        {
+            instancedCollider.GetInstancedCollider()?.OnOcclusionPostBake();
         }
     }
 }

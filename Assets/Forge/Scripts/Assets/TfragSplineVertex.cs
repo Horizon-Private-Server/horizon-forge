@@ -41,14 +41,14 @@ public class TfragSplineVertex : MonoBehaviour
     {
         ParentSpline = GetComponentInParent<TfragSpline>();
         if (ParentSpline)
-            ParentSpline.InvalidateCache();
+            ParentSpline.OnChange();
     }
 
     private void OnValidate()
     {
         ParentSpline = GetComponentInParent<TfragSpline>();
         if (ParentSpline)
-            ParentSpline.InvalidateCache();
+            ParentSpline.OnChange();
     }
 
     private void OnDrawGizmosSelected()
@@ -101,7 +101,9 @@ public class TfragSplineVertex : MonoBehaviour
         var i = Mathf.RoundToInt(t * (path.Length - 1));
 
         var point = path[i];
-        return WidthSplineAbsolute ? this.transform.worldToLocalMatrix.MultiplyVector(point - WidthSpline.transform.position) : WidthSpline.transform.worldToLocalMatrix.MultiplyPoint(point);
+        return WidthSplineAbsolute 
+            ? this.transform.worldToLocalMatrix.MultiplyVector(point - WidthSpline.transform.position) 
+            : (Matrix4x4.Scale(this.transform.localScale) * WidthSpline.transform.worldToLocalMatrix).MultiplyPoint(point);
     }
 
     public Vector3 GetSplineNormal(float t)
@@ -109,7 +111,24 @@ public class TfragSplineVertex : MonoBehaviour
         var path = WidthSpline.ComputePathPoints();
         var i = Mathf.RoundToInt(t * (path.Count - 1));
 
-        var bitangent = WidthSpline.GetAlignedNormal(path[i].a, path[i].b, path[i].time).normalized;
-        return WidthSplineAbsolute ? this.transform.worldToLocalMatrix.MultiplyVector(bitangent) : WidthSpline.transform.worldToLocalMatrix.MultiplyVector(bitangent);
+        var normal = WidthSpline.GetTangent(path[i].a, path[i].b, path[i].time).normalized;
+        return WidthSplineAbsolute
+            ? this.transform.worldToLocalMatrix.MultiplyVector(normal)
+            : WidthSpline.transform.worldToLocalMatrix.MultiplyVector(normal);
+    }
+
+    public Hash128 ComputeHash()
+    {
+        var hash = new Hash128();
+
+        hash = hash.Append(this.HandleIn);
+        hash = hash.Append(this.Control);
+        hash = hash.Append(this.HandleOut);
+        hash = hash.Append(this.WidthDirection);
+        hash.Append(this.Width);
+        hash.Append((int)this.WidthAlignment);
+        hash.Append(this.WidthSplineAbsolute ? 1 : 0);
+
+        return hash;
     }
 }

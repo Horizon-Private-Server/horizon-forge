@@ -662,7 +662,7 @@ public static class ForgeBuilder
                     var chunk = chunks[i];
                     if (chunk.HeaderBytes == null || chunk.HeaderBytes.Length != 0x40)
                     {
-                        Debug.LogError($"Unable to build tfrags. Chunk {chunk.name} has an invalid def. Please reimport the terrain to fix.");
+                        Debug.LogError($"Unable to build tfrags. Chunk {chunk.name} has an invalid def. Please reimport the terrain to fix.", chunk.transform);
                         ctx.Cancel = true;
                         return;
                     }

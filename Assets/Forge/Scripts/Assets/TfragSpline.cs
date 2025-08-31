@@ -20,32 +20,36 @@ public class TfragSpline : BaseAssetGenerator
     }
 
     [Header("Tfrag")]
-    [Range(2f, 8f)] public float m_TfragSize = 4f;
+    [Range(2f, 16f)] public float m_TfragSize = 4f;
     [Min(1)] public int m_SliceCount = 2;
     [Min(1)] public TfragSplineWidthMode m_SliceMode = TfragSplineWidthMode.Constant;
-    public bool RemoveNormal = false;
+    public bool m_FlatNormal = false;
+    public bool m_RecalculateNormals;
+    public bool m_FlipNormal;
 
     [Header("Textures")]
     public List<TfragSplineTexture> m_Textures;
 
     [Header("Collider")]
-    public bool InstancedCollider;
-    public bool FlipNormal;
+    public bool m_InstancedCollider;
+    public bool m_ColliderFlipNormal;
 
     [Header("Spline")]
-    public bool Loop = false;
+    public bool m_Loop = false;
     [Tooltip("First value indicates where the gap begins, in units along spline. Second value indicates the length of the gap in units along spline.")]
-    public List<Vector2> Gaps;
-    [ReadOnly] public int ComputedNumPoints = 0;
+    public List<Vector2> m_Gaps;
+    [ReadOnly] public int m_ComputedNumPoints = 0;
 
     [Header("Gizmos")]
-    public bool DrawPoints = false;
-    public bool DrawRotation = false;
-    public bool AutoRegenerate = false;
+    public bool m_DrawPoints = false;
+    public bool m_DrawRotation = false;
+    public bool m_AutoRegenerate = false;
 
     private TfragSplineVertex[] m_CachedVertices;
     private List<TfragSplineBuiltPoint> m_BuiltPath = new List<TfragSplineBuiltPoint>();
-    
+    private List<TfragSplinePoint> m_CachedPathPoints;
+    private Hash128 m_CachedPathPointsHash;
+
     [SerializeField, HideInInspector] private MeshCollider m_InstancedMeshCollider;
     [SerializeField, HideInInspector] private MeshFilter m_InstancedColliderMeshFilter;
     [SerializeField, HideInInspector] private InstancedMeshCollider m_Collider;
@@ -81,9 +85,14 @@ public class TfragSpline : BaseAssetGenerator
 
     protected void OnValidate()
     {
+        OnChange();
+    }
+
+    public void OnChange()
+    {
         InvalidateCache();
         BuildSpline();
-        if (AutoRegenerate)
+        if (m_AutoRegenerate)
             Dispatcher.RunOnMainThread(() => Generate());
     }
 
@@ -92,43 +101,49 @@ public class TfragSpline : BaseAssetGenerator
     private Hash128 ComputeHash()
     {
         var hash = new Hash128();
-
-        var vertices = GetVertices();
-
         hash = hash.Append(this.transform.localToWorldMatrix);
 
         // add vertices
+        var vertices = GetVertices();
         foreach (var vertex in vertices)
         {
-            hash = hash.Append(vertex.HandleIn);
-            hash = hash.Append(vertex.HandleOut);
-            hash = hash.Append(vertex.Control);
+            hash.Append(vertex.ComputeHash().ToString());
         }
 
         // add gaps
-        foreach (var gap in Gaps)
+        if (m_Gaps != null)
         {
-            hash = hash.Append(gap);
+            foreach (var gap in m_Gaps)
+            {
+                hash = hash.Append(gap);
+            }
         }
 
         // add textures
-        foreach (var texture in m_Textures)
+        if (m_Textures != null)
         {
-            hash.Append(texture.m_Texture.GetHash().ToString());
-            hash = hash.Append(texture.m_UvOffset);
-            hash = hash.Append(texture.m_UvTiling);
-            hash.Append(texture.m_UvRotation);
-            hash = hash.Append((Vector2)texture.m_AppearAfter);
-            hash.Append((int)texture.m_TextureSize);
-            hash = hash.Append(texture.m_Tint);
-            hash.Append(texture.m_CollisionId);
+            foreach (var texture in m_Textures)
+            {
+                hash.Append(texture.m_Texture.GetHash().ToString());
+                hash = hash.Append(texture.m_UvOffset);
+                hash = hash.Append(texture.m_UvTiling);
+                hash.Append(texture.m_UvWorldSpaceU ? 1 : 0);
+                hash.Append(texture.m_UvWorldSpaceV ? 1 : 0);
+                hash.Append(texture.m_UvRotation);
+                hash = hash.Append((Vector2)texture.m_AppearAfter);
+                hash.Append((int)texture.m_TextureSize);
+                hash = hash.Append(texture.m_Tint);
+                hash.Append(texture.m_CollisionId);
+            }
         }
 
         // add spline params
-        hash.Append(Loop ? 1 : 0);
-        hash.Append(InstancedCollider ? 1 : 0);
-        hash.Append(FlipNormal ? 1 : 0);
-        hash.Append(RemoveNormal ? 1 : 0);
+        hash.Append(m_Loop ? 1 : 0);
+        hash.Append(m_InstancedCollider ? 1 : 0);
+        hash.Append(m_ColliderFlipNormal ? 1 : 0);
+        hash.Append(m_RecalculateNormals ? 1 : 0);
+        hash.Append(m_FlipNormal ? 1 : 0);
+        hash.Append(m_FlatNormal ? 1 : 0);
         hash.Append(m_SliceCount);
         hash.Append((int)m_SliceMode);
         hash.Append(m_TfragSize);
@@ -180,12 +195,17 @@ public class TfragSpline : BaseAssetGenerator
         var hash = ComputeHash();
         if (hash == m_LastGeneratedHash) return;
 
+        this.transform.localScale = Vector3.one;
         var buildTransform = this.transform.Find("build");
         var buildGo = buildTransform ? buildTransform.gameObject : new GameObject("build");
         buildGo.transform.SetParent(this.transform, false);
+        buildGo.transform.position = Vector3.zero;
+        buildGo.transform.rotation = Quaternion.identity;
+        buildGo.transform.localScale = Vector3.one;
         buildGo.hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
 
         // convert
+        InvalidateCache();
         BuildSpline();
         ToMesh(out var meshVertices, out var meshNormals, out var meshUvs, out var meshColors, out var meshTriangles, out var meshTextures, out var meshCollisionIds);
         UpdateCollider(buildGo, meshVertices, meshNormals, meshUvs, meshColors, meshTriangles, meshCollisionIds);
@@ -196,7 +216,7 @@ public class TfragSpline : BaseAssetGenerator
 
     private void UpdateCollider(GameObject parentGo, Vector3[] meshVertices, Vector3[] meshNormals, Vector2[] meshUvs, Color[] meshColors, int[] meshTriangles, int[] meshCollisionIds)
     {
-        if (!InstancedCollider)
+        if (!m_InstancedCollider)
         {
             if (m_InstancedMeshCollider)
                 DestroyImmediate(m_InstancedMeshCollider.gameObject);
@@ -222,6 +242,16 @@ public class TfragSpline : BaseAssetGenerator
         mesh.SetNormals(meshNormals);
         mesh.RecalculateBounds();
 
+        if (m_RecalculateNormals)
+        {
+            mesh.RecalculateNormals();
+
+            for (int i = 0; i < mesh.normals.Length; ++i)
+            {
+                meshNormals[i] = mesh.normals[i];
+            }
+        }
+
         // get list of collision ids
         // use submeshes to group collisions
         var uniqueColIds = meshCollisionIds.Distinct().ToArray();
@@ -243,9 +273,18 @@ public class TfragSpline : BaseAssetGenerator
                 var triIndex = 0;
                 foreach (var f in facesWithColId)
                 {
-                    newTriangles[triIndex++] = meshTriangles[(f * 3) + 0];
-                    newTriangles[triIndex++] = meshTriangles[(f * 3) + 1];
-                    newTriangles[triIndex++] = meshTriangles[(f * 3) + 2];
+                    if (m_ColliderFlipNormal)
+                    {
+                        newTriangles[triIndex++] = meshTriangles[(f * 3) + 2];
+                        newTriangles[triIndex++] = meshTriangles[(f * 3) + 1];
+                        newTriangles[triIndex++] = meshTriangles[(f * 3) + 0];
+                    }
+                    else
+                    {
+                        newTriangles[triIndex++] = meshTriangles[(f * 3) + 0];
+                        newTriangles[triIndex++] = meshTriangles[(f * 3) + 1];
+                        newTriangles[triIndex++] = meshTriangles[(f * 3) + 2];
+                    }
                 }
 
                 mesh.SetTriangles(newTriangles, i, true);
@@ -254,6 +293,7 @@ public class TfragSpline : BaseAssetGenerator
 
         m_Collider.m_UseColliderIdOverrides = true;
         m_Collider.m_ColliderIdOverrides = uniqueColIds;
+        m_Collider.m_Normals = CollisionRenderHandleNormalMode.FrontSide;
         m_InstancedMeshCollider.sharedMesh = mesh;
         m_InstancedColliderMeshFilter.sharedMesh = mesh;
         m_Collider.UpdateAsset();
@@ -344,8 +384,8 @@ public class TfragSpline : BaseAssetGenerator
 
                     quad[t] = vertices.Count;
                     vertices.Add(meshVertices[vIdx]);
-                    normals.Add(RemoveNormal ? Vector3.up : this.transform.localToWorldMatrix.MultiplyVector(meshNormals[vIdx]));
-                    unityNormals.Add(RemoveNormal ? Vector3.forward : meshNormals[vIdx]);
+                    normals.Add(m_FlatNormal ? Vector3.up : this.transform.localToWorldMatrix.MultiplyVector(meshNormals[vIdx]));
+                    unityNormals.Add(m_FlatNormal ? Vector3.forward : meshNormals[vIdx]);
                     uvs.Add(meshUvs[vIdx]);
 
                     // calculate color
@@ -405,6 +445,7 @@ public class TfragSpline : BaseAssetGenerator
             chunk.HeaderBytes = headerBytes;
             chunk.DataBytes = dataBytes;
             chunk.gameObject.layer = LayerMask.NameToLayer("TFRAG");
+            chunk.gameObject.hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
             chunkMeshFilter.sharedMesh = newMesh;
             chunkMeshRenderer.sharedMaterials = texs.Select(x => materials[x]).ToArray();
             ++computedChunkCount;
@@ -444,7 +485,7 @@ public class TfragSpline : BaseAssetGenerator
 
             for (int j = 0; j < sliceSegmentCount - 1; ++j)
             {
-                if (Gaps.Any(gap => currentLength >= gap.x && currentLength <= (gap.x + gap.y)))
+                if (m_Gaps.Any(gap => currentLength >= gap.x && currentLength <= (gap.x + gap.y)))
                 {
                     vertIndex += 4;
                     triangles[triIndex++] = triangles[lastValidTris + 0];
@@ -461,31 +502,38 @@ public class TfragSpline : BaseAssetGenerator
                 var textureDef = m_Textures.FirstOrDefault(x => i >= x.m_AppearAfter.x && j >= x.m_AppearAfter.y);
                 var tint = textureDef?.m_Tint.SetAlpha(1) ?? Color.white;
 
-                Vector3 width0 = point0.Transform.MultiplyVector(point0.Point.GetWidth(m_SliceMode, sliceT));
-                Vector3 width1 = point1.Transform.MultiplyVector(point1.Point.GetWidth(m_SliceMode, sliceT));
-                Vector3 width0N = point0.Transform.MultiplyVector(point0.Point.GetWidth(m_SliceMode, sliceTN));
-                Vector3 width1N = point1.Transform.MultiplyVector(point1.Point.GetWidth(m_SliceMode, sliceTN));
+                Vector3 width0 = point0.Transform.MultiplyPoint(point0.Point.GetWidth(m_SliceMode, sliceT));
+                Vector3 width1 = point1.Transform.MultiplyPoint(point1.Point.GetWidth(m_SliceMode, sliceT));
+                Vector3 width0N = point0.Transform.MultiplyPoint(point0.Point.GetWidth(m_SliceMode, sliceTN));
+                Vector3 width1N = point1.Transform.MultiplyPoint(point1.Point.GetWidth(m_SliceMode, sliceTN));
 
-                Vector3 normal0L = point0.Transform.MultiplyVector(RemoveNormal ? Vector3.forward : point0.Point.GetNormal(m_SliceMode, sliceT));
-                Vector3 normal0R = point0.Transform.MultiplyVector(RemoveNormal ? Vector3.forward : point0.Point.GetNormal(m_SliceMode, sliceTN));
-                Vector3 normal1L = point1.Transform.MultiplyVector(RemoveNormal ? Vector3.forward : point1.Point.GetNormal(m_SliceMode, sliceT));
-                Vector3 normal1R = point1.Transform.MultiplyVector(RemoveNormal ? Vector3.forward : point1.Point.GetNormal(m_SliceMode, sliceTN));
+                var m0 = point0.Transform;
+                var m1 = point1.Transform;
+                Vector3 normal0L = m0.MultiplyVector(point0.Point.GetNormal(m_SliceMode, sliceT)).normalized;
+                Vector3 normal0R = m0.MultiplyVector(point0.Point.GetNormal(m_SliceMode, sliceTN)).normalized;
+                Vector3 normal1L = m1.MultiplyVector(point1.Point.GetNormal(m_SliceMode, sliceT)).normalized;
+                Vector3 normal1R = m1.MultiplyVector(point1.Point.GetNormal(m_SliceMode, sliceTN)).normalized;
 
-                Vector3 v0L = p0 + width0;
-                Vector3 v0R = p0 + width0N;
-                Vector3 v1L = p1 + width1;
-                Vector3 v1R = p1 + width1N;
+                Vector3 v0L = width0;
+                Vector3 v0R = width0N;
+                Vector3 v1L = width1;
+                Vector3 v1R = width1N;
 
-                //if (FlipNormal && false)
-                //{
-                //    normal0L *= -1;
-                //    normal0R *= -1;
-                //    normal1L *= -1;
-                //    normal1R *= -1;
-                //}
+                if (m_FlatNormal)
+                {
+                    normal0R = normal0L = point0.Transform.MultiplyVector(Vector3.forward);
+                    normal1R = normal1L = point1.Transform.MultiplyVector(Vector3.forward);
+                }
+                if (m_FlipNormal)
+                {
+                    normal0L *= -1;
+                    normal0R *= -1;
+                    normal1L *= -1;
+                    normal1R *= -1;
+                }
 
                 // compute uvs
-                var faceUvs = ComputeQuadUVs(sliceT, sliceTN, i, i + 1, textureDef);
+                var faceUvs = ComputeQuadUVs(new Vector3[] { v0L, v0R, v1L, v1R }, sliceT, sliceTN, i, i + 1, textureDef);
 
                 // v0
                 vertices[vertIndex] = v0L;
@@ -526,7 +574,7 @@ public class TfragSpline : BaseAssetGenerator
                 // build 2 tris (1 quad face)
                 var vertBaseIdx = vertIndex - 4;
                 lastValidTris = triIndex;
-                if (FlipNormal)
+                if (m_FlipNormal && false)
                 {
                     textures[triIndex / 3] = texture;
                     collisionIds[triIndex / 3] = CollisionHelper.ParseId(textureDef?.m_CollisionId);
@@ -560,20 +608,66 @@ public class TfragSpline : BaseAssetGenerator
         }
     }
 
-    private Vector2[] ComputeQuadUVs(float x0, float x1, float y0, float y1, TfragSplineTexture textureDef)
+    private Vector2[] ComputeQuadUVs(Vector3[] points, float x0, float x1, float y0, float y1, TfragSplineTexture textureDef)
     {
         var dirX = Math.Sign(x1 - x0);
         var dirY = Math.Sign(y1 - y0);
         var tiling = textureDef?.m_UvTiling ?? Vector2.one;
         var offset = textureDef?.m_UvOffset ?? Vector2.zero;
+        var offsets = new Vector2[4];
         var radians = (textureDef?.m_UvRotation ?? 0) * 90f * Mathf.Deg2Rad;
+
+        offsets[0] = new Vector2(x0, y0) + offset;
+        offsets[1] = new Vector2(x1, y0) + offset;
+        offsets[2] = new Vector2(x0, y1) + offset;
+        offsets[3] = new Vector2(x1, y1) + offset;
+
+        if (textureDef?.m_UvWorldSpaceU == true || textureDef?.m_UvWorldSpaceV == true)
+        {
+            var normal = new Plane(points[0], points[1], points[2]).normal;
+            var binormal = Vector3.Cross(points[1] - points[0], normal).normalized;
+            var binormal2 = Vector3.Cross(binormal, normal).normalized;
+            Func<Vector3, Vector2> getVec2 = (v) => new Vector2(v.x + v.y, v.z + v.y);
+            if (Mathf.Abs(Vector3.Dot(Vector3.up, normal)) < 0.5f)
+                getVec2 = (v) => new Vector2(v.y, v.x + v.z);
+
+            var wuv0 = getVec2(points[0]) + offset;
+            var wuv1 = getVec2(points[1]) + offset;
+            var wuv2 = getVec2(points[2]) + offset;
+            var wuv3 = getVec2(points[3]) + offset;
+
+            if (textureDef.m_UvWorldSpaceU)
+            {
+                offsets[0].x = wuv0.x;
+                offsets[1].x = wuv1.x;
+                offsets[2].x = wuv2.x;
+                offsets[3].x = wuv3.x;
+            }
+            if (textureDef.m_UvWorldSpaceV)
+            {
+                offsets[0].y = wuv0.y;
+                offsets[1].y = wuv1.y;
+                offsets[2].y = wuv2.y;
+                offsets[3].y = wuv3.y;
+            }
+        }
 
         // clamp uvs to [0,1]
         // required to fix texture repeating issues on hardware
-        var uv0L = ((new Vector2(x0, y0) + offset) * tiling).ClampUV();
-        var uv0R = ((new Vector2(x1, y0) + offset) * tiling).ClampUVRelativeTo(uv0L, Vector2.right * dirX * tiling);
-        var uv1L = ((new Vector2(x0, y1) + offset) * tiling).ClampUVRelativeTo(uv0L, Vector2.up * dirY * tiling);
-        var uv1R = ((new Vector2(x1, y1) + offset) * tiling).ClampUVRelativeTo(uv0L, new Vector2(dirX, dirY) * tiling);
+        var baseUv = offsets[0] * tiling;
+        var uv0R = (offsets[1] * tiling);
+        var uv1L = (offsets[2] * tiling);
+        var uv1R = (offsets[3] * tiling);
+        //var uv0R = (offsets[1] * tiling).ClampUVRelativeTo(baseUv, Vector2.right * dirX * tiling);
+        //var uv1L = (offsets[2] * tiling).ClampUVRelativeTo(baseUv, Vector2.up * dirY * tiling);
+        //var uv1R = (offsets[3] * tiling).ClampUVRelativeTo(baseUv, new Vector2(dirX, dirY) * tiling);
+        var uv0L = baseUv.ClampUV();
+
+        // make relative to base uv
+        var delta = uv0L - baseUv;
+        uv0R += delta;
+        uv1L += delta;
+        uv1R += delta;
 
         // apply uv rotation
         var rotatePivot = Vector2.zero;
@@ -717,7 +811,7 @@ public class TfragSpline : BaseAssetGenerator
             return m_CachedVertices;
 
         m_CachedVertices = GetComponentsInChildren<TfragSplineVertex>();
-        if (Loop && m_CachedVertices != null)
+        if (m_Loop && m_CachedVertices != null)
         {
             Array.Resize(ref m_CachedVertices, m_CachedVertices.Length + 1);
             m_CachedVertices[m_CachedVertices.Length - 1] = m_CachedVertices[0];
@@ -744,16 +838,18 @@ public class TfragSpline : BaseAssetGenerator
         var count = path.Count;
         for (int i = 0; i < count; ++i)
         {
-            var nextI = (i + 1) >= count ? 0 : (i + 1);
-            var pos1 = path[i].GetPosition(this);
-            var pos2 = path[nextI].GetPosition(this);
-            if (nextI >= count && !Loop) pos2 = pos1;
+            var nextI = (i + 1) >= count ? (m_Loop ? 0 : (i - 1)) : (i + 1);
+            var pos1 = path[i].GetPosition();
+            var pos2 = path[nextI].GetPosition();
             var tan = (pos2 - pos1).normalized;
-            if (tan == Vector3.zero && i > 0) tan = i > 0 ? (pos1 - path[i - 1].GetPosition(this)).normalized : this.transform.forward;
+            if (nextI < i) tan *= -1;
+            if (tan == Vector3.zero && i > 0) tan = i > 0 ? (pos1 - path[i - 1].GetPosition()).normalized : this.transform.forward;
 
-            var mVertex = Matrix4x4.TRS(pos1, Quaternion.LookRotation(tan, Vector3.up), Vector3.one);
-            var mLocal = this.transform.worldToLocalMatrix * mVertex;
-            m_BuiltPath.Add(new TfragSplineBuiltPoint(mLocal, path[i]));
+            var mVertex = Matrix4x4.TRS(pos1, Quaternion.LookRotation(tan, this.transform.up), Vector3.one);
+            if (mVertex.determinant < 0)
+                mVertex = Matrix4x4.TRS(pos1, Quaternion.LookRotation(tan, -this.transform.up), Vector3.one);
+
+            m_BuiltPath.Add(new TfragSplineBuiltPoint(mVertex, path[i]));
         }
     }
 
@@ -893,6 +989,10 @@ public class TfragSpline : BaseAssetGenerator
         if (vertices == null || vertices.Length < 2)
             return null;
 
+        var hash = ComputeHash();
+        if (m_CachedPathPointsHash == hash && m_CachedPathPoints != null)
+            return m_CachedPathPoints.ToList();
+
         // compute length of curve
         var length = 0f;
         for (int i = 0; i < (vertices.Length - 1); ++i)
@@ -913,6 +1013,8 @@ public class TfragSpline : BaseAssetGenerator
             pointsT.Add(new TfragSplinePoint(vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1));
         }
 
+        m_CachedPathPointsHash = hash;
+        m_CachedPathPoints = pointsT.ToList();
         return pointsT;
     }
 
@@ -924,7 +1026,7 @@ public class TfragSpline : BaseAssetGenerator
         Vector3[] points = new Vector3[pointsT.Count];
         for (int i = 0; i < pointsT.Count; ++i)
         {
-            points[i] = pointsT[i].GetPosition(this);
+            points[i] = pointsT[i].GetPosition();
         }
 
         return points;
@@ -973,14 +1075,37 @@ public class TfragSpline : BaseAssetGenerator
         public Vector3 GetSplineWidth(float sliceT) => Vector3.Slerp(From.GetSplineWidth(sliceT), To.GetSplineWidth(sliceT), T);
         public Vector3 GetSplineNormal(float sliceT) => Vector3.Slerp(From.GetSplineNormal(sliceT), To.GetSplineNormal(sliceT), T);
         public Vector3 GetWidth(TfragSplineWidthMode mode, float sliceT) => mode == TfragSplineWidthMode.Spline ? GetSplineWidth(sliceT) : GetConstantWidth(sliceT);
-        public Vector3 GetNormal(TfragSplineWidthMode mode, float sliceT) => mode == TfragSplineWidthMode.Spline ? GetSplineNormal(sliceT) : GetConstantNormal(sliceT);
-        public Vector3 GetPosition(TfragSpline spline) => spline.GetPosition(From, To, T);
+        public Vector3 GetPosition() => GetPosition(From, To, T);
+
+        public Vector3 GetNormal(TfragSplineWidthMode mode, float sliceT)
+        {
+            var wdt = mode == TfragSplineWidthMode.Spline ? (1f / (From.WidthSpline.ComputePath().Length - 1)) : 0.01f;
+            var pdt = 0.01f;
+            var pos0 = GetPosition(From, To, T - pdt);
+            var pos1 = GetPosition(From, To, T);
+            var pos2 = GetPosition(From, To, T + pdt);
+
+            var widthTangent = sliceT >= wdt ? (GetWidth(mode, sliceT) - GetWidth(mode, sliceT - wdt)) : (GetWidth(mode, sliceT + wdt) - GetWidth(mode, sliceT));
+            var splineTangentWS = T > pdt ? (pos1 - pos0) : (pos2 - pos1);
+            var splineTangent = Vector3.Slerp(From.transform.worldToLocalMatrix.MultiplyVector(splineTangentWS), To.transform.worldToLocalMatrix.MultiplyVector(splineTangentWS), T).normalized;
+
+            return Vector3.Cross(splineTangent, widthTangent).normalized;
+        }
 
         public TfragSplinePoint(TfragSplineVertex from, TfragSplineVertex to, float t)
         {
             From = from;
             To = to;
             T = t;
+        }
+
+        private static Vector3 GetPosition(TfragSplineVertex a, TfragSplineVertex b, float t)
+        {
+            float invT = 1 - t;
+            return (a.Control * Mathf.Pow(invT, 3)) +
+                (a.HandleOut * 3 * t * Mathf.Pow(invT, 2)) +
+                (b.HandleIn * 3 * Mathf.Pow(t, 2) * invT) +
+                (b.Control * Mathf.Pow(t, 3));
         }
     }
 
@@ -992,54 +1117,52 @@ public class TfragSpline : BaseAssetGenerator
     {
         if (!IsSplineSelected()) return;
 
+        var gizmosMatrix = Gizmos.matrix;
         var vertices = GetVertices();
         if (vertices == null || vertices.Length < 2)
             return;
 
-        // compute length of curve
-        var length = 0f;
-        for (int i = 0; i < (vertices.Length - 1); ++i)
-            length += GetSegmentLength(vertices[i], vertices[i + 1], 0, 1);
-
-        var path = ComputePath();
+        var path = ComputePathPoints();
         if (path == null) return;
 
-        var count = path.Length;
+        var count = path.Count;
         for (int i = 0; i < count; ++i)
         {
-            var nextI = i + 1;
-            var pos = path[i];
-            var pos2 = nextI >= count ? path[0] : path[nextI];
-            if (nextI >= count && !Loop) pos2 = pos;
-            var tan = (pos2 - pos).normalized;
-            if (tan == Vector3.zero) tan = i > 0 ? (path[i] - path[i - 1]).normalized : this.transform.forward;
-            var normal = Vector3.up; // GetNormal(Points[i], Points[i + 1], t);
-            var bitangent = Vector3.Cross(tan, normal);
-            var rot = Quaternion.LookRotation(tan, normal);
-            normal = -Vector3.Cross(tan, bitangent);
+            var nextI = (i + 1) >= count ? (m_Loop ? 0 : (i - 1)) : (i + 1);
+            var pos1 = path[i].GetPosition();
+            var pos2 = path[nextI].GetPosition();
+            var tan = (pos2 - pos1).normalized;
+            if (nextI < i) tan *= -1;
+            if (tan == Vector3.zero && i > 0) tan = i > 0 ? (pos1 - path[i - 1].GetPosition()).normalized : this.transform.forward;
+
+            var mVertex = Matrix4x4.TRS(pos1, Quaternion.LookRotation(tan, this.transform.up), Vector3.one);
+            if (mVertex.determinant < 0)
+                mVertex = Matrix4x4.TRS(pos1, Quaternion.LookRotation(tan, -this.transform.up), Vector3.one);
 
             Gizmos.color = Color.white;
-            Gizmos.DrawLine(pos, pos2);
+            Gizmos.DrawLine(pos1, pos2);
 
-            if (DrawPoints)
+            if (m_DrawPoints)
             {
-                Gizmos.DrawSphere(pos, 0.3f);
-                Handles.Label(pos + Vector3.up * 0.4f, $"{i}");
+                Gizmos.DrawSphere(pos1, 0.3f);
+                Handles.Label(pos1 + Vector3.up * 0.4f, $"{i}");
             }
 
             // draw rotation
-            if (DrawRotation)
+            if (m_DrawRotation)
             {
+                Gizmos.matrix = mVertex;
                 Gizmos.color = Color.blue;
-                Gizmos.DrawLine(pos, pos + tan);
+                Gizmos.DrawLine(Vector3.zero, Vector3.forward);
                 Gizmos.color = Color.green;
-                Gizmos.DrawLine(pos, pos + normal);
+                Gizmos.DrawLine(Vector3.zero, Vector3.up);
                 Gizmos.color = Color.red;
-                Gizmos.DrawLine(pos, pos + bitangent);
+                Gizmos.DrawLine(Vector3.zero, Vector3.right);
+                Gizmos.matrix = gizmosMatrix;
             }
         }
 
-        ComputedNumPoints = path.Length;
+        m_ComputedNumPoints = path.Count;
     }
 
     private void DrawLineGizmos(TfragSplineVertex a, TfragSplineVertex b, float time, Vector3 drawFrom)
@@ -1054,7 +1177,7 @@ public class TfragSpline : BaseAssetGenerator
         Gizmos.DrawLine(drawFrom, pos);
 
         // draw rotation
-        if (DrawRotation)
+        if (m_DrawRotation)
         {
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(pos, pos + tan);
@@ -1114,6 +1237,8 @@ public class TfragSplineTexture
     [CollisionId] public string m_CollisionId = "2f";
 
     [Header("UV")]
+    public bool m_UvWorldSpaceU;
+    public bool m_UvWorldSpaceV;
     public Vector2 m_UvTiling = Vector2.one;
     public Vector2 m_UvOffset = Vector2.zero;
     [Range(0, 4)] public int m_UvRotation = 0;

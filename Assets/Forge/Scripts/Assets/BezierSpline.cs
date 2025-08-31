@@ -20,6 +20,7 @@ public class BezierSpline : Spline
     public BezierSplineGenMode Mode = BezierSplineGenMode.FixedCount;
     [Min(2)]
     public int NumPoints = 2;
+    public Vector3 AlignedNormal = Vector3.up;
 
     [Range(0f, 0.99f)]
     public float Curvature = 0f;
@@ -175,6 +176,7 @@ public class BezierSpline : Spline
             return;
 
         // add vertices
+        Vertices ??= new List<SplineVertex>();
         Vertices.Clear();
         var count = path.Length;
         for (int i = 0; i < count; ++i)
@@ -372,7 +374,7 @@ public class BezierSpline : Spline
         {
             for (int i = 0; i < (vertices.Length - 1); ++i)
             {
-                pointsT.Add((vertices[i], null, 0));
+                pointsT.Add((vertices[i], vertices[i + 1], 0));
             }
         }
         else
@@ -543,13 +545,25 @@ public class BezierSpline : Spline
 
     public Vector3 GetAlignedNormal(BezierSplineVertex a, BezierSplineVertex b, float t)
     {
-        if (Mode == BezierSplineGenMode.NoBezier) return Vector3.Cross((b.Control - a.Control), Vector3.right).normalized;
-
+        var alignedNormal = this.transform.rotation * AlignedNormal;
         var vertices = this.GetVertices();
-        if (vertices.Length < 2) return this.transform.forward;
+        if (vertices.Length < 2) return alignedNormal;
 
-        var normal = new Plane(vertices[0].Control, vertices[0].HandleOut, vertices[1].Control).normal.normalized;
-        if (normal.sqrMagnitude == 0f) return Vector3.Cross(vertices[1].Control - vertices[0].Control, this.transform.right).normalized;
+        var tangent = GetTangent(a, b, t);
+        var normal = Vector3.Cross(Vector3.Cross(alignedNormal, tangent), tangent).normalized;
+        if (normal.sqrMagnitude == 0f)
+        {
+            // fallback to cross product with right or forward
+            normal = Vector3.Cross(tangent, this.transform.right).normalized;
+            if (normal.sqrMagnitude == 0f) normal = Vector3.Cross(tangent, this.transform.forward).normalized;
+        }
+
+        //if (Mode == BezierSplineGenMode.NoBezier)
+        //{
+        //    if (normal.sqrMagnitude == 0f) normal = Vector3.Cross(vertices[1].Control - vertices[0].Control, this.transform.right).normalized;
+        //    if (normal.sqrMagnitude == 0f) normal = Vector3.Cross(vertices[1].Control - vertices[0].Control, this.transform.forward).normalized;
+        //    return Vector3.Cross((b.Control - a.Control), normal).normalized;
+        //}
 
         return normal;
     }

@@ -66,7 +66,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             chunkCount = chunkPerRow * chunkPerColumn;
 
             // check if we need to regenerate
-            if (chunkCount == chunks.Length && m_LastGeneratedHash.isValid && TerrainHelper.ComputeHash(m_Terrain.terrainData) == m_LastGeneratedHash)
+            if (m_LastGeneratedHash.isValid && TerrainHelper.ComputeHash(m_Terrain.terrainData) == m_LastGeneratedHash)
                 return;
 
             // convert
@@ -75,27 +75,11 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             // generate
             for (int i = 0; i < chunkCount; ++i)
             {
-                var chunk = chunks.ElementAtOrDefault(i);
+                var chunk = chunks.FirstOrDefault(c => c.name == i.ToString());
+                bool isNew = !chunk;
                 MeshFilter chunkMeshFilter = null;
                 MeshRenderer chunkMeshRenderer = null;
-                if (!chunk)
-                {
-                    if (allOctants == null) allOctants = UnityHelper.GetAllOctants();
-
-                    var go = new GameObject(i.ToString());
-                    go.transform.SetParent(this.transform, false);
-                    Hide(go, m_RenderGenerated);
-                    chunkMeshFilter = go.AddComponent<MeshFilter>();
-                    chunkMeshRenderer = go.AddComponent<MeshRenderer>();
-                    chunk = go.AddComponent<TfragChunk>();
-                    chunk.Octants = allOctants.ToArray();
-                }
-                else
-                {
-                    chunkMeshFilter = chunk.GetComponent<MeshFilter>();
-                    chunkMeshRenderer = chunk.GetComponent<MeshRenderer>();
-                }
-
+              
                 byte[] headerBytes = null;
                 byte[] dataBytes = null;
                 var quadValid = new List<bool>();
@@ -166,7 +150,8 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                 var quadsWithNoHole = quads.Count(x => x.Any(v => colors[v].a != 0));
                 if (quadsWithNoHole == 0)
                 {
-                    Dispatcher.RunOnMainThread(() => GameObject.DestroyImmediate(chunk.gameObject));
+                    if (chunk) GameObject.DestroyImmediate(chunk.gameObject);
+                    //Dispatcher.RunOnMainThread(() => GameObject.DestroyImmediate(chunk.gameObject));
                     continue;
                 }
 
@@ -189,9 +174,28 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                 for (int f = 0; f < quads.Count; ++f)
                 {
                     var quad = quads[f];
-                    if (quad.All(x => colors[x].a == 0)) continue;
+                    if (quad.All(x => colors[x].a == 0))
+                        continue;
                     //if (colors[quad[f]].a == 0) continue;
                     newMesh.SetIndices(new int[] { quad[0], quad[1], quad[2], quad[1], quad[3], quad[2] }, MeshTopology.Triangles, f);
+                }
+
+                if (!chunk)
+                {
+                    if (allOctants == null) allOctants = UnityHelper.GetAllOctants();
+
+                    var go = new GameObject(i.ToString());
+                    go.transform.SetParent(this.transform, false);
+                    Hide(go, m_RenderGenerated);
+                    chunkMeshFilter = go.AddComponent<MeshFilter>();
+                    chunkMeshRenderer = go.AddComponent<MeshRenderer>();
+                    chunk = go.AddComponent<TfragChunk>();
+                    chunk.Octants = allOctants.ToArray();
+                }
+                else
+                {
+                    chunkMeshFilter = chunk.GetComponent<MeshFilter>();
+                    chunkMeshRenderer = chunk.GetComponent<MeshRenderer>();
                 }
 
                 chunk.gameObject.name = i.ToString();
@@ -257,8 +261,12 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             }
         }
 
+        // always disable collider
+        var collider = GetComponent<TerrainCollider>();
+        collider.enabled = false;
+
         m_Terrain = GetComponent<Terrain>();
-        if (m_Terrain) m_Terrain.enabled = !visible;
+        if (m_Terrain) m_Terrain.drawHeightmap = !visible;
     }
 
     private void Hide(GameObject go, bool visible)

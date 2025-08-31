@@ -84,6 +84,7 @@ Shader "Horizon Forge/Universal"
             float4 _MainTex_ST;
             float4 _MainTex_TexelSize;
             int _Id;
+            int _Tfrag;
             int _Faded;
             int _Faded2;
             int _Picking;
@@ -250,8 +251,12 @@ Shader "Horizon Forge/Universal"
 
                 return _LayerColor;
 #else
-
+                
                 FacingSign = lerp(FacingSign, 1, _Reflection);
+
+                if (_Tfrag) FacingSign = 1;
+
+                //return float4(1 * i.normal.xyz, 1);
 
                 // vertex colors
                 float4 vcolor = lerp(1, i.color, _VertexColors);

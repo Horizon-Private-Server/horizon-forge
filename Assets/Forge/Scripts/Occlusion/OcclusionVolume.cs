@@ -22,6 +22,17 @@ public class OcclusionVolume : MonoBehaviour
     public bool ForceAdd;
     public bool Sticky;
     public float StickyDistance = 12;
+    [Tooltip("Max angle of the surface. A value of 180 will include all surfaces. A value of 90 will only include surfaces facing upwards.")]
+    [Range(0f, 180f)]
+    public float StickyNormalAngle = 180f;
+    public CollisionIdMask StickyColMask = (CollisionIdMask)0xffff;
+
+    public List<Vector3> GetCachedOctants()
+    {
+        if (_cachedOctants != null) return _cachedOctants;
+
+        return _cachedOctants = GetOctants();
+    }
 
     public void Align()
     {
@@ -186,7 +197,7 @@ public class OcclusionVolume : MonoBehaviour
         return new Vector3((int)(p.x / 4) * 4, (int)(p.y / 4) * 4, (int)(p.z / 4) * 4);
     }
 
-    private bool IsNearWalkableSurface(Vector3 p, float? dist = null)
+    private bool IsNearWalkableSurface(Vector3 p, float? dist = null, Dictionary<Collider, MeshRenderer> colliderCache = null)
     {
         if (!dist.HasValue)
             dist = 4f * 3f;
@@ -207,11 +218,52 @@ public class OcclusionVolume : MonoBehaviour
         {
             if (Physics.Raycast(p - (dir * 2f), dir, out var hitInfo, dist.Value + (dir.magnitude * 2f)))
             {
+                var normalAngle = Vector3.Angle(hitInfo.normal, Vector3.up);
+                if (normalAngle > StickyNormalAngle)
+                    continue;
+
                 if (Vector3.Dot(hitInfo.normal, dir) < 0)
                 {
-                    //var mr = hitInfo.transform.GetComponent<MeshRenderer>();
-                    //if (mr && mr.sharedMaterials.Any(x => x.name.EndsWith("_8")))
-                    //    continue;
+                    var hitFlagBit = 0;
+                    var mc = hitInfo.collider as MeshCollider;
+                    if (!mc) continue;
+
+                    if (!colliderCache.TryGetValue(mc, out var mr))
+                    {
+                        mr = hitInfo.transform.GetComponent<MeshRenderer>();
+                        if (!mr) mr = hitInfo.transform.GetComponentInChildren<MeshRenderer>();
+                        colliderCache[mc] = mr;
+                    }
+
+                    if (mr)
+                    {
+                        Mesh mesh = mc.sharedMesh;
+                        int triangleOffset = 0;
+
+                        // Find which submesh contains the triangle index
+                        for (int submeshIndex = 0; submeshIndex < mesh.subMeshCount; submeshIndex++)
+                        {
+                            var submeshInfo = mesh.GetSubMesh(submeshIndex);
+                            int triangleCount = submeshInfo.indexCount / 3;
+
+                            if (hitInfo.triangleIndex >= triangleOffset && hitInfo.triangleIndex < triangleOffset + triangleCount)
+                            {
+                                // Found the submesh that contains this triangle
+                                Material hitMaterial = mr.sharedMaterials[submeshIndex];
+                                if (hitMaterial.shader.name != "Horizon Forge/Collider") break;
+
+                                var hitMask = hitMaterial.GetInteger("_ColId") & 0x1f;
+                                hitFlagBit = 1 << (int)hitMask;
+                            }
+
+                            triangleOffset += triangleCount;
+                            if (hitFlagBit > 0)
+                                break;
+                        }
+                    }
+
+                    if (hitFlagBit > 0 && !StickyColMask.HasFlag((CollisionIdMask)hitFlagBit))
+                        continue;
 
                     return true;
                 }
@@ -224,6 +276,7 @@ public class OcclusionVolume : MonoBehaviour
     public List<Vector3> GetOctants()
     {
         var graph = GameObject.FindObjectOfType<OcclusionGraph>();
+        var colliderCache = new Dictionary<Collider, MeshRenderer>();
 
         var octants = new List<Vector3>();
 
@@ -248,7 +301,7 @@ public class OcclusionVolume : MonoBehaviour
                     {
                         if (Sticky)
                         {
-                            if (IsNearWalkableSurface(center, StickyDistance))
+                            if (IsNearWalkableSurface(center, StickyDistance, colliderCache))
                                 octants.Add(octant);
                         }
                         else

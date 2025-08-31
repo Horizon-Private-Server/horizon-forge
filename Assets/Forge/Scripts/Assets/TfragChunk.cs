@@ -79,6 +79,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
                 mpb.SetInteger("_Id", OcclusionId);
                 mpb.SetInteger("_Picking", !SceneVisibilityManager.instance.IsPickingDisabled(this.gameObject) ? 1 : 0);
                 mpb.SetInteger("_Selected", Selection.activeGameObject == this.gameObject ? 1 : 0);
+                mpb.SetInteger("_Tfrag", 1);
                 //mpb.SetFloat("_DoubleSidedEnable", 1);
                 renderer.SetPropertyBlock(mpb);
             }
@@ -110,6 +111,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
                 mpb.SetInteger("_Selected", selected ? 1 : 0);
                 mpb.SetColor("_Color", new Color(2, 2, 2, 0.5f));
                 mpb.SetInteger("_VertexColors", 1);
+                mpb.SetInteger("_Tfrag", 1);
                 renderer.SetPropertyBlock(mpb);
             }
         }
