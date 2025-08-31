@@ -23,15 +23,26 @@ public static class WrenchHelper
         return GAME_NAMES.GetValueOrDefault(version) ?? "dl";
     }
 
+    private static string GetWrenchBuildPath()
+    {
+#if UNITY_STANDALONE_WIN
+        return Path.Combine("tools", "wrench", "wrenchbuild.exe");
+#elif UNITY_STANDALONE_LINUX
+        return Path.Combine("tools", "wrench", "wrenchbuild");
+#else
+        throw new NotImplementedException();
+#endif
+    }
+
     public static bool IsInstalled()
     {
-        var exePath = Path.Combine("tools", "Wrench", "wrenchbuild.exe");
+        var exePath = GetWrenchBuildPath();
         return File.Exists(exePath);
     }
 
     public static int RunWrench(out string output, params string[] args)
     {
-        var exePath = Path.Combine("tools", "Wrench", "wrenchbuild.exe");
+        var exePath = GetWrenchBuildPath();
         return RunWrench(exePath, out output, args);
     }
 

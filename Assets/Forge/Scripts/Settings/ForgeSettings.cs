@@ -18,6 +18,8 @@ public class ForgeSettings : ScriptableObject
     public string PathToOutputUyaNtscIso;
     public string PathToOutputUyaPalIso;
 
+    public string PathToBlender;
+
     public string[] DLBuildFolders;
     public string[] UYABuildFolders;
 

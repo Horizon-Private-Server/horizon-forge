@@ -124,9 +124,20 @@ public static class PackerHelper
         PACK_SOUND_WAD = 64,
     }
 
+    private static string GetPackerPath()
+    {
+#if UNITY_STANDALONE_WIN
+        return Path.Combine("tools", "packer", "DL.Level.exe");
+#elif UNITY_STANDALONE_LINUX
+        return Path.Combine("tools", "packer", "DL.Level");
+#else
+        throw new NotImplementedException();
+#endif
+    }
+
     public static bool IsInstalled()
     {
-        var packerPath = Path.Combine("tools", "packer", "DL.Level.exe");
+        var packerPath = GetPackerPath();
         return File.Exists(packerPath);
     }
 
@@ -150,7 +161,7 @@ public static class PackerHelper
         output = null;
         string consoleData = "";
 
-        var packerPath = Path.Combine("tools", "packer", "DL.Level.exe");
+        var packerPath = GetPackerPath();
         if (!File.Exists(packerPath))
         {
             throw new System.Exception("Packer not found in tools directory!");
@@ -183,41 +194,6 @@ public static class PackerHelper
     public static PACKER_STATUS_CODES RunPacker(out string output, params string[] args)
     {
         return RunPacker(args, false, out output);
-    }
-
-    public static int RunWAD2(out string output, params string[] args)
-    {
-        output = null;
-        string consoleData = "";
-
-        var exePath = Path.Combine("tools", "packer", "static", "wad2.exe");
-        if (!File.Exists(exePath))
-        {
-            throw new System.Exception("wad2 packer not found in tools directory!");
-        }
-
-        var processArgs = string.Join(" ", args.Select(x => "\"" + x.Replace("\\", "/") + "\""));
-        var startInfo = new System.Diagnostics.ProcessStartInfo(Path.GetFullPath(exePath), processArgs)
-        {
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            UseShellExecute = false,
-        };
-
-        var p = new System.Diagnostics.Process() { StartInfo = startInfo };
-        p.OutputDataReceived += (s, e) => { consoleData += e.Data + "\n"; };
-        p.ErrorDataReceived += (s, e) => { consoleData += e.Data + "\n"; };
-        p.Start();
-        p.BeginOutputReadLine();
-        p.BeginErrorReadLine();
-        p.WaitForExit();
-
-        output = consoleData;
-        if (p.ExitCode < 0)
-            Debug.Log(output);
-        return p.ExitCode;
     }
 
     public static PACKER_STATUS_CODES ExtractLevelWads(string isoPath, string destFolder, int levelId, int racVersion)
@@ -312,12 +288,6 @@ public static class PackerHelper
     public static PACKER_STATUS_CODES PackMobyModel(string inFolder, string outFolder, int racVersion)
     {
         return RunPacker(out _, "pack-moby-model", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString());
-    }
-
-    public static bool UnpackCollision(string collisionBinFile, string outColladaFile)
-    {
-        var r = RunWAD2(out _, "extract_collision", collisionBinFile, outColladaFile);
-        return r == 0;
     }
 
     public static PACKER_STATUS_CODES UnpackOcclusion(string inFile, string worldInstancesFolder, string outFolder, int racVersion)
