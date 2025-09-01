@@ -127,10 +127,17 @@ public static class ForgeUpdater
                     {
                         foreach (JObject asset in assets)
                         {
+#if UNITY_STANDALONE_WIN
                             if ((string)asset["name"] == "tools-windows.zip")
                             {
                                 toolsZipUrl = (string)asset["browser_download_url"];
                             }
+#elif UNITY_STANDALONE_LINUX
+                            if ((string)asset["name"] == "tools-linux.zip")
+                            {
+                                toolsZipUrl = (string)asset["browser_download_url"];
+                            }
+#endif
                             else if ((string)asset["name"] == "forge.zip")
                             {
                                 forgeZipUrl = (string)asset["browser_download_url"];

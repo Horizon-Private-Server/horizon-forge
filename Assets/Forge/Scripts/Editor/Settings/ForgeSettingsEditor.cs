@@ -11,15 +11,25 @@ public class ForgeSettingsEditor : Editor
 {
     public override void OnInspectorGUI()
     {
+        var isoExts = new string[] { "iso", "ISO" };
         var forgeSettings = target as ForgeSettings;
 
         EditorGUI.BeginChangeCheck();
+        GUILayout.Label("Blender");
+        var blenderTitle = "Blender executable path";
+        string[] blenderExt = null;
+#if UNITY_STANDALONE_WIN
+        blenderExt = new string[] { "Exe", "exe" };
+        blenderTitle = "Blender executable path (optional)";
+#endif
+        CreateBrowseFileGUI(blenderTitle, forgeSettings.PathToBlender, blenderExt);
+
         GUILayout.Label("Clean ISO Paths");
         EditorGUI.BeginDisabledGroup(true);
-        CreateBrowseFileGUI("Clean Deadlocked (NTSC) Iso", forgeSettings.PathToCleanDeadlockedIso);
-        CreateBrowseFileGUI("Clean UYA (NTSC) Iso", forgeSettings.PathToCleanUyaNtscIso);
-        CreateBrowseFileGUI("Clean R&C3 (PAL) Iso", forgeSettings.PathToCleanUyaPalIso);
-        CreateBrowseFileGUI("Clean GC (NTSC) Iso", forgeSettings.PathToCleanGcIso);
+        CreateBrowseFileGUI("Clean Deadlocked (NTSC) Iso", forgeSettings.PathToCleanDeadlockedIso, isoExts);
+        CreateBrowseFileGUI("Clean UYA (NTSC) Iso", forgeSettings.PathToCleanUyaNtscIso, isoExts);
+        CreateBrowseFileGUI("Clean R&C3 (PAL) Iso", forgeSettings.PathToCleanUyaPalIso, isoExts);
+        CreateBrowseFileGUI("Clean GC (NTSC) Iso", forgeSettings.PathToCleanGcIso, isoExts);
         EditorGUI.EndDisabledGroup();
 
         if (GUILayout.Button("Configure in Startup Window"))
@@ -145,7 +155,7 @@ public class ForgeSettingsEditor : Editor
         return newPath;
     }
 
-    string CreateBrowseFileGUI(string title, string path)
+    string CreateBrowseFileGUI(string title, string path, params string[] extensions)
     {
         var width = 130;
 
@@ -168,9 +178,13 @@ public class ForgeSettingsEditor : Editor
 
         if (openFileDialog)
         {
-            var openPath = EditorUtility.OpenFilePanelWithFilters(title, newPath, new string[] { "ISO", "iso" });
-            if (!string.IsNullOrEmpty(openPath))
-                newPath = openPath;
+            string openPath = null;
+            if (extensions == null)
+                openPath = EditorUtility.OpenFilePanel(title, newPath, "");
+            else
+                openPath = EditorUtility.OpenFilePanelWithFilters(title, newPath, extensions);
+                
+            if (!string.IsNullOrEmpty(openPath)) newPath = openPath;
         }
 
         if (newPath != path) EditorUtility.SetDirty(target);

@@ -188,7 +188,7 @@ public class ISOImporterWindow : EditorWindow
 
                 var result = PackerHelper.PACKER_STATUS_CODES.SUCCESS;
                 var levelFolder = Path.Combine(tempFolder, $"rc{racVersion}-{(int)level}");
-                var assetsFolder = Path.Combine(levelFolder, FolderNames.AssetsFolder);
+                var assetsFolder = Path.Combine(levelFolder, FolderNames.BinaryAssetsFolder);
                 var soundPath = racVersion == RCVER.DL ? Path.Combine(levelFolder, "sound.bnk") : Path.Combine(levelFolder, $"level{(int)level}.1.wad");
                 var soundsFolder = Path.Combine(levelFolder, FolderNames.BinarySoundsFolder);
                 var missionsFolder = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
@@ -237,7 +237,7 @@ public class ISOImporterWindow : EditorWindow
                 // ties
                 if (importTies)
                 {
-                    var tieAssetDir = Path.Combine(assetsFolder, FolderNames.TieFolder);
+                    var tieAssetDir = Path.Combine(levelFolder, FolderNames.BinaryTieFolder);
                     var tieGlobalDir = FolderNames.GetGlobalAssetFolder(FolderNames.TieFolder, racVersion);
                     var tieDirs = Directory.EnumerateDirectories(tieAssetDir).ToList();
 
@@ -271,7 +271,7 @@ public class ISOImporterWindow : EditorWindow
                 // shrubs
                 if (importShrubs)
                 {
-                    var shrubAssetDir = Path.Combine(assetsFolder, FolderNames.ShrubFolder);
+                    var shrubAssetDir = Path.Combine(levelFolder, FolderNames.BinaryShrubFolder);
                     var shrubGlobalDir = FolderNames.GetGlobalAssetFolder(FolderNames.ShrubFolder, racVersion);
                     var shrubDirs = Directory.EnumerateDirectories(shrubAssetDir).ToList();
 
@@ -299,7 +299,7 @@ public class ISOImporterWindow : EditorWindow
                 // only can import UYA/DL mobys
                 if (importMobys && (racVersion == RCVER.UYA || racVersion == RCVER.DL))
                 {
-                    var mobyAssetDir = Path.Combine(assetsFolder, FolderNames.MobyFolder);
+                    var mobyAssetDir = Path.Combine(levelFolder, FolderNames.BinaryMobyFolder);
                     var mobyGlobalDir = FolderNames.GetGlobalAssetFolder(FolderNames.MobyFolder, racVersion);
                     var mobyDirs = Directory.EnumerateDirectories(mobyAssetDir).ToList();
 

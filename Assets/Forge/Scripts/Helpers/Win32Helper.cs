@@ -8,6 +8,8 @@ using UnityEngine;
 public static class Win32Helper
 {
 
+#if UNITY_STANDALONE_WIN
+
     #region AssocQueryString
 
     [DllImport("Shlwapi.dll", CharSet = CharSet.Unicode)]
@@ -92,5 +94,7 @@ public static class Win32Helper
     }
 
     #endregion
+
+#endif
 
 }

@@ -13,103 +13,100 @@ public static class PackerHelper
         SUCCESS = 0,
 
         // IO
-        MISSING_DIR = -1,
-        MISSING_FILE = -2,
+        MISSING_DIR = 1,
+        MISSING_FILE = 2,
 
         // Unpacking
-        UNPACK_ASSET_FAILURE = -10,
-        UNPACK_ASSET_FAILURE_MOBY = -11,
-        UNPACK_ASSET_FAILURE_TIE = -12,
-        UNPACK_ASSET_FAILURE_SHRUB = -13,
-        UNPACK_ASSET_FAILURE_TERRAIN = -14,
-        UNPACK_ASSET_FAILURE_SKYBOX = -15,
-        UNPACK_ASSET_FAILURE_PARTICLE_TEX = -16,
-        UNPACK_ASSET_FAILURE_FX_TEX = -17,
-        UNPACK_ASSET_FAILURE_COLLISION = -18,
-        UNPACK_ASSET_FAILURE_SOUND_REMAP = -19,
-        UNPACK_ASSET_FAILURE_OCCLUSION = -20,
-        UNPACK_ASSET_FAILURE_CHROME = -21,
-        UNPACK_ASSET_FAILURE_GLASS = -22,
-        UNPACK_ASSET_FAILURE_PARTICLE_DEF = -23,
-        UNPACK_ASSET_FAILURE_MOBY_GS_STASH_LIST = -24,
-        UNPACK_ASSET_FAILURE_MOBY_SOUND_REMAP = -25,
-        UNPACK_ASSET_FAILURE_LIGHT_CUBOIDS = -26, // same offset in header
-        UNPACK_ASSET_FAILURE_RATCHET_ANIMS = -26, // same offset in header
-        UNPACK_ASSET_FAILURE_DECOMPRESS = -27,
+        UNPACK_ASSET_FAILURE = 10,
+        UNPACK_ASSET_FAILURE_MOBY = 11,
+        UNPACK_ASSET_FAILURE_TIE = 12,
+        UNPACK_ASSET_FAILURE_SHRUB = 13,
+        UNPACK_ASSET_FAILURE_TERRAIN = 14,
+        UNPACK_ASSET_FAILURE_SKYBOX = 15,
+        UNPACK_ASSET_FAILURE_PARTICLE_TEX = 16,
+        UNPACK_ASSET_FAILURE_FX_TEX = 17,
+        UNPACK_ASSET_FAILURE_COLLISION = 18,
+        UNPACK_ASSET_FAILURE_SOUND_REMAP = 19,
+        UNPACK_ASSET_FAILURE_OCCLUSION = 20,
+        UNPACK_ASSET_FAILURE_CHROME = 21,
+        UNPACK_ASSET_FAILURE_GLASS = 22,
+        UNPACK_ASSET_FAILURE_PARTICLE_DEF = 23,
+        UNPACK_ASSET_FAILURE_MOBY_GS_STASH_LIST = 24,
+        UNPACK_ASSET_FAILURE_MOBY_SOUND_REMAP = 25,
+        UNPACK_ASSET_FAILURE_LIGHT_CUBOIDS = 26, // same offset in header
+        UNPACK_ASSET_FAILURE_RATCHET_ANIMS = 26, // same offset in header
+        UNPACK_ASSET_FAILURE_DECOMPRESS = 27,
 
         // Packing
-        READ_ASSET_FAILURE = -50,
-        READ_ASSET_FAILURE_MOBY = -51,
-        READ_ASSET_FAILURE_TIE = -52,
-        READ_ASSET_FAILURE_SHRUB = -53,
-        READ_ASSET_FAILURE_TERRAIN = -54,
-        READ_ASSET_FAILURE_SKYBOX = -55,
-        READ_ASSET_FAILURE_PARTICLE_TEX = -56,
-        READ_ASSET_FAILURE_FX_TEX = -57,
-        READ_ASSET_FAILURE_COLLISION = -58,
-        READ_ASSET_FAILURE_SOUND_REMAP = -59,
-        READ_ASSET_FAILURE_OCCLUSION = -60,
-        READ_ASSET_FAILURE_CHROME = -61,
-        READ_ASSET_FAILURE_GLASS = -62,
-        READ_ASSET_FAILURE_PARTICLE_DEF = -63,
-        READ_ASSET_FAILURE_MOBY_GS_STASH_LIST = -64,
-        READ_ASSET_FAILURE_TEXTURES = -65,
+        READ_ASSET_FAILURE = 50,
+        READ_ASSET_FAILURE_MOBY = 51,
+        READ_ASSET_FAILURE_TIE = 52,
+        READ_ASSET_FAILURE_SHRUB = 53,
+        READ_ASSET_FAILURE_TERRAIN = 54,
+        READ_ASSET_FAILURE_SKYBOX = 55,
+        READ_ASSET_FAILURE_PARTICLE_TEX = 56,
+        READ_ASSET_FAILURE_FX_TEX = 57,
+        READ_ASSET_FAILURE_COLLISION = 58,
+        READ_ASSET_FAILURE_SOUND_REMAP = 59,
+        READ_ASSET_FAILURE_OCCLUSION = 60,
+        READ_ASSET_FAILURE_CHROME = 61,
+        READ_ASSET_FAILURE_GLASS = 62,
+        READ_ASSET_FAILURE_PARTICLE_DEF = 63,
+        READ_ASSET_FAILURE_MOBY_GS_STASH_LIST = 64,
+        READ_ASSET_FAILURE_TEXTURES = 65,
 
-        PACK_ASSET_FAILURE = -80,
-        PACK_ASSET_FAILURE_MOBY = -81,
-        PACK_ASSET_FAILURE_TIE = -82,
-        PACK_ASSET_FAILURE_SHRUB = -83,
-        PACK_ASSET_FAILURE_TERRAIN = -84,
-        PACK_ASSET_FAILURE_SKYBOX = -85,
-        PACK_ASSET_FAILURE_PARTICLE_TEX = -86,
-        PACK_ASSET_FAILURE_FX_TEX = -87,
-        PACK_ASSET_FAILURE_COLLISION = -88,
-        PACK_ASSET_FAILURE_SOUND_REMAP = -89,
-        PACK_ASSET_FAILURE_OCCLUSION = -90,
-        PACK_ASSET_FAILURE_CHROME = -91,
-        PACK_ASSET_FAILURE_GLASS = -92,
-        PACK_ASSET_FAILURE_PARTICLE_DEF = -93,
-        PACK_ASSET_FAILURE_MOBY_GS_STASH_LIST = -94,
-        PACK_ASSET_FAILURE_TEXTURES = -95,
-        PACK_ASSET_FAILURE_FX_DEF = -96,
-        PACK_ASSET_FAILURE_MOBY_SOUND_REMAP = -97,
-        PACK_ASSET_FAILURE_LIGHT_CUBOIDS = -98, // same offset in header
-        PACK_ASSET_FAILURE_RATCHET_ANIMS = -98, // same offset in header
-        PACK_ASSET_FAILURE_MIPMAP_DEF = -99,
+        PACK_ASSET_FAILURE = 80,
+        PACK_ASSET_FAILURE_MOBY = 81,
+        PACK_ASSET_FAILURE_TIE = 82,
+        PACK_ASSET_FAILURE_SHRUB = 83,
+        PACK_ASSET_FAILURE_TERRAIN = 84,
+        PACK_ASSET_FAILURE_SKYBOX = 85,
+        PACK_ASSET_FAILURE_PARTICLE_TEX = 86,
+        PACK_ASSET_FAILURE_FX_TEX = 87,
+        PACK_ASSET_FAILURE_COLLISION = 88,
+        PACK_ASSET_FAILURE_SOUND_REMAP = 89,
+        PACK_ASSET_FAILURE_OCCLUSION = 90,
+        PACK_ASSET_FAILURE_CHROME = 91,
+        PACK_ASSET_FAILURE_GLASS = 92,
+        PACK_ASSET_FAILURE_PARTICLE_DEF = 93,
+        PACK_ASSET_FAILURE_MOBY_GS_STASH_LIST = 94,
+        PACK_ASSET_FAILURE_TEXTURES = 95,
+        PACK_ASSET_FAILURE_FX_DEF = 96,
+        PACK_ASSET_FAILURE_MOBY_SOUND_REMAP = 97,
+        PACK_ASSET_FAILURE_LIGHT_CUBOIDS = 98, // same offset in header
+        PACK_ASSET_FAILURE_RATCHET_ANIMS = 98, // same offset in header
+        PACK_ASSET_FAILURE_MIPMAP_DEF = 99,
 
-
-        PACK_ASSET_FAILURE_TODO = -99,
-
-        WRITE_ASSET_FAILURE = -110,
-        WRITE_ASSET_FAILURE_MOBY = -111,
-        WRITE_ASSET_FAILURE_TIE = -112,
-        WRITE_ASSET_FAILURE_SHRUB = -113,
-        WRITE_ASSET_FAILURE_TERRAIN = -114,
-        WRITE_ASSET_FAILURE_SKYBOX = -115,
-        WRITE_ASSET_FAILURE_PARTICLE_TEX = -116,
-        WRITE_ASSET_FAILURE_FX_TEX = -117,
-        WRITE_ASSET_FAILURE_COLLISION = -118,
-        WRITE_ASSET_FAILURE_SOUND_REMAP = -119,
-        WRITE_ASSET_FAILURE_OCCLUSION = -120,
-        WRITE_ASSET_FAILURE_CHROME = -121,
-        WRITE_ASSET_FAILURE_GLASS = -122,
-        WRITE_ASSET_FAILURE_PARTICLE_DEF = -123,
-        WRITE_ASSET_FAILURE_MOBY_GS_STASH_LIST = -124,
-        WRITE_ASSET_FAILURE_TEXTURES = -125,
-        WRITE_ASSET_FAILURE_FX_DEF = -126,
-        WRITE_ASSET_FAILURE_LIGHT_CUBOIDS = -127, // same offset in header
-        WRITE_ASSET_FAILURE_RATCHET_ANIMS = -127, // same offset in header
-        WRITE_ASSET_FAILURE_MIPMAP_DEF = -99,
+        WRITE_ASSET_FAILURE = 110,
+        WRITE_ASSET_FAILURE_MOBY = 111,
+        WRITE_ASSET_FAILURE_TIE = 112,
+        WRITE_ASSET_FAILURE_SHRUB = 113,
+        WRITE_ASSET_FAILURE_TERRAIN = 114,
+        WRITE_ASSET_FAILURE_SKYBOX = 115,
+        WRITE_ASSET_FAILURE_PARTICLE_TEX = 116,
+        WRITE_ASSET_FAILURE_FX_TEX = 117,
+        WRITE_ASSET_FAILURE_COLLISION = 118,
+        WRITE_ASSET_FAILURE_SOUND_REMAP = 119,
+        WRITE_ASSET_FAILURE_OCCLUSION = 120,
+        WRITE_ASSET_FAILURE_CHROME = 121,
+        WRITE_ASSET_FAILURE_GLASS = 122,
+        WRITE_ASSET_FAILURE_PARTICLE_DEF = 123,
+        WRITE_ASSET_FAILURE_MOBY_GS_STASH_LIST = 124,
+        WRITE_ASSET_FAILURE_TEXTURES = 125,
+        WRITE_ASSET_FAILURE_FX_DEF = 126,
+        WRITE_ASSET_FAILURE_LIGHT_CUBOIDS = 127, // same offset in header
+        WRITE_ASSET_FAILURE_RATCHET_ANIMS = 127, // same offset in header
+        WRITE_ASSET_FAILURE_MIPMAP_DEF = 128,
 
 
         // Unsupported operations
-        UNSUPPORTED_RAC1 = -200,
-        UNSUPPORTED_RAC_UNKNOWN = -201,
-        UNSUPPORTED_OP = -202,
-        UNSUPPORTED_NOT_IMPLEMENTED = -203,
+        UNSUPPORTED_RAC1 = 200,
+        UNSUPPORTED_RAC_UNKNOWN = 201,
+        UNSUPPORTED_OP = 202,
+        UNSUPPORTED_NOT_IMPLEMENTED = 203,
 
         // Command line parser errors
-        COMMAND_LINE_PARSER_FAILED = -300,
+        COMMAND_LINE_PARSER_FAILED = 255,
     }
 
     [Flags]
@@ -124,14 +121,27 @@ public static class PackerHelper
         PACK_SOUND_WAD = 64,
     }
 
+    private static string GetPackerPath()
+    {
+#if UNITY_STANDALONE_WIN
+        return Path.Combine("tools", "packer", "DL.Level.exe");
+#elif UNITY_STANDALONE_LINUX
+        return Path.Combine("tools", "packer", "DL.Level");
+#else
+        throw new NotImplementedException();
+#endif
+    }
+
     public static bool IsInstalled()
     {
-        var packerPath = Path.Combine("tools", "packer", "DL.Level.exe");
+        var packerPath = GetPackerPath();
         return File.Exists(packerPath);
     }
 
     public static bool CanRun()
     {
+        // run packer with no args
+        // should return COMMAND_LINE_PARSER_FAILED
         return RunPacker(null, true, out _) == PACKER_STATUS_CODES.COMMAND_LINE_PARSER_FAILED;
     }
 
@@ -150,12 +160,13 @@ public static class PackerHelper
         output = null;
         string consoleData = "";
 
-        var packerPath = Path.Combine("tools", "packer", "DL.Level.exe");
+        var packerPath = GetPackerPath();
         if (!File.Exists(packerPath))
         {
             throw new System.Exception("Packer not found in tools directory!");
         }
 
+        var packerFileInfo = new FileInfo(packerPath);
         var processArgs = args == null ? "" : string.Join(" ", args.Select(x => "\"" + x.Replace("\\", "/") + "\""));
         var startInfo = new System.Diagnostics.ProcessStartInfo(Path.GetFullPath(packerPath), processArgs)
         {
@@ -163,8 +174,10 @@ public static class PackerHelper
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
-            UseShellExecute = false,
+            UseShellExecute = false
         };
+        startInfo.EnvironmentVariables.Add("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "1");
+        startInfo.EnvironmentVariables.Add("WRENCHBUILD_BINARY", Path.GetFullPath(WrenchHelper.GetWrenchBuildPath()));
 
         var p = new System.Diagnostics.Process() { StartInfo = startInfo };
         p.OutputDataReceived += (s, e) => { consoleData += e.Data + "\n"; };
@@ -175,49 +188,15 @@ public static class PackerHelper
         p.WaitForExit();
 
         output = consoleData;
-        if (p.ExitCode < 0 && !silent)
-            Debug.Log(output);
+        if (p.ExitCode != 0 && !silent)
+            Debug.Log(processArgs + ":\n\n" + output);
+
         return (PACKER_STATUS_CODES)p.ExitCode;
     }
 
     public static PACKER_STATUS_CODES RunPacker(out string output, params string[] args)
     {
         return RunPacker(args, false, out output);
-    }
-
-    public static int RunWAD2(out string output, params string[] args)
-    {
-        output = null;
-        string consoleData = "";
-
-        var exePath = Path.Combine("tools", "packer", "static", "wad2.exe");
-        if (!File.Exists(exePath))
-        {
-            throw new System.Exception("wad2 packer not found in tools directory!");
-        }
-
-        var processArgs = string.Join(" ", args.Select(x => "\"" + x.Replace("\\", "/") + "\""));
-        var startInfo = new System.Diagnostics.ProcessStartInfo(Path.GetFullPath(exePath), processArgs)
-        {
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            UseShellExecute = false,
-        };
-
-        var p = new System.Diagnostics.Process() { StartInfo = startInfo };
-        p.OutputDataReceived += (s, e) => { consoleData += e.Data + "\n"; };
-        p.ErrorDataReceived += (s, e) => { consoleData += e.Data + "\n"; };
-        p.Start();
-        p.BeginOutputReadLine();
-        p.BeginErrorReadLine();
-        p.WaitForExit();
-
-        output = consoleData;
-        if (p.ExitCode < 0)
-            Debug.Log(output);
-        return p.ExitCode;
     }
 
     public static PACKER_STATUS_CODES ExtractLevelWads(string isoPath, string destFolder, int levelId, int racVersion)
@@ -314,12 +293,6 @@ public static class PackerHelper
         return RunPacker(out _, "pack-moby-model", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString());
     }
 
-    public static bool UnpackCollision(string collisionBinFile, string outColladaFile)
-    {
-        var r = RunWAD2(out _, "extract_collision", collisionBinFile, outColladaFile);
-        return r == 0;
-    }
-
     public static PACKER_STATUS_CODES UnpackOcclusion(string inFile, string worldInstancesFolder, string outFolder, int racVersion)
     {
         var mappingFileName = "144.bin";
@@ -408,7 +381,7 @@ public static class PackerHelper
         // assets
         if (ops.HasFlag(PACKER_PACK_OPS.PACK_ASSETS))
         {
-            result = RunPacker(out _, "pack-assets", "-i", Path.Combine(inFolder, FolderNames.AssetsFolder), "-o", inFolder, "-v", racVersion.ToString());
+            result = RunPacker(out _, "pack-assets", "-i", Path.Combine(inFolder, FolderNames.BinaryAssetsFolder), "-o", inFolder, "-v", racVersion.ToString());
             if (result != PACKER_STATUS_CODES.SUCCESS) return result;
             onProgressCallback?.Invoke(0.7f);
         }

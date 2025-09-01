@@ -9,9 +9,21 @@ using UnityEngine;
 
 public static class BlenderHelper
 {
-    public static string GetBlenderPath()
+    public static string GetBlenderPath(bool forceFindBlenderPath = false)
     {
+        if (!forceFindBlenderPath)
+        {
+            var forgeSettings = ForgeSettings.Singleton;
+            if (forgeSettings != null && !string.IsNullOrEmpty(forgeSettings.PathToBlender))
+                return forgeSettings.PathToBlender;
+        }
+
+#if UNITY_STANDALONE_WIN
         return Win32Helper.AssocQueryString(Win32Helper.AssocStr.Executable, ".blend");
+#else
+        // path to blender not configured
+        return null;
+#endif
     }
 
     public static bool RunBlender(string pythonScript, string args, string blendFile = null)

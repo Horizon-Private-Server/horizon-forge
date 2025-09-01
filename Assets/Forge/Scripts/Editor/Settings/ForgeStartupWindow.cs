@@ -89,6 +89,13 @@ public class ForgeStartupWindow : EditorWindow
         CreateDependencyBox(groupBox, IconDotNetCore, hasDotNetCore, hasDotNetCore ? ".NET Desktop Runtime 3.1 installation detected." : $".NET Desktop Runtime 3.1 installation not detected. Please ensure the Tools package is installed first. Then download and install at <a href=\"https://dotnet.microsoft.com/en-us/download/dotnet/3.1#runtime-desktop-3.1.32\">https://dotnet.microsoft.com/en-us/download/dotnet/3.1#runtime-desktop-3.1.32</a>.");
 
         // refresh
+        var blenderTitle = "Blender executable path";
+        string[] blenderExt = null;
+#if UNITY_STANDALONE_WIN
+        blenderExt = new string[] { "Exe", "exe" };
+        blenderTitle = "Blender executable path (optional)";
+#endif
+        CreateOpenFileBrowser(CreateValidationRow(groupBox, hasBlender), blenderTitle, forgeSettings.PathToBlender, (v) => OnBlenderPathUpdated(forgeSettings, v), blenderExt);
         CreateLabel(groupBox, ""); // padding
         CreateButton(groupBox, "Refresh Installations", () => { CreateGUI(); });
 
@@ -171,6 +178,14 @@ public class ForgeStartupWindow : EditorWindow
         uyaNtscIsoValid = !string.IsNullOrEmpty(forgeSettings.PathToCleanUyaNtscIso) && ISOHelper.ValidateISO(forgeSettings.PathToCleanUyaNtscIso, 3, GameRegion.NTSC);
         uyaPalIsoValid = !string.IsNullOrEmpty(forgeSettings.PathToCleanUyaPalIso) && ISOHelper.ValidateISO(forgeSettings.PathToCleanUyaPalIso, 3, GameRegion.PAL);
         gcNtscIsoValid = !string.IsNullOrEmpty(forgeSettings.PathToCleanGcIso) && ISOHelper.ValidateISO(forgeSettings.PathToCleanGcIso, 2, GameRegion.NTSC);
+    }
+
+    private void OnBlenderPathUpdated(ForgeSettings forgeSettings, string newValue)
+    {
+        forgeSettings.PathToBlender = newValue;
+
+        // update gui
+        CreateGUI();
     }
 
     private void OnDeadlockedCleanISOPathUpdated(ForgeSettings forgeSettings, string newValue)
@@ -276,7 +291,7 @@ public class ForgeStartupWindow : EditorWindow
 
     #region Install Validation Helpers
 
-    private bool HasBlender() => !string.IsNullOrEmpty(BlenderHelper.GetBlenderPath());
+    private bool HasBlender() => File.Exists(forgeSettings.PathToBlender) || File.Exists(BlenderHelper.GetBlenderPath(forceFindBlenderPath: true));
 
     private bool HasPacker() => PackerHelper.IsInstalled();
 
@@ -433,7 +448,12 @@ public class ForgeStartupWindow : EditorWindow
         browse.style.width = new Length(10, LengthUnit.Percent);
         browse.clicked += () =>
         {
-            var newPath = EditorUtility.OpenFilePanelWithFilters(title, textbox.value, extensions);
+            string newPath = null;
+            if (extensions == null)
+                newPath = EditorUtility.OpenFilePanel(title, textbox.value, "");
+            else
+                newPath = EditorUtility.OpenFilePanelWithFilters(title, textbox.value, extensions);
+                
             if (!string.IsNullOrEmpty(newPath)) textbox.value = newPath;
         };
         row.Add(browse);

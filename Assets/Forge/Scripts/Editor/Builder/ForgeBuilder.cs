@@ -1937,14 +1937,15 @@ public static class ForgeBuilder
         // dzo is DL (rc4) only
         var binFolder = FolderNames.GetMapBinFolder(scene.name, 4);
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+    
+        if (!scene.isLoaded || !mapConfig || !mapConfig.HasDeadlockedBaseMap())
+            return;
+
         if (!Directory.Exists(binFolder))
         {
             EditorUtility.DisplayDialog("Cannot build", $"Scene does not have matching level folder \"{scene.name}\"", "Ok");
             return;
         }
-
-        if (!scene.isLoaded || !mapConfig || !mapConfig.HasDeadlockedBaseMap())
-            return;
 
         var buildFolder = FolderNames.GetMapBuildFolder(scene.name, 4);
         var outGlbFile = Path.Combine(buildFolder, $"{mapConfig.MapFilename}.dzo.glb");

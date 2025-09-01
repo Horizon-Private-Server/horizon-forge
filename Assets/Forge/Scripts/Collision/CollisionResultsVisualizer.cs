@@ -18,7 +18,7 @@ public class CollisionResultsVisualizer : MonoBehaviour
     public void UpdateShaderGlobals()
     {
         var nodes = GetComponentsInChildren<CollisionResultsVisualizerNode>();
-        var badSectors = new Vector4[1024];
+        var badSectors = new Vector4[500];
 
         for (int i = 0; i < nodes.Length; i++)
         {
