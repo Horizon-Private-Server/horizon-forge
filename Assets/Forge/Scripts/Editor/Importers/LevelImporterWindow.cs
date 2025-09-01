@@ -1226,12 +1226,13 @@ public class LevelImporterWindow : EditorWindow
         var levelId = GetLevelId();
         var bResult = false;
 
-        var unpackSounds = importMobys > 0;
-        var unpackAssets = importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
-        var unpackGameplay = importMobys > 0 || importWorldConfig > 0 || importMisc > 0;
-        var unpackOcclusion = importTies > 0 || importTfrags > 0 || importMobys > 0;
-        var unpackWorldInstances = importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
-        var unpackCollision = importCollision > 0;
+        var unpackAll = !importIntoExistingMap;
+        var unpackSounds = unpackAll || importMobys > 0;
+        var unpackAssets = unpackAll || importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
+        var unpackGameplay = unpackAll || importMobys > 0 || importWorldConfig > 0 || importMisc > 0;
+        var unpackOcclusion = unpackAll || importTies > 0 || importTfrags > 0 || importMobys > 0;
+        var unpackWorldInstances = unpackAll || importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
+        var unpackCollision = unpackAll || importCollision > 0;
 
         if (racVersion == RCVER.UYA)
             unpackGameplay |= unpackWorldInstances;

@@ -176,7 +176,8 @@ public static class PackerHelper
             RedirectStandardInput = true,
             UseShellExecute = false
         };
-        startInfo.EnvironmentVariables.Add("WRENCHBUILD_BINARY", WrenchHelper.GetWrenchBuildPath());
+        startInfo.EnvironmentVariables.Add("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "1");
+        startInfo.EnvironmentVariables.Add("WRENCHBUILD_BINARY", Path.GetFullPath(WrenchHelper.GetWrenchBuildPath()));
 
         var p = new System.Diagnostics.Process() { StartInfo = startInfo };
         p.OutputDataReceived += (s, e) => { consoleData += e.Data + "\n"; };

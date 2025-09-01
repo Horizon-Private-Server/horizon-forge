@@ -40,7 +40,7 @@ Shader "Horizon Forge/Collider"
             #include "UniversalInc.hlsl"
 
 			int _COLLISION_RESULTS_BAD_SECTORS_COUNT;
-			float4 _COLLISION_RESULTS_BAD_SECTORS[1024];
+			float4 _COLLISION_RESULTS_BAD_SECTORS[500];
 
             int _ColId;
             int _Faded2;
