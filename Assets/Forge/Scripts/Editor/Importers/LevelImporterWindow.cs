@@ -1377,7 +1377,7 @@ public class LevelImporterWindow : EditorWindow
     void ImportCode(string mapBinFolder, string mapResourcesFolder, GameRegion racRegion, List<PackerImporterWindow.PackerAssetImport> assetImports, GameObject rootGo)
     {
         var racVersion = ImportSourceRacVersion();
-        var binCodeFolder = Path.Combine(mapBinFolder, FolderNames.CodeFolder);
+        var binCodeFolder = Path.Combine(mapBinFolder, FolderNames.BinaryCodeFolder);
         var resourcesCodeFolder = Path.Combine(mapResourcesFolder, FolderNames.GetMapCodeFolder(racVersion, racRegion));
         if (Directory.Exists(resourcesCodeFolder)) Directory.Delete(resourcesCodeFolder, true);
         Directory.CreateDirectory(resourcesCodeFolder);
