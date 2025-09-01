@@ -767,6 +767,9 @@ public class LevelImporterWindow : EditorWindow
             // So to that end in order to import a UYA map (base map) you must also have the PAL iso
             if (ImportSourceIsUYA() && string.IsNullOrEmpty(forgeSettings.PathToCleanUyaPalIso)) throw new Exception("Missing UYA PAL iso");
 
+            // save open scenes
+            EditorSceneManager.SaveOpenScenes();
+
             // clear map assets folder on fresh import
             if (Directory.Exists(destMapFolder)) Directory.Delete(destMapFolder, true);
             if (Directory.Exists(tempPalBinFolder)) Directory.Delete(tempPalBinFolder, true);
@@ -829,7 +832,7 @@ public class LevelImporterWindow : EditorWindow
                 var palWadFile = Path.Combine(tempPalBinFolder, "pal.wad");
                 ExtractWadFromISO(forgeSettings.PathToCleanUyaPalIso, GetLevelId(), palWadFile);
                 if (!DecompressAndUnpackLevelCodeFromWad(palWadFile)) return;
-                
+
                 // import PAL code
                 ImportCode(tempPalBinFolder, destMapFolder, GameRegion.PAL, assetImports, rootGo);
             }
@@ -906,6 +909,9 @@ public class LevelImporterWindow : EditorWindow
             var assets = GameObject.FindObjectsOfType<MonoBehaviour>().Where(x => x is IAsset).Select(x => x as IAsset);
             foreach (var asset in assets)
                 asset.UpdateAsset();
+                
+            // save new scene
+            EditorSceneManager.SaveOpenScenes();
         }
         catch (Exception ex)
         {
