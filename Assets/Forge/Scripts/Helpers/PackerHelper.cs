@@ -381,7 +381,7 @@ public static class PackerHelper
         // assets
         if (ops.HasFlag(PACKER_PACK_OPS.PACK_ASSETS))
         {
-            result = RunPacker(out _, "pack-assets", "-i", Path.Combine(inFolder, FolderNames.AssetsFolder), "-o", inFolder, "-v", racVersion.ToString());
+            result = RunPacker(out _, "pack-assets", "-i", Path.Combine(inFolder, FolderNames.BinaryAssetsFolder), "-o", inFolder, "-v", racVersion.ToString());
             if (result != PACKER_STATUS_CODES.SUCCESS) return result;
             onProgressCallback?.Invoke(0.7f);
         }
