@@ -13,7 +13,7 @@ public static class BlenderHelper
     {
         if (!forceFindBlenderPath)
         {
-            var forgeSettings = ForgeSettings.Load();
+            var forgeSettings = ForgeSettings.Singleton;
             if (forgeSettings != null && !string.IsNullOrEmpty(forgeSettings.PathToBlender))
                 return forgeSettings.PathToBlender;
         }

@@ -23,7 +23,7 @@ public static class WrenchHelper
         return GAME_NAMES.GetValueOrDefault(version) ?? "dl";
     }
 
-    private static string GetWrenchBuildPath()
+    public static string GetWrenchBuildPath()
     {
 #if UNITY_STANDALONE_WIN
         return Path.Combine("tools", "wrench", "wrenchbuild.exe");

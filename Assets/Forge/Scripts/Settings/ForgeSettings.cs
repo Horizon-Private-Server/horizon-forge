@@ -6,6 +6,7 @@ using UnityEngine;
 public class ForgeSettings : ScriptableObject
 {
     public static readonly string FORGE_SETTINGS_PATH = "Assets/ForgeSettings.asset";
+    public static ForgeSettings Singleton { get; private set; }
 
     public int Version = 0;
 
@@ -27,7 +28,7 @@ public class ForgeSettings : ScriptableObject
 
     public static ForgeSettings Load()
     {
-        return AssetDatabase.LoadAssetAtPath<ForgeSettings>(ForgeSettings.FORGE_SETTINGS_PATH);
+        return Singleton = AssetDatabase.LoadAssetAtPath<ForgeSettings>(ForgeSettings.FORGE_SETTINGS_PATH);
     }
 
     public string GetPathToCleanUyaIso() => string.IsNullOrEmpty(PathToCleanUyaNtscIso) ? PathToCleanUyaPalIso : PathToCleanUyaNtscIso;
