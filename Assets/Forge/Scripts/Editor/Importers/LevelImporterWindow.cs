@@ -763,6 +763,10 @@ public class LevelImporterWindow : EditorWindow
             //PackerImporterWindow.Import(assetImports, true);
             //return;
 
+            // We've decided that all custom maps for UYA must support both NTSC & PAL
+            // So to that end in order to import a UYA map (base map) you must also have the PAL iso
+            if (ImportSourceIsUYA() && string.IsNullOrEmpty(forgeSettings.PathToCleanUyaPalIso)) throw new Exception("Missing UYA PAL iso");
+
             // clear map assets folder on fresh import
             if (Directory.Exists(destMapFolder)) Directory.Delete(destMapFolder, true);
             if (Directory.Exists(tempPalBinFolder)) Directory.Delete(tempPalBinFolder, true);

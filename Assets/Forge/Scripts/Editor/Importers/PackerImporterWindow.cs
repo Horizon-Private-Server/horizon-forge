@@ -484,7 +484,7 @@ public class PackerImporterWindow : EditorWindow
                     else
                         AssetDatabase.CreateAsset(mat, matAssetPath);
 
-                    EditorUtility.DisplayProgressBar($"Importing Textures", $"{texConfig} ({i}/{texturesToConfigureImporterSettings.Count})", i / (float)texturesToConfigureImporterSettings.Count);
+                    EditorUtility.DisplayProgressBar($"Importing Textures", $"{texConfig.Path} ({i}/{texturesToConfigureImporterSettings.Count})", i / (float)texturesToConfigureImporterSettings.Count);
                     ++i;
                 }
             }
@@ -508,7 +508,7 @@ public class PackerImporterWindow : EditorWindow
                 {
                     WrenchHelper.SetDefaultWrenchModelImportSettings(modelAssetPath.Item3, modelAssetPath.Item2, modelPrependedToTextureNames[i], tags: modelAssetPath.Item1?.AdditionalTags);
 
-                    EditorUtility.DisplayProgressBar($"Configuring Assets", $"{modelAssetPath} ({i}/{modelsToConfigureImporterSettings.Count})", i / (float)modelsToConfigureImporterSettings.Count);
+                    EditorUtility.DisplayProgressBar($"Configuring Assets", $"{modelAssetPath.Item3} ({i}/{modelsToConfigureImporterSettings.Count})", i / (float)modelsToConfigureImporterSettings.Count);
                     ++i;
                 }
             }

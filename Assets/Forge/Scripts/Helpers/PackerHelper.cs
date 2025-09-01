@@ -189,7 +189,7 @@ public static class PackerHelper
 
         output = consoleData;
         if (p.ExitCode != 0 && !silent)
-            Debug.Log(output);
+            Debug.Log(processArgs + ":\n\n" + output);
 
         return (PACKER_STATUS_CODES)p.ExitCode;
     }
