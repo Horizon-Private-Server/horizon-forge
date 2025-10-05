@@ -75,7 +75,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
             // generate
             for (int i = 0; i < chunkCount; ++i)
             {
-                var chunk = chunks.FirstOrDefault(c => c.name == i.ToString());
+                var chunk = chunks.FirstOrDefault(c => c && c.name == i.ToString());
                 bool isNew = !chunk;
                 MeshFilter chunkMeshFilter = null;
                 MeshRenderer chunkMeshRenderer = null;
@@ -231,6 +231,10 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
     {
         if (type != BakeType.OCCLUSION && type != BakeType.BUILD && type != BakeType.MAPRENDER) return;
 
+        // always disable collider
+        var collider = GetComponent<TerrainCollider>();
+        if (collider) collider.enabled = false;
+
         // render tfrags
         SetVisible(true);
     }
@@ -238,6 +242,10 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
     public override void OnPostBake(BakeType type)
     {
         if (type != BakeType.OCCLUSION && type != BakeType.BUILD && type != BakeType.MAPRENDER) return;
+
+        // always enable collider
+        var collider = GetComponent<TerrainCollider>();
+        if (collider) collider.enabled = true;
 
         // return to normal render mode
         SetVisible(m_RenderGenerated);
@@ -260,10 +268,6 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                 if (chunk) Hide(chunk.gameObject, visible);
             }
         }
-
-        // always disable collider
-        var collider = GetComponent<TerrainCollider>();
-        collider.enabled = false;
 
         m_Terrain = GetComponent<Terrain>();
         if (m_Terrain) m_Terrain.drawHeightmap = !visible;
