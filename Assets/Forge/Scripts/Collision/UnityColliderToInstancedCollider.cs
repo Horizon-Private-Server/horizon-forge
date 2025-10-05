@@ -114,7 +114,11 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
 
     private Mesh GenerateFromTerrainCollider(TerrainCollider terrainCollider, bool force)
     {
-        return TerrainHelper.GetCollider(terrainCollider, faceSize: m_TfragSize, force: force);
+        var splatRamp = 1f;
+        if (terrainCollider.GetComponent<UnityTerrainToTfrags>() is UnityTerrainToTfrags unityTerrainToTfrags)
+            splatRamp = unityTerrainToTfrags.m_TfragTextureClassificationSharpness;
+
+        return TerrainHelper.GetCollider(terrainCollider, faceSize: m_TfragSize, force: force, splatRamp: splatRamp);
     }
 
     private int[] GetLayerCollisionIds(TerrainData terrainData)

@@ -9,7 +9,7 @@ using UnityEngine;
 
 public static class TerrainHelper
 {
-    public static Vector4 OFFSET_SCALE = new Vector4(-1, -1, 1, 1);
+    public static Vector4 OFFSET_SCALE = new Vector4(-0.5f, -0.5f, 1, 1);
     static readonly RectInt? DEBUG_RENDER_SUBMESH = null; // new RectInt(9, 13, 4, 4);
     const bool DEBUG_RENDER_SPLAT_POINT_FILTER = false;
     const int QUANTIZATION_RESOLUTION = 1;
@@ -48,7 +48,7 @@ public static class TerrainHelper
     }
 
 
-    public static Mesh GetCollider(this TerrainCollider terrainCollider, float faceSize = 4f, bool force = false)
+    public static Mesh GetCollider(this TerrainCollider terrainCollider, float faceSize = 4f, float splatRamp = 1f, bool force = false)
     {
         var hash = terrainCollider.terrainData.ComputeHash();
         hash.Append(faceSize);
@@ -56,23 +56,29 @@ public static class TerrainHelper
         if (!force && _terrainColliderMeshCache.TryGetValue(hash, out var mesh) && mesh)
             return mesh;
 
+        var texDb = new TerrainTextureDatabase(terrainCollider.terrainData);
         var terrainData = terrainCollider.terrainData;
         var vertexPerRow = Mathf.CeilToInt(terrainData.size.x / faceSize) + 1;
         var vertexPerColumn = Mathf.CeilToInt(terrainData.size.z / faceSize) + 1;
         var facePerRow = vertexPerRow - 1;
         var facePerColumn = vertexPerColumn - 1;
+        var iFacePerRow = 1f / facePerRow;
+        var iFacePerColumn = 1f / facePerColumn;
 
         mesh = new Mesh();
         var vertices = new List<Vector3>();
         var triangles = new int[3 * 2 * facePerColumn * facePerRow];
         var normals = new Vector3[vertexPerRow * vertexPerColumn];
         var submeshTriangles = new List<int>[Math.Max(1, terrainCollider.terrainData.terrainLayers.Length)];
+        var splatClassifications = new int[QUANTIZATION_RESOLUTION * vertexPerRow * QUANTIZATION_RESOLUTION * vertexPerColumn];
 
         // construct mesh
         for (int y = 0; y < vertexPerColumn; ++y)
         {
             for (int x = 0; x < vertexPerRow; ++x)
             {
+                var fx = x - 1;
+                var fy = y - 1;
                 var tx = x / (float)facePerRow;
                 var ty = y / (float)facePerColumn;
                 var txp = (x - 1) / (float)facePerRow;
@@ -82,13 +88,15 @@ public static class TerrainHelper
                 var vertex = new Vector3(tx * terrainData.size.x, height, ty * terrainData.size.z);
                 vertices.Add(vertex);
 
+                var face = new Rect((fx * iFacePerRow) + (OFFSET_SCALE.x * iFacePerRow * OFFSET_SCALE.z), (fy * iFacePerColumn) + (OFFSET_SCALE.y * iFacePerRow * OFFSET_SCALE.w), iFacePerRow * OFFSET_SCALE.z, iFacePerColumn * OFFSET_SCALE.w);
+
                 if (y > 0 && x > 0)
                 {
                     //var isHole = terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
-                        //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
-                        //|| terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
-                        //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
-                        ;
+                    //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
+                    //|| terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
+                    //|| terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
+                    ;
                     var isHole = terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
                         && terrainData.IsHole((int)(txp * (terrainData.holesResolution - 1)), (int)(ty * (terrainData.holesResolution - 1)))
                         && terrainData.IsHole((int)(tx * (terrainData.holesResolution - 1)), (int)(typ * (terrainData.holesResolution - 1)))
@@ -108,7 +116,7 @@ public static class TerrainHelper
                         triangles[idx + 5] = rowS1 + 1;
 
                         // get submesh
-                        int submeshIdx = GetDominateLayer(terrainCollider.terrainData, new Rect(tx, ty, 1f / facePerRow, 1f / facePerColumn), 0);
+                        int submeshIdx = 0; //GetDominateLayer(terrainCollider.terrainData, face, 0);
 
                         // set submesh triangle
                         if (submeshTriangles[submeshIdx] == null) submeshTriangles[submeshIdx] = new List<int>();
@@ -128,22 +136,59 @@ public static class TerrainHelper
                         triangles[idx + 4] = rowS1 + 1;
                         triangles[idx + 5] = rowS1 + 0;
 
-                        // get submesh
-                        int submeshIdx = GetDominateLayer(terrainCollider.terrainData, new Rect(tx, ty, 1f / facePerRow, 1f / facePerColumn), 0);
+                        var classification = texDb.Classify(terrainCollider.terrainData, face, 0, ramp: splatRamp);
 
-                        // set submesh triangle
-                        if (submeshTriangles[submeshIdx] == null) submeshTriangles[submeshIdx] = new List<int>();
-                        submeshTriangles[submeshIdx].Add(rowE1 + 0);
-                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
-                        submeshTriangles[submeshIdx].Add(rowS1 + 0);
-                        submeshTriangles[submeshIdx].Add(rowE1 + 1);
-                        submeshTriangles[submeshIdx].Add(rowS1 + 1);
-                        submeshTriangles[submeshIdx].Add(rowS1 + 0);
+                        // classify splat
+                        {
+                            var ci = 0;
+                            for (int cy = 0; cy < QUANTIZATION_RESOLUTION_WITH_BUFFER; cy++)
+                            {
+                                for (int cx = 0; cx < QUANTIZATION_RESOLUTION_WITH_BUFFER; cx++)
+                                {
+                                    var sx = (cx - QUANTIZATION_BUFFER) + (fx * QUANTIZATION_RESOLUTION);
+                                    var sy = (cy - QUANTIZATION_BUFFER) + (fy * QUANTIZATION_RESOLUTION);
+                                    if (sx < 0) continue;
+                                    if (sx >= (vertexPerRow * QUANTIZATION_RESOLUTION)) continue;
+                                    if (sy < 0) continue;
+                                    if (sy >= (vertexPerColumn * QUANTIZATION_RESOLUTION)) continue;
+
+                                    var cIdx = (sy * vertexPerRow * QUANTIZATION_RESOLUTION) + sx;
+                                    if (cIdx < splatClassifications.Length)
+                                    {
+                                        var c = classification[ci++];
+                                        splatClassifications[cIdx] = c;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
                 var vIdx = (y * vertexPerRow) + x;
                 normals[vIdx] = normal;
+            }
+        }
+        
+
+        // assign textures
+        for (int y = 0; y < vertexPerColumn; ++y)
+        {
+            for (int x = 0; x < vertexPerRow; ++x)
+            {
+                if (x > 0 && y > 0)
+                {
+                    var idx = ((y - 1) * facePerRow + (x - 1)) * 6;
+                    var submeshIdx = texDb.GetDominateLayer(splatClassifications, QUANTIZATION_RESOLUTION * vertexPerRow, x, y, true);
+
+                    // set submesh triangle
+                    if (submeshTriangles[submeshIdx] == null) submeshTriangles[submeshIdx] = new List<int>();
+                    submeshTriangles[submeshIdx].Add(triangles[idx + 0]);
+                    submeshTriangles[submeshIdx].Add(triangles[idx + 1]);
+                    submeshTriangles[submeshIdx].Add(triangles[idx + 2]);
+                    submeshTriangles[submeshIdx].Add(triangles[idx + 3]);
+                    submeshTriangles[submeshIdx].Add(triangles[idx + 4]);
+                    submeshTriangles[submeshIdx].Add(triangles[idx + 5]);
+                }
             }
         }
 
@@ -171,7 +216,7 @@ public static class TerrainHelper
 
         var uvCenter = Vector2.one * 0.5f;
 
-        var texDb = new TerrainTextureDatabase(terrain);
+        var texDb = new TerrainTextureDatabase(terrain.terrainData);
         var vertexPerRow = Mathf.CeilToInt(terrain.terrainData.size.x / faceSize) + 1;
         var vertexPerColumn = Mathf.CeilToInt(terrain.terrainData.size.z / faceSize) + 1;
         var facePerRow = vertexPerRow - 1;
@@ -310,9 +355,7 @@ public static class TerrainHelper
 
     public static void ToMesh(this Terrain terrain, out Vector3[] vertices, out Vector3[] normals, out Vector2[] uvs, out Color[] colors, out int[] triangles, out Texture2D[] textures, float faceSize = 4f, float splatRamp = 1f, bool splatReduce = true, TextureSize textureSize = TextureSize._64)
     {
-        var uvCenter = Vector2.one * 0.5f;
-
-        var texDb = new TerrainTextureDatabase(terrain);
+        var texDb = new TerrainTextureDatabase(terrain.terrainData);
         var vertexPerRow = Mathf.CeilToInt(terrain.terrainData.size.x / faceSize) + 1;
         var vertexPerColumn = Mathf.CeilToInt(terrain.terrainData.size.z / faceSize) + 1;
         var facePerRow = vertexPerRow - 1;
@@ -440,27 +483,27 @@ public static class TerrainHelper
 
     class TerrainTextureDatabase
     {
-        private Terrain _terrain;
+        private TerrainData _terrainData;
         private Texture2D _noiseTexture;
         private Dictionary<string, Texture2D> _classificationTexCache = new Dictionary<string, Texture2D>();
 
-        public TerrainTextureDatabase(Terrain terrain)
+        public TerrainTextureDatabase(TerrainData terrainData)
         {
-            _terrain = terrain;
+            _terrainData = terrainData;
             _noiseTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(Path.Combine(FolderNames.ForgeFolder, "Textures", "terrain_noise.asset"));
         }
 
         public Texture2D GetTexture(Rect face)
         {
             // sample layers
-            var layers = _terrain.terrainData.terrainLayers;
+            var layers = _terrainData.terrainLayers;
             if (layers == null || !layers.Any())
                 return UnityHelper.DefaultTexture;
 
             Texture2D tex = null;
-            for (int i = 0; i < _terrain.terrainData.alphamapTextureCount; ++i)
+            for (int i = 0; i < _terrainData.alphamapTextureCount; ++i)
             {
-                tex = SampleSplatmap(_terrain.terrainData, i, face, 64, 64, true);
+                tex = SampleSplatmap(_terrainData, i, face, 64, 64, true);
             }
 
             // default to default tex
@@ -475,7 +518,7 @@ public static class TerrainHelper
             var texSize = (int)Mathf.Pow(2, 5 + (int)textureSize);
 
             // sample layers
-            var layers = _terrain.terrainData.terrainLayers;
+            var layers = _terrainData.terrainLayers;
             if (layers == null || !layers.Any())
                 return UnityHelper.DefaultTexture;
 
@@ -483,10 +526,10 @@ public static class TerrainHelper
                 return UnityHelper.DefaultTexture;
 
             Texture2D tex = null;
-            for (int i = 0; i < _terrain.terrainData.alphamapTextureCount; ++i)
+            for (int i = 0; i < _terrainData.alphamapTextureCount; ++i)
             {
                 var classification = GetClassificationBlock(classifications, stride, x, y, reduce);
-                tex = SampleSplatmap(_terrain.terrainData, i, classification, texSize, texSize, reduce);
+                tex = SampleSplatmap(_terrainData, i, classification, texSize, texSize, reduce);
             }
 
             // default to default tex
@@ -494,6 +537,20 @@ public static class TerrainHelper
                 tex = UnityHelper.DefaultTexture;
 
             return tex;
+        }
+
+        public int GetDominateLayer(int[] classifications, int stride, int x, int y, bool reduce)
+        {
+            // sample layers
+            var layers = _terrainData.terrainLayers;
+            if (layers == null || !layers.Any())
+                return 0;
+
+            if (DEBUG_RENDER_SUBMESH.HasValue && !DEBUG_RENDER_SUBMESH.Value.Contains(new Vector2Int(x, y)))
+                return 0;
+
+            var classification = GetClassificationBlock(classifications, stride, x, y, reduce);
+            return classification.GroupBy(x => x).OrderByDescending(x => x.Count()).ThenBy(x => x.Key).Select(x => x.Key).FirstOrDefault();
         }
 
         private Texture2D SampleSplatmap(TerrainData terrainData, int splatmapIdx, Rect face, int width, int height, bool reduce)
