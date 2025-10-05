@@ -231,7 +231,7 @@ Shader "Horizon Forge/Collider"
                 baseColor.b = ((_ColId & 0xF0) << 0)  / 255.0;
 				baseColor = lerp(baseColor, i.color, i.color.a);
 
-				// make hero collision gray
+				// make hero collision blue
 				if (_ColId >= 256) baseColor = float4(0,0,1,1);
 
 				// rim lighting

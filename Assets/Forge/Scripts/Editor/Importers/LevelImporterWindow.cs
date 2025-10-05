@@ -1567,7 +1567,6 @@ public class LevelImporterWindow : EditorWindow
         // import
         UpdateImportProgressBar(ImportStage.Importing_Collision);
         BlenderHelper.ImportCollision(collisionDaeFile, mapResourcesFolder, "collision", true, out var outMeshFile);
-        Debug.Log($"Import collision -> {outMeshFile}");
         AssetDatabase.ImportAsset(UnityHelper.GetProjectRelativePath(outMeshFile));
         SetModelImportSettings(outMeshFile, addCollider: true, labels: new string[] { "Collider" });
 
