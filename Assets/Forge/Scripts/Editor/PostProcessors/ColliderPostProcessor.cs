@@ -23,6 +23,8 @@ public class ColliderPostProcessor : AssetPostprocessor
                     var id = 0;
                     if (int.TryParse(material.name.Split(new char[] { '_', '.' }).ElementAtOrDefault(1), System.Globalization.NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hId))
                         id = hId;
+                    else if (material.name == "hero_group_collision")
+                        id = 256;
 
                     material.shader = shader;
                     material.SetInteger("_ColId", id);

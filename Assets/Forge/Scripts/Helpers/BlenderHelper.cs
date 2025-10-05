@@ -88,6 +88,27 @@ public static class BlenderHelper
         return RunBlender("prepare-model-for-collider.py", "\"" + inFile + "\"" + " \"" + outFbxFile + "\"" + " \"" + defaultMatId + "\"");
     }
 
+    public static bool ImportCollision(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile)
+    {
+        // import mesh
+        meshFile = Path.GetFullPath(meshFile).Replace("\\", "/");
+        outMeshFile = Path.GetFullPath(Path.Combine(outDir, $"{name}.blend")).Replace("\\", "/");
+
+        // check the file we want to import exists
+        // and that the out file doesn't exist, or overwrite existing
+        if (File.Exists(meshFile) && (overwrite || !File.Exists(outMeshFile)))
+        {
+            RunBlender("import-collision.py", $"\"{meshFile}\" \"{outMeshFile}\"");
+
+            if (File.Exists(outMeshFile))
+                return true;
+            else
+                Debug.Log($"Failed to import mesh {meshFile}");
+        }
+
+        return false;
+    }
+
     public static bool ImportMesh(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false)
     {
         var extension = Path.GetExtension(meshFile);

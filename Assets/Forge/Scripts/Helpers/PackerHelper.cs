@@ -125,7 +125,7 @@ public static class PackerHelper
     {
 #if UNITY_STANDALONE_WIN
         return Path.Combine("tools", "packer", "DL.Level.exe");
-#elif UNITY_STANDALONE_LINUX
+#elif UNITY_STANDALONE_LINUX || UNITY_STANDALONE_OSX
         return Path.Combine("tools", "packer", "DL.Level");
 #else
         throw new NotImplementedException();

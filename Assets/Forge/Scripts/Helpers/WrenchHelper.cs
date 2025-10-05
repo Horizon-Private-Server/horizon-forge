@@ -27,7 +27,7 @@ public static class WrenchHelper
     {
 #if UNITY_STANDALONE_WIN
         return Path.Combine("tools", "wrench", "wrenchbuild.exe");
-#elif UNITY_STANDALONE_LINUX
+#elif UNITY_STANDALONE_LINUX || UNITY_STANDALONE_OSX
         return Path.Combine("tools", "wrench", "wrenchbuild");
 #else
         throw new NotImplementedException();

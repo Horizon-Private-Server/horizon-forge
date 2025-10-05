@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -109,6 +110,9 @@ public static class CollisionBaker
                 Debug.LogError($"Failed to export collision blend as collada {collisionDaeFile}");
                 return false;
             }
+
+            // create collision asset
+            File.WriteAllText(collisionAssetFile, BuildCollisionAsset(File.ReadAllText(collisionDaeFile)));
 
             // build collision
             EditorUtility.DisplayProgressBar("Baking Collision", "Packing Collision", 0.9f);
@@ -298,6 +302,47 @@ public static class CollisionBaker
         }
 
         return true;
+    }
+
+    static string BuildCollisionAsset(string collisionDaeContent)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("Collision collision {");
+        sb.AppendLine("\tMesh mesh {");
+        sb.AppendLine("\t\tname: \"collision\"");
+        sb.AppendLine("\t\tsrc: \"collision.dae\"");
+        sb.AppendLine("\t}");
+        sb.AppendLine("");
+        sb.AppendLine("\thero_groups {");
+        for (int i = 0; ; ++i)
+        {
+            // check that the collada file has a mesh with the given name
+            var meshName = $"hero_group_collision_{i}";
+            if (!collisionDaeContent.Contains(meshName)) break;
+
+            sb.AppendLine($"\t\tMesh {i} {{");
+            sb.AppendLine($"\t\t\tname: \"{meshName}\"");
+            sb.AppendLine("\t\t\tsrc: \"collision.dae\"");
+            sb.AppendLine("\t\t}");
+            sb.AppendLine("");
+        }
+        sb.AppendLine("\t}");
+        sb.AppendLine("");
+        sb.AppendLine("\tmaterials {");
+        for (int i = 0; i <= 256; ++i)
+        {
+            var id = i >= 256 ? -1 : i;
+            sb.AppendLine($"\t\tCollisionMaterial col_{i:x} {{");
+            sb.AppendLine($"\t\t\tname: \"col_{i:x}\"");
+            sb.AppendLine($"\t\t\tid: {id}");
+            sb.AppendLine($"\t\t}}");
+            sb.AppendLine($"");
+        }
+        sb.AppendLine("\t}");
+        sb.AppendLine("}");
+
+        return sb.ToString();
     }
 
     static GameObject CombineMeshes(GameObject[] gameObjects)

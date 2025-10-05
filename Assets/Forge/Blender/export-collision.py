@@ -229,12 +229,133 @@ for s in remove_slots:
 #bpy.ops.mesh.tris_convert_to_quads()
 #bpy.ops.object.mode_set(mode='OBJECT')
 
+# split col_100 into its own mesh 'hero_group_collision'
+obj = bpy.context.active_object
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.mesh.select_all(action='DESELECT')
+bpy.ops.object.mode_set(mode='OBJECT')
+
+# Select faces with target material
+for p in obj.data.polygons:
+    if obj.data.materials[p.material_index].name == "col_100":
+        p.select = True
+
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.mesh.separate(type='SELECTED')
+bpy.ops.object.mode_set(mode='OBJECT')
+
+def split_by_distance(obj, idx):
+    if not obj or obj.type != 'MESH':
+        raise Exception("Select a mesh object.")
+
+    # Ensure we're in object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Create a BMesh
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.verts.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+
+    # Transform to world space so we compare properly
+    world_matrix = obj.matrix_world
+
+    # grab first vertex as sphere center
+    sphere_center = world_matrix @ bm.faces[0].verts[0].co
+    sphere_radius = 8.0
+
+    # Determine which vertices are inside the sphere
+    verts_in_sphere = set()
+    for v in bm.verts:
+        world_pos = world_matrix @ v.co
+        if (world_pos - sphere_center).length <= sphere_radius:
+            verts_in_sphere.add(v)
+
+    # Find all faces that have all their vertices inside the sphere
+    print(f"found {len(verts_in_sphere)} verts in sphere")
+    faces_in_sphere = [f for f in bm.faces if any(v in verts_in_sphere for v in f.verts)]
+
+    if not faces_in_sphere:
+        raise Exception("No faces found within sphere region.")
+
+    # Create a new bmesh for extracted region
+    bm_new = bmesh.new()
+    vert_map = {}
+
+    for f in faces_in_sphere:
+        new_verts = []
+        for v in f.verts:
+            if v not in vert_map:
+                vert_map[v] = bm_new.verts.new(v.co)
+            new_verts.append(vert_map[v])
+        try:
+            bm_new.faces.new(new_verts)
+        except ValueError:
+            # face might already exist
+            pass
+
+    # Output to new mesh and object
+    bm_new.normal_update()
+    new_mesh = bpy.data.meshes.new(f"{obj.name}_{idx}")
+    bm_new.to_mesh(new_mesh)
+    bm_new.free()
+
+    new_obj = bpy.data.objects.new(new_mesh.name, new_mesh)
+    bpy.context.collection.objects.link(new_obj)
+    new_obj.matrix_world = obj.matrix_world
+    new_obj.data.materials.clear()
+    new_obj.data.materials.append(obj.data.materials.get("col_100"))
+    new_obj.select_set(True)
+
+    # --- Remove those faces from the original ---
+    for f in faces_in_sphere:
+        bm.faces.remove(f)
+
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.update()
+
+    print(f"✅ Created new object '{new_obj.name}' containing {len(faces_in_sphere)} faces inside sphere.")
+
+# rename hero mesh
+hero_group_name = "hero_group_collision"
+hero_group = bpy.data.objects.get("collision.001")
+if hero_group:
+    hero_group.name = hero_group_name
+    hero_group.data.name = hero_group_name
+
+    # split by distance
+    idx = 0
+    while len(hero_group.data.polygons) > 0:
+        split_by_distance(hero_group, idx)
+        idx += 1
+
+    # remove empty
+    bpy.data.objects.remove(hero_group, do_unlink=True)
+
+    # rename all 
+    #for obj in bpy.data.objects:
+    #    if obj.name.startswith(hero_group_name):
+    #        obj.name = hero_group_name
+    #        obj.data.name = hero_group_name
+
+# make hero group triangles
+#C.view_layer.objects.active = hero_group
+#bpy.ops.object.mode_set(mode='EDIT')
+#bpy.ops.mesh.select_all(action='SELECT')
+#bpy.ops.mesh.quads_convert_to_tris()
+#bpy.ops.object.mode_set(mode='OBJECT')
+
+# select all
+#bpy.ops.object.mode_set(mode='OBJECT')
+#bpy.ops.mesh.select_all(action='SELECT')
+
+# export
 if export_filepath:
     bpy.ops.wm.collada_export(filepath=export_filepath, check_existing=False, selected=True, triangulate=False)
 
 #bpy.ops.wm.save_as_mainfile(filepath='C:/Users/dna11/OneDrive/Desktop/test.blend')
-
-bpy.data.objects.remove(root)
+#bpy.data.objects.remove(root)
 
 # success
 exit(1)

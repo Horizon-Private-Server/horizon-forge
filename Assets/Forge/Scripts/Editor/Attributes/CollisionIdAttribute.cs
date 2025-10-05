@@ -27,6 +27,7 @@ public class CollisionIdDrawer : PropertyDrawer
         "Lethal Water Ice Cube (0x0D)",
         "Water Trail (0x0E)",
         "Walkable Surface 4 (0x0F)",
+        "Player Only (Nonwalkable)"
     };
 
     static readonly string[] SOUND_OPTIONS = new[]
@@ -38,7 +39,7 @@ public class CollisionIdDrawer : PropertyDrawer
         "Level Sound 4",
         "Level Sound 5",
         "Level Sound 6",
-        "Level Sound 7",
+        "Level Sound 7"
     };
 
     public override float GetPropertyHeight(SerializedProperty property,
@@ -55,6 +56,11 @@ public class CollisionIdDrawer : PropertyDrawer
         var id = CollisionHelper.ParseId(property.stringValue);
         var colId = id & 0x1f;
         var soundId = (id >> 5) & 0x7;
+        if (id == 256)
+        {
+            soundId = 0;
+            colId = COL_OPTIONS.Length - 1;
+        }
 
         EditorGUI.BeginProperty(position, label, property);
         var rect = EditorGUI.PrefixLabel(position, label);
@@ -62,16 +68,20 @@ public class CollisionIdDrawer : PropertyDrawer
         var xOff = rect.width - xSplit;
         var strWidth = 24;
 
+        var isHeroCollision = colId == (COL_OPTIONS.Length-1);
         var indentation = EditorGUI.indentLevel;
         EditorGUI.indentLevel = 0;
-        soundId = EditorGUI.Popup(EditorGUI.IndentedRect(new Rect(rect.x + xOff, rect.y, (xSplit * 0.5f) - strWidth, rect.height)), soundId, SOUND_OPTIONS);
+        if (!isHeroCollision)
+            soundId = EditorGUI.Popup(EditorGUI.IndentedRect(new Rect(rect.x + xOff, rect.y, (xSplit * 0.5f) - strWidth, rect.height)), soundId, SOUND_OPTIONS);
+        
         colId = EditorGUI.Popup(new Rect(rect.x + xOff + ((xSplit - strWidth) * 0.5f), rect.y, (xSplit * 0.5f) - strWidth, rect.height), colId, COL_OPTIONS);
+        isHeroCollision = colId == (COL_OPTIONS.Length-1);
 
         GUI.enabled = false;
         EditorGUI.TextField(new Rect(position.x + position.width - strWidth, position.y, strWidth, position.height), property.stringValue);
         GUI.enabled = true;
 
-        var colStr = ((colId & 0x1f) | ((soundId & 0x7) << 5)).ToString("x2");
+        var colStr = isHeroCollision ? "100" : ((colId & 0x1f) | ((soundId & 0x7) << 5)).ToString("x2");
         if (colStr != property.stringValue)
             property.stringValue = colStr;
 
