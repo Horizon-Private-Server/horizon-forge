@@ -27,7 +27,7 @@ public class CollisionIdDrawer : PropertyDrawer
         "Lethal Water Ice Cube (0x0D)",
         "Water Trail (0x0E)",
         "Walkable Surface 4 (0x0F)",
-        "Player Only"
+        "Player Only (Nonwalkable)"
     };
 
     static readonly string[] SOUND_OPTIONS = new[]
