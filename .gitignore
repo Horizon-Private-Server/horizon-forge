@@ -72,6 +72,9 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Mac OS
+.DS_Store
+
 # Forge user installation settings
 /[Aa]ssets/ForgeSettings.asset
 /[Aa]ssets/ForgeSettings.asset.meta

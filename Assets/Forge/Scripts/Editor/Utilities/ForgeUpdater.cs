@@ -137,6 +137,11 @@ public static class ForgeUpdater
                             {
                                 toolsZipUrl = (string)asset["browser_download_url"];
                             }
+#elif UNITY_STANDALONE_OSX
+                            if ((string)asset["name"] == "tools-macosx.zip")
+                            {
+                                toolsZipUrl = (string)asset["browser_download_url"];
+                            }
 #endif
                             else if ((string)asset["name"] == "forge.zip")
                             {

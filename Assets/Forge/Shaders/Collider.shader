@@ -2,7 +2,7 @@ Shader "Horizon Forge/Collider"
 {
     Properties
     {
-        [HideInInspector] _ColId("Collision Id", Integer) = 0
+        _ColId("Collision Id", Integer) = 0
         [HideInInspector] _Color("Color", Color) = (0,0,0,0)
         [HideInInspector] _Faded2("Faded2", Integer) = 0
         [HideInInspector] _Picking("Picking", Integer) = 0
@@ -26,7 +26,9 @@ Shader "Horizon Forge/Collider"
             CGPROGRAM
             #pragma multi_compile_fwdbase
 			#pragma vertex vert
+			#ifdef SHADER_API_D3D11
 			#pragma geometry geom
+			#endif
 			#pragma fragment frag
             // make fog work
             #pragma multi_compile_fog
@@ -53,7 +55,7 @@ Shader "Horizon Forge/Collider"
                 0,1,0,0,
                 0,0,1,0,
                 0,0,0,1
-                );
+			);
                 
 			struct appdata
 			{
@@ -83,9 +85,17 @@ Shader "Horizon Forge/Collider"
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
 			
+			#ifdef SHADER_API_D3D11
 			v2g vert (appdata v)
 			{
 				v2g o;
+			#else
+			g2f vert (appdata v)
+			{
+				g2f o;
+				o.color = (0,0,0,0);
+				o.dist = 1;
+			#endif
 				UNITY_SETUP_INSTANCE_ID(v);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 				o.projectionSpaceVertex = UnityObjectToClipPos(v.vertex);
@@ -221,6 +231,9 @@ Shader "Horizon Forge/Collider"
                 baseColor.b = ((_ColId & 0xF0) << 0)  / 255.0;
 				baseColor = lerp(baseColor, i.color, i.color.a);
 
+				// make hero collision gray
+				if (_ColId >= 256) baseColor = float4(0,0,1,1);
+
 				// rim lighting
                 float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.worldSpacePosition.xyz);
                 half rim = 1.0 - (abs(dot(viewDirection, normalize(i.worldSpaceNormal))) * 0.25);// rimlight based on view and normal
@@ -242,5 +255,6 @@ Shader "Horizon Forge/Collider"
 			}
             ENDCG
         }
+
     }
 }
