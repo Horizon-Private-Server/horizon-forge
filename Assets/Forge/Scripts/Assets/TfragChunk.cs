@@ -16,7 +16,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
     public float DZOBrightness = 1f;
 
     [HideInInspector, SerializeField] private Vector3[] _octants;
-    [SerializeField] private int _occlusionId;
+    [HideInInspector, SerializeField] private int _occlusionId;
 
     [SerializeField] private List<TfragManipulator> _manipulators;
     private MaterialPropertyBlock _mpb;

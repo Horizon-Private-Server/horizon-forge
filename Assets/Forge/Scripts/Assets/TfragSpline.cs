@@ -485,7 +485,7 @@ public class TfragSpline : BaseAssetGenerator
 
             for (int j = 0; j < sliceSegmentCount - 1; ++j)
             {
-                if (m_Gaps.Any(gap => currentLength >= gap.x && currentLength <= (gap.x + gap.y)))
+                if (m_Gaps != null && m_Gaps.Any(gap => currentLength >= gap.x && currentLength <= (gap.x + gap.y)))
                 {
                     vertIndex += 4;
                     triangles[triIndex++] = triangles[lastValidTris + 0];

@@ -22,6 +22,7 @@ public class DzoConfig : MonoBehaviour
 
     [Header("Export Misc")]
     public bool Lights = true;
+    public Texture2D MinimapTextureOverride;
     public int MinimapResolution = 512;
 
     [Header("Post Processing")]
