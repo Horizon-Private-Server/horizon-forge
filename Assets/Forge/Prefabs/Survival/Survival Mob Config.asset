@@ -175,16 +175,16 @@ MonoBehaviour:
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 4
-    BlipType: 4
+    BlipType: 3
     BlipTeam: 1
     Variants:
     - Name: Normal
-      OClass: 0
-      Bangles: 0
+      OClass: 8388
+      Bangles: 8191
       Dependencies:
-      - OClass: 0
-        SourceMapId: 1
-        SourceMissionId: 0
+      - OClass: 8388
+        SourceMapId: 4
+        SourceMissionId: -1
     Behaviors: []
     Xp: 5
     Bolts: 50

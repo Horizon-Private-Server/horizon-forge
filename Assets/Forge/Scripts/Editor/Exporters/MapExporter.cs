@@ -72,7 +72,7 @@ public static class MapExporter
 
             // create minimap object
             GameObject minimapGo = null;
-            var minimapTex = mapConfig.DLMinimap;
+            var minimapTex = dzoConfig.MinimapTextureOverride ? dzoConfig.MinimapTextureOverride : mapConfig.DLMinimap;
             if (minimapTex)
             {
                 minimapGo = new GameObject("minimap-container");
