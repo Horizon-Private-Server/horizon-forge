@@ -94,7 +94,7 @@ public static class MapExporter
             {
                 SkymeshName = sky ? objectPathPrefix + sky.gameObject.name : null,
                 MinimapMeshName = minimapGo ? objectPathPrefix + minimapGo.name : null,
-                BackgroundColor = mapConfig.BackgroundColor,
+                BackgroundColor = dzoConfig.UseBackgroundColorOverride ? dzoConfig.BackgroundColorOverride : mapConfig.BackgroundColor,
                 FogColor = dzoConfig.FogOverride ? dzoConfig.FogOverrideColor : mapConfig.FogColor,
                 FogNearDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideNearDistance : fogNear,
                 FogFarDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideFarDistance : fogFar,
