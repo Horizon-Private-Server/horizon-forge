@@ -18,19 +18,21 @@ public class MapConfig : MonoBehaviour
     [Min(0)] public int MapVersion = 0;
     public string MapName;
     public string MapAuthor;
-    public string MapDescription;
+    [Multiline] public string MapDescription;
     public string MapFilename;
 
     [Header("Deadlocked")]
     [ReadOnly] public DLMapIds DLBaseMap = DLMapIds.SP_Battledome;
     public DLCustomModeIds DLForceCustomMode = DLCustomModeIds.None;
-    public Texture2D DLLoadingScreen;
+    [Tooltip("Aspect ratio 1:1")] public Texture2D DLLoadingScreen;
+    [Tooltip("Aspect ratio 2:1")] public Texture2D DLThumbnail;
     public Texture2D DLMinimap;
     public int[] DLMobysIncludedInExport;
 
     [Header("UYA")]
     [ReadOnly] public UYAMapIds UYABaseMap = UYAMapIds.SP_Veldin;
     public Texture2D UYAMinimap;
+    [Tooltip("Aspect ratio 2:1")] public Texture2D UYAThumbnail;
     public int[] UYAMobysIncludedInExport;
 
     [Header("Render Settings")]

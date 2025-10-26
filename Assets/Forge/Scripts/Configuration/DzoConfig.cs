@@ -7,6 +7,8 @@ public class DzoConfig : MonoBehaviour
 {
     [Header("World Settings")]
     public Transform DefaultCameraPosition;
+    public bool UseBackgroundColorOverride = false;
+    [ColorUsage(false)] public Color BackgroundColorOverride = Color.white;
 
     [Header("Export Static Geometry")]
     public bool Ties = true;

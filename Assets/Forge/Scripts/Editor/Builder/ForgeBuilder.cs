@@ -329,7 +329,7 @@ public static class ForgeBuilder
             if (!Directory.Exists(mapBuildFolder)) continue;
             if (buildFolders == null) continue;
 
-            foreach (var buildFolder in settings.DLBuildFolders)
+            foreach (var buildFolder in buildFolders)
             {
                 if (Directory.Exists(buildFolder))
                 {
@@ -349,6 +349,7 @@ public static class ForgeBuilder
         var worldPath = ctx.RacVersion == RCVER.DL ? null : Path.Combine(binFolder, FolderNames.GetWorldWadFilename(baseMap, ctx.RacVersion));
         var soundPath = Path.Combine(binFolder, FolderNames.GetSoundWadFilename(baseMap, ctx.RacVersion));
         var bgPngPath = AssetDatabase.GetAssetPath(mapConfig.DLLoadingScreen);
+        var thumbPngPath = ctx.RacVersion == RCVER.DL ? AssetDatabase.GetAssetPath(mapConfig.DLThumbnail) : AssetDatabase.GetAssetPath(mapConfig.UYAThumbnail);
         var minimapPngPath = ctx.RacVersion == RCVER.DL ? AssetDatabase.GetAssetPath(mapConfig.DLMinimap) : AssetDatabase.GetAssetPath(mapConfig.UYAMinimap);
         var customModeDatas = GameObject.FindObjectsOfType<CustomModeData>()?.Where(x => x.IsEnabled)?.ToArray();
 
@@ -379,7 +380,7 @@ public static class ForgeBuilder
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);
                     writer.WriteString(mapConfig.MapAuthor, 32);
-                    writer.WriteString(mapConfig.MapDescription, 256);
+                    writer.WriteString(BinaryHelper.StrToRatchetStr(mapConfig.MapDescription), 256);
                 }
                 else
                 {
@@ -389,7 +390,7 @@ public static class ForgeBuilder
                     writer.Write((int)0); // padding
                     writer.WriteString(mapConfig.MapName, 32);
                     writer.WriteString(mapConfig.MapAuthor, 32);
-                    writer.WriteString(mapConfig.MapDescription, 256);
+                    writer.WriteString(BinaryHelper.StrToRatchetStr(mapConfig.MapDescription), 256);
                 }
 
                 // write extra data (DL only)
@@ -473,6 +474,28 @@ public static class ForgeBuilder
                     Debug.LogError($"Failed to pack loading screen. {result}");
                     return;
                 }
+            }
+        }
+
+        // build thumbnail
+        if (File.Exists(thumbPngPath))
+        {
+            var tempPngPath = Path.Combine(FolderNames.GetTempFolder(), $"{mapConfig.MapFilename}.png");
+            var thumb = AssetDatabase.LoadAssetAtPath<Texture2D>(thumbPngPath);
+            var outPif2File = Path.Combine(buildPath, $"{mapConfig.MapFilename}.pif2");
+            if (thumb)
+            {
+                UnityHelper.SaveTexture(UnityHelper.ResizeTexture(thumb, 128, 64), tempPngPath, Color.white, hasAlpha: true);
+                var result = PackerHelper.ConvertPngToPif8bpp(tempPngPath, buildPath, half_alpha: true, outSwizzle: false);
+                if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                {
+                    Debug.LogError($"Failed to pack thumbnail. {result}");
+                    return;
+                }
+
+                var outThumbFile = Path.Combine(buildPath, $"{mapConfig.MapFilename}{regionExt}.thumb");
+                if (File.Exists(outThumbFile)) File.Delete(outThumbFile);
+                if (File.Exists(outPif2File)) File.Move(outPif2File, outThumbFile);
             }
         }
     }

@@ -22,10 +22,12 @@ public class MapConfigEditor : Editor
     SerializedProperty m_DLBaseMap;
     SerializedProperty m_DLForceCustomMode;
     SerializedProperty m_DLLoadingScreen;
+    SerializedProperty m_DLThumbnail;
     SerializedProperty m_DLMinimap;
     SerializedProperty m_DLMobysIncludedInExport;
 
     SerializedProperty m_UYABaseMap;
+    SerializedProperty m_UYAThumbnail;
     SerializedProperty m_UYAMinimap;
     SerializedProperty m_UYAMobysIncludedInExport;
 
@@ -52,10 +54,12 @@ public class MapConfigEditor : Editor
         m_DLBaseMap = serializedObject.FindProperty("DLBaseMap");
         m_DLForceCustomMode = serializedObject.FindProperty("DLForceCustomMode");
         m_DLLoadingScreen = serializedObject.FindProperty("DLLoadingScreen");
+        m_DLThumbnail = serializedObject.FindProperty("DLThumbnail");
         m_DLMinimap = serializedObject.FindProperty("DLMinimap");
         m_DLMobysIncludedInExport = serializedObject.FindProperty("DLMobysIncludedInExport");
 
         m_UYABaseMap = serializedObject.FindProperty("UYABaseMap");
+        m_UYAThumbnail = serializedObject.FindProperty("UYAThumbnail");
         m_UYAMinimap = serializedObject.FindProperty("UYAMinimap");
         m_UYAMobysIncludedInExport = serializedObject.FindProperty("UYAMobysIncludedInExport");
 
@@ -93,6 +97,7 @@ public class MapConfigEditor : Editor
         {
             EditorGUILayout.PropertyField(m_DLForceCustomMode);
             EditorGUILayout.PropertyField(m_DLLoadingScreen);
+            EditorGUILayout.PropertyField(m_DLThumbnail);
             EditorGUILayout.PropertyField(m_DLMinimap);
             EditorGUILayout.PropertyField(m_DLMobysIncludedInExport);
         }
@@ -109,6 +114,7 @@ public class MapConfigEditor : Editor
         EditorGUILayout.PropertyField(m_UYABaseMap);
         if ((target as MapConfig).HasUYABaseMap())
         {
+            EditorGUILayout.PropertyField(m_UYAThumbnail);
             EditorGUILayout.PropertyField(m_UYAMinimap);
             EditorGUILayout.PropertyField(m_UYAMobysIncludedInExport);
         }
