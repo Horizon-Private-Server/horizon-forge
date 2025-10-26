@@ -379,7 +379,7 @@ public static class ForgeBuilder
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);
                     writer.WriteString(mapConfig.MapAuthor, 32);
-                    writer.WriteString(mapConfig.MapDescription, 256);
+                    writer.WriteString(BinaryHelper.StrToRatchetStr(mapConfig.MapDescription), 256);
                 }
                 else
                 {
@@ -389,7 +389,7 @@ public static class ForgeBuilder
                     writer.Write((int)0); // padding
                     writer.WriteString(mapConfig.MapName, 32);
                     writer.WriteString(mapConfig.MapAuthor, 32);
-                    writer.WriteString(mapConfig.MapDescription, 256);
+                    writer.WriteString(BinaryHelper.StrToRatchetStr(mapConfig.MapDescription), 256);
                 }
 
                 // write extra data (DL only)

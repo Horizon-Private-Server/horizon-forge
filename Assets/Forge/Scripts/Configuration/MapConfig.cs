@@ -18,7 +18,7 @@ public class MapConfig : MonoBehaviour
     [Min(0)] public int MapVersion = 0;
     public string MapName;
     public string MapAuthor;
-    public string MapDescription;
+    [Multiline] public string MapDescription;
     public string MapFilename;
 
     [Header("Deadlocked")]
