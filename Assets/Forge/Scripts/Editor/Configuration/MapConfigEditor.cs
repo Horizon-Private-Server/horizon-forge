@@ -15,6 +15,8 @@ public class MapConfigEditor : Editor
 
     SerializedProperty m_MapVersion;
     SerializedProperty m_MapName;
+    SerializedProperty m_MapAuthor;
+    SerializedProperty m_MapDescription;
     SerializedProperty m_MapFilename;
 
     SerializedProperty m_DLBaseMap;
@@ -43,6 +45,8 @@ public class MapConfigEditor : Editor
     {
         m_MapVersion = serializedObject.FindProperty("MapVersion");
         m_MapName = serializedObject.FindProperty("MapName");
+        m_MapAuthor = serializedObject.FindProperty("MapAuthor");
+        m_MapDescription = serializedObject.FindProperty("MapDescription");
         m_MapFilename = serializedObject.FindProperty("MapFilename");
 
         m_DLBaseMap = serializedObject.FindProperty("DLBaseMap");
@@ -79,6 +83,8 @@ public class MapConfigEditor : Editor
         // map build
         EditorGUILayout.PropertyField(m_MapVersion);
         EditorGUILayout.PropertyField(m_MapName);
+        EditorGUILayout.PropertyField(m_MapAuthor);
+        EditorGUILayout.PropertyField(m_MapDescription);
         EditorGUILayout.PropertyField(m_MapFilename);
 
         // deadlocked

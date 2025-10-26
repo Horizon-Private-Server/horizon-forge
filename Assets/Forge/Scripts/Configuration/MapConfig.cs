@@ -17,6 +17,8 @@ public class MapConfig : MonoBehaviour
     [Header("Map Build")]
     [Min(0)] public int MapVersion = 0;
     public string MapName;
+    public string MapAuthor;
+    public string MapDescription;
     public string MapFilename;
 
     [Header("Deadlocked")]
@@ -84,6 +86,8 @@ public class MapConfig : MonoBehaviour
         UpdateShaderGlobals();
 
         if (MapName != null && MapName.Length > 32) MapName = MapName.Substring(0, 32);
+        if (MapAuthor != null && MapAuthor.Length > 32) MapAuthor = MapAuthor.Substring(0, 32);
+        if (MapDescription != null && MapDescription.Length > 256) MapDescription = MapDescription.Substring(0, 256);
         if (MapFilename != null && MapFilename.Length > 48) MapFilename = MapFilename.Substring(0, 48);
 
         if (FogFarIntensity < FogNearIntensity)
