@@ -329,7 +329,7 @@ public static class ForgeBuilder
             if (!Directory.Exists(mapBuildFolder)) continue;
             if (buildFolders == null) continue;
 
-            foreach (var buildFolder in settings.DLBuildFolders)
+            foreach (var buildFolder in buildFolders)
             {
                 if (Directory.Exists(buildFolder))
                 {
