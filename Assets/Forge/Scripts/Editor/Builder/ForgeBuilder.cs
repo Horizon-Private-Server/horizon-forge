@@ -378,6 +378,8 @@ public static class ForgeBuilder
                     writer.Write((short)(customModeDatas?.Length ?? 0)); // extra data count
                     writer.Write((short)mapConfig.ShrubMinRenderDistance); // shrub min render distance
                     writer.WriteString(mapConfig.MapName, 32);
+                    writer.WriteString(mapConfig.MapAuthor, 32);
+                    writer.WriteString(mapConfig.MapDescription, 256);
                 }
                 else
                 {
@@ -386,6 +388,8 @@ public static class ForgeBuilder
                     writer.Write((int)0); // forced custom mode id
                     writer.Write((int)0); // padding
                     writer.WriteString(mapConfig.MapName, 32);
+                    writer.WriteString(mapConfig.MapAuthor, 32);
+                    writer.WriteString(mapConfig.MapDescription, 256);
                 }
 
                 // write extra data (DL only)
@@ -405,7 +409,7 @@ public static class ForgeBuilder
                         var offset = writer.BaseStream.Position;
                         customModeDatas[0].Write(writer);
                         var endOffset = writer.BaseStream.Position;
-                        writer.BaseStream.Position = 0x30 + (8 * i) + 2;
+                        writer.BaseStream.Position = 0x150 + (8 * i) + 2;
                         writer.Write((short)(endOffset - offset));
                         writer.Write((int)offset);
                         writer.BaseStream.Position = endOffset;
