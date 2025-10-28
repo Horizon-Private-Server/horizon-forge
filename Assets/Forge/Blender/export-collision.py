@@ -236,13 +236,16 @@ bpy.ops.mesh.select_all(action='DESELECT')
 bpy.ops.object.mode_set(mode='OBJECT')
 
 # Select faces with target material
+has_selection = False
 for p in obj.data.polygons:
     if obj.data.materials[p.material_index].name == "col_100":
         p.select = True
+        has_selection = True
 
-bpy.ops.object.mode_set(mode='EDIT')
-bpy.ops.mesh.separate(type='SELECTED')
-bpy.ops.object.mode_set(mode='OBJECT')
+if has_selection:
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.separate(type='SELECTED')
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 def split_by_distance(obj, idx):
     if not obj or obj.type != 'MESH':
