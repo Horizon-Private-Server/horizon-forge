@@ -236,7 +236,7 @@ public class PvarOverlay
         if (Overlay != null)
         {
             ComputeOrder(Overlay);
-            CheckForDupes($"rc{this.RCVersion}.{this.Name}", new List<string>(), Overlay);
+            //CheckForDupes($"rc{this.RCVersion}.{this.Name}", new List<string>(), Overlay);
         }
 
         // calculate defaults

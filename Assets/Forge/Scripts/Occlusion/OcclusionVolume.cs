@@ -199,6 +199,7 @@ public class OcclusionVolume : MonoBehaviour
 
     private bool IsNearWalkableSurface(Vector3 p, float? dist = null, Dictionary<Collider, MeshRenderer> colliderCache = null)
     {
+        var layerMask = LayerMask.GetMask("COLLISION");
         if (!dist.HasValue)
             dist = 4f * 3f;
 
@@ -212,11 +213,18 @@ public class OcclusionVolume : MonoBehaviour
             new Vector3(-1f, 1f, -1f),
             new Vector3(-1f, -1f, 1f),
             new Vector3(-1f, -1f, -1f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(-1f, 0f, 0f),
+            new Vector3(0f, 1f, 0f),
+            new Vector3(0f, -1f, 0f),
+            new Vector3(0f, 0f, 1f),
+            new Vector3(0f, 0f, -1f),
         };
 
         foreach (var dir in dirs)
         {
-            if (Physics.Raycast(p - (dir * 2f), dir, out var hitInfo, dist.Value + (dir.magnitude * 2f)))
+            var maxDist = dist.Value + (dir.magnitude * 2f);
+            if (Physics.Raycast(p - (dir * 2f), dir.normalized, out var hitInfo, maxDist, layerMask))
             {
                 var normalAngle = Vector3.Angle(hitInfo.normal, Vector3.up);
                 if (normalAngle > StickyNormalAngle)

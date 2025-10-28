@@ -128,7 +128,7 @@ public class CollisionRenderHandle
     {
         if (!CollectionHelper.CollectionsEqual(_colliderGeneratedMaterialIds, matIds))
         {
-            _colliderGeneratedMaterialIds = matIds.ToArray(); // make copy
+            _colliderGeneratedMaterialIds = matIds?.ToArray(); // make copy
             _regenerate = true;
         }
 
