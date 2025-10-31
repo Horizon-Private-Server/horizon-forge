@@ -28,7 +28,7 @@ public class BezierSplineVertex : MonoBehaviour
 
     private void OnValidate()
     {
-        SendRebuildUpstream();
+        Dispatcher.RunOnMainThread(() => SendRebuildUpstream());
     }
 
     private void SendRebuildUpstream()

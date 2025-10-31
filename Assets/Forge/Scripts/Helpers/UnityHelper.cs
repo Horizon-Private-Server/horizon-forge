@@ -1923,6 +1923,9 @@ public static class UnityHelper
 
     public static Hash128 GetHash(this Texture2D tex)
     {
+        if (!tex)
+            return new Hash128();
+
         if (tex.imageContentsHash.isValid)
             return tex.imageContentsHash;
 

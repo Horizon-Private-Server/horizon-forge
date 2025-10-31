@@ -10,7 +10,7 @@ public class Spline : MonoBehaviour
     public static bool DrawSplineGizmos = false;
     public static List<Spline> SelectedSplines = new List<Spline>();
 
-    public List<SplineVertex> Vertices;
+    public List<SplineVertex> Vertices = new List<SplineVertex>();
 
     public virtual bool IncludeInExport()
     {

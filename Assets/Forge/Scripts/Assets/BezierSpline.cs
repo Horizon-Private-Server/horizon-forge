@@ -69,7 +69,7 @@ public class BezierSpline : Spline
 
     protected override void OnValidate()
     {
-        RebuildSpline();
+        Dispatcher.RunOnMainThread(() => RebuildSpline());
     }
 
     #region Create Asset

@@ -26,8 +26,8 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         [ReadOnly] public SurvivalMob Mob;
         public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
         public DLTeamIds BlipTeam = DLTeamIds.Red;
-        public List<SurvivalMobVariant> Variants;
-        public List<string> Behaviors;
+        public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
+        public List<string> Behaviors = new List<string>();
 
         public int Xp = BASE_XP;
         public int Bolts = BASE_BOLTS;
