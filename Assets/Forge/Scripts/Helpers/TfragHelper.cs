@@ -125,48 +125,28 @@ public static class TfragHelper
         // find and transform displacements
         int lod = 0;
         bool match = false;
-        for (int w = 0; w < colorOffset; w += 4)
+        dataReader.BaseStream.Position = 0;
+        var packets = VifHelper.ParsePackets(dataReader, colorOffset);
+        foreach (var unpack in packets.Where(x => x.Code != null && x.Code.IsUnpack()))
         {
-            dataReader.BaseStream.Position = w;
-            var word = dataReader.ReadInt32();
-
-            // UNPACK
-            if (((word >> 24) & 0b01100000) == 0b01100000)
+            if (unpack.Code.Unpack.Vnvl == VifHelper.VifVnVl.V3_16)
             {
-                var vn = (word >> 26) & 0b11;
-                var vl = (word >> 24) & 0b11;
-                var num = (word >> 16) & 0b11111111;
-                if (num == 0)
-                    num = 256;
-                var gsize = ((32 >> vl) * (vn + 1)) / 8;
-                var size = num * gsize;
-                if (size % 4 != 0)
-                    size += 4 - (size % 4);
-
-                size = (1 + (size / 4)) * 4;
-
-                if (gsize == 6)
+                for (int di = 0; di < unpack.Code.Num; ++di)
                 {
-                    for (int di = 0; di < num; ++di)
+                    dataReader.BaseStream.Position = dataWriter.BaseStream.Position = unpack.Offset + 4 + (di * 6);
+
+                    var displacement = ReadVector3_16_1024(dataReader);
+                    var realPos = originalBasePosition + displacement;
+                    var transformedRealPos = transformationMatrix.MultiplyPoint(realPos);
+                    points.Add(transformedRealPos);
+                    WriteVector3_16_1024(dataWriter, transformedRealPos - transformedBasePosition);
+
+                    if (!match)
                     {
-                        dataReader.BaseStream.Position = dataWriter.BaseStream.Position = w + 4 + (di * 6);
-
-                        var displacement = ReadVector3_16_1024(dataReader);
-                        var realPos = originalBasePosition + displacement;
-                        var transformedRealPos = transformationMatrix.MultiplyPoint(realPos);
-                        points.Add(transformedRealPos);
-                        WriteVector3_16_1024(dataWriter, transformedRealPos - transformedBasePosition);
-
-                        if (!match)
-                        {
-                            match = true;
-                            ++lod;
-                        }
+                        match = true;
+                        ++lod;
                     }
                 }
-
-                // skip
-                w += size - 4;
             }
         }
 

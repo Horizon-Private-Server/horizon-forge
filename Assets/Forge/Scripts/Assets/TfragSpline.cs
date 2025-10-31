@@ -19,16 +19,23 @@ public class TfragSpline : BaseAssetGenerator
         Spline
     }
 
+    public enum TfragSplineLerpMode
+    {
+        Time,
+        Distance
+    }
+
     [Header("Tfrag")]
     [Range(2f, 16f)] public float m_TfragSize = 4f;
     [Min(1)] public int m_SliceCount = 2;
     [Min(1)] public TfragSplineWidthMode m_SliceMode = TfragSplineWidthMode.Constant;
+    [Min(1)] public TfragSplineLerpMode m_LerpMode = TfragSplineLerpMode.Time;
     public bool m_FlatNormal = false;
     public bool m_RecalculateNormals;
     public bool m_FlipNormal;
 
     [Header("Textures")]
-    public List<TfragSplineTexture> m_Textures;
+    public List<TfragSplineTexture> m_Textures = new List<TfragSplineTexture>();
 
     [Header("Collider")]
     public bool m_InstancedCollider;
@@ -37,7 +44,7 @@ public class TfragSpline : BaseAssetGenerator
     [Header("Spline")]
     public bool m_Loop = false;
     [Tooltip("First value indicates where the gap begins, in units along spline. Second value indicates the length of the gap in units along spline.")]
-    public List<Vector2> m_Gaps;
+    public List<Vector2> m_Gaps = new List<Vector2>();
     [ReadOnly] public int m_ComputedNumPoints = 0;
 
     [Header("Gizmos")]
@@ -45,7 +52,7 @@ public class TfragSpline : BaseAssetGenerator
     public bool m_DrawRotation = false;
     public bool m_AutoRegenerate = false;
 
-    private TfragSplineVertex[] m_CachedVertices;
+    private TfragSplineVertex[] m_CachedVertices; 
     private List<TfragSplineBuiltPoint> m_BuiltPath = new List<TfragSplineBuiltPoint>();
     private List<TfragSplinePoint> m_CachedPathPoints;
     private Hash128 m_CachedPathPointsHash;
@@ -146,6 +153,7 @@ public class TfragSpline : BaseAssetGenerator
         hash.Append(m_FlatNormal ? 1 : 0);
         hash.Append(m_SliceCount);
         hash.Append((int)m_SliceMode);
+        hash.Append((int)m_LerpMode);
         hash.Append(m_TfragSize);
 
         return hash;
@@ -255,7 +263,7 @@ public class TfragSpline : BaseAssetGenerator
         // get list of collision ids
         // use submeshes to group collisions
         var uniqueColIds = meshCollisionIds.Distinct().ToArray();
-        if (uniqueColIds.Length > 1)
+        if (uniqueColIds.Length > 0)
         {
             mesh.subMeshCount = uniqueColIds.Length;
             for (int i = 0; i < uniqueColIds.Length; ++i)
@@ -265,7 +273,7 @@ public class TfragSpline : BaseAssetGenerator
                 {
                     if (meshCollisionIds[f] == uniqueColIds[i])
                     {
-                        facesWithColId.Add(f);
+                        facesWithColId.Add(f); 
                     }
                 }
 
@@ -565,7 +573,7 @@ public class TfragSpline : BaseAssetGenerator
 
                 // get texture
                 var texture = UnityHelper.DefaultTexture;
-                if (textureDef != null && !textureCollection.TryGetValue(textureDef, out texture))
+                if (textureDef != null && textureDef.m_Texture && !textureCollection.TryGetValue(textureDef, out texture))
                 {
                     var texSize = (int)Mathf.Pow(2, 5 + (int)textureDef.m_TextureSize);
                     textureCollection[textureDef] = texture = UnityHelper.CloneTexture(textureDef.m_Texture, hasAlpha: false, resizeWidth: texSize, resizeHeight: texSize);
@@ -914,11 +922,12 @@ public class TfragSpline : BaseAssetGenerator
     {
         float currentDistance = 0f;
         var vertices = GetVertices();
-        if (vertices == null || vertices.Length < 2) return new TfragSplinePoint(null, null, 0);
+        if (vertices == null || vertices.Length < 2) return new TfragSplinePoint(null, null, 0, 0);
 
         for (int i = 0; i < vertices.Length - 1; ++i)
         {
             // find segment
+            var segmentStartDistance = currentDistance;
             float segmentLength = GetSegmentLength(vertices[i], vertices[i + 1], 0, 1);
             if ((currentDistance + segmentLength) < distance)
             {
@@ -934,13 +943,13 @@ public class TfragSpline : BaseAssetGenerator
                 var d = Vector3.Distance(lastPosition, p);
                 currentDistance += d;
                 if (currentDistance >= distance)
-                    return new TfragSplinePoint(vertices[i], vertices[i + 1], t);
+                    return new TfragSplinePoint(vertices[i], vertices[i + 1], t, m_LerpMode == TfragSplineLerpMode.Time ? t : ((currentDistance - segmentStartDistance) / segmentLength));
 
                 lastPosition = p;
             }
         }
 
-        return new TfragSplinePoint(vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1);
+        return new TfragSplinePoint(vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1, 1);
     }
 
     public float GetTimeToDistanceOnPoint(TfragSplineVertex a, TfragSplineVertex b, float distance)
@@ -1010,7 +1019,7 @@ public class TfragSpline : BaseAssetGenerator
         // add end
         if (currentLength != length)
         {
-            pointsT.Add(new TfragSplinePoint(vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1));
+            pointsT.Add(new TfragSplinePoint(vertices[vertices.Length - 2], vertices[vertices.Length - 1], 1, 1));
         }
 
         m_CachedPathPointsHash = hash;
@@ -1069,11 +1078,13 @@ public class TfragSpline : BaseAssetGenerator
         public TfragSplineVertex From { get; set; }
         public TfragSplineVertex To { get; set; }
         public float T { get; set; }
+        public float L { get; set; }
+        
 
-        public Vector3 GetConstantWidth(float sliceT) => Vector3.Slerp(From.GetConstantWidth(sliceT), To.GetConstantWidth(sliceT), T);
-        public Vector3 GetConstantNormal(float sliceT) => Vector3.Slerp(From.GetConstantNormal(sliceT), To.GetConstantNormal(sliceT), T);
-        public Vector3 GetSplineWidth(float sliceT) => Vector3.Slerp(From.GetSplineWidth(sliceT), To.GetSplineWidth(sliceT), T);
-        public Vector3 GetSplineNormal(float sliceT) => Vector3.Slerp(From.GetSplineNormal(sliceT), To.GetSplineNormal(sliceT), T);
+        public Vector3 GetConstantWidth(float sliceT) => Vector3.Lerp(From.GetConstantWidth(sliceT), To.GetConstantWidth(sliceT), L);
+        public Vector3 GetConstantNormal(float sliceT) => Vector3.Slerp(From.GetConstantNormal(sliceT), To.GetConstantNormal(sliceT), L);
+        public Vector3 GetSplineWidth(float sliceT) => Vector3.Slerp(From.GetSplineWidth(sliceT), To.GetSplineWidth(sliceT), L);
+        public Vector3 GetSplineNormal(float sliceT) => Vector3.Slerp(From.GetSplineNormal(sliceT), To.GetSplineNormal(sliceT), L);
         public Vector3 GetWidth(TfragSplineWidthMode mode, float sliceT) => mode == TfragSplineWidthMode.Spline ? GetSplineWidth(sliceT) : GetConstantWidth(sliceT);
         public Vector3 GetPosition() => GetPosition(From, To, T);
 
@@ -1092,11 +1103,12 @@ public class TfragSpline : BaseAssetGenerator
             return Vector3.Cross(splineTangent, widthTangent).normalized;
         }
 
-        public TfragSplinePoint(TfragSplineVertex from, TfragSplineVertex to, float t)
+        public TfragSplinePoint(TfragSplineVertex from, TfragSplineVertex to, float t, float l)
         {
             From = from;
             To = to;
             T = t;
+            L = l;
         }
 
         private static Vector3 GetPosition(TfragSplineVertex a, TfragSplineVertex b, float t)

@@ -20,7 +20,7 @@ public class OcclusionGraph : MonoBehaviour
     };
 
     [SerializeField]
-    public List<OcclusionNode> _nodes;
+    public List<OcclusionNode> _nodes = new List<OcclusionNode>();
 
     private void OnEnable()
     {

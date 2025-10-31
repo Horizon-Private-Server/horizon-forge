@@ -19,7 +19,7 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
     public bool m_OcclusionBakeIgnore = false;
     public bool m_Render = true;
 
-    [SerializeField, HideInInspector] public List<TfragLayerToCollisionId> m_TerrainLayerCollisionIds;
+    [SerializeField, HideInInspector] public List<TfragLayerToCollisionId> m_TerrainLayerCollisionIds = new List<TfragLayerToCollisionId>();
     [SerializeField, HideInInspector] private bool m_ForceRegenerateMesh = false;
 
     public GameObject GameObject => this ? this.gameObject : null;

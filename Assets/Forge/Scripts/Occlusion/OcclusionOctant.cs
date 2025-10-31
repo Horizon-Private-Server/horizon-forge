@@ -6,7 +6,7 @@ using UnityEngine;
 public class OcclusionOctant : MonoBehaviour
 {
     [SerializeField, HideInInspector]
-    public List<Vector3> Octants;
+    public List<Vector3> Octants = new List<Vector3>();
 
     private void OnDrawGizmosSelected()
     {

@@ -21,7 +21,7 @@ public class TfragManipulator : MonoBehaviour, IBuildHook
     public float FalloffRadius = 1;
     public float Falloff = 0;
 
-    public List<TfragChunk> Tfrags;
+    public List<TfragChunk> Tfrags = new List<TfragChunk>();
 
     private Matrix4x4 _lastTRS;
 

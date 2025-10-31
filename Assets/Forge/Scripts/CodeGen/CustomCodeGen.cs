@@ -2,16 +2,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 public class CustomCodeGen : MonoBehaviour, ICodeGen
 {
-    public List<string> Defines;
-    public List<TextAsset> Files;
+    public List<string> Defines = new List<string>();
+    public List<UnityEngine.Object> Files = new List<UnityEngine.Object>();
     public string InitFunctionName = "customModuleInit";
     public string TickFunctionName = "customModuleTick";
     public bool WaitForClientsReady = false;
-    public List<CodeGenMeta> Metas;
+    public List<CodeGenMeta> Metas = new List<CodeGenMeta>();
 
     public bool IsEnabled => this.isActiveAndEnabled;
     public int CodeGenOrder => 10;
@@ -22,24 +23,28 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
         {
             if (!file) continue;
 
-            var name = file.name;
+            var assetPath = AssetDatabase.GetAssetPath(file);
+            if (string.IsNullOrEmpty(assetPath)) continue;
+
+            var text = File.ReadAllText(assetPath);
+            var name = Path.GetFileName(assetPath);
             var nameNoExt = Path.GetFileNameWithoutExtension(name);
             switch (Path.GetExtension(name))
             {
                 case ".h":
                     {
-                        File.WriteAllText(Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder, name), file.text);
+                        File.WriteAllText(Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder, name), text);
                         break;
                     }
                 case ".c":
                     {
-                        File.WriteAllText(Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder, name), file.text);
+                        File.WriteAllText(Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder, name), text);
                         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/{nameNoExt}.o");
                         break;
                     }
                 default:
                     {
-                        File.WriteAllText(Path.Combine(buildFolder, name), file.text);
+                        File.WriteAllText(Path.Combine(buildFolder, name), text);
                         break;
                     }
             }

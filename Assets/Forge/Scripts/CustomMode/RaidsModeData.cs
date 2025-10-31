@@ -61,13 +61,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     [Multiline] public string Description;
 
     [Header("Zones (Open World Only)")]
-    public List<RaidsZone> Zones;
+    public List<RaidsZone> Zones = new List<RaidsZone>();
 
     [Header("Challenges")]
-    public List<RaidsChallenge> Challenges;
+    public List<RaidsChallenge> Challenges = new List<RaidsChallenge>();
 
     [Header("Contracts")]
-    public List<RaidsContractRule> ContractRules;
+    public List<RaidsContractRule> ContractRules = new List<RaidsContractRule>();
 
     [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 16.")]
     public List<RaidsMobSpawnParam> Mobs = new List<RaidsMobSpawnParam>()

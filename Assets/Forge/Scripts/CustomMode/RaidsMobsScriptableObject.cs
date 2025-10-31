@@ -16,7 +16,7 @@ public class RaidsMobsScriptableObject : ScriptableObject
     private const int BASE_SPEED = 3;
     private const int BASE_HEALTH = 30;
 
-    public List<RaidsMobsConfig> Mobs;
+    public List<RaidsMobsConfig> Mobs = new List<RaidsMobsConfig>();
 
 
     [Serializable]
@@ -25,8 +25,8 @@ public class RaidsMobsScriptableObject : ScriptableObject
         [ReadOnly] public RaidsMob Mob;
         public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
         public DLTeamIds BlipTeam = DLTeamIds.Red;
-        public List<RaidsMobVariant> Variants;
-        public List<string> Behaviors;
+        public List<RaidsMobVariant> Variants = new List<RaidsMobVariant>();
+        public List<string> Behaviors = new List<string>();
 
         public int Xp = BASE_XP;
         public int Bolts = BASE_BOLTS;
