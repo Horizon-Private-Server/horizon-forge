@@ -9,7 +9,7 @@ using UnityEngine;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 3;
+    public static readonly int SURVIVAL_VERSION = 4;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -24,6 +24,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         new SurvivalMobSpawnParam() { Name = "Zombie" }
     };
 
+    [Header("Gambits")]
+    public List<SurvivalGambit> Gambits = new List<SurvivalGambit>();
+
     [Header("Debug")]
     public bool DebugPath;
     public bool DebugMove;
@@ -31,6 +34,29 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     private void OnValidate()
     {
         while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
+
+        foreach (var gambit in Gambits)
+        {
+            if (gambit.Name != null && gambit.Name.Length > 32) gambit.Name = gambit.Name.Substring(0, 32);
+            if (gambit.Description != null && gambit.Description.Length > 128) gambit.Description = gambit.Description.Substring(0, 128);
+        }
+    }
+
+    public override void Write(BinaryWriter writer)
+    {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+
+        // write version
+        writer.Write(SURVIVAL_VERSION);
+
+        // write gambits
+        writer.Write(Gambits.Count);
+        foreach (var gambit in Gambits)
+        {
+            writer.WriteCString(gambit.Name);
+            writer.WriteCString(gambit.Description);
+        }
     }
 
     #region CodeGen
@@ -284,14 +310,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         return PathGraph.ExportGraphsAsC();
     }
 
-    public override void Write(BinaryWriter writer)
-    {
-        var mapConfig = FindObjectOfType<MapConfig>();
-        var mobys = mapConfig.GetMobys(RCVER.DL);
-
-        writer.Write(SURVIVAL_VERSION);
-    }
-
     #endregion
 
     #region Menu Items
@@ -362,6 +380,13 @@ public enum SurvivalMobBangle
     BANGLE_1000 = 0x1000,
     BANGLE_2000 = 0x2000,
     BANGLE_4000 = 0x4000,
+}
+
+[Serializable]
+public class SurvivalGambit
+{
+    public string Name;
+    public string Description;
 }
 
 [Serializable]

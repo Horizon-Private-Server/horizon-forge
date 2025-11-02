@@ -1574,11 +1574,12 @@ public class LevelImporterWindow : EditorWindow
         var collPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UnityHelper.GetProjectRelativePath(outMeshFile));
         if (collPrefab)
         {
+            var layer = LayerMask.NameToLayer("COLLISION");
             var go = (GameObject)PrefabUtility.InstantiatePrefab(collPrefab);
             if (go)
             {
                 go.transform.SetParent(rootGo.transform, true);
-                go.layer = LayerMask.NameToLayer("COLLISION");
+                UnityHelper.RecurseHierarchy(go.transform, (t) => t.gameObject.layer = layer);
             }
         }
     }
