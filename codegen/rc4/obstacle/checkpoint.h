@@ -34,6 +34,9 @@ struct CheckpointManagerPVar
 struct CheckpointPVar
 {
   char Log;
+#if OBSTACLE
+  char Save;
+#endif
   Moby* OnActivateControllerMoby;
   Moby* OnDeactivateControllerMoby;
 };
