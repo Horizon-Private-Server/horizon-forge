@@ -106,6 +106,7 @@ int checkpointSetActive(Moby* checkpointMoby)
   if (!checkpointManagerMoby) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
+  struct CheckpointPVar* checkpointPvars = (struct CheckpointPVar*)checkpointMoby->PVar;
 
   // get index of checkpoint
   int idx = 0;
@@ -120,12 +121,22 @@ int checkpointSetActive(Moby* checkpointMoby)
 
   DLOG_MNGR(checkpointManagerMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
   DLOG_CHPT(checkpointMoby, "Activate checkpoint %08X => %d\n", (u32)checkpointMoby, idx);
-  uiShowPopup(0, "Checkpoint");
   
   // update checkpoint locally
   mobySetState(checkpointManagerMoby, idx, -1);
   checkpointManagerUpdate(checkpointManagerMoby);
   checkpointUpdate(checkpointMoby);
+
+#if OBSTACLE
+  if (MapConfig.SetLocalPlayerReachedCheckpoint && checkpointPvars->Save) {
+    MapConfig.SetLocalPlayerReachedCheckpoint(checkpointMoby);
+    uiShowPopup(0, "Saved Checkpoint");
+  } else {
+    uiShowPopup(0, "Checkpoint");
+  }
+#else
+  uiShowPopup(0, "Checkpoint");
+#endif
 
 	// create event
   // if (gameAmIHost()) {

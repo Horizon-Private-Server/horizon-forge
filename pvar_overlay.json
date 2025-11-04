@@ -5248,6 +5248,11 @@
         "Offset": 0
       },
       {
+        "Name": "Save",
+        "DataType": "Bool",
+        "Offset": 1
+      },
+      {
         "Name": "On Activate Controller Moby",
         "Tooltip": "Controller to activate when this checkpoint is reached.",
         "DataType": "MobyRef",
