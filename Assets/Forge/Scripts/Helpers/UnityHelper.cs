@@ -12,7 +12,7 @@ using UnityEngine.AI;
 public static class UnityHelper
 {
     private static Texture2D _defaultTexture;
-    public static Texture2D DefaultTexture => _defaultTexture ? _defaultTexture : (_defaultTexture = new Texture2D(32, 32, TextureFormat.ARGB32, false));
+    public static Texture2D DefaultTexture => _defaultTexture ? _defaultTexture : (_defaultTexture = CreateDefaultTexture());
 
     public static void Matrix4x4PropertyField(SerializedProperty property)
     {
@@ -55,6 +55,17 @@ public static class UnityHelper
                 prop.floatValue = m[x, y];
             }
         }
+    }
+
+    private static Texture2D CreateDefaultTexture()
+    {
+        var tex = new Texture2D(32, 32, TextureFormat.ARGB32, false);
+        for (int y = 0; y < tex.height; ++y)
+            for (int x = 0; x < tex.width; ++x)
+                tex.SetPixel(x, y, Color.white);
+
+        tex.Apply();
+        return tex;
     }
 
     #region Byte Array Property Field
@@ -1572,6 +1583,19 @@ public static class UnityHelper
         {
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         });
+    }
+
+    public static bool IsObjectPrefabFile(UnityEngine.Object target)
+    {
+        var assetType = PrefabUtility.GetPrefabAssetType(target);
+        var instanceStatus = PrefabUtility.GetPrefabInstanceStatus(target);
+
+        if (assetType != PrefabAssetType.NotAPrefab && instanceStatus == PrefabInstanceStatus.NotAPrefab)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public static void RecurseHierarchy(Transform root, Action<Transform> onNode)

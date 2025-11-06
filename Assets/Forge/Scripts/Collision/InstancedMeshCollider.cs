@@ -58,6 +58,8 @@ public class InstancedMeshCollider : RenderSelectionBase, IAsset, IInstancedColl
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         collisionRenderHandle?.UpdateMaterials();
     }
 

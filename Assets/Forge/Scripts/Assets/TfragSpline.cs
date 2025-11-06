@@ -92,6 +92,8 @@ public class TfragSpline : BaseAssetGenerator
 
     protected void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         OnChange();
     }
 
@@ -401,6 +403,7 @@ public class TfragSpline : BaseAssetGenerator
                     //var shading = Mathf.Pow(Mathf.Clamp01(Mathf.Abs(Vector3.Dot(meshNormals[vIdx], Vector3.up))), m_Shading * 10);
                     //var noise = Mathf.Pow(Mathf.Clamp01(Mathf.PerlinNoise(vertexWorldSpace.x / m_NoiseScale, vertexWorldSpace.z / m_NoiseScale)), m_Noise * 3f);
                     var color = meshColors[vIdx] * 0.5f; // * shading * noise;
+                    color.a = 1;
                     colors.Add(color);
                 }
 
@@ -733,8 +736,8 @@ public class TfragSpline : BaseAssetGenerator
     #region Create Asset
 
 
-    [MenuItem("GameObject/Forge/Misc/Tfrag Spline", priority = 10)]
-    public static void CreateTfragSpline()
+    [MenuItem("GameObject/Forge/Misc/Tfrag Spline/Default", priority = 10)]
+    public static void CreateTfragSplineDefault()
     {
         var tfragSplineGo = new GameObject("Tfrag Spline");
         var tfragSpline = tfragSplineGo.AddComponent<TfragSpline>();
@@ -755,40 +758,24 @@ public class TfragSpline : BaseAssetGenerator
             vert1.SetOffsets(Vector3.forward * -5, Vector3.forward * 5);
         }
 
-        // add slices
-        //var tfragSplineSliceRootGo = new GameObject("Slices");
-        //tfragSplineSliceRootGo.transform.SetParent(tfragSplineGo.transform, false);
-        //for (int i = 0; i < 2; ++i)
-        //{
-        //    var tfragSplineSliceGo = new GameObject(i.ToString());
-        //    tfragSplineSliceGo.transform.SetParent(tfragSplineSliceRootGo.transform, false);
-        //    var tfragSplineSlice = tfragSplineSliceGo.AddComponent<TfragSplineSlice>();
+        // place under selected object
+        // or try and spawn on top of scene camera
+        if (Selection.activeGameObject)
+            tfragSplineGo.transform.SetParent(Selection.activeGameObject.transform, false);
+        else if (SceneView.lastActiveSceneView.camera)
+            tfragSplineGo.transform.position = SceneView.lastActiveSceneView.camera.transform.position + (SceneView.lastActiveSceneView.camera.transform.forward * 5);
 
-        //    tfragSplineSliceGo.transform.localPosition = Vector3.right * i * 10;
-        //    tfragSplineSlice.m_LocationT = i;
+        Selection.activeGameObject = tfragSplineGo;
+    }
 
-        //    var vertGo0 = new GameObject("0");
-        //    var vertGo1 = new GameObject("1");
-        //    var vertGo2 = new GameObject("2");
+    [MenuItem("GameObject/Forge/Misc/Tfrag Spline/Path", priority = 10)]
+    public static void CreateTfragSplinePath()
+    {
+        var prefab = UnityHelper.GetMiscPrefab("Tfrag Spline Path");
+        if (!prefab) return;
 
-        //    vertGo0.transform.SetParent(tfragSplineSlice.transform, false);
-        //    vertGo1.transform.SetParent(tfragSplineSlice.transform, false);
-        //    vertGo2.transform.SetParent(tfragSplineSlice.transform, false);
-        //    vertGo1.transform.localPosition = Vector3.up * 10;
-        //    vertGo2.transform.localPosition = Vector3.up * 10 + Vector3.forward * 5;
-
-        //    var vert0 = vertGo0.AddComponent<BezierSplineVertex>();
-        //    var vert1 = vertGo1.AddComponent<BezierSplineVertex>();
-        //    var vert2 = vertGo2.AddComponent<BezierSplineVertex>();
-
-        //    vert0.SetOffsets(Vector3.up * -1, Vector3.up * 1);
-        //    vert1.SetOffsets(Vector3.forward * -1, Vector3.forward * 1);
-        //    vert2.SetOffsets(Vector3.forward * -1, Vector3.forward * 1);
-
-        //    tfragSplineSlice.Mode = BezierSpline.BezierSplineGenMode.Curvature;
-        //    tfragSplineSlice.NumPoints = 20;
-        //    tfragSplineSlice.Curvature = 0.9f;
-        //}
+        var tfragSplineGo = Instantiate(prefab);
+        if (!tfragSplineGo) return;
 
         // place under selected object
         // or try and spawn on top of scene camera
@@ -798,6 +785,12 @@ public class TfragSpline : BaseAssetGenerator
             tfragSplineGo.transform.position = SceneView.lastActiveSceneView.camera.transform.position + (SceneView.lastActiveSceneView.camera.transform.forward * 5);
 
         Selection.activeGameObject = tfragSplineGo;
+
+        // generate
+        tfragSplineGo.name = "Tfrag Spline Path";
+        var tfragSpline = tfragSplineGo.GetComponent<TfragSpline>();
+        if (tfragSpline)
+            tfragSpline.Generate();
     }
 
     #endregion

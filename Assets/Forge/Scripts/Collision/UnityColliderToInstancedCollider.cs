@@ -61,6 +61,8 @@ public class UnityColliderToInstancedCollider : RenderSelectionBase, IAsset, IIn
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         collisionRenderHandle?.UpdateMaterials();
     }
 

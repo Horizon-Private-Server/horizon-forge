@@ -43,6 +43,8 @@ public class TfragManipulator : MonoBehaviour, IBuildHook
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         Register();
     }
 

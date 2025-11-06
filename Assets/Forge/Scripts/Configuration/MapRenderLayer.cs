@@ -25,6 +25,8 @@ public class MapRenderLayer : MonoBehaviour
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         if (ForceRender)
             OnPreMapRender();
     }

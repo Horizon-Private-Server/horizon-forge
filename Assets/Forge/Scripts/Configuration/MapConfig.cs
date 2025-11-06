@@ -84,6 +84,8 @@ public class MapConfig : MonoBehaviour
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         Upgrade();
         UpdateShaderGlobals();
 
