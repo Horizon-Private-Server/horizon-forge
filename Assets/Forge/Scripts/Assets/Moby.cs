@@ -107,6 +107,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
         AssetUpdater.RegisterAsset(this);
         UpdateAsset();
+        MakeUidUnique();
     }
 
     private void OnDisable()
