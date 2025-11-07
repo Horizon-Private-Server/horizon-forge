@@ -1,3 +1,4 @@
+using Codice.CM.Common.Merge;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,15 +21,18 @@ public class BezierSpline : Spline
     public BezierSplineGenMode Mode = BezierSplineGenMode.FixedCount;
     [Min(2)]
     public int NumPoints = 2;
-    public Vector3 AlignedNormal = Vector3.up;
+    [ReadOnly] public int ComputedNumPoints = 0;
 
-    [Range(0f, 0.99f)]
-    public float Curvature = 0f;
+    public Vector3 AlignedNormal = Vector3.up;
     public bool Loop = false;
     [Tooltip("Use for internal Forge-only tools, where spline isn't needed in game.")]
     public bool DoNotIncludeInBuild = false;
 
-    [ReadOnly] public int ComputedNumPoints = 0;
+    [Header("Curvature")]
+    [Range(0f, 0.99f)]
+    public float Curvature = 0f;
+    [Min(0)]
+    public float CurvatureDistanceThreshold = 0.5f;
 
     [Header("Tristrip")]
     public bool Tristrip;
@@ -69,6 +73,8 @@ public class BezierSpline : Spline
 
     protected override void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         Dispatcher.RunOnMainThread(() => RebuildSpline());
     }
 
@@ -334,6 +340,22 @@ public class BezierSpline : Spline
         return distance;
     }
 
+    public float GetSegmentLength((BezierSplineVertex a, BezierSplineVertex b, float time) a, (BezierSplineVertex a, BezierSplineVertex b, float time) b)
+    {
+        if (a.a == b.a)
+        {
+            return GetSegmentLength(a.a, a.b, a.time, b.time);
+        }
+        else if (a.b == b.a)
+        {
+            return GetSegmentLength(a.a, a.b, a.time, 1f) + GetSegmentLength(b.a, b.b, 0, b.time);
+        }
+        else
+        {
+            return 0f; // invalid path
+        }
+    }
+
     public List<(BezierSplineVertex a, BezierSplineVertex b, float time)> ComputePathPoints()
     {
         var hash = ComputeHash();
@@ -356,19 +378,27 @@ public class BezierSpline : Spline
         {
             for (int i = 0; i < (vertices.Length - 1); ++i)
             {
-                var a = vertices[i];
-                var b = vertices[i + 1];
-                var t = 0f;
-                var step = 1 / 10f;
-                while (t < 1)
-                {
-                    var point = (a, b, t);
-                    var pos = GetPosition(point.a, point.b, point.t);
-
-                    pointsT.Add(point);
-                    t += step;
-                }
+                pointsT.Add((vertices[i], vertices[i + 1], 0));
             }
+
+            //for (int i = 0; i < (vertices.Length - 1); ++i)
+            //{
+            //    var seglen = GetSegmentLength(vertices[i], vertices[i + 1], 0, 1);
+            //    var steps = (int)Math.Ceiling(length / seglen);
+
+            //    var a = vertices[i];
+            //    var b = vertices[i + 1];
+            //    var t = 0f;
+            //    var step = 1f / steps;
+            //    while (t < 1)
+            //    {
+            //        var point = (a, b, t);
+            //        var pos = GetPosition(point.a, point.b, point.t);
+
+            //        pointsT.Add(point);
+            //        t += step;
+            //    }
+            //}
         }
         else if (Mode == BezierSplineGenMode.NoBezier)
         {
@@ -399,72 +429,80 @@ public class BezierSpline : Spline
         // increase density of points around curves
         if (Mode == BezierSplineGenMode.Curvature)
         {
-            var idx = 1;
-            while (idx < (pointsT.Count - 1))
+            Func<float, float> norm = (d) => Mathf.Abs(Mathf.Asin(d)) / (Mathf.PI / 2);
+
+            var hasCurvature = true;
+            while (hasCurvature)
             {
-                // before
-                var currentIdx = idx;
+                hasCurvature = false;
+
+                // determine parts with most curvature
+                var passes = new List<(int i, float score)>();
+                for (int i = 1; i < pointsT.Count; i++)
                 {
-                    // 0 = 180 deg turn
-                    // 1 = 0 deg turn (straight line)
-                    var p0 = pointsT[currentIdx - 1];
-                    var p1 = pointsT[currentIdx];
-                    var p2 = pointsT[currentIdx + 1];
-                    var t01 = GetTangent(p1.a, p1.b, p1.time);
-                    var t12 = GetTangent(p2.a, p2.b, p2.time);
-                    var factor = (Vector3.Dot(t01, t12) + 1) / 2;
+                    var p0 = pointsT[i - 1];
+                    var p1 = pointsT[i];
+                    var t0 = GetTangent(p0.a, p0.b, p0.time).normalized;
+                    var t1 = GetTangent(p1.a, p1.b, p1.time).normalized;
+                    var factor = norm(Vector3.Dot(t0, t1));
 
-                    while (factor < Curvature && p1.a == p0.a)
-                    {
-                        var t = Mathf.Lerp(p0.time, p1.time, 0.5f);
-                        pointsT.Insert(currentIdx + 0, (p1.a, p1.b, t));
-                        idx += 1;
-
-                        p0 = pointsT[currentIdx - 1];
-                        p1 = pointsT[currentIdx];
-                        p2 = pointsT[currentIdx + 1];
-
-                        t01 = GetTangent(p0.a, p0.b, p0.time);
-                        t12 = GetTangent(p1.a, p1.b, p1.time);
-                        factor = (Vector3.Dot(t01, t12) + 1) / 2;
-
-                        if ((idx - currentIdx) > 100) break;
-                    }
+                    if (factor < Curvature)
+                        passes.Add((i, factor));
                 }
 
-                // after
-                currentIdx = idx + 0;
+                // we're done
+                if (passes.Count == 0)
+                    break;
+
+                // iterate and add points where there's the most curvature
+                passes = passes.OrderBy(x => x.score).ToList();
+                for (int p = 0; p < passes.Count; ++p)
                 {
-                    // 0 = 180 deg turn
-                    // 1 = 0 deg turn (straight line)
-                    var p0 = pointsT[currentIdx - 1];
-                    var p1 = pointsT[currentIdx];
-                    var p2 = pointsT[currentIdx + 1];
-                    var t01 = GetTangent(p1.a, p1.b, p1.time);
-                    var t12 = GetTangent(p2.a, p2.b, p2.time);
-                    var factor = (Vector3.Dot(t01, t12) + 1) / 2;
+                    var i = passes[p].i;
+                    var p0 = pointsT[i - 1];
+                    var p1 = pointsT[i];
+                    var pN = p1;
 
-                    while (factor < Curvature && p1.a == p2.a)
+                    // if p0 and p1 are on different segments
+                    // choose a segment by where tHalf lies
+                    pN.time = Mathf.Lerp(p0.time, p1.time, 0.5f);
+                    if (p0.a != p1.a)
                     {
-                        var t = Mathf.Lerp(p1.time, p2.time, 0.5f);
-                        pointsT.Insert(currentIdx + 1, (p1.a, p1.b, t));
-                        idx += 1;
+                        var t = Mathf.Lerp(p0.time - 1, p1.time, 0.5f);
 
-                        p0 = pointsT[currentIdx - 1];
-                        p1 = pointsT[currentIdx];
-                        p2 = pointsT[currentIdx + 1];
-
-                        t01 = GetTangent(p1.a, p1.b, p1.time);
-                        t12 = GetTangent(p2.a, p2.b, p2.time);
-                        factor = (Vector3.Dot(t01, t12) + 1) / 2;
-
-                        if ((idx - currentIdx) > 100) break;
+                        if (t < 0)
+                        {
+                            pN.a = p0.a;
+                            pN.b = p0.b;
+                            pN.time = t + 1;
+                        }
+                        else
+                        {
+                            pN.a = p1.a;
+                            pN.b = p1.b;
+                            pN.time = t;
+                        }
                     }
 
-                    ++currentIdx;
-                }
+                    // let user set distance threshold to prevent curves becoming incredibly dense
+                    var dist = Mathf.Max(GetSegmentLength(p0, pN), GetSegmentLength(pN, p1));
+                    if (dist < CurvatureDistanceThreshold) continue;
 
-                ++idx;
+                    // insert
+                    pointsT.Insert(i + 0, pN);
+                    for (int p2 = p+1; p2 < passes.Count; ++p2)
+                    {
+                        if (passes[p2].i >= i)
+                        {
+                            var pass2 = passes[p2];
+                            pass2.i += 1;
+                            passes[p2] = pass2;
+                        }
+                    }
+
+                    // indicate we may still have curvature left
+                    hasCurvature = true;
+                }
             }
         }
 

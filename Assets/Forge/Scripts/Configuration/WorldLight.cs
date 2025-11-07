@@ -76,6 +76,8 @@ public class WorldLight : MonoBehaviour
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         if (mapConfig) mapConfig.UpdateShaderGlobals();
     }

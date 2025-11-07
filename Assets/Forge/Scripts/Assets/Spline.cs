@@ -24,6 +24,8 @@ public class Spline : MonoBehaviour
 
     protected virtual void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         RefreshVertices();
     }
 

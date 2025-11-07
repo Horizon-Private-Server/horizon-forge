@@ -119,7 +119,8 @@ public enum DLCustomModeIds
     Tag,
     Raids,
     OneInTheChamber,
-    ObstacleCourse
+    ObstacleCourse,
+    Collectathon
 }
 
 public enum DLTeamIds

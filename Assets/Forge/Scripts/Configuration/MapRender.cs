@@ -23,6 +23,8 @@ public class MapRender : MonoBehaviour
 
     public void UpdateCamera()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         // setup camera
         var camera = GetComponent<Camera>();
         camera.backgroundColor = BackgroundColor;

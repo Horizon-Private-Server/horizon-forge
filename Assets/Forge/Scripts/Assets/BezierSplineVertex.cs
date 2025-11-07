@@ -28,6 +28,8 @@ public class BezierSplineVertex : MonoBehaviour
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         Dispatcher.RunOnMainThread(() => SendRebuildUpstream());
     }
 

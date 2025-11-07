@@ -5649,7 +5649,25 @@
       {
         "Name": "Index",
         "DataType": "byte",
-        "Offset": 0
+        "Offset": 0,
+        "Hidden": true
+      },
+      {
+        "Name": "Difficulty",
+        "DataType": "Enum",
+        "DataSize": 1,
+        "Offset": 1,
+        "Options": {
+          "Easy": 0,
+          "Medium": 1,
+          "Hard": 2,
+          "Very Hard": 3
+        }
+      },
+      {
+        "Name": "Blip",
+        "DataType": "Bool",
+        "Offset": 2
       }
     ]
   },

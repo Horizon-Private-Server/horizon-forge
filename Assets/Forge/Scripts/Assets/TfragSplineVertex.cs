@@ -46,6 +46,8 @@ public class TfragSplineVertex : MonoBehaviour
 
     private void OnValidate()
     {
+        if (UnityHelper.IsObjectPrefabFile(this.gameObject)) return;
+
         ParentSpline = GetComponentInParent<TfragSpline>();
         if (ParentSpline)
             ParentSpline.OnChange();
