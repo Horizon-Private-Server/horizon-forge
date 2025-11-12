@@ -63,11 +63,15 @@ public class MapRenderEditor : Editor
         {
             render(mapRender, depth: true);
         }
+        if (GUILayout.Button("Render Color"))
+        {
+            render(mapRender, color: true);
+        }
 
         GUILayout.Label($"Minimap Coordinates:\npX: {mapRender.transform.position.x}\npY: {mapRender.transform.position.z}\nsX: {mapRender.transform.localScale.x}\nsY: {mapRender.transform.localScale.z}");
     }
 
-    private void render(MapRender mapRender, bool depth = false)
+    private void render(MapRender mapRender, bool depth = false, bool color = false)
     {
         var scene = SceneManager.GetActiveScene();
         if (scene == null) return;
@@ -89,10 +93,12 @@ public class MapRenderEditor : Editor
         try
         {
             UnityHelper.RunGeneratorsPreBake(BakeType.MAPRENDER);
+            Shader.DisableKeyword("_MAPRENDER");
+            Shader.DisableKeyword("_DEPTH");
 
             if (depth)
                 Shader.EnableKeyword("_DEPTH");
-            else
+            else if (!color)
                 Shader.EnableKeyword("_MAPRENDER");
 
             // pre layers
@@ -108,7 +114,6 @@ public class MapRenderEditor : Editor
             //mapRender.camera.SetTargetBuffers(rt.colorBuffer, rt.depthBuffer);
 
             camera.Render();
-
 
             SaveTexture(rt, outPath, mapRender.Tint);
         }

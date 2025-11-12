@@ -29,6 +29,8 @@
 
 MobyGetGuberObject_func baseGetGuberFunc = NULL;
 MobyEventHandler_func baseHandleGuberEventFunc = NULL;
+char baseInitialized = 0;
+char baseCleanedUp = 0;
 
 ##DECLARATIONS##
 
@@ -115,21 +117,42 @@ void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
 }
 
 //--------------------------------------------------------------------------
+void cleanup(void)
+{
+  if (baseCleanedUp)
+    return;
+
+##CLEANUPBODY##
+
+  baseCleanedUp = 1;
+}
+
+//--------------------------------------------------------------------------
+void baseOnLoadLevel(void)
+{
+  if (baseInitialized && !baseCleanedUp) {
+    cleanup();
+  }
+}
+
+//--------------------------------------------------------------------------
 void initialize(void)
 {
-  static int initialized = 0;
-  if (initialized)
+  if (baseInitialized)
     return;
+
+  HOOK_J(0x004E24C8, &baseOnLoadLevel);
 
 ##INITBODY##
 
-  initialized = 1;
+  baseInitialized = 1;
 }
 
 //--------------------------------------------------------------------------
 int main(void)
 {
   int i;
+  if (baseCleanedUp) return 0;
   if (!isInGame() && !isSceneLoadedNotYetInGame())
     return 0;
 

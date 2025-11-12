@@ -181,7 +181,7 @@ public class ISOImporterWindow : EditorWindow
 
             // then gather assets
             i = 0;
-            foreach (DLMapIds level in levelsToImport)
+            foreach (var level in levelsToImport)
             {
                 if (CancelProgressBar(ref cancel, $"Gathering {isoLabelStr} Level Assets ({assetImports.Count} total assets to import)", level.ToString(), i / (float)levelsToImport.Length))
                     return false;
@@ -192,7 +192,7 @@ public class ISOImporterWindow : EditorWindow
                 var soundPath = racVersion == RCVER.DL ? Path.Combine(levelFolder, "sound.bnk") : Path.Combine(levelFolder, $"level{(int)level}.1.wad");
                 var soundsFolder = Path.Combine(levelFolder, FolderNames.BinarySoundsFolder);
                 var missionsFolder = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
-                var needsMission = level < DLMapIds.MP_Battledome;
+                var needsMission = (int)level < 40;
 
                 var shouldUnpack = !Directory.Exists(assetsFolder) || !Directory.Exists(soundsFolder) || (needsMission && !Directory.Exists(missionsFolder)) || !reuseLastUnpackToggle;
                 if (shouldUnpack)

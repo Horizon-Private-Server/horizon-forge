@@ -256,7 +256,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
 
     public void MakeUidUnique()
     {
-        var mobys = FindObjectsOfType<Moby>();
+        var mobys = FindObjectsOfType<Moby>(true);
         if (this.Uid >= 0 && !mobys.Any(x => x.Uid == this.Uid && x != this)) return;
 
         int uid = 1;

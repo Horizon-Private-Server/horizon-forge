@@ -10,6 +10,7 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
     public List<string> Defines = new List<string>();
     public List<UnityEngine.Object> Files = new List<UnityEngine.Object>();
     public string InitFunctionName = "customModuleInit";
+    public string CleanupFunctionName = "customModuleCleanup";
     public string TickFunctionName = "customModuleTick";
     public bool WaitForClientsReady = false;
     public List<CodeGenMeta> Metas = new List<CodeGenMeta>();
@@ -54,6 +55,12 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
         {
             state.Declarations.Add($"void {InitFunctionName}(void);");
             state.InitBody.Add($"{InitFunctionName}();");
+        }
+
+        if (!string.IsNullOrEmpty(CleanupFunctionName))
+        {
+            state.Declarations.Add($"void {CleanupFunctionName}(void);");
+            state.CleanupBody.Add($"{CleanupFunctionName}();");
         }
 
         if (!string.IsNullOrEmpty(TickFunctionName))
