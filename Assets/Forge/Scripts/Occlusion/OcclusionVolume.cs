@@ -18,13 +18,17 @@ public class OcclusionVolume : MonoBehaviour
     [SerializeField, HideInInspector]
     public float LastStickyDistance;
 
+    [Tooltip("Remove the given octants from the final list of octants.")]
     public bool Negate;
     public bool ForceAdd;
+    [Tooltip("Only include octants near surfaces.")]
     public bool Sticky;
+    [Tooltip("Max distance from a surface an octant can be.")]
     public float StickyDistance = 12;
     [Tooltip("Max angle of the surface. A value of 180 will include all surfaces. A value of 90 will only include surfaces facing upwards.")]
     [Range(0f, 180f)]
     public float StickyNormalAngle = 180f;
+    [Tooltip("Collisions to consider a valid surface when calculating sticky octants.")]
     public CollisionIdMask StickyColMask = (CollisionIdMask)0xffff;
 
     public List<Vector3> GetCachedOctants()
@@ -323,4 +327,46 @@ public class OcclusionVolume : MonoBehaviour
 
         return octants;
     }
+
+
+    #region Menu Items
+
+    [MenuItem("GameObject/Forge/Misc/Occlusion Volume", priority = 10)]
+    public static void CreateOcclusionVolume()
+    {
+        var go = new GameObject("Occlusion Volume");
+        if (!go) return;
+
+        go.AddComponent<OcclusionVolume>();
+        go.transform.localScale = Vector3.one * 10;
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Misc/Occlusion Preset", priority = 10)]
+    public static void CreateOcclusionPrefab()
+    {
+        var prefab = UnityHelper.GetMiscPrefab("Occlusion");
+        if (!prefab) return;
+
+        var go = Instantiate(prefab);
+        if (!go) return;
+
+        go.name = "Occlusion";
+        OnAfterCreateGameObject(go);
+    }
+
+    private static void OnAfterCreateGameObject(GameObject go)
+    {
+        // place under selected object
+        // or try and spawn on top of scene camera
+        if (Selection.activeGameObject)
+            go.transform.SetParent(Selection.activeGameObject.transform, false);
+        else if (SceneView.lastActiveSceneView.camera)
+            go.transform.position = SceneView.lastActiveSceneView.camera.transform.position + (SceneView.lastActiveSceneView.camera.transform.forward * 5);
+
+        Selection.activeGameObject = go;
+    }
+
+    #endregion
+
 }

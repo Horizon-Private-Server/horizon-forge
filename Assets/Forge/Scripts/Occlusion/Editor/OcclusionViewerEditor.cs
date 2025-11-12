@@ -15,6 +15,14 @@ public class OcclusionViewerEditor : Editor
         var occlusionViewer = this.target as OcclusionViewer;
 
         GUILayout.Space(20);
+        EditorGUILayout.HelpBox("Place this GameObject and click Enable to preview what objects are visible from that location.\n\nNote that due to occlusion compression, in game will likely have more objects visible. It will never have less.", MessageType.Info);
+
+        GUILayout.Space(20);
         GUILayout.Label(occlusionViewer.VisibleCount.ToString());
+
+        if (GUILayout.Button(occlusionViewer.enabled ? "Disable" : "Enable"))
+        {
+            occlusionViewer.enabled = !occlusionViewer.enabled;
+        }
     }
 }

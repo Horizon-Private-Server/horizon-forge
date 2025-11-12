@@ -86,6 +86,7 @@ public class CodeManager : MonoBehaviour
             .Replace("##DECLARATIONS##", string.Join("\n", state.Declarations))
             .Replace("##FUNCTIONS##", string.Join("\n", state.Functions))
             .Replace("##INITBODY##", string.Join("\n", state.InitBody.Select(x => Indent(x, 1))))
+            .Replace("##CLEANUPBODY##", string.Join("\n", state.CleanupBody.Select(x => Indent(x, 1))))
             .Replace("##MAINBODYREADY##", string.Join("\n", state.MainBodyReady.Select(x => Indent(x, 2))))
             .Replace("##MAINBODY##", string.Join("\n", state.MainBody.Select(x => Indent(x, 1))))
             .Replace("##GETGUBERCASES##", string.Join("\n", state.GetGuberCase.Select(x => Indent(x, 2))))
@@ -186,6 +187,7 @@ public class CodeGenState
     public List<string> Declarations { get; set; } = new List<string>();
     public List<string> Functions { get; set; } = new List<string>();
     public List<string> InitBody { get; set; } = new List<string>();
+    public List<string> CleanupBody { get; set; } = new List<string>();
     public List<string> MainBodyReady { get; set; } = new List<string>();
     public List<string> MainBody { get; set; } = new List<string>();
     public List<string> HandleGuberEventCase { get; set; } = new List<string>();

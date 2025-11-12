@@ -19,8 +19,13 @@ public class OcclusionGraph : MonoBehaviour
         new Vector3(-1f, -1f, -1f) * 2,
     };
 
+    [HelpBox("Place nodes in areas that a player can enter.\n\nEach octant in an Occlusion Volume will check if they can see a node. If they can't, the octant is ignored.\n\nThis is particularly useful for removing octants from dead space inside or inbetween big structures.", MessageType.Info, false)]
+    [ReadOnly]
     [SerializeField]
-    public List<OcclusionNode> _nodes = new List<OcclusionNode>();
+    private bool _helpText;
+
+    [SerializeField, HideInInspector]
+    private List<OcclusionNode> _nodes = new List<OcclusionNode>();
 
     private void OnEnable()
     {
