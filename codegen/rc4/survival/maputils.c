@@ -240,12 +240,6 @@ void pushSnack(int localPlayerIdx, char* string, int ticksAlive)
 }
 
 //--------------------------------------------------------------------------
-void uiShowLowerPopup(int localPlayerIdx, int msgStringId)
-{
-	((void (*)(int, int, int))0x0054ea30)(localPlayerIdx, msgStringId, 0);
-}
-
-//--------------------------------------------------------------------------
 int isInDrawDist(Moby* moby)
 {
   int i;

@@ -71,4 +71,5 @@ else:
     bpy.ops.export_scene.fbx(filepath = out_filepath, axis_forward='Y', axis_up='Z', apply_scale_options='FBX_SCALE_ALL')
 
 # success
-exit(1)
+print("FORGE SCRIPT COMPLETE")
+sys.exit(1)

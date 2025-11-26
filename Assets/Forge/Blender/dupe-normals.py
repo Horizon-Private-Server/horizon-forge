@@ -48,4 +48,5 @@ for obj in bpy.context.selected_objects:
 bpy.ops.export_scene.fbx(filepath = argv[1], apply_scale_options='FBX_SCALE_NONE', bake_space_transform=False, object_types={'MESH'})
 
 # success
-exit(1)
+print("FORGE SCRIPT COMPLETE")
+sys.exit(1)

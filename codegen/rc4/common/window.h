@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_DRAW_H
-#define OBSTACLE_DRAW_H
+#ifndef COMMON_DRAW_H
+#define COMMON_DRAW_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -32,4 +32,4 @@ int windowHasArea(Window_t* window);
 void windowCreateFrom(Window_t* out, Window_t* window, float winOffsetX, float winOffsetY, float winWidth, float winHeight, enum TextAlign winAlignment);
 void windowCreate(Window_t* out, float anchorX, float anchorY, float offsetX, float offsetY, float width, float height, enum TextAlign anchorAlignment);
 
-#endif // OBSTACLE_DRAW_H
+#endif // COMMON_DRAW_H

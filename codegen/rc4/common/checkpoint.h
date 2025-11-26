@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_CHECKPOINT_H
-#define OBSTACLE_CHECKPOINT_H
+#ifndef COMMON_CHECKPOINT_H
+#define COMMON_CHECKPOINT_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -47,4 +47,4 @@ int checkpointHandleEvent(Moby* moby, GuberEvent* event);
 void checkpointStart(void);
 void checkpointInit(void);
 
-#endif // OBSTACLE_CHECKPOINT_H
+#endif // COMMON_CHECKPOINT_H

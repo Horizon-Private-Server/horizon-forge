@@ -164,8 +164,6 @@ void moverInitSpline(Moby* moby)
   int startIdx = 0;
   float startEdgeT = 0;
   if (pvars->SplineRandomizeStart) {
-    GameSettings* gs = gameGetSettings();
-    randSeed(gs->GameLoadStartTime);
     startIdx = rand(spline->Count);
     startEdgeT = pvars->SplineRandomizeStart == MOVER_RANDSPLINE_VERTEX ? 0 : randRange(0, 1);
 

@@ -36,6 +36,10 @@
 #include "controller.h"
 #include "checkpoint.h"
 
+#if OBSTACLE || RAIDS
+#include "config.h"
+#endif
+
 #if DEBUG
 #define DLOG_CHPT(moby, format, ...) if (((struct CheckpointPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
 #define DLOG_MNGR(moby, format, ...) if (((struct CheckpointManagerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
@@ -44,7 +48,11 @@
 #define DLOG_MNGR(moby, format, ...) 
 #endif
 
+void checkpointManagerUpdate(Moby* moby);
+
+
 Moby* checkpointManagerMoby = NULL;
+
 
 //--------------------------------------------------------------------------
 void checkpointOnStateChanged(Moby* moby)

@@ -283,4 +283,5 @@ if out_filepath:
                     )
 
 # success
-exit(1)
+print("FORGE SCRIPT COMPLETE")
+sys.exit(1)

@@ -99,7 +99,7 @@ void gateDrawQuad(Moby* moby, float direction)
 	float v0 = vOff*vScale;
 	float v1 = (1+vOff)*vScale;
 
-  u32 color = colorLerp(0, 0x40404040, pvars->Opacity);
+  u32 color = colorLerp(0, moby->PrimaryColor, pvars->Opacity);
 
 	// init
   gfxResetQuad(&quad);
@@ -211,7 +211,8 @@ void gateUpdate(Moby* moby)
   vector_scale(moby->M1_03, moby->M1_03, pvars->Length / pvars->Height);
 
   // force BSphere radius to something larger so that entire collision registers
-  moby->BSphere[3] = 10000 * pvars->Length;
+  moby->BSphere[3] = 1024 * pvars->Length * pvars->Length;
+  moby->LSphere[3] = 1024 * pvars->Length * pvars->Length;
 }
 
 //--------------------------------------------------------------------------

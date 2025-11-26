@@ -75,15 +75,16 @@ public static class AssetGizmosDrawer
             normals = mesh.normals
         };
 
-        var triangles = new int[mesh.triangles.Length * 2];
-        for (int i = 0; i < mesh.triangles.Length; i += 3)
+        var meshTriangles = mesh.triangles;
+        var triangles = new int[meshTriangles.Length * 2];
+        for (int i = 0; i < meshTriangles.Length; i += 3)
         {
-            triangles[i * 2 + 0] = mesh.triangles[i + 0];
-            triangles[i * 2 + 1] = mesh.triangles[i + 1];
-            triangles[i * 2 + 2] = mesh.triangles[i + 2];
-            triangles[i * 2 + 3] = mesh.triangles[i + 2];
-            triangles[i * 2 + 4] = mesh.triangles[i + 1];
-            triangles[i * 2 + 5] = mesh.triangles[i + 0];
+            triangles[i * 2 + 0] = meshTriangles[i + 0];
+            triangles[i * 2 + 1] = meshTriangles[i + 1];
+            triangles[i * 2 + 2] = meshTriangles[i + 2];
+            triangles[i * 2 + 3] = meshTriangles[i + 2];
+            triangles[i * 2 + 4] = meshTriangles[i + 1];
+            triangles[i * 2 + 5] = meshTriangles[i + 0];
         }
         newMesh.SetTriangles(triangles, 0);
 

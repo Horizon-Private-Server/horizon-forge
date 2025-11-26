@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_HACKERORB_H
-#define OBSTACLE_HACKERORB_H
+#ifndef COMMON_HACKERORB_H
+#define COMMON_HACKERORB_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -23,4 +23,4 @@ struct Guber* hackerorbGetGuber(Moby* moby);
 int hackerorbHandleEvent(Moby* moby, GuberEvent* event);
 void hackerorbInit(void);
 
-#endif // OBSTACLE_HACKERORB_H
+#endif // COMMON_HACKERORB_H

@@ -88,6 +88,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (Author != null && Author.Length > 32) Author = Author.Substring(0, 32);
         if (Description != null && Description.Length > 256) Description = Description.Substring(0, 256);
         while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
+
+        // at some point migrate the reuseable moby logic out of raids and into common
+        //var commonCodeGen = FindObjectOfType<CommonCodeGen>();
+        //if (!commonCodeGen)
+        //{
+        //    this.gameObject.AddComponent<CommonCodeGen>();
+        //}
     }
 
     public void Configure(string buildFolder, CodeGenState state)

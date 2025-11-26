@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_LASERBEAM_H
-#define OBSTACLE_LASERBEAM_H
+#ifndef COMMON_LASERBEAM_H
+#define COMMON_LASERBEAM_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -37,4 +37,4 @@ void laserbeamSet(Moby* moby, VECTOR position, VECTOR direction, float maxLength
 void laserbeamDestroy(Moby* moby);
 Moby* laserbeamCreate(Moby* parent);
 
-#endif // OBSTACLE_LASERBEAM_H
+#endif // COMMON_LASERBEAM_H
