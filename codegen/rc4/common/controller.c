@@ -37,6 +37,10 @@
 #include "mover.h"
 #include "controller.h"
 
+#if OBSTACLE || RAIDS
+#include "config.h"
+#endif
+
 #if DEBUG
 #define DLOG(moby, format, ...) if (((struct ControllerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
 #else
@@ -907,7 +911,7 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
   if (!MapConfig.State) return 0;
   if (!missionIsActive()) return 0;
   
-  MapConfig.State->MissionStatus = OBSTACLE_MISSION_COMPLETED;
+  MapConfig.State->MissionStatus = RAIDS_MISSION_COMPLETED;
   MapConfig.State->MissionCompleteTime = controllerAmIOwner(moby) ? gameGetTime() : pvars->State.RemoteIterationTime;
   if (MapConfig.OnMissionCompleteFunc) MapConfig.OnMissionCompleteFunc(target->Cuboid.DestIdx);
   DLOG(moby, "mission end\n");
@@ -1010,7 +1014,7 @@ int controllerControlUpdateChallenge(Moby* moby, struct ControllerTarget* target
 
   // tell user
   if (setTo && PATCH_INTEROP && PATCH_INTEROP->ReadCustomMapExtraData) {
-    char exDataBuf[OBSTACLE_MAX_EXDATA_SIZE];
+    char exDataBuf[RAIDS_MAX_EXDATA_SIZE];
     struct RaidsCustomMapExtraData* exData = (struct RaidsCustomMapExtraData*)exDataBuf;
     PATCH_INTEROP->ReadCustomMapExtraData(MapConfig.State->CurrentMapDef->Filename, exDataBuf, sizeof(exDataBuf), CUSTOM_MODE_RAIDS);
       

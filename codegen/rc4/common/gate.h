@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_GATE_H
-#define OBSTACLE_GATE_H
+#ifndef COMMON_GATE_H
+#define COMMON_GATE_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -39,4 +39,4 @@ int gateHandleEvent(Moby* moby, GuberEvent* event);
 void gateStart(void);
 void gateInit(void);
 
-#endif // OBSTACLE_GATE_H
+#endif // COMMON_GATE_H

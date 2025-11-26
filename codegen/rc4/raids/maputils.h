@@ -43,7 +43,6 @@ int getLevelFromXp(u64 xp);
 u64 getXpForLevel(int level);
 
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive);
-void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
 
 int isInDrawDist(Moby* moby);
 

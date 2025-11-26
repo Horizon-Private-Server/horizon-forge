@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_CONTROLLER_H
-#define OBSTACLE_CONTROLLER_H
+#ifndef COMMON_CONTROLLER_H
+#define COMMON_CONTROLLER_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -331,4 +331,4 @@ int controllerHandleEvent(Moby* moby, GuberEvent* event);
 void controllerStart(void);
 void controllerInit(void);
 
-#endif // OBSTACLE_CONTROLLER_H
+#endif // COMMON_CONTROLLER_H

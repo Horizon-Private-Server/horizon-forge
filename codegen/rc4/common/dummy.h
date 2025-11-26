@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_DUMMY_H
-#define OBSTACLE_DUMMY_H
+#ifndef COMMON_DUMMY_H
+#define COMMON_DUMMY_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -94,4 +94,4 @@ int dummyHandleEvent(Moby* moby, GuberEvent* event);
 void dummyStart(void);
 void dummyInit(void);
 
-#endif // OBSTACLE_DUMMY_H
+#endif // COMMON_DUMMY_H

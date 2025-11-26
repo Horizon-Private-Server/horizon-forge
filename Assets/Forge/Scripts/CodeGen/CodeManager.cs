@@ -70,7 +70,7 @@ public class CodeManager : MonoBehaviour
         if (!Directory.Exists(outSrcDir)) Directory.CreateDirectory(outSrcDir);
 
         // pass to generators
-        var generators = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<ICodeGen>()).Where(x => x != null).OrderBy(x => x.CodeGenOrder).ToArray();
+        var generators = GameObject.FindObjectsOfType<GameObject>().SelectMany(x => x.GetComponents<ICodeGen>()).Where(x => x != null).OrderBy(x => x.CodeGenOrder).ToArray();
         foreach (var generator in generators)
         {
             if (!generator.IsEnabled) continue;

@@ -205,4 +205,5 @@ else:
     raise RuntimeError(f'Unsupported export extension {out_ext}')
 
 # success
-exit(1)
+print("FORGE SCRIPT COMPLETE")
+sys.exit(1)

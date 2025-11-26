@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_PVARPOKE_H
-#define OBSTACLE_PVARPOKE_H
+#ifndef COMMON_PVARPOKE_H
+#define COMMON_PVARPOKE_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -41,4 +41,4 @@ struct PVarPokePVar
 void pvarpokeStart(void);
 void pvarpokeInit(void);
 
-#endif // OBSTACLE_PVARPOKE_H
+#endif // COMMON_PVARPOKE_H

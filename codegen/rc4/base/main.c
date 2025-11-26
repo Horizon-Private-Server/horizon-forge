@@ -140,7 +140,9 @@ void initialize(void)
 {
   if (baseInitialized)
     return;
-
+  GameSettings* gs = gameGetSettings();
+  randSeed(gs->GameLoadStartTime);
+  
   HOOK_J(0x004E24C8, &baseOnLoadLevel);
 
 ##INITBODY##

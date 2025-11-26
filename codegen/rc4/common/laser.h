@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_LASER_H
-#define OBSTACLE_LASER_H
+#ifndef COMMON_LASER_H
+#define COMMON_LASER_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -41,4 +41,4 @@ struct LaserPVar
 void laserStart(void);
 void laserInit(void);
 
-#endif // OBSTACLE_LASER_H
+#endif // COMMON_LASER_H

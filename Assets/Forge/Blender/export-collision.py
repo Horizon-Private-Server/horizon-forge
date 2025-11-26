@@ -361,4 +361,5 @@ if export_filepath:
 #bpy.data.objects.remove(root)
 
 # success
-exit(1)
+print("FORGE SCRIPT COMPLETE")
+sys.exit(1)

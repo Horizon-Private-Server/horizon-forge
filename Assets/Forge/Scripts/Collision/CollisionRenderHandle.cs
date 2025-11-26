@@ -417,12 +417,18 @@ public class CollisionRenderHandle
         var newMesh = new Mesh()
         {
             vertices = mesh.vertices,
-            triangles = mesh.triangles,
             normals = mesh.normals,
             tangents = mesh.tangents,
+            indexFormat = mesh.indexFormat,
             bounds = mesh.bounds,
             uv = mesh.uv
         };
+
+        for (int i = 0; i < mesh.subMeshCount; ++i)
+        {
+            newMesh.subMeshCount = mesh.subMeshCount;
+            newMesh.SetTriangles(mesh.GetTriangles(i), i);
+        }
 
         switch (Normals)
         {

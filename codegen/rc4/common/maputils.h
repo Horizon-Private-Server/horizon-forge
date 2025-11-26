@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_MAP_UTILS_H
-#define OBSTACLE_MAP_UTILS_H
+#ifndef COMMON_MAP_UTILS_H
+#define COMMON_MAP_UTILS_H
 
 #define TPS (60)
 
@@ -9,13 +9,10 @@
 #include <libdl/time.h>
 #include <libdl/player.h>
 #include <libdl/sound.h>
-#include "config.h"
-
-extern struct ObstacleMapConfig MapConfig;
 
 typedef int (*CanSelectIndex_func)(void* userdata, int index);
 
-
+void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);
 Moby * spawnExplosion(VECTOR position, float size, u32 color);
 Moby * spawnExplosionDamage(VECTOR position, float size, u32 color, Moby* damager, float damage, u32 damageFlags);
 void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, float damageRadius);
@@ -32,7 +29,6 @@ u16 decTimerU16(u16* timeValue);
 u32 decTimerU32(u32* timeValue);
 
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive);
-void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
 
 int isInDrawDist(Moby* moby);
 
@@ -57,4 +53,4 @@ int countBits(u32 value);
 
 int allClientsReady(void);
 
-#endif // OBSTACLE_MAP_UTILS_H
+#endif // COMMON_MAP_UTILS_H

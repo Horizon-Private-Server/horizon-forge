@@ -31,7 +31,6 @@ u16 decTimerU16(u16* timeValue);
 u32 decTimerU32(u32* timeValue);
 
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive);
-void uiShowLowerPopup(int localPlayerIdx, int msgStringId);
 
 int isInDrawDist(Moby* moby);
 

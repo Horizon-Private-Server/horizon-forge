@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_BLIP_H
-#define OBSTACLE_BLIP_H
+#ifndef COMMON_BLIP_H
+#define COMMON_BLIP_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -20,4 +20,4 @@ struct BlipPVar
 
 void blipInit(void);
 
-#endif // OBSTACLE_BLIP_H
+#endif // COMMON_BLIP_H

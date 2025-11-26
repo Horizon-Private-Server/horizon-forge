@@ -50,16 +50,22 @@ public static class BlenderHelper
             UseShellExecute = false,
         };
 
+        var success = false;
         var p = new System.Diagnostics.Process() { StartInfo = startInfo };
-        p.OutputDataReceived += (s, e) => { sbOut.AppendLine(e.Data); };
-        p.ErrorDataReceived += (s, e) => { sbError.AppendLine(e.Data); };
+        p.OutputDataReceived += (s, e) => { sbOut.Append(e.Data); if (e.Data?.Trim() == "FORGE SCRIPT COMPLETE") success = true; };
+        p.ErrorDataReceived += (s, e) => { sbError.Append(e.Data); };
         p.Start();
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
         p.WaitForExit();
 
-        if (p.ExitCode != 1) Debug.LogError($"{p.ExitCode}: out:{sbOut} error:{sbError}");
-        return p.ExitCode == 1;
+        if (!success)
+        {
+            Debug.LogError($"{p.ExitCode}: out:{sbOut} error:{sbError}");
+            return false;
+        }
+
+        return true;
     }
 
     public static bool PackCollision(string inBlendFile, string outDaeFile, params string[] additionalMeshes)

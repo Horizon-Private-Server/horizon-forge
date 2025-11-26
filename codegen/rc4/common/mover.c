@@ -68,7 +68,7 @@ int moverWrapSplineIdx(Moby* moby, int idx, int dir)
 }
 
 //--------------------------------------------------------------------------
-float moverGetTurnEase(VECTOR outRot, Moby* moby, int currIdx, int dir, float dist, float seglen)
+void moverGetTurnEase(VECTOR outRot, Moby* moby, int currIdx, int dir, float dist, float seglen)
 {
   VECTOR dtCurr, dtLast, dtNext, r0, r1, up = {0,0,1,0};
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
@@ -161,9 +161,8 @@ void moverInitSpline(Moby* moby)
   int startIdx = 0;
   float startEdgeT = 0;
   if (pvars->SplineRandomizeStart) {
-    GameSettings* gs = gameGetSettings();
-    randSeed(gs->GameLoadStartTime);
-    startIdx = rand(spline->Count);
+    randSeed(pvars->State.TimeStarted * moby->UID);
+    startIdx = rand(spline->Count-1);
     startEdgeT = pvars->SplineRandomizeStart == MOVER_RANDSPLINE_VERTEX ? 0 : randRange(0, 1);
 
     // not using spline movement, just snap to point on spline
@@ -180,17 +179,14 @@ void moverInitSpline(Moby* moby)
   // calculate length of spline
   VECTOR dt;
   for (i = 0; i < (spline->Count-1); ++i) {
+    vector_subtract(dt, spline->Points[i], spline->Points[i+1]);
+    float segLen = vector_length(dt);
+
     if (i == startIdx && pvars->SplineRandomizeStart && pvars->SplineSpeed != 0) {
-      pvars->State.TimeOffset = pvars->State.CurrentSplineLen / pvars->SplineSpeed;
+      pvars->State.TimeOffset = (pvars->State.CurrentSplineLen + (segLen * startEdgeT)) / pvars->SplineSpeed;
     }
 
-    vector_subtract(dt, spline->Points[i], spline->Points[i+1]);
-    pvars->State.CurrentSplineLen += vector_length(dt);
-  }
-
-  // handle case where start idx is last node
-  if (startIdx == (spline->Count-1) && pvars->SplineRandomizeStart && pvars->SplineSpeed != 0) {
-    pvars->State.TimeOffset = pvars->State.CurrentSplineLen / pvars->SplineSpeed;
+    pvars->State.CurrentSplineLen += segLen;
   }
 
   DLOG(moby, "start idx:%d edgeT:%f (t:%f len:%f)\n", startIdx, startEdgeT, pvars->State.TimeOffset, pvars->State.CurrentSplineLen);
@@ -404,31 +400,18 @@ void moverMove(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
 }
 
 //--------------------------------------------------------------------------
-void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
+void moverApplyMobyTransformationToAttachedPlayers(Moby* moby, MATRIX mWorldBeforeTransformation)
 {
-  int i;
-  Player** players = playerGetAll();
-  VECTOR position, rotation;
-  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
-  if (!target) return;
-
-  vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
-  vector_add(rotation, rotation, rotDelta);
-  vector_clampeuler(rotation, rotation);
-
-  // remove last applied position delta, and apply our newly calculated one
-  // this lets the target moby move independently (ie we aren't forcing its position)
-  vector_subtract(position, target->Position, pvars->State.LastAppliedPositionDelta);
-  vector_add(position, position, posDelta);
-
   // since MP doesn't have proper support for ground moby tracking
   // ie Ratchet won't stick to a moving platform like in Singleplayer
   // we can hack a similar effect by finding any player standing on the target
   // and applying the same delta to them
+  int i;
+  Player** players = playerGetAll();
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* p = players[i];
-    if (!p || !p->SkinMoby || !p->PlayerMoby || p->Ground.pMoby != target) continue;
-    if (p->Ground.dist > 0.1) continue;
+    if (!p || !p->SkinMoby || !p->PlayerMoby || p->Ground.pMoby != moby) continue;
+    if (!p->Ground.onGood) continue;
 
     // transform player position to target local space
     // apply new transformation
@@ -436,17 +419,17 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
     MATRIX w2l, l2w;
     VECTOR pos, dt;
     matrix_unit(w2l);
-    memcpy(w2l, target->M0_03, 3 * sizeof(VECTOR));
+    memcpy(w2l, mWorldBeforeTransformation, 3 * sizeof(VECTOR));
     matrix_transpose(w2l, w2l);
-    vector_subtract(pos, p->PlayerPosition, target->Position);
+    vector_subtract(pos, p->PlayerPosition, &mWorldBeforeTransformation[12]);
     vector_apply(pos, pos, w2l);
     
     matrix_unit(l2w);
-    matrix_rotate_x(l2w, l2w, rotation[0]);
-    matrix_rotate_y(l2w, l2w, rotation[1]);
-    matrix_rotate_z(l2w, l2w, rotation[2]);
+    matrix_rotate_x(l2w, l2w, moby->Rotation[0]);
+    matrix_rotate_y(l2w, l2w, moby->Rotation[1]);
+    matrix_rotate_z(l2w, l2w, moby->Rotation[2]);
     vector_apply(pos, pos, l2w);
-    vector_add(pos, pos, position);
+    vector_add(pos, pos, moby->Position);
 
     int j;
     vector_subtract(dt, pos, p->PlayerPosition);
@@ -465,12 +448,107 @@ void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
 
     p->Ground.stickLanding = 5;
   }
+}
 
+//--------------------------------------------------------------------------
+void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
+{
+  int i;
+  Player** players = playerGetAll();
+  VECTOR position, rotation;
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  if (!target) return;
+
+  // backup w2l matrix
+  MATRIX mWorld;
+  memcpy(mWorld, target->M0_03, sizeof(VECTOR) * 3);
+  vector_copy(&mWorld[12], target->Position);
+
+  // build new rotation
+  vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
+  vector_add(rotation, rotation, rotDelta);
+  vector_clampeuler(rotation, rotation);
+
+  // remove last applied position delta, and apply our newly calculated one
+  // this lets the target moby move independently (ie we aren't forcing its position)
+  vector_subtract(position, target->Position, pvars->State.LastAppliedPositionDelta);
+  vector_add(position, position, posDelta);
+
+  // apply
   vector_copy(target->Position, position);
   vector_copy(target->Rotation, rotation);
   if ((target->ModeBits & MOBY_MODE_BIT_NO_POST_UPDATE) == 0) {
     mobyUpdateTransform(target);
   }
+  
+  moverApplyMobyTransformationToAttachedPlayers(target, mWorld);
+  return;
+  
+  // int i;
+  // Player** players = playerGetAll();
+  // VECTOR position, rotation;
+  // struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  // if (!target) return;
+
+  // vector_subtract(rotation, target->Rotation, pvars->State.LastAppliedRotationDelta);
+  // vector_add(rotation, rotation, rotDelta);
+  // vector_clampeuler(rotation, rotation);
+
+  // // remove last applied position delta, and apply our newly calculated one
+  // // this lets the target moby move independently (ie we aren't forcing its position)
+  // vector_subtract(position, target->Position, pvars->State.LastAppliedPositionDelta);
+  // vector_add(position, position, posDelta);
+
+  // // since MP doesn't have proper support for ground moby tracking
+  // // ie Ratchet won't stick to a moving platform like in Singleplayer
+  // // we can hack a similar effect by finding any player standing on the target
+  // // and applying the same delta to them
+  // for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+  //   Player* p = players[i];
+  //   if (!p || !p->SkinMoby || !p->PlayerMoby || p->Ground.pMoby != target) continue;
+  //   if (p->Ground.dist > 0.1) continue;
+
+  //   // transform player position to target local space
+  //   // apply new transformation
+  //   // transform back to world space
+  //   MATRIX w2l, l2w;
+  //   VECTOR pos, dt;
+  //   matrix_unit(w2l);
+  //   memcpy(w2l, target->M0_03, 3 * sizeof(VECTOR));
+  //   matrix_transpose(w2l, w2l);
+  //   vector_subtract(pos, p->PlayerPosition, target->Position);
+  //   vector_apply(pos, pos, w2l);
+    
+  //   matrix_unit(l2w);
+  //   matrix_rotate_x(l2w, l2w, rotation[0]);
+  //   matrix_rotate_y(l2w, l2w, rotation[1]);
+  //   matrix_rotate_z(l2w, l2w, rotation[2]);
+  //   vector_apply(pos, pos, l2w);
+  //   vector_add(pos, pos, position);
+
+  //   int j;
+  //   vector_subtract(dt, pos, p->PlayerPosition);
+  //   for (j = 0; j < 6; ++j) {
+  //     if (p->Gadgets[j].pMoby) {
+  //       vector_add(p->Gadgets[j].pMoby->Position, p->Gadgets[j].pMoby->Position, dt);
+  //     }
+  //     if (p->Gadgets[j].pMoby2) {
+  //       vector_add(p->Gadgets[j].pMoby2->Position, p->Gadgets[j].pMoby2->Position, dt);
+  //     }
+  //   }
+    
+  //   vector_copy(p->PlayerPosition, pos);
+  //   vector_copy(p->PlayerMoby->Position, pos);
+  //   vector_copy(p->Ground.point, pos);
+
+  //   p->Ground.stickLanding = 5;
+  // }
+
+  // vector_copy(target->Position, position);
+  // vector_copy(target->Rotation, rotation);
+  // if ((target->ModeBits & MOBY_MODE_BIT_NO_POST_UPDATE) == 0) {
+  //   mobyUpdateTransform(target);
+  // }
 }
 
 //--------------------------------------------------------------------------

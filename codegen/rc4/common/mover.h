@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_MOVER_H
-#define OBSTACLE_MOVER_H
+#ifndef COMMON_MOVER_H
+#define COMMON_MOVER_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -107,4 +107,4 @@ int moverHandleEvent(Moby* moby, GuberEvent* event);
 void moverStart(void);
 void moverInit(void);
 
-#endif // OBSTACLE_MOVER_H
+#endif // COMMON_MOVER_H

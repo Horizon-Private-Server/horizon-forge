@@ -18,4 +18,6 @@ struct ObstacleMapConfig
   SetLocalPlayerReachedCheckpoint_t SetLocalPlayerReachedCheckpoint;
 };
 
+extern struct ObstacleMapConfig MapConfig;
+
 #endif // OBSTACLE_CONFIG_H

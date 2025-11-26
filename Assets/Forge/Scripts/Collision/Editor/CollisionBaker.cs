@@ -378,7 +378,13 @@ public static class CollisionBaker
                 return null;
             }
 
-            var colors = meshFilter.sharedMesh.colors;
+            var mesh = meshFilter.sharedMesh;
+            if (mesh == null)
+            {
+                continue;
+            }
+
+            var colors = mesh.colors;
             var reflectionMatrix = Matrix4x4.identity;
             var tie = meshRenderer.GetComponentInParent<Tie>();
             var shrub = meshRenderer.GetComponentInParent<Shrub>();
@@ -386,30 +392,32 @@ public static class CollisionBaker
             {
                 reflectionMatrix = tie.Reflection;
                 var color = tie.GetBaseVertexColor().HalveRGB(); // dzo expect vertex color RGB to be same as game, but alpha to be corrected without bloom
-                colors = Enumerable.Repeat(color, meshFilter.sharedMesh.vertexCount).ToArray();
+                colors = Enumerable.Repeat(color, mesh.vertexCount).ToArray();
             }
             else if (shrub)
             {
                 reflectionMatrix = shrub.Reflection;
                 var color = shrub.Tint.HalveRGB(); // dzo expect vertex color RGB to be same as game, but alpha to be corrected without bloom
-                colors = Enumerable.Repeat(color, meshFilter.sharedMesh.vertexCount).ToArray();
+                colors = Enumerable.Repeat(color, mesh.vertexCount).ToArray();
             }
 
             // create a clone of the mesh and bake any vertex colors
+            var submeshCount = mesh.subMeshCount;
             var meshCopy = new Mesh()
             {
-                vertices = meshFilter.sharedMesh.vertices,
-                normals = meshFilter.sharedMesh.normals,
-                uv = meshFilter.sharedMesh.uv,
-                tangents = meshFilter.sharedMesh.tangents,
-                subMeshCount = meshFilter.sharedMesh.subMeshCount,
-                indexFormat = meshFilter.sharedMesh.indexFormat,
-                bounds = meshFilter.sharedMesh.bounds,
+                vertices = mesh.vertices,
+                normals = mesh.normals,
+                uv = mesh.uv,
+                tangents = mesh.tangents,
+                subMeshCount = submeshCount,
+                indexFormat = mesh.indexFormat,
+                bounds = mesh.bounds,
             };
 
-            for (int i = 0; i < meshCopy.subMeshCount; ++i)
+            for (int i = 0; i < submeshCount; ++i)
             {
-                var triangles = meshFilter.sharedMesh.GetTriangles(i);
+                var triangles = mesh.GetTriangles(i);
+                meshCopy.subMeshCount = submeshCount;
                 meshCopy.SetTriangles(triangles, i);
             }
 

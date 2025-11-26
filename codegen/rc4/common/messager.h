@@ -1,5 +1,5 @@
-#ifndef OBSTACLE_MESSAGER_H
-#define OBSTACLE_MESSAGER_H
+#ifndef COMMON_MESSAGER_H
+#define COMMON_MESSAGER_H
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -60,4 +60,4 @@ struct MessagerPVar
 void messagerFrameUpdate(void);
 void messagerInit(void);
 
-#endif // OBSTACLE_MESSAGER_H
+#endif // COMMON_MESSAGER_H
