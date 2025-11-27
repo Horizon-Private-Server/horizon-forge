@@ -155,6 +155,8 @@ public class LevelImporterWindow : EditorWindow
         }
     }
 
+    string GetImportMapPathName() => mapName.Trim().Replace(" ", "_");
+
     #endregion
 
     #region Create GUI
@@ -537,12 +539,12 @@ public class LevelImporterWindow : EditorWindow
 
     bool ValidateImportDestination()
     {
-        var destSceneFile = FolderNames.GetScenePath(mapName);
+        var destSceneFile = FolderNames.GetScenePath(GetImportMapPathName());
 
         // check if scene already exists
         if (File.Exists(destSceneFile))
         {
-            if (!EditorUtility.DisplayDialog(this.titleContent.text, $"Scene already exists for {mapName}.\nWould you like to overwrite it?", "Yes", "Cancel"))
+            if (!EditorUtility.DisplayDialog(this.titleContent.text, $"Scene already exists for {GetImportMapPathName()}.\nWould you like to overwrite it?", "Yes", "Cancel"))
             {
                 return false;
             }
@@ -738,12 +740,13 @@ public class LevelImporterWindow : EditorWindow
         var forgeSettings = ForgeSettings.Load();
 
         // get dest paths
-        var destSceneFile = FolderNames.GetScenePath(mapName);
-        var destMapFolder = FolderNames.GetMapFolder(mapName);
+        var destMapName = GetImportMapPathName();
+        var destSceneFile = FolderNames.GetScenePath(destMapName);
+        var destMapFolder = FolderNames.GetMapFolder(destMapName);
         var destMapHUDFolder = Path.Combine(destMapFolder, FolderNames.HUDFolder);
-        var destMapBinFolder = FolderNames.GetMapBinFolder(mapName, ImportSourceRacVersion());
+        var destMapBinFolder = FolderNames.GetMapBinFolder(destMapName, ImportSourceRacVersion());
         var tempPalBinFolder = Path.Combine(FolderNames.GetTempFolder(), "level-import-pal");
-        var destMapWadFile = Path.Combine(destMapBinFolder, $"{mapName}.wad");
+        var destMapWadFile = Path.Combine(destMapBinFolder, $"{destMapName}.wad");
         var chunkId = importChunkId;
         var assetImports = new List<PackerImporterWindow.PackerAssetImport>();
         var postActions = new List<Action>();
@@ -1130,7 +1133,7 @@ public class LevelImporterWindow : EditorWindow
 
         // create scene
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        scene.name = mapName;
+        scene.name = GetImportMapPathName();
         EditorSceneManager.SaveScene(scene, destSceneFile);
 
         // open scene
@@ -1141,7 +1144,8 @@ public class LevelImporterWindow : EditorWindow
         var map = mapGameObject.AddComponent<MapConfig>();
         map.InitializeVersion();
         map.MapVersion = 0;
-        map.MapName = map.MapFilename = mapName;
+        map.MapName = mapName;
+        map.MapFilename = GetImportMapPathName();
 
         if (ImportSourceIsDL())
             map.DLBaseMap = Enum.Parse<DLMapIds>(DLBaseMaps[importBaseLevelIdx]);
