@@ -58,7 +58,7 @@ public class LevelImporterWindow : EditorWindow
 
     static readonly string WindowTitle = "Level Importer";
     static readonly List<int> ImportSourceGameVersions = new List<int>() { 4, 4, 3, 3, 2 };
-    static readonly List<string> ImportSources = new List<string>() { "DL ISO", "DL WAD", "UYA ISO",  "UYA WAD", "GC ISO" };
+    static readonly List<string> ImportSources = new List<string>() { "DL ISO", "DL WAD", "UYA ISO", "UYA WAD", "GC ISO" };
     static readonly List<string> DLBaseMaps = ((DLMapIds[])Enum.GetValues(typeof(DLMapIds))).Where(x => (int)x > 40).Select(x => Enum.GetName(typeof(DLMapIds), x)).ToList();
     static readonly List<string> DLMaps = ((DLMapIds[])Enum.GetValues(typeof(DLMapIds))).Select(x => Enum.GetName(typeof(DLMapIds), x)).ToList();
     static readonly List<string> UYABaseMaps = ((UYAMapIds[])Enum.GetValues(typeof(UYAMapIds))).Where(x => (int)x >= 40).Select(x => Enum.GetName(typeof(UYAMapIds), x)).ToList();
@@ -504,7 +504,7 @@ public class LevelImporterWindow : EditorWindow
             {
                 EditorUtility.DisplayDialog(WindowTitle, $"Configured clean deadlocked iso path does not point to a valid iso file.\n\nPlease configure the correct iso path in {ForgeSettings.FORGE_SETTINGS_PATH}.", "Ok");
                 return false;
-            }    
+            }
         }
         else if (importSource == (int)ImportSource.UYA_ISO)
         {
@@ -909,7 +909,7 @@ public class LevelImporterWindow : EditorWindow
             var assets = GameObject.FindObjectsOfType<MonoBehaviour>().Where(x => x is IAsset).Select(x => x as IAsset);
             foreach (var asset in assets)
                 asset.UpdateAsset();
-                
+
             // save new scene
             EditorSceneManager.SaveOpenScenes();
         }
@@ -1244,7 +1244,7 @@ public class LevelImporterWindow : EditorWindow
         var unpackWorldInstances = unpackAll || importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
         var unpackCollision = unpackAll || importCollision > 0;
 
-        if (racVersion == RCVER.UYA)
+        if (racVersion != RCVER.DL)
             unpackGameplay |= unpackWorldInstances;
 
         // decompress and unpack level wad
