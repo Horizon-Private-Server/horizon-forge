@@ -481,7 +481,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/Raids/Create Raids Data", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Create Raids Data", priority = 10)]
     public static void CreateRaidsData()
     {
         var go = new GameObject("Raids");
@@ -490,7 +490,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Mob Spawner Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Mob Spawner Moby", priority = 10)]
     public static void CreateSpawnerMoby()
     {
         var go = new GameObject("Raids Mob Spawner");
@@ -503,7 +503,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Mover Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Mover Moby", priority = 10)]
     public static void CreateMoverMoby()
     {
         var go = new GameObject("Mover");
@@ -516,7 +516,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Controller Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Controller Moby", priority = 10)]
     public static void CreateControllerMoby()
     {
         var go = new GameObject("Controller");
@@ -529,7 +529,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Counter Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Counter Moby", priority = 10)]
     public static void CreateCounterMoby()
     {
         var go = new GameObject("Counter");
@@ -541,7 +541,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/PVar Poke Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/PVar Poke Moby", priority = 10)]
     public static void CreatePVarPokeMoby()
     {
         var go = new GameObject("PVar Poke");
@@ -554,7 +554,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Gate Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Gate Moby", priority = 10)]
     public static void CreateGateMoby()
     {
         var mobyBin = Convert.FromBase64String("sAAAAAEAAAEAAAAAAQD/AMAAAAAAAQAAAAEAAAABAABgAgAAq6qqPAAAAAAABQAAnFNJvZxTybycU8m8PMQHR3h4eIAAAAAQYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgqh7vgAAAACcU8m8N8QHRwH/AAAAAAAAJAAAADAAAAACABQAAAAAAAAAAAAAAAAAAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAQAACAAEAJABAAANAwIIAAAAAAAAAAAQAAAAIAAAAAAAAKAAYAAAAAAAYABgAAAAAABgAKAAAAAAAKAAoAAAAAIBbwIAA28BAwBvAwECbwAAAAAAAAAAAAAAAAAAAADCgAh1AAAAEAAQABAAEAAAAAAAAAAAABAAEAAQABAAAAAAAAAtgQRu/gQBAACCBAOFhggHAQEBAAAAAAAxgQRskv8AAAQAAAAEAKBBAAAAAAAAAAAAAAAACAAAAAAAAAD/////AAAAAAYAAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAEAAAAAAAgAAAAIACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAAAAAAAAAAGAAYAAAAPQAAAAAAAAAAACgAGAAAAD0AAAAAAAAAAAAoACgAAAA9AAAAAAAAAAAAGAAoAAAAPQAAAAAgAAAAACgAGAAAAD0AAAAAIAAAAAAYABgAAAA9AAAAACAAAAAAGAAoP8AAPQAAAAAgAAAAACgAKD/AAAAAAAAAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAP8AAAD/AP8A/wD/AAAAAAD///////////////9AAQCA");
@@ -583,7 +583,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Messager Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Messager Moby", priority = 10)]
     public static void CreateMessagerMoby()
     {
         var go = new GameObject("Messager");
@@ -596,7 +596,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/NPC Controller Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/NPC Controller Moby", priority = 10)]
     public static void CreateNpcControllerMoby()
     {
         var go = new GameObject("NPC Controller");
@@ -609,7 +609,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Checkpoint Manager Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Checkpoint Manager Moby", priority = 10)]
     public static void CreateCheckpointManagerMoby()
     {
         var go = new GameObject("Checkpoint Manager");
@@ -622,7 +622,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Checkpoint Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Checkpoint Moby", priority = 10)]
     public static void CreateCheckpointMoby()
     {
         var go = new GameObject("Checkpoint");
@@ -636,7 +636,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Laser (Tripwire) Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Laser (Tripwire) Moby", priority = 10)]
     public static void CreateLaserMoby()
     {
         var go = new GameObject("Laser (Tripwire)");
@@ -650,7 +650,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Radar Blip Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Radar Blip Moby", priority = 10)]
     public static void CreateRadarBlipMoby()
     {
         var go = new GameObject("Radar Blip Moby");
@@ -664,7 +664,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Health Proxy Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Health Proxy Moby", priority = 10)]
     public static void CreateHealthProxyMoby()
     {
         var go = new GameObject("Health Proxy Moby");
@@ -678,7 +678,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Gold Bolt Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Gold Bolt Moby", priority = 10)]
     public static void CreateGoldBoltMoby()
     {
         var go = new GameObject("Gold Bolt Moby");
@@ -694,7 +694,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/Soul Collector Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Soul Collector Moby", priority = 10)]
     public static void CreateSoulCollectorMoby()
     {
         var go = new GameObject("Soul Collector Moby");
@@ -708,7 +708,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Raids/PathGraph", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/PathGraph", priority = 10)]
     public static void CreatePathGraph()
     {
         var prefab = UnityHelper.GetRaidsPrefab("PathGraph");

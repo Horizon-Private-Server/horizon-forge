@@ -20,7 +20,7 @@ public class SNDModeData : CustomModeData
     public Transform BombSite1;
     public Transform BombSite2;
 
-    [MenuItem("Forge/Custom Modes/Create Search and Destroy Data")]
+    [MenuItem("GameObject/Forge/Deadlocked/SnD/Create Search and Destroy Data", priority = 10)]
     public static void CreateNewDataObject()
     {
         var go = new GameObject("Search and Destroy");

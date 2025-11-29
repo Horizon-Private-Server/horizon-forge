@@ -1860,34 +1860,11 @@ public static class UnityHelper
                 height = ForceDimensionPowerOfTwo(height);
             }
 
-            var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
-            rt.Create();
-            try
+            var tex2 = CloneTexture(tex, hasAlpha: hasAlpha, tint: tint, resizeWidth: width, resizeHeight: height);
+            if (tex2)
             {
-                var mat = new Material(AssetDatabase.LoadAssetAtPath<Material>(Path.Combine(FolderNames.ForgeFolder, "Shaders", "TintBlit.mat")));
-                mat.SetColor("_Color", tint ?? Color.white);
-                mat.SetTexture("_In", tex);
-                mat.SetTexture("_Out", rt);
-                mat.SetColor("_Alpha", hasAlpha ? Color.clear : Color.white);
-                Graphics.Blit(tex, rt, mat);
-
-                var oldRt = RenderTexture.active;
-                RenderTexture.active = rt;
-                var tex2 = new Texture2D(width, height, TextureFormat.ARGB32, false);
-                tex2.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                tex2.Apply();
-                RenderTexture.active = oldRt;
-
                 var bytes = tex2.EncodeToPNG();
                 File.WriteAllBytes(path, bytes);
-                return true;
-            }
-            finally
-            {
-                if (RenderTexture.active == rt)
-                    RenderTexture.active = null;
-
-                rt.Release();
             }
         }
 
@@ -1923,8 +1900,7 @@ public static class UnityHelper
             var mat = new Material(AssetDatabase.LoadAssetAtPath<Material>(Path.Combine(FolderNames.ForgeFolder, "Shaders", "TintBlit.mat")));
             mat.SetColor("_Color", tint ?? Color.white);
             mat.SetTexture("_In", src);
-            mat.SetTexture("_Out", rt);
-            mat.SetColor("_Alpha", hasAlpha ? Color.clear : Color.white);
+            mat.SetFloat("_ForceAlpha", hasAlpha ? 0 : (tint.HasValue ? tint.Value.a : 1));
             Graphics.Blit(src, rt, mat);
 
             var oldRt = RenderTexture.active;

@@ -146,7 +146,7 @@ public class PropHuntModeData : CustomModeData, IBuildHook, ICodeGen
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/HnS/Create Prop Hunt Data", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/HnS/Create Prop Hunt Data", priority = 10)]
     public static void CreateDataData()
     {
         var go = new GameObject("Prop Hunt");

@@ -89,7 +89,7 @@ public class ObstacleCourseModeData : CustomModeData, ICodeGen, IBuildHook
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/Obstacle Course/Create Obstacle Course Data", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Obstacle Course/Create Obstacle Course Data", priority = 10)]
     public static void CreateDataData()
     {
         var go = new GameObject("Obstacle Course");

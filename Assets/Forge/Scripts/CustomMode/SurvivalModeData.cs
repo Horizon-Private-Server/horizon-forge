@@ -314,7 +314,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/Survival/Create Survival Data", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Survival/Create Survival Data", priority = 10)]
     public static void CreateSurvivalData()
     {
         var go = new GameObject("Survival");
