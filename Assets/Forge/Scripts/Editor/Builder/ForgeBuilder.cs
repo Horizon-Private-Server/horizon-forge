@@ -660,7 +660,13 @@ public static class ForgeBuilder
         var terrainBinFile = Path.Combine(binFolder, FolderNames.BinaryTerrainBinFile);
         var occlusionFolder = Path.Combine(binFolder, FolderNames.GetWorldInstanceOcclusionFolder(ctx.RacVersion));
         var tfragOcclusionBinFile = Path.Combine(occlusionFolder, "tfrag.bin");
-        var materials = new List<Material>();
+        var materials = new MaterialCollection((Material mat) =>
+        {
+            var mainTex = mat.GetTexture("_MainTex") as Texture2D;
+            var color = mat.GetColor("_Color");
+
+            return mainTex.GetHash().Append(color);
+        });
         var chunks = HierarchicalSorting.Sort(GameObject.FindObjectsOfType<TfragChunk>());
 
         if (RebuildLevelProgress(ctx, $"Rebuilding Tfrags", 0.5f))
@@ -727,7 +733,7 @@ public static class ForgeBuilder
         }
 
         // write textures
-        if (materials.Any())
+        if (materials.Count > 0)
         {
             for (int i = 0; i < materials.Count; ++i)
             {
