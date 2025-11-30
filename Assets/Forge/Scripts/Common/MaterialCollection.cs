@@ -14,12 +14,17 @@ public class MaterialCollection
     public int Count => _materials.Count;
     public Material this[int i] => _materials[i];
 
+    public MaterialCollection()
+    {
+        _hashFunc = DefaultHashFunc;
+    }
+
     public MaterialCollection(Func<Material, Hash128> hashFunc)
     {
         _hashFunc = hashFunc;
     }
 
-    public int GetOrInsert(Material material)
+    public int FindIndexOrAdd(Material material)
     {
         var hash = _hashFunc(material);
         if (_materialHashes.TryGetValue(hash, out var mat))
@@ -30,4 +35,12 @@ public class MaterialCollection
         return _materials.Count - 1;
     }
 
+    private Hash128 DefaultHashFunc(Material mat)
+    {
+        // default hash is tex * color
+        var mainTex = mat.GetTexture("_MainTex") as Texture2D;
+        var color = mat.GetColor("_Color");
+
+        return mainTex.GetHash().Append(color);
+    }
 }

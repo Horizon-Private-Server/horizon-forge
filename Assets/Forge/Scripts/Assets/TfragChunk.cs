@@ -132,7 +132,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
                 var mat = renderer.sharedMaterials[m];
 
                 // try and get idx to material
-                var idx = materials.GetOrInsert(mat);
+                var idx = materials.FindIndexOrAdd(mat);
                 texIdxs[m] = idx;
             }
 
