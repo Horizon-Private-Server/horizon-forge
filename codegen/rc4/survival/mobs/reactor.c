@@ -9,9 +9,9 @@
 #include <libdl/dialog.h>
 #include <libdl/utils.h>
 
-#include "../game.h"
-#include "../mob.h"
-#include "../utils.h"
+#include "game.h"
+#include "mob.h"
+#include "utils.h"
 #include "maputils.h"
 #include "shared.h"
 
@@ -96,10 +96,6 @@ const int reactorOnDamagePlayerDialogIds[] = {
   DIALOG_ID_REACTOR_THIS_IS_MY_HOUSE,
 };
 
-extern u32 MobPrimaryColors[];
-extern u32 MobSecondaryColors[];
-extern u32 MobLODColors[];
-
 Moby* reactorActiveMoby = NULL;
 
 //--------------------------------------------------------------------------
@@ -112,10 +108,11 @@ void reactorTransAnim(Moby* moby, int animId, float startOff)
 int reactorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
 {
 	struct MobSpawnEventArgs args;
+  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(REACTOR_MOBY_OCLASS, sizeof(struct MobPVar) + sizeof(ReactorMobVars_t), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -185,9 +182,10 @@ void reactorPostUpdate(Moby* moby)
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   ReactorMobVars_t* reactorVars = (ReactorMobVars_t*)pvars->AdditionalMobVarsPtr;
+  float scale = mobGetScaleMultiplier(moby);
 
   // adjust animSpeed by speed and by animation
-	float animSpeed = reactorVars->AnimSpeedAdditive + 0.6 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+	float animSpeed = reactorVars->AnimSpeedAdditive + 0.6 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (moby->AnimSeqId == REACTOR_ANIM_JUMP_UP) {
     animSpeed = 1 * (1 - powf(moby->AnimSeqT / 21, 1));
     if (pvars->MobVars.MoveVars.Grounded) {
@@ -233,7 +231,7 @@ void reactorPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = MobLODColors[pvars->MobVars.SpawnParamsIdx] | (moby->Opacity << 24);
+  u32 color = REACTOR_LOD_COLOR | (moby->Opacity << 24);
   mobPostDrawQuad(moby, 127, color, 1);
 }
 
@@ -269,16 +267,17 @@ void reactorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
   MATRIX m;
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   ReactorMobVars_t* reactorVars = (ReactorMobVars_t*)pvars->AdditionalMobVarsPtr;
+  float scale = mobGetScaleMultiplier(moby);
 
   // set scale
-  moby->Scale = 0.6;
+  moby->Scale = 0.6 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = MobSecondaryColors[pvars->MobVars.SpawnParamsIdx];
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->GlowRGBA = REACTOR_GLOW_COLOR;
+	moby->PrimaryColor = REACTOR_PRIMARY_COLOR;
 
   // targeting
-	pvars->TargetVars.targetHeight = 1.5;
+	pvars->TargetVars.targetHeight = 1.0 + (scale * 0.5);
   pvars->MobVars.BlipType = 6;
 
   // move step
@@ -325,7 +324,7 @@ void reactorOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   reactorActiveMoby = NULL;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->PrimaryColor = REACTOR_PRIMARY_COLOR;
 
   // destroy particle mobys
   if (reactorVars->PrepShotWithFireParticleMoby1) {
@@ -520,41 +519,7 @@ void reactorSendCustomEvent(Moby* moby, int customEventId, void* payload, int si
 //--------------------------------------------------------------------------
 Moby* reactorGetNextTarget(Moby* moby)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
-	Moby * currentTarget = pvars->MobVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
-
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player* p = *players;
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
-
-			if (dist < 300) {
-				// favor existing target
-				if (playerGetTargetMoby(p) == currentTarget)
-					dist *= (1.0 / REACTOR_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-
-		++players;
-	}
-
-	if (closestPlayer) {
-    return playerGetTargetMoby(closestPlayer);
-  }
-
-	return NULL;
+  return mobGetNextTarget(moby, REACTOR_TARGET_KEEP_CURRENT_FACTOR);
 }
 
 //--------------------------------------------------------------------------
@@ -772,9 +737,9 @@ void reactorDoAction(Moby* moby)
         // move
         if (!isInAirFromFlinching) {
           if (target) {
-            pathGetTargetPos(t, moby);
-            mobTurnTowards(moby, t, turnSpeed);
-            mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+            if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+              pvars->MobVars.Dirty = 1; // new path, sync with other clients
+            mobJumpTowards(moby, t);
           } else {
             mobStand(moby);
           }
@@ -816,7 +781,7 @@ void reactorDoAction(Moby* moby)
 		{
       if (target) {
 
-        float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
+        float dir = mobGetCurrentWalkAngle(moby);
 
         // determine next position
         vector_copy(t, target->Position);
@@ -835,22 +800,13 @@ void reactorDoAction(Moby* moby)
           vector_scale(forward, forward, 5);
           vector_subtract(backTarget, target->Position, forward);
 
-          mobTurnTowards(moby, backTarget, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, backTarget, pvars->MobVars.Config.Speed, acceleration);
+          mobMoveTowards(moby, backTarget, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
         } else if (dist > (pvars->MobVars.Config.AttackRadius - pvars->MobVars.Config.HitRadius)) {
 
-          pathGetTargetPos(t, moby);
-          vector_subtract(t, t, moby->Position);
-          float dist = vector_length(t);
-          if (dist < 10.0) {
-            reactorAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * dir);
-            vector_add(t, t, t2);
-          }
-          vector_scale(t, t, 1 / dist);
-          vector_add(t, moby->Position, t);
+          if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+            pvars->MobVars.Dirty = 1; // new path, sync with other clients
+          mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
 
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
         } else if (dist < (0.5 * pvars->MobVars.Config.CollRadius)) {
           vector_fromyaw(t, moby->Rotation[2]);
           vector_scale(t, t, -2 * pvars->MobVars.Config.CollRadius);
@@ -860,7 +816,6 @@ void reactorDoAction(Moby* moby)
           mobStand(moby);
         }
       } else {
-        // stand
         mobStand(moby);
       }
 
@@ -908,11 +863,9 @@ void reactorDoAction(Moby* moby)
 			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 14 && moby->AnimSeqT < 18;
 
       if (target) {
-        mobTurnTowards(moby, target->Position, turnSpeed);
         mobStand(moby);
-        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speed, acceleration);
+        mobMoveTowards(moby, target->Position, speed, turnSpeed, acceleration, 0);
       } else {
-        // stand
         mobStand(moby);
       }
 
@@ -981,7 +934,7 @@ void reactorDoAction(Moby* moby)
           }
                   
           // create electricity
-          if (pvars->ReactVars.effectStates == 0) {
+          if (pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_BOSS && pvars->ReactVars.effectStates == 0) {
             pvars->ReactVars.effectStates = 0x84;
             pvars->ReactVars.effectTimers[2] = 10;
           }

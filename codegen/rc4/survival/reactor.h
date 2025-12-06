@@ -59,6 +59,10 @@
 #define REACTOR_DIALOG_COOLDOWN_MIN_TPS         (2 * TPS)
 #define REACTOR_DIALOG_COOLDOWN_MAX_TPS         (10 * TPS)
 
+#define REACTOR_PRIMARY_COLOR                   (0x00464443)
+#define REACTOR_GLOW_COLOR                      (0x8020C020)
+#define REACTOR_LOD_COLOR                       (0x00FF0000)
+
 enum ReactorAnimId
 {
 	REACTOR_ANIM_IDLE,
@@ -181,5 +185,10 @@ typedef struct ReactorMobVars
 } ReactorMobVars_t;
 
 extern int reactorMinionSpawnParamIdx;
+
+struct MobConfig;
+int reactorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
+
+extern struct MobVTable ReactorVTable;
 
 #endif // SURVIVAL_MOB_REACTOR_H

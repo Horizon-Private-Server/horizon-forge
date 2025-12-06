@@ -475,6 +475,101 @@ public class PathGraph : MonoBehaviour
   }},";
     }
 
+    public string ExportAsSurvivalC()
+    {
+        var dataDefs = "";
+        var varPrefix = "MOB";
+
+        string nodesVarName = $"{varPrefix}_PATHFINDING_NODES";
+        string nodesCorneringVarName = $"{varPrefix}_PATHFINDING_NODES_CORNERING";
+        string nodesHeightVarName = $"{varPrefix}_PATHFINDING_NODES_HEIGHT";
+        string edgesVarName = $"{varPrefix}_PATHFINDING_EDGES";
+        string edgesRequiredVarName = $"{varPrefix}_PATHFINDING_EDGES_REQUIRED";
+        string edgesPathFitVarName = $"{varPrefix}_PATHFINDING_EDGES_PATHFIT";
+        string edgesJumpPadSpeedVarName = $"{varPrefix}_PATHFINDING_EDGES_JUMPPADSPEED";
+        string edgesJumpPadAtVarName = $"{varPrefix}_PATHFINDING_EDGES_JUMPPADAT";
+
+        _cachedNodes = GetNodes();
+
+        // max # of nodes
+        if (_cachedNodes.Count > 100)
+        {
+            Debug.LogError($"{this.name} num nodes {_cachedNodes.Count} exceeds max 100");
+        }
+
+        // build list of nodes
+        dataDefs += $"VECTOR {nodesVarName}[] = {{\n";
+        foreach (var node in _cachedNodes)
+        {
+            var p = node.GetCenterPosition();
+            dataDefs += $"\t{{ {p.x}, {p.z}, {p.y}, {node.Radius} }},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of node cornering amount
+        dataDefs += $"u8 {nodesCorneringVarName}[] = {{\n";
+        foreach (var node in _cachedNodes)
+        {
+            dataDefs += $"\t{(int)(node.Cornering * 255)},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of node height amount
+        dataDefs += $"u16 {nodesHeightVarName}[] = {{\n";
+        foreach (var node in _cachedNodes)
+        {
+            var heightLimit = node.HasHeightLimit ? (node.HeightLimit * 256) : ushort.MaxValue;
+            dataDefs += $"\t{(ushort)(Mathf.Clamp(heightLimit, 0, ushort.MaxValue))},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of edges
+        dataDefs += $"u8 {edgesVarName}[][2] = {{\n";
+        foreach (var edge in this.Edges)
+        {
+            dataDefs += $"\t{{ {_cachedNodes.IndexOf(edge.From)}, {_cachedNodes.IndexOf(edge.To)} }},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of edge requireds
+        dataDefs += $"u8 {edgesRequiredVarName}[] = {{\n";
+        foreach (var edge in this.Edges)
+        {
+            dataDefs += $"\t{(edge.Required ? (int)(Mathf.Clamp(edge.RequiredUntil * 255 + 1, 0, 255)) : 0)},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of edge path fit start end
+        dataDefs += $"u8 {edgesPathFitVarName}[] = {{\n";
+        foreach (var edge in this.Edges)
+        {
+            dataDefs += $"\t{(int)(edge.PathFitStartEnd * 255)},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of edge jump pad speeds
+        dataDefs += $"u8 {edgesJumpPadSpeedVarName}[] = {{\n";
+        foreach (var edge in this.Edges)
+        {
+            dataDefs += $"\t{(edge.JumpPad ? (int)Math.Ceiling(edge.JumpPadSpeed + 0.01) : 0)},\n";
+        }
+        dataDefs += "};\n\n";
+
+        // build list of edge jump pad ats
+        dataDefs += $"u8 {edgesJumpPadAtVarName}[] = {{\n";
+        foreach (var edge in this.Edges)
+        {
+            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * byte.MaxValue) : 0)},\n";
+        }
+        dataDefs += "};\n\n";
+        dataDefs += ExportPathsAsC(varPrefix, out int longestPath);
+
+        dataDefs += $"const int MOB_PATHFINDING_PATHS_MAX_PATH_LENGTH = {longestPath};\n";
+        dataDefs += $"const int MOB_PATHFINDING_NODES_COUNT = {_cachedNodes.Count};\n";
+        dataDefs += $"const int MOB_PATHFINDING_EDGES_COUNT = {Edges.Count};\n";
+        return dataDefs;
+    }
+
     public string ExportPathsAsC(string varPrefix, out int longestPath)
     {
         var str = "";

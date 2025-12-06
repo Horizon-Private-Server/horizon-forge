@@ -53,6 +53,7 @@ struct MysteryBoxPVar
   VECTOR SpawnpointRotation;
   enum MysteryBoxItem Item;
   enum MysteryBoxItem CycleItem;
+  float BoltCostMultiplier;
   int Random;
   int ActivatedTime;
   int StateChangedAtTime;
@@ -71,5 +72,7 @@ struct MysteryBoxItemWeight
 
 void mboxSpawn(void);
 void mboxInit(void);
+struct GuberMoby* mboxGetGuber(Moby* moby);
+int mboxHandleEvent(Moby* moby, GuberEvent* event);
 
 #endif // SURVIVAL_MYSTERY_BOX_H

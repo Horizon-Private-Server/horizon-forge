@@ -3500,6 +3500,22 @@
     "Overlay": []
   },
   {
+    "Name": "UYA Hill",
+    "RCVersion": 3,
+    "MobyOClass": 12288,
+    "Length": 512,
+    "Default": "",
+    "Pointers": "",
+    "Overlay": [
+      {
+        "Name": "Hill Cuboids",
+        "DataType": "CuboidRef",
+        "Count": 32,
+        "Offset": 0
+      }
+    ]
+  },
+  {
     "_": "Ambient Sound",
     "RCVersion": -1,
     "AmbientSoundType": 1,
@@ -4856,10 +4872,10 @@
     ]
   },
   {
-    "Name": "Raids Gate",
+    "Name": "Gate",
     "RCVersion": 4,
     "MobyOClass": 16388,
-    "Length": 20,
+    "Length": 24,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -4869,11 +4885,19 @@
       {
         "Name": "Default State",
         "DataType": "Enum",
-        "Offset": 4,
+        "DataSize": 1,
+        "Offset": 0,
         "Options": {
           "Off": 0,
           "On": 1
         }
+      },
+      {
+        "Name": "Cost",
+        "DataType": "Integer",
+        "Offset": 4,
+        "Min": 0,
+        "Default": 0
       },
       {
         "Name": "Length",
@@ -5906,7 +5930,7 @@
     "Name": "Launch Stream",
     "RCVersion": 4,
     "MobyOClass": 16401,
-    "Length": 256,
+    "Length": 180,
     "States": {
       "Destroyed": -1,
       "On": 0,
@@ -5956,6 +5980,61 @@
         "Offset": 16,
         "Default": 10,
         "Min": 0
+      }
+    ]
+  },
+  {
+    "Name": "Holdable Proxy",
+    "RCVersion": 4,
+    "MobyOClass": 16402,
+    "Length": 304,
+    "States": {
+      "Destroyed": -1,
+      "On": 0,
+      "Off": 1
+    },
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 80,
+        "Default": 1,
+        "Options": {
+          "Off": 0,
+          "On": 1
+        }
+      },
+      {
+        "Name": "Log (DEBUG)",
+        "DataType": "Bool",
+        "Offset": 81
+      },
+      {
+        "Name": "Wrench Only",
+        "DataType": "Bool",
+        "Offset": 82,
+        "Default": 1
+      },
+      {
+        "Name": "Reset On Death",
+        "DataType": "Bool",
+        "Offset": 83,
+        "Default": 1
+      },
+      {
+        "Name": "Target Moby",
+        "DataType": "MobyRef",
+        "Offset": 84
+      },
+      {
+        "Name": "On Pickup (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 88
+      },
+      {
+        "Name": "On Drop (Controller)",
+        "DataType": "MobyRef",
+        "Offset": 92
       }
     ]
   }

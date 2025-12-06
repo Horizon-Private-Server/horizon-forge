@@ -15,7 +15,9 @@
 
 enum GateEventType {
 	GATE_EVENT_SPAWN,
-  GATE_EVENT_SET_STATE
+  GATE_EVENT_SET_STATE,
+  GATE_EVENT_PAY_TOKEN,
+  GATE_EVENT_SET_COST,
 };
 
 enum GateState {
@@ -25,11 +27,12 @@ enum GateState {
 
 struct GatePVar
 {
-  int Init;
-  enum GateState DefaultState;
+  char DefaultState;
+  int InitialCost;
   float Length;
   float Height;
   float Opacity;
+  int CurrentCost;
 };
 
 void gateBroadcastNewState(Moby* moby, enum GateState state);

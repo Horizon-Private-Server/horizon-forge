@@ -46,6 +46,7 @@ char* STACKABLE_ITEM_NAMES[] = {
   [STACKABLE_ITEM_ALPHA_MOD_AREA] "Area Mod Perk",
   [STACKABLE_ITEM_ALPHA_MOD_IMPACT] "Impact Mod Perk",
   [STACKABLE_ITEM_VAMPIRE] "Vampire Perk",
+  [STACKABLE_ITEM_EXPLODING_ENEMIES] "Will o' the Wisp",
 };
 
 char* STACKABLE_ITEM_DESC[] = {
@@ -58,6 +59,7 @@ char* STACKABLE_ITEM_DESC[] = {
   [STACKABLE_ITEM_ALPHA_MOD_AREA] "Gives +2 extra area mod for all weapons",
   [STACKABLE_ITEM_ALPHA_MOD_IMPACT] "Gives +2 extra impact mod for all weapons",
   [STACKABLE_ITEM_VAMPIRE] "Gives +3 health after each kill, disables health pickups",
+  [STACKABLE_ITEM_EXPLODING_ENEMIES] "Deals +10 explosive damage after each kill",
 };
 
 int STACKABLE_ITEM_TEX_IDS[] = {
@@ -70,32 +72,59 @@ int STACKABLE_ITEM_TEX_IDS[] = {
   [STACKABLE_ITEM_ALPHA_MOD_AREA] 42 - 3,
   [STACKABLE_ITEM_ALPHA_MOD_IMPACT] 47 - 3,
   [STACKABLE_ITEM_VAMPIRE] 110,
+  [STACKABLE_ITEM_EXPLODING_ENEMIES] 131,
 };
 
 u32 STACKABLE_ITEM_COLORS[] = {
-  [STACKABLE_ITEM_EXTRA_JUMP] 0x80808080,
-  [STACKABLE_ITEM_EXTRA_SHOT] 0x80808080,
-  [STACKABLE_ITEM_HOVERBOOTS] 0x80808080,
-  [STACKABLE_ITEM_LOW_HEALTH_DMG_BUF] 0x80808080,
-  [STACKABLE_ITEM_ALPHA_MOD_AMMO] 0x80808080,
-  [STACKABLE_ITEM_ALPHA_MOD_SPEED] 0x80808080,
-  [STACKABLE_ITEM_ALPHA_MOD_AREA] 0x80808080,
-  [STACKABLE_ITEM_ALPHA_MOD_IMPACT] 0x80808080,
-  [STACKABLE_ITEM_VAMPIRE] 0x80808080,
+  [STACKABLE_ITEM_EXTRA_JUMP] 0x80FFFFFF,
+  [STACKABLE_ITEM_EXTRA_SHOT] 0x80FFFFFF,
+  [STACKABLE_ITEM_HOVERBOOTS] 0x80FFFFFF,
+  [STACKABLE_ITEM_LOW_HEALTH_DMG_BUF] 0x80FFFFFF,
+  [STACKABLE_ITEM_ALPHA_MOD_AMMO] 0x80FFFFFF,
+  [STACKABLE_ITEM_ALPHA_MOD_SPEED] 0x80FFFFFF,
+  [STACKABLE_ITEM_ALPHA_MOD_AREA] 0x80FFFFFF,
+  [STACKABLE_ITEM_ALPHA_MOD_IMPACT] 0x80FFFFFF,
+  [STACKABLE_ITEM_VAMPIRE] 0x80FFFFFF,
+  [STACKABLE_ITEM_EXPLODING_ENEMIES] 0x80FFFFFF,
 };
+
+int STACKABLE_ITEM_MAX[] = {
+  [STACKABLE_ITEM_EXTRA_JUMP] 0,
+  [STACKABLE_ITEM_EXTRA_SHOT] 0,
+  [STACKABLE_ITEM_HOVERBOOTS] 0,
+  [STACKABLE_ITEM_LOW_HEALTH_DMG_BUF] 0,
+  [STACKABLE_ITEM_ALPHA_MOD_AMMO] 0,
+  [STACKABLE_ITEM_ALPHA_MOD_SPEED] 10,
+  [STACKABLE_ITEM_ALPHA_MOD_AREA] 5,
+  [STACKABLE_ITEM_ALPHA_MOD_IMPACT] 5,
+  [STACKABLE_ITEM_VAMPIRE] 0,
+  [STACKABLE_ITEM_EXPLODING_ENEMIES] 0
+};
+
+extern int StackboxItems[];
+extern const int StackboxItemsCount;
+
+//--------------------------------------------------------------------------
+int sboxCanBuy(int playerId, enum StackableItemId item)
+{
+  if (!MapConfig.State) return 0;
+
+  int count = playerGetStackableCount(playerId, (int)item);
+  return STACKABLE_ITEM_MAX[(int)item] <= 0 || count < STACKABLE_ITEM_MAX[(int)item];
+}
 
 //--------------------------------------------------------------------------
 int sboxGetStackableCost(int playerId, enum StackableItemId item)
 {
   if (!MapConfig.State) return 0;
 
-  return STACK_BOX_BASE_COST + playerGetStackableCount(playerId, (int)item) * STACK_BOX_ADD_COST;
+  return MapConfig.BakedConfig->StackboxBaseCost + playerGetStackableCount(playerId, (int)item) * MapConfig.BakedConfig->StackboxCostPerPerk;
 }
 
 //--------------------------------------------------------------------------
 int sboxGetRandomItem(Moby* moby)
 {
-  if (!moby) return rand(STACKABLE_ITEM_COUNT);
+  if (!moby) return StackboxItems[rand(StackboxItemsCount)];
 
   struct StackBoxPVar* pvars = (struct StackBoxPVar*)moby->PVar;
 
@@ -103,7 +132,7 @@ int sboxGetRandomItem(Moby* moby)
   // avoid picking the current item
   int item = pvars->Item;
   while (item == pvars->Item)
-    item = rand(STACKABLE_ITEM_COUNT);
+    item = StackboxItems[rand(StackboxItemsCount)];
 
   return item;
 }
@@ -146,6 +175,7 @@ void sboxPlayerBuy(Moby* moby, int playerId, enum StackableItemId item)
   if (!MapConfig.State) return;
   if (MapConfig.State->PlayerStates[playerId].State.Bolts < cost) return;
   if ((gameGetTime() - pvars->ActivatedTime) < (TIME_SECOND * 0.2)) return;
+  if (!sboxCanBuy(playerId, item)) return;
 
   // send to host
   if (!gameAmIHost()) {
@@ -328,10 +358,16 @@ void sboxUpdate(Moby* moby)
     if (!player || !player->pNetPlayer || !playerIsConnected(player)) continue;
 
     // prompt for 
-    int cost = sboxGetStackableCost(player->PlayerId, pvars->Item);
-    snprintf(buf, sizeof(buf), "\x11 %s \x0E%'d\x08", STACKABLE_ITEM_NAMES[pvars->Item], cost);
-    if (tryPlayerInteract(moby, player, buf, STACKABLE_ITEM_DESC[pvars->Item], 0, 0, PLAYER_STACK_BOX_COOLDOWN_TICKS, STACK_BOX_MAX_DIST*STACK_BOX_MAX_DIST, PAD_CIRCLE)) {
-      sboxPlayerBuy(moby, player->PlayerId, pvars->Item);
+    if (!sboxCanBuy(i, pvars->Item)) {
+      
+      tryPlayerInteract(moby, player, "Maxed Out", STACKABLE_ITEM_DESC[pvars->Item], 0, 0, PLAYER_STACK_BOX_COOLDOWN_TICKS, STACK_BOX_MAX_DIST*STACK_BOX_MAX_DIST, PAD_CIRCLE);
+    } else {
+
+      int cost = sboxGetStackableCost(player->PlayerId, pvars->Item);
+      snprintf(buf, sizeof(buf), "\x11 %s \x0E%'d\x08", STACKABLE_ITEM_NAMES[pvars->Item], cost);
+      if (tryPlayerInteract(moby, player, buf, STACKABLE_ITEM_DESC[pvars->Item], 0, 0, PLAYER_STACK_BOX_COOLDOWN_TICKS, STACK_BOX_MAX_DIST*STACK_BOX_MAX_DIST, PAD_CIRCLE)) {
+        sboxPlayerBuy(moby, player->PlayerId, pvars->Item);
+      }
     }
   }
 }
@@ -606,6 +642,7 @@ void sboxFrameTick(void)
           case STACKABLE_ITEM_LOW_HEALTH_DMG_BUF: snprintf(buffer, 32, "+%.f%%", count * ITEM_STACKABLE_LOW_HEALTH_DMG_BUF_FAC * 100); break;
           case STACKABLE_ITEM_HOVERBOOTS: snprintf(buffer, 32, "+%.0f%%", ITEM_STACKABLE_HOVERBOOTS_SPEED_BUF * count * 100); break;
           case STACKABLE_ITEM_VAMPIRE: snprintf(buffer, 32, "+%d", ITEM_STACKABLE_VAMPIRE_HEALTH_AMT * count); break;
+          case STACKABLE_ITEM_EXPLODING_ENEMIES: snprintf(buffer, 32, "+%d", ITEM_STACKABLE_EXPLODINGENEMIES_DAMAGE * count); break;
         }
         gfxScreenSpaceText(x+6, y+8+2, 1, 1, 0x40000000, buffer, -1, 0);
         gfxScreenSpaceText(x+4,   y+8,   1, 1, 0x8000C0C0, buffer, -1, 0);

@@ -368,6 +368,7 @@ public static class MapExporter
             {
                 newMat = new Material(Shader.Find("Standard"));
                 newMat.SetTexture("_MainTex", entry.Key.GetTexture("_MainTex"));
+                newMat.SetTexture("_EmissionMap", entry.Key.GetTexture("_MainTex"));
                 newMat.SetColor("_Color", entry.Key.GetColor("_Color"));
                 newMat.SetFloat("_Cutoff", entry.Key.GetFloat("_AlphaClip"));
                 newMat.SetFloat("_Mode", 0);

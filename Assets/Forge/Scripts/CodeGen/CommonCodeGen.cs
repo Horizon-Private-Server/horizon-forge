@@ -21,6 +21,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
     public static readonly int COUNTER_OCLASS = 0x400F;
     public static readonly int SOULCOLLECTOR_OCLASS = 0x4010;
     public static readonly int LAUNCHSTREAM_OCLASS = 0x4011;
+    public static readonly int HOLDER_OCLASS = 0x4012;
 
 
     public bool IsEnabled => true;
@@ -51,6 +52,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/launchstream.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/holder.o");
 
         state.LDFlags.Add("-DGATE");
 
@@ -67,6 +69,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.Includes.Add("#include \"blip.h\"");
         state.Includes.Add("#include \"dummy.h\"");
         state.Includes.Add("#include \"launchstream.h\"");
+        state.Includes.Add("#include \"holder.h\"");
 
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
@@ -83,6 +86,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.InitBody.Add($"blipInit();");
         state.InitBody.Add($"dummyInit();");
         state.InitBody.Add($"launchstreamInit();");
+        state.InitBody.Add($"holderInit();");
 
         // get gubers
         state.GetGuberCase.Add("case CHECKPOINT_MANAGER_OCLASS: return checkpointGetGuber(moby);");
@@ -94,6 +98,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.GetGuberCase.Add("case CONTROLLER_OCLASS: return controllerGetGuber(moby);");
         state.GetGuberCase.Add("case DUMMY_OCLASS: return dummyGetGuber(moby);");
         state.GetGuberCase.Add("case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);");
+        state.GetGuberCase.Add("case HOLDER_OCLASS: return holderGetGuber(moby);");
 
         // handle events
         state.HandleGuberEventCase.Add("case CHECKPOINT_MANAGER_OCLASS: checkpointHandleEvent(moby, event); break;");
@@ -105,6 +110,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.HandleGuberEventCase.Add("case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case HOLDER_OCLASS: holderHandleEvent(moby, event); break;");
 
         state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
         state.InitBody.Add($"HOOK_JAL(0x0051f648, &onBeforeUpdateHeroes2);");
@@ -116,6 +122,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.MainBodyReady.Add("laserStart();");
         state.MainBodyReady.Add("pvarpokeStart();");
         state.MainBodyReady.Add("dummyStart();");
+        state.MainBodyReady.Add("holderStart();");
     }
 
     public void Configure(BuildState state)
@@ -125,7 +132,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/Custom Moby/Mover Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Mover Moby", priority = 10)]
     public static void CreateMoverMoby()
     {
         var go = new GameObject("Mover");
@@ -138,7 +145,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Checkpoint Manager Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Checkpoint Manager Moby", priority = 10)]
     public static void CreateCheckpointManagerMoby()
     {
         var go = new GameObject("Checkpoint Manager");
@@ -151,7 +158,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Checkpoint Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Checkpoint Moby", priority = 10)]
     public static void CreateCheckpointMoby()
     {
         var go = new GameObject("Checkpoint");
@@ -165,7 +172,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Controller Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Controller Moby", priority = 10)]
     public static void CreateControllerMoby()
     {
         var go = new GameObject("Controller");
@@ -178,7 +185,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Counter Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Counter Moby", priority = 10)]
     public static void CreateCounterMoby()
     {
         var go = new GameObject("Counter");
@@ -190,7 +197,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/PVar Poke Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/PVar Poke Moby", priority = 10)]
     public static void CreatePVarPokeMoby()
     {
         var go = new GameObject("PVar Poke");
@@ -203,7 +210,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Gate Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Gate Moby", priority = 10)]
     public static void CreateGateMoby()
     {
         var mobyBin = Convert.FromBase64String("sAAAAAEAAAEAAAAAAQD/AMAAAAAAAQAAAAEAAAABAABgAgAAq6qqPAAAAAAABQAAnFNJvZxTybycU8m8PMQHR3h4eIAAAAAQYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgqh7vgAAAACcU8m8N8QHRwH/AAAAAAAAJAAAADAAAAACABQAAAAAAAAAAAAAAAAAAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAQAACAAEAJABAAANAwIIAAAAAAAAAAAQAAAAIAAAAAAAAKAAYAAAAAAAYABgAAAAAABgAKAAAAAAAKAAoAAAAAIBbwIAA28BAwBvAwECbwAAAAAAAAAAAAAAAAAAAADCgAh1AAAAEAAQABAAEAAAAAAAAAAAABAAEAAQABAAAAAAAAAtgQRu/gQBAACCBAOFhggHAQEBAAAAAAAxgQRskv8AAAQAAAAEAKBBAAAAAAAAAAAAAAAACAAAAAAAAAD/////AAAAAAYAAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAEAAAAAAAgAAAAIACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAAAAAAAAAAGAAYAAAAPQAAAAAAAAAAACgAGAAAAD0AAAAAAAAAAAAoACgAAAA9AAAAAAAAAAAAGAAoAAAAPQAAAAAgAAAAACgAGAAAAD0AAAAAIAAAAAAYABgAAAA9AAAAACAAAAAAGAAoP8AAPQAAAAAgAAAAACgAKD/AAAAAAAAAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAP8AAAD/AP8A/wD/AAAAAAD///////////////9AAQCA");
@@ -232,7 +239,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Messager Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Messager Moby", priority = 10)]
     public static void CreateMessagerMoby()
     {
         var go = new GameObject("Messager");
@@ -245,7 +252,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Laser (Tripwire) Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Laser (Tripwire) Moby", priority = 10)]
     public static void CreateLaserMoby()
     {
         var go = new GameObject("Laser (Tripwire)");
@@ -259,7 +266,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Radar Blip Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Radar Blip Moby", priority = 10)]
     public static void CreateRadarBlipMoby()
     {
         var go = new GameObject("Radar Blip Moby");
@@ -273,7 +280,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Health Proxy Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Health Proxy Moby", priority = 10)]
     public static void CreateHealthProxyMoby()
     {
         var go = new GameObject("Health Proxy Moby");
@@ -287,7 +294,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Custom Moby/Launch Stream Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Launch Stream Moby", priority = 10)]
     public static void CreateLaunchStreamMoby()
     {
         var go = new GameObject("Launch Stream Moby");
@@ -297,6 +304,20 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         moby.UpdateDistance = 255;
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Launch Stream");
+        moby.InitializePVarReferences();
+        OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Holdable Proxy Moby", priority = 10)]
+    public static void CreateHoldableProxyMoby()
+    {
+        var go = new GameObject("Holdable Proxy Moby");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = HOLDER_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.Color = new Color(1, 1, 1, 0.5f);
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Holdable Proxy");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

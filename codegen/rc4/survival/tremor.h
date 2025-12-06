@@ -28,6 +28,10 @@
 #define TREMOR_FLINCH_PROBABILITY             (1.0)
 #define TREMOR_FLINCH_PROBABILITY_PWR_FACTOR  (0.1)
 
+#define TREMOR_PRIMARY_COLOR                  (0x00464443)
+#define TREMOR_GLOW_COLOR                     (0x80202020)
+#define TREMOR_LOD_COLOR                      (0x0080FF80)
+
 enum TremorAnimId
 {
 	TREMOR_ANIM_IDLE,
@@ -98,5 +102,10 @@ enum TremorSubskeletonJoints
   TREMOR_SUBSKELETON_JOINT_RIGHT_UPPER_LEG = 2,
   TREMOR_SUBSKELETON_JOINT_RIGHT_FOOT = 3,
 };
+
+struct MobConfig;
+int tremorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
+
+extern struct MobVTable TremorVTable;
 
 #endif // SURVIVAL_MOB_TREMOR_H

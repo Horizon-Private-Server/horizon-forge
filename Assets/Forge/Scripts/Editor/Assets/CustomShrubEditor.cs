@@ -523,32 +523,12 @@ public class CustomShrubEditor : Editor
                 return true;
             }
 
-            var width = tex.width;
-            var height = tex.height;
-            var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
-            rt.Create();
-            try
+            var tex2 = UnityHelper.CloneTexture(tex, true, tint);
+            if (tex2)
             {
-                var mat = new Material(AssetDatabase.LoadAssetAtPath<Material>(Path.Combine(FolderNames.ForgeFolder, "Shaders", "TintBlit.mat")));
-                mat.SetColor("_Color", tint);
-                mat.SetTexture("_In", tex);
-                mat.SetTexture("_Out", rt);
-                Graphics.Blit(tex, rt, mat);
-
-                var oldRt = RenderTexture.active;
-                RenderTexture.active = rt;
-                var tex2 = new Texture2D(width, height, TextureFormat.ARGB32, false);
-                tex2.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                tex2.Apply();
-                RenderTexture.active = oldRt;
-
                 var bytes = tex2.EncodeToPNG();
                 File.WriteAllBytes(texPath, bytes);
                 return true;
-            }
-            finally
-            {
-                rt.Release();
             }
         }
 

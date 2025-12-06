@@ -58,7 +58,7 @@ public class LevelImporterWindow : EditorWindow
 
     static readonly string WindowTitle = "Level Importer";
     static readonly List<int> ImportSourceGameVersions = new List<int>() { 4, 4, 3, 3, 2 };
-    static readonly List<string> ImportSources = new List<string>() { "DL ISO", "DL WAD", "UYA ISO",  "UYA WAD", "GC ISO" };
+    static readonly List<string> ImportSources = new List<string>() { "DL ISO", "DL WAD", "UYA ISO", "UYA WAD", "GC ISO" };
     static readonly List<string> DLBaseMaps = ((DLMapIds[])Enum.GetValues(typeof(DLMapIds))).Where(x => (int)x > 40).Select(x => Enum.GetName(typeof(DLMapIds), x)).ToList();
     static readonly List<string> DLMaps = ((DLMapIds[])Enum.GetValues(typeof(DLMapIds))).Select(x => Enum.GetName(typeof(DLMapIds), x)).ToList();
     static readonly List<string> UYABaseMaps = ((UYAMapIds[])Enum.GetValues(typeof(UYAMapIds))).Where(x => (int)x >= 40).Select(x => Enum.GetName(typeof(UYAMapIds), x)).ToList();
@@ -154,6 +154,8 @@ public class LevelImporterWindow : EditorWindow
             default: throw new NotImplementedException();
         }
     }
+
+    string GetImportMapPathName() => mapName.Trim().Replace(" ", "_");
 
     #endregion
 
@@ -504,7 +506,7 @@ public class LevelImporterWindow : EditorWindow
             {
                 EditorUtility.DisplayDialog(WindowTitle, $"Configured clean deadlocked iso path does not point to a valid iso file.\n\nPlease configure the correct iso path in {ForgeSettings.FORGE_SETTINGS_PATH}.", "Ok");
                 return false;
-            }    
+            }
         }
         else if (importSource == (int)ImportSource.UYA_ISO)
         {
@@ -537,12 +539,12 @@ public class LevelImporterWindow : EditorWindow
 
     bool ValidateImportDestination()
     {
-        var destSceneFile = FolderNames.GetScenePath(mapName);
+        var destSceneFile = FolderNames.GetScenePath(GetImportMapPathName());
 
         // check if scene already exists
         if (File.Exists(destSceneFile))
         {
-            if (!EditorUtility.DisplayDialog(this.titleContent.text, $"Scene already exists for {mapName}.\nWould you like to overwrite it?", "Yes", "Cancel"))
+            if (!EditorUtility.DisplayDialog(this.titleContent.text, $"Scene already exists for {GetImportMapPathName()}.\nWould you like to overwrite it?", "Yes", "Cancel"))
             {
                 return false;
             }
@@ -738,12 +740,13 @@ public class LevelImporterWindow : EditorWindow
         var forgeSettings = ForgeSettings.Load();
 
         // get dest paths
-        var destSceneFile = FolderNames.GetScenePath(mapName);
-        var destMapFolder = FolderNames.GetMapFolder(mapName);
+        var destMapName = GetImportMapPathName();
+        var destSceneFile = FolderNames.GetScenePath(destMapName);
+        var destMapFolder = FolderNames.GetMapFolder(destMapName);
         var destMapHUDFolder = Path.Combine(destMapFolder, FolderNames.HUDFolder);
-        var destMapBinFolder = FolderNames.GetMapBinFolder(mapName, ImportSourceRacVersion());
+        var destMapBinFolder = FolderNames.GetMapBinFolder(destMapName, ImportSourceRacVersion());
         var tempPalBinFolder = Path.Combine(FolderNames.GetTempFolder(), "level-import-pal");
-        var destMapWadFile = Path.Combine(destMapBinFolder, $"{mapName}.wad");
+        var destMapWadFile = Path.Combine(destMapBinFolder, $"{destMapName}.wad");
         var chunkId = importChunkId;
         var assetImports = new List<PackerImporterWindow.PackerAssetImport>();
         var postActions = new List<Action>();
@@ -909,7 +912,7 @@ public class LevelImporterWindow : EditorWindow
             var assets = GameObject.FindObjectsOfType<MonoBehaviour>().Where(x => x is IAsset).Select(x => x as IAsset);
             foreach (var asset in assets)
                 asset.UpdateAsset();
-                
+
             // save new scene
             EditorSceneManager.SaveOpenScenes();
         }
@@ -1130,7 +1133,7 @@ public class LevelImporterWindow : EditorWindow
 
         // create scene
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        scene.name = mapName;
+        scene.name = GetImportMapPathName();
         EditorSceneManager.SaveScene(scene, destSceneFile);
 
         // open scene
@@ -1141,7 +1144,8 @@ public class LevelImporterWindow : EditorWindow
         var map = mapGameObject.AddComponent<MapConfig>();
         map.InitializeVersion();
         map.MapVersion = 0;
-        map.MapName = map.MapFilename = mapName;
+        map.MapName = mapName;
+        map.MapFilename = GetImportMapPathName();
 
         if (ImportSourceIsDL())
             map.DLBaseMap = Enum.Parse<DLMapIds>(DLBaseMaps[importBaseLevelIdx]);
@@ -1244,7 +1248,7 @@ public class LevelImporterWindow : EditorWindow
         var unpackWorldInstances = unpackAll || importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
         var unpackCollision = unpackAll || importCollision > 0;
 
-        if (racVersion == RCVER.UYA)
+        if (racVersion != RCVER.DL)
             unpackGameplay |= unpackWorldInstances;
 
         // decompress and unpack level wad

@@ -373,6 +373,26 @@ enum CustomMessageId
     CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST = 68,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_CLIENT_REQUEST_DYNAMIC_PAGE_CONTENT = 69,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_CLIENT_UPDATE_CUSTOM_MAP_SURVIVAL_DATA_REQUEST = 70,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_CLIENT_UPDATE_SURVIVAL_GAMBIT_COMPLETED_REQUEST = 71,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_CLIENT_UPDATE_CUSTOM_MAP_EX_DATA_REQUEST = 72,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,
@@ -603,6 +623,41 @@ typedef struct ServerDateTimeMessage
   u8 Month;
   u8 Day;
 } ServerDateTimeMessage_t;
+
+typedef struct GetDynamicPageContentRequest
+{
+  int Type;
+  u32 StateAddress;
+  u32 LineItemsCountAddress;
+  u32 LineItemsAddress;
+  char MapFilename[64];
+} GetDynamicPageContentRequest_t;
+
+typedef struct UpdateCustomMapSurvivalDataRequest
+{
+  int GambitCount;
+  char MapFilename[64];
+  char MapName[32];
+  char Gambits[10][32];
+} UpdateCustomMapSurvivalDataRequest_t;
+
+typedef struct UpdateSurvivalGambitCompletedRequest
+{
+  int GambitIdx;
+  char MapFilename[64];
+  char GambitName[32];
+} UpdateSurvivalGambitCompletedRequest_t;
+
+typedef struct UpdateCustomMapExDataRequest
+{
+  u16 Offset;
+  u16 Len;
+  char CustomModeId;
+  char LastSegment;
+  char MapFilename[64];
+  char Data[432];
+} UpdateCustomMapExDataRequest_t;
+
 
 typedef struct CustomDzoCommandDrawText
 {

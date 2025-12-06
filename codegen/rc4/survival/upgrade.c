@@ -343,10 +343,12 @@ int upgradeHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 	// play pickup sound
 	upgradePlayPickupSound(moby);
 
-  // reduce uses
+  // reduce uses, if not post round 25 break
   // respawn at next spot if used
 #if !DEBUG
-  pvars->Uses--;
+  if (!MapConfig.State || MapConfig.State->RoundEndTime != -1) {
+    pvars->Uses--;
+  }
 #endif
   if (!pvars->Uses && gameAmIHost()) {
     upgradeSpawnNew(pvars->Type);

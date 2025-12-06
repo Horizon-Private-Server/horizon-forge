@@ -56,7 +56,7 @@ public class CollectathonModeData : CustomModeData, IBuildHook
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/Collectathon/Create Bolt", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Collectathon/Create Bolt", priority = 10)]
     public static void CreateBolt()
     {
         var go = new GameObject("Gold Bolt Moby");
@@ -72,7 +72,7 @@ public class CollectathonModeData : CustomModeData, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Collectathon/Create Collectathon Data", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Collectathon/Create Collectathon Data", priority = 10)]
     public static void CreateDataData()
     {
         var go = new GameObject("Collectathon");

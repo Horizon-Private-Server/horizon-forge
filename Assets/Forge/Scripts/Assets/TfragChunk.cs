@@ -117,7 +117,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
         }
     }
 
-    public void GetData(List<Material> materials, out byte[] header, out byte[] data)
+    public void GetData(MaterialCollection materials, out byte[] header, out byte[] data)
     {
         header = HeaderBytes?.ToArray();
         data = DataBytes?.ToArray();
@@ -130,13 +130,9 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
             for (int m = 0; m < renderer.sharedMaterials.Length; ++m)
             {
                 var mat = renderer.sharedMaterials[m];
-                var idx = materials.IndexOf(mat);
-                if (idx < 0)
-                {
-                    idx = materials.Count;
-                    materials.Add(mat);
-                }
 
+                // try and get idx to material
+                var idx = materials.FindIndexOrAdd(mat);
                 texIdxs[m] = idx;
             }
 

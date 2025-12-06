@@ -40,9 +40,17 @@ extern u8 MOB_PATHFINDING_EDGES_JUMPPADAT[];
 extern const int MOB_PATHFINDING_PATHS_MAX_PATH_LENGTH;
 extern u8 MOB_PATHFINDING_PATHS[];
 
+int pathGetClosestNodeIdx(VECTOR pos);
+int pathGetClosestNode(Moby* moby);
+int pathGetClosestNodeInSight(Moby* moby, int * foundInSight);
+int pathTargetCacheGetClosestNodeIdx(Moby* moby);
+int pathHasRouteFromTo(int fromNodeIdx, int toNodeIdx);
+int pathHasRouteToTarget(Moby* moby, Moby* target);
+
+int pathUseTargetMoby(Moby* moby);
 int pathShouldJump(Moby* moby);
 float pathGetJumpSpeed(Moby* moby);
-void pathGetTargetPos(VECTOR output, Moby* moby);
+int pathGetTargetPos(VECTOR output, Moby* moby);
 void pathSetPath(Moby* moby, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd);
 
 #endif // SURVIVAL_PATHFIND_H

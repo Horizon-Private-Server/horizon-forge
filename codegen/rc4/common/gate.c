@@ -31,7 +31,10 @@
 #include "maputils.h"
 #include "gate.h"
 
-int gateInitialized = 0;
+#if SURVIVAL
+#include "utils.h"
+#endif
+
 Moby* gateMobies[GATE_MAX_COUNT] = {};
 void * gateCollisionData = NULL;
 
@@ -143,6 +146,16 @@ void gatePlayOpenSound(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void gatePayToken(Moby* moby, int playerIdx)
+{
+	// create event
+	GuberEvent * guberEvent = guberCreateEvent(moby, GATE_EVENT_PAY_TOKEN);
+  if (guberEvent) {
+    guberEventWrite(guberEvent, &playerIdx, 4);
+  }
+}
+
+//--------------------------------------------------------------------------
 void gateOnStateChanged(Moby* moby)
 {
   if (moby->State == GATE_STATE_DEACTIVATED) {
@@ -161,21 +174,76 @@ void gateBroadcastNewState(Moby* moby, enum GateState state)
 }
 
 //--------------------------------------------------------------------------
+int gateCanInteract(Moby* moby, VECTOR point)
+{
+  VECTOR delta, gateTangent, gateClosestToPoint;
+  if (!moby || !moby->PVar)
+    return 0;
+
+  struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
+
+  // get delta from center of gate to point
+  vector_subtract(delta, point, moby->Position);
+
+  // outside vertical range
+  if (fabsf(delta[2]) > ((pvars->Height/2) + 0.5))
+    return 0;
+
+  // get closest point on gate to point
+  float gateLength = pvars->Length;
+  vector_copy(gateTangent, moby->M0_03);
+  //vector_scale(gateTangent, gateTangent, 1 / gateLength);
+
+  vector_subtract(delta, point, moby->Position);
+  float dot = vector_innerproduct_unscaled(delta, gateTangent);
+  if (dot < (-gateLength/2 - GATE_INTERACT_CAP_RADIUS))
+    return 0;
+
+  if (dot > (gateLength/2 + GATE_INTERACT_CAP_RADIUS))
+    return 0;
+
+  vector_scale(gateClosestToPoint, gateTangent, dot);
+  vector_add(gateClosestToPoint, gateClosestToPoint, moby->Position);
+  vector_subtract(delta, point, gateClosestToPoint);
+  delta[2] = 0;
+  return vector_sqrmag(delta) < (GATE_INTERACT_RADIUS*GATE_INTERACT_RADIUS);
+}
+
+//--------------------------------------------------------------------------
+void gateHandleInteract(Moby* moby)
+{
+  struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
+  int i;
+  char buf[32];
+  
+  // handle interact
+  if (pvars->CurrentCost > 0 && moby->State == GATE_STATE_ACTIVATED) {
+    for (i = 0; i < GAME_MAX_LOCALS; ++i) {
+      Player* lp = playerGetFromSlot(i);
+      if (lp) {
+        
+        // draw help popup
+        if (gateCanInteract(moby, lp->PlayerPosition)) {
+#if SURVIVAL
+          snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
+          if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE)) {
+            gatePayToken(moby, lp->PlayerId);
+            break;
+          }
+#endif
+        }
+      }
+    }
+  }
+}
+
+//--------------------------------------------------------------------------
 void gateUpdate(Moby* moby)
 {
   if (!moby || !moby->PVar)
     return;
     
   struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
-
-  // initialize by sending first state
-  if (!pvars->Init) {
-    if (gameAmIHost() && gateInitialized) {
-      gateBroadcastNewState(moby, pvars->DefaultState);
-    }
-    
-    return;
-  }
 
   // detect when state was changed
   if ((moby->Triggers & 1) == 0) {
@@ -194,6 +262,8 @@ void gateUpdate(Moby* moby)
   } else if (moby->State == GATE_STATE_DEACTIVATED) {
     pvars->Opacity = clamp(pvars->Opacity - MATH_DT, 0, 1);
   }
+  
+  gateHandleInteract(moby);
   
   // collision only if visible
   if (pvars->Opacity > 0)
@@ -246,7 +316,67 @@ int gateHandleEvent_SetState(Moby* moby, GuberEvent* event)
   mobySetState(moby, state, -1);
   
   struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
-  pvars->Init = 1;
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+int gateHandleEvent_PayToken(Moby* moby, GuberEvent* event)
+{
+  int pIdx;
+  Player** players = playerGetAll();
+  
+  DPRINTF("gate token paid: %08X\n", (u32)moby);
+  struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
+  if (!pvars)
+    return 0;
+  
+  guberEventRead(event, &pIdx, 4);
+
+  // increment stat
+#if SURVIVAL
+  if (pIdx >= 0 && MapConfig.State) {
+    MapConfig.State->PlayerStates[pIdx].State.TokensUsedOnGates += 1;
+  }
+#endif
+  
+  // reduce cost by 1
+  // open gate if cost reduced to 0
+  if (pvars->CurrentCost > 0 && moby->State == GATE_STATE_ACTIVATED) {
+    pvars->CurrentCost -= 1;
+    if (pvars->CurrentCost == 0) {
+      mobySetState(moby, GATE_STATE_DEACTIVATED, -1);
+      gatePlayOpenSound(moby);
+    }
+
+    // charge player
+#if SURVIVAL
+    if (MapConfig.State) {
+      MapConfig.State->PlayerStates[pIdx].State.CurrentTokens -= 1;
+    }
+
+    playPaidSound(players[pIdx]);
+#endif
+  }
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+int gateHandleEvent_SetCost(Moby* moby, GuberEvent* event)
+{
+  struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
+  if (!pvars)
+    return 0;
+  
+  guberEventRead(event, &pvars->CurrentCost, 4);
+
+  DPRINTF("gate cost set: %08X => %d\n", (u32)moby, pvars->CurrentCost);
+
+  // reactivate
+  if (moby->State != GATE_STATE_ACTIVATED) {
+    mobySetState(moby, GATE_STATE_ACTIVATED, -1);
+  }
+
   return 0;
 }
 
@@ -257,9 +387,8 @@ void gateOnGuberCreated(Moby* moby)
 
 	moby->PUpdate = &gateUpdate;
   moby->ModeBits = MOBY_MODE_BIT_LOCK_ROTATION | MOBY_MODE_BIT_HIDDEN | MOBY_MODE_BIT_NO_POST_UPDATE;
-  pvars->Init = 0;
   pvars->Opacity = 0;
-
+  pvars->CurrentCost = pvars->InitialCost;
   mobySetState(moby, pvars->DefaultState, -1);
 
   // update global collision data ptr
@@ -292,6 +421,8 @@ int gateHandleEvent(Moby* moby, GuberEvent* event)
 		{
 			case GATE_EVENT_SPAWN: return gateHandleEvent_Spawned(moby, event);
       case GATE_EVENT_SET_STATE: return gateHandleEvent_SetState(moby, event);
+			case GATE_EVENT_PAY_TOKEN: return gateHandleEvent_PayToken(moby, event);
+			case GATE_EVENT_SET_COST: return gateHandleEvent_SetCost(moby, event);
 			default:
 			{
 				DPRINTF("unhandle gate event %d\n", upgradeEvent);
@@ -327,7 +458,7 @@ int gateCreate(VECTOR position, VECTOR rotation, float length, float height)
 //--------------------------------------------------------------------------
 void gateStart(void)
 {
-  gateInitialized = 1;
+  
 }
 
 //--------------------------------------------------------------------------

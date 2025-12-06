@@ -58,6 +58,7 @@ public class ObstacleCourseModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.LDFlags.Add("-DOBSTACLE");
+        state.InitBody.Add("respawnAllPlayers();");
     }
 
     public void Configure(BuildState state)
@@ -89,7 +90,7 @@ public class ObstacleCourseModeData : CustomModeData, ICodeGen, IBuildHook
 
     #region Menu Items
 
-    [MenuItem("GameObject/Forge/Obstacle Course/Create Obstacle Course Data", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Obstacle Course/Create Obstacle Course Data", priority = 10)]
     public static void CreateDataData()
     {
         var go = new GameObject("Obstacle Course");
