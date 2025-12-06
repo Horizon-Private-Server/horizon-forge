@@ -33,6 +33,7 @@
 #include "game.h"
 #include "gate.h"
 #include "messageid.h"
+#include "utils.h"
 #include "maputils.h"
 
 #if POWER
@@ -102,7 +103,7 @@ int ALPHA_MOD_TEX_IDS[] = {
   [ALPHA_MOD_XP] 44 - 3,
 };
 
-const int ENABLED_ALPHA_MODS[] = {
+const char ENABLED_ALPHA_MODS[] = {
   ALPHA_MOD_SPEED,
   ALPHA_MOD_AMMO,
   ALPHA_MOD_IMPACT,
@@ -143,6 +144,8 @@ extern struct MysteryBoxItemWeight MysteryBoxItemProbabilitiesLucky[];
 extern const int MysteryBoxItemProbabilitiesCount;
 extern const int MysteryBoxItemProbabilitiesLuckyCount;
 
+char MysteryBoxRespawnImmediately = 0;
+
 //--------------------------------------------------------------------------
 void mboxPlayOpenSound(Moby* moby)
 {
@@ -153,6 +156,16 @@ void mboxPlayOpenSound(Moby* moby)
 void mboxPlayRespawnSound(Moby* moby)
 {
   soundPlay(&RespawnSoundDef, 0, moby, 0, 0x400);
+}
+
+//--------------------------------------------------------------------------
+int mboxGetCost(Moby* moby, int playerId)
+{
+  if (!moby || !moby->PVar)
+    return 0;
+    
+  struct MysteryBoxPVar* pvars = (struct MysteryBoxPVar*)moby->PVar;
+  return pvars->BoltCostMultiplier * (MYSTERY_BOX_COST + (MYSTERY_BOX_COST_PER_VOX * pvars->NumVoxPerPlayer[playerId]));
 }
 
 //--------------------------------------------------------------------------
@@ -192,7 +205,7 @@ void mboxRandomizeWeaponPickups(void)
 	if (gameOptions->WeaponFlags.B6) { wepEnabled[7] = 1; pickupOptionCount++; }
 	if (gameOptions->WeaponFlags.Holoshield) { wepEnabled[16] = 1; pickupOptionCount++; }
 	if (gameOptions->WeaponFlags.Flail) { wepEnabled[12] = 1; pickupOptionCount++; }
-	if (gameOptions->WeaponFlags.Chargeboots) { wepEnabled[13] = 1; pickupOptionCount++; }
+  if (gameOptions->WeaponFlags.Chargeboots && gameOptions->GameFlags.MultiplayerGameFlags.SpawnWithChargeboots == 0) { wepEnabled[13] = 1; pickupOptionCount++; }
 
 	if (pickupOptionCount > 0) {
 		Moby* moby = mobyListGetStart();
@@ -203,7 +216,7 @@ void mboxRandomizeWeaponPickups(void)
 				
 				int target = pickupCount / pickupOptionCount;
 				int gadgetId = 1;
-				if (target < 2) {
+				if (target < 3) {
 					do { j = rand(pickupOptionCount); } while (wepCounts[j] != target);
 
 					++wepCounts[j];
@@ -671,7 +684,7 @@ void mboxUpdate(Moby* moby)
 
       // find local players to activate
       for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-        int cost = MYSTERY_BOX_COST + (MYSTERY_BOX_COST_PER_VOX * pvars->NumVoxPerPlayer[i]);
+        int cost = mboxGetCost(moby, i);
         snprintf(buf, sizeof(buf), "\x11 Open [\x0E%'d\x08]", cost);
 
         if (tryPlayerInteract(moby, players[i], buf, NULL, cost, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE)) {
@@ -686,7 +699,7 @@ void mboxUpdate(Moby* moby)
       moby->DrawDist = 0;
       moby->CollActive = -1;
 
-      if (MapConfig.State && MapConfig.State->RoundNumber != pvars->RoundHidden) {
+      if (MapConfig.State && (MysteryBoxRespawnImmediately || MapConfig.State->RoundNumber != pvars->RoundHidden)) {
         vector_copy(moby->Position, pvars->SpawnpointPosition);
         vector_copy(moby->Rotation, pvars->SpawnpointRotation);
         mobySetState(moby, MYSTERY_BOX_STATE_IDLE, -1);
@@ -714,6 +727,9 @@ int mboxHandleEvent_Spawned(Moby* moby, GuberEvent* event)
 
 	// indicate to survival mode that we can damage players
   moby->Bolts = -1;
+
+  // init pvars
+  pvars->BoltCostMultiplier = 1;
 
   // update mode reference
   if (MapConfig.State) MapConfig.State->MysteryBoxMoby = moby;
@@ -772,7 +788,7 @@ int mboxHandleEvent_Activate(Moby* moby, GuberEvent* event)
 
     // charge player
     if (MapConfig.State) {
-      int cost = MYSTERY_BOX_COST + (MYSTERY_BOX_COST_PER_VOX * pvars->NumVoxPerPlayer[activatedByPlayerId]);
+      int cost = mboxGetCost(moby, activatedByPlayerId);
       MapConfig.State->PlayerStates[activatedByPlayerId].State.Bolts -= cost;
     }
 
@@ -969,6 +985,7 @@ int mboxCreate(VECTOR position, VECTOR rotation)
   return guberEvent != NULL;
 }
 
+//--------------------------------------------------------------------------
 void mboxSpawn(void)
 {
   static int spawned = 0;
@@ -989,6 +1006,7 @@ void mboxSpawn(void)
   spawned = 1;
 }
 
+//--------------------------------------------------------------------------
 void mboxInit(void)
 {
   Moby* temp = mobySpawn(MYSTERY_BOX_OCLASS, 0);

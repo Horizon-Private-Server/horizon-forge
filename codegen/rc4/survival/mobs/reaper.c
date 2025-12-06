@@ -7,10 +7,11 @@
 #include <libdl/radar.h>
 #include <libdl/color.h>
 
-#include "../game.h"
-#include "../mob.h"
+#include "game.h"
+#include "mob.h"
 #include "pathfind.h"
 #include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 
 void reaperPreUpdate(Moby* moby);
@@ -57,18 +58,15 @@ struct MobVTable ReaperVTable = {
   .ShouldForceStateUpdateOnAction = &reaperShouldForceStateUpdateOnAction,
 };
 
-extern u32 MobPrimaryColors[];
-extern u32 MobSecondaryColors[];
-extern u32 MobLODColors[];
-
 //--------------------------------------------------------------------------
 int reaperCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
 {
 	struct MobSpawnEventArgs args;
+  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(REAPER_MOBY_OCLASS, sizeof(struct MobPVar) + sizeof(ReaperMobVars_t), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -119,9 +117,10 @@ void reaperPostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = mobGetScaleMultiplier(moby);
 
   // adjust animSpeed by speed and by animation
-	float animSpeed = 1.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+	float animSpeed = 1.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (reaperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
     animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
   }
@@ -140,8 +139,8 @@ void reaperPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = MobLODColors[pvars->MobVars.SpawnParamsIdx] | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  u32 color = REAPER_LOD_COLOR | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 127, color, REAPER_SUBSKELETON_HEAD);
 }
 
 //--------------------------------------------------------------------------
@@ -163,18 +162,18 @@ void reaperMove(Moby* moby)
 //--------------------------------------------------------------------------
 void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
-  
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = mobGetScaleMultiplier(moby);
 
   // set scale
-  moby->Scale = 0.256339;
+  moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = MobSecondaryColors[pvars->MobVars.SpawnParamsIdx];
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->GlowRGBA = REAPER_GLOW_COLOR;
+	moby->PrimaryColor = REAPER_PRIMARY_COLOR;
 
   // targeting
-	pvars->TargetVars.targetHeight = 1;
+	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
   pvars->MobVars.BlipType = 4;
 
 #if MOB_DAMAGETYPES
@@ -199,7 +198,7 @@ void reaperOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->PrimaryColor = REAPER_PRIMARY_COLOR;
   
 	// limit corn spawning to prevent freezing/framelag
 	if (MapConfig.State && MapConfig.State->MobStats.TotalAlive < 30) {
@@ -301,12 +300,7 @@ Moby* reaperGetNextTarget(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   ReaperMobVars_t* reaperVars = (ReaperMobVars_t*)pvars->AdditionalMobVarsPtr;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
 	Moby * currentTarget = pvars->MobVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
 
   // target player who hit us
   Moby* aggroTriggeredByTarget = playerGetTargetMoby(reaperVars->AggroTriggeredBy);
@@ -323,32 +317,7 @@ Moby* reaperGetNextTarget(Moby* moby)
     }
   }
 
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = *players;
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
-
-			if (dist < 300) {
-				// favor existing target
-				if (playerGetTargetMoby(p) == currentTarget)
-					dist *= (1.0 / REAPER_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-
-		++players;
-	}
-
-	if (closestPlayer)
-		return playerGetTargetMoby(closestPlayer);
-
-	return NULL;
+  return mobGetNextTarget(moby, REAPER_TARGET_KEEP_CURRENT_FACTOR);
 }
 
 //--------------------------------------------------------------------------
@@ -498,9 +467,9 @@ void reaperDoAction(Moby* moby)
 			{
         // move
         if (target) {
-          pathGetTargetPos(t, moby);
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+            pvars->MobVars.Dirty = 1; // new path, sync with other clients
+          mobJumpTowards(moby, t);
         } else {
           mobStand(moby);
         }
@@ -569,21 +538,9 @@ void reaperDoAction(Moby* moby)
       }
       
       if (target) {
-        float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
-
-        // determine next position
-        pathGetTargetPos(t, moby);
-        vector_subtract(t, t, moby->Position);
-        float dist = vector_length(t);
-        if (dist < 10.0) {
-          reaperAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * dir);
-          vector_add(t, t, t2);
-        }
-        vector_scale(t, t, 1 / dist);
-        vector_add(t, moby->Position, t);
-
-        mobTurnTowards(moby, t, turnSpeed);
-        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed * 3, acceleration);
+        if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+          pvars->MobVars.Dirty = 1; // new path, sync with other clients
+        mobMoveTowards(moby, t, pvars->MobVars.Config.Speed * 3, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
       } else {
         // stand
         mobStand(moby);
@@ -602,24 +559,10 @@ void reaperDoAction(Moby* moby)
     case REAPER_ACTION_WALK:
 		{
       if (target) {
-        float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
-
-        // determine next position
-        pathGetTargetPos(t, moby);
-        vector_subtract(t, t, moby->Position);
-        float dist = vector_length(t);
-        if (dist < 10.0) {
-          reaperAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * dir);
-          vector_add(t, t, t2);
-        }
-        vector_scale(t, t, 1 / dist);
-        vector_add(t, moby->Position, t);
-
-
-        mobTurnTowards(moby, t, turnSpeed);
-        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+        if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+          pvars->MobVars.Dirty = 1; // new path, sync with other clients
+        mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
       } else {
-        // stand
         mobStand(moby);
       }
 
@@ -653,10 +596,8 @@ void reaperDoAction(Moby* moby)
 			u32 damageFlags = 0x00081801;
 
       if (target) {
-        mobTurnTowards(moby, target->Position, turnSpeed);
-        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult * pvars->MobVars.Config.Speed, acceleration);
+        mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
       } else {
-        // stand
         mobStand(moby);
       }
 

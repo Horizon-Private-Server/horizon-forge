@@ -32,6 +32,10 @@
 #include "maputils.h"
 #include "common.h"
 
+#if SURVIVAL
+#include "utils.h"
+#endif
+
 char LocalPlayerStrBuffer[2][64];
 
 /* 
@@ -187,7 +191,14 @@ u32 decTimerU32(u32* timeValue)
 //--------------------------------------------------------------------------
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive)
 {
+#if SURVIVAL
+  if (MapConfig.PushSnackFunc)
+    MapConfig.PushSnackFunc(string, ticksAlive, localPlayerIdx);
+  else
+    uiShowPopup(localPlayerIdx, string);
+#else
   uiShowPopup(localPlayerIdx, string);
+#endif
 }
 
 //--------------------------------------------------------------------------
@@ -371,11 +382,16 @@ void respawnAllPlayers(void)
   int i;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = players[i];
-    if (!player || !player->PlayerMoby || !player->pNetPlayer) continue;
+    if (!playerIsValid(player)) continue;
     
     // respawn player
-    playerGetSpawnpoint(player, player->PlayerPosition, player->PlayerRotation, 1);
-    vector_copy(player->PlayerMoby->Position, player->PlayerPosition);
+    // reuse hooked respawn method
+    u32 addr = (*(u32*)0x00610724 & 0x03ffffff) << 2;
+    VECTOR p,r;
+    ((void (*)(Player*, VECTOR, VECTOR, int))addr)(player, p, r, 1);
+    //playerGetSpawnpoint(player, player->PlayerPosition, player->PlayerRotation, 1);
+    playerSetPosRot(player, p, r);
+
     if (!player->IsLocal) {
       memset((void*)((u32)player->pNetPlayer + 0x38), 0, 0xAD0 - 0x38);
       player->pNetPlayer->lastActiveSeqNum = -1;

@@ -30,6 +30,10 @@
 #define SWARMER_FLINCH_PROBABILITY            (1.0)
 #define SWARMER_FLINCH_PROBABILITY_PWR_FACTOR (0.1)
 
+#define SWARMER_PRIMARY_COLOR                   (0x00464443)
+#define SWARMER_GLOW_COLOR                      (0x00808080)
+#define SWARMER_LOD_COLOR                       (0x00808080)
+
 enum SwarmerAnimId
 {
 	SWARMER_ANIM_IDLE,
@@ -79,5 +83,10 @@ enum SwarmerSubskeletonJoints
 {
   SWARMER_SUBSKELETON_JOINT_JAW = 0,
 };
+
+struct MobConfig;
+int swarmerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
+
+extern struct MobVTable SwarmerVTable;
 
 #endif // SURVIVAL_MOB_SWARMER_H

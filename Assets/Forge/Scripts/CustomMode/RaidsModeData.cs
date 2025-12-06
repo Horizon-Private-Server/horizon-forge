@@ -199,7 +199,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
             state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
             state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  contractsFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("  \r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  contractsFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("\t\r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
         }
 
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
@@ -411,7 +411,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine($"int musicTrackWhitelistCount = {TrackWhitelist.Count};");
         sb.AppendLine("int musicTrackWhitelist[] = {");
         foreach (var track in TrackWhitelist)
-            sb.AppendLine($"  {(int)track},");
+            sb.AppendLine($"\t{(int)track},");
         sb.AppendLine("};");
         sb.AppendLine("");
 
@@ -846,42 +846,42 @@ public class RaidsMobSpawnParam
         var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new RaidsMobsScriptableObject.RaidsMobsConfig();
         var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
 
-        sb.AppendLine("  {");
-        sb.AppendLine($"    .MobCreate = &{mobPrefix}Create,");
-        sb.AppendLine($"    .MobVTable = &{this.Mob}VTable,");
-        sb.AppendLine($"    .RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
-        sb.AppendLine($"    .Scale = {SizeMultiplier},");
-        sb.AppendLine($"    .OClass = {variant.OClass},");
-        sb.AppendLine($"    .BlipType = {(int)defaults.BlipType},");
-        sb.AppendLine($"    .BlipTeam = {(int)defaults.BlipTeam},");
-        sb.AppendLine($"    .TeamPalette = {(int)TexturePalette},");
-        //sb.AppendLine($"    .Name = \"{Name?.Replace("\"", "")}\",");
-        sb.AppendLine($"    .Config = {{");
-        sb.AppendLine($"      .Xp = {(int)(defaults.Xp * XpMultiplier)},");
-        sb.AppendLine($"      .Bolts = {(int)(defaults.Bolts * BoltsMultiplier)},");
-        sb.AppendLine($"      .Bangles = 0x{(int)variant.Bangles:X4},");
-        sb.AppendLine($"      .Damage = {defaults.Damage * DamageMultiplier},");
-        sb.AppendLine($"      .MaxDamage = {defaults.DamageMax},");
-        sb.AppendLine($"      .DamageScale = {defaults.DamageScale * DamageDifficultyRateMultiplier},");
-        sb.AppendLine($"      .Speed = {defaults.Speed * SpeedMultiplier},");
-        sb.AppendLine($"      .MaxSpeed = {defaults.SpeedMax},");
-        sb.AppendLine($"      .SpeedScale = {defaults.SpeedScale * SpeedDifficultyRateMultiplier},");
-        sb.AppendLine($"      .Health = {defaults.Health * HealthMultiplier},");
-        sb.AppendLine($"      .MaxHealth = {defaults.HealthMax},");
-        sb.AppendLine($"      .HealthScale = {defaults.HealthScale * HealthDifficultyRateMultiplier},");
-        sb.AppendLine($"      .TurnSpeed = {defaults.TurnSpeed * TurnSpeedMultiplier},");
-        sb.AppendLine($"      .AttackRadius = {defaults.AttackRadius * SizeMultiplier},");
-        sb.AppendLine($"      .HitRadius = {defaults.HitRadius * SizeMultiplier},");
-        sb.AppendLine($"      .CollRadius = {defaults.CollRadius * SizeMultiplier},");
-        sb.AppendLine($"      .AutoAggroMaxRange = {ForceAggroRange},");
-        sb.AppendLine($"      .VisionRange = {VisionRange},");
-        sb.AppendLine($"      .RangedMaxDistanceToTarget = {RangedAttackDistance},");
-        sb.AppendLine($"      .PeripheryRangeTheta = {PeripheralVisionDegrees * 0.5f * Mathf.Deg2Rad},");
-        sb.AppendLine($"      .OutOfSightDeAggroTickCount = {(int)(OutOfSightDeAggroTime * 60)},");
-        sb.AppendLine($"      .ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
-        sb.AppendLine($"      .AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
-        sb.AppendLine($"    }}");
-        sb.AppendLine("  },");
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.MobCreate = &{mobPrefix}Create,");
+        sb.AppendLine($"\t\t.MobVTable = &{this.Mob}VTable,");
+        sb.AppendLine($"\t\t.RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
+        sb.AppendLine($"\t\t.Scale = {SizeMultiplier},");
+        sb.AppendLine($"\t\t.OClass = {variant.OClass},");
+        sb.AppendLine($"\t\t.BlipType = {(int)defaults.BlipType},");
+        sb.AppendLine($"\t\t.BlipTeam = {(int)defaults.BlipTeam},");
+        sb.AppendLine($"\t\t.TeamPalette = {(int)TexturePalette},");
+        //sb.AppendLine($"\t\t.Name = \"{Name?.Replace("\"", "")}\",");
+        sb.AppendLine($"\t\t.Config = {{");
+        sb.AppendLine($"\t\t\t.Xp = {(int)(defaults.Xp * XpMultiplier)},");
+        sb.AppendLine($"\t\t\t.Bolts = {(int)(defaults.Bolts * BoltsMultiplier)},");
+        sb.AppendLine($"\t\t\t.Bangles = 0x{(int)variant.Bangles:X4},");
+        sb.AppendLine($"\t\t\t.Damage = {defaults.Damage * DamageMultiplier},");
+        sb.AppendLine($"\t\t\t.MaxDamage = {defaults.DamageMax},");
+        sb.AppendLine($"\t\t\t.DamageScale = {defaults.DamageScale * DamageDifficultyRateMultiplier},");
+        sb.AppendLine($"\t\t\t.Speed = {defaults.Speed * SpeedMultiplier},");
+        sb.AppendLine($"\t\t\t.MaxSpeed = {defaults.SpeedMax},");
+        sb.AppendLine($"\t\t\t.SpeedScale = {defaults.SpeedScale * SpeedDifficultyRateMultiplier},");
+        sb.AppendLine($"\t\t\t.Health = {defaults.Health * HealthMultiplier},");
+        sb.AppendLine($"\t\t\t.MaxHealth = {defaults.HealthMax},");
+        sb.AppendLine($"\t\t\t.HealthScale = {defaults.HealthScale * HealthDifficultyRateMultiplier},");
+        sb.AppendLine($"\t\t\t.TurnSpeed = {defaults.TurnSpeed * TurnSpeedMultiplier},");
+        sb.AppendLine($"\t\t\t.AttackRadius = {defaults.AttackRadius * SizeMultiplier},");
+        sb.AppendLine($"\t\t\t.HitRadius = {defaults.HitRadius * SizeMultiplier},");
+        sb.AppendLine($"\t\t\t.CollRadius = {defaults.CollRadius * SizeMultiplier},");
+        sb.AppendLine($"\t\t\t.AutoAggroMaxRange = {ForceAggroRange},");
+        sb.AppendLine($"\t\t\t.VisionRange = {VisionRange},");
+        sb.AppendLine($"\t\t\t.RangedMaxDistanceToTarget = {RangedAttackDistance},");
+        sb.AppendLine($"\t\t\t.PeripheryRangeTheta = {PeripheralVisionDegrees * 0.5f * Mathf.Deg2Rad},");
+        sb.AppendLine($"\t\t\t.OutOfSightDeAggroTickCount = {(int)(OutOfSightDeAggroTime * 60)},");
+        sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
+        sb.AppendLine($"\t\t\t.AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
+        sb.AppendLine($"\t\t}}");
+        sb.AppendLine("\t},");
 
         return sb.ToString();
     }
@@ -921,14 +921,14 @@ public class RaidsContractRule
         var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == Mob);
         var variant = mobDefaults.Variants.ElementAtOrDefault(Variant);
 
-        sb.AppendLine("  {");
-        sb.AppendLine($"    .MobOClass = {variant.OClass},");
-        sb.AppendLine($"    .MinCount = {MinCount},");
-        sb.AppendLine($"    .MaxCount = {MaxCount},");
-        sb.AppendLine($"    .XpMult = {BaseXpPerMob},");
-        sb.AppendLine($"    .BoltMult = {BaseBoltsPerMob},");
-        sb.AppendLine($"    .ExpirationMinutes = {ExpirationTimeMinutes}");
-        sb.AppendLine("  },");
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.MobOClass = {variant.OClass},");
+        sb.AppendLine($"\t\t.MinCount = {MinCount},");
+        sb.AppendLine($"\t\t.MaxCount = {MaxCount},");
+        sb.AppendLine($"\t\t.XpMult = {BaseXpPerMob},");
+        sb.AppendLine($"\t\t.BoltMult = {BaseBoltsPerMob},");
+        sb.AppendLine($"\t\t.ExpirationMinutes = {ExpirationTimeMinutes}");
+        sb.AppendLine("\t},");
 
         return sb.ToString();
     }
@@ -950,10 +950,10 @@ public class RaidsZone
         if (cuboidIdx < 0)
             Debug.LogWarning($"Missing cuboid for Zone {this.Name}");
 
-        sb.AppendLine("  {");
-        sb.AppendLine($"    .CuboidIdx = {cuboidIdx},");
-        sb.AppendLine($"    .Difficulty = {(int)this.Difficulty}");
-        sb.AppendLine("  },");
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.CuboidIdx = {cuboidIdx},");
+        sb.AppendLine($"\t\t.Difficulty = {(int)this.Difficulty}");
+        sb.AppendLine("\t},");
 
         return sb.ToString();
     }

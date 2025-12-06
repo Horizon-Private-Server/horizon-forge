@@ -25,7 +25,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     {
         [ReadOnly] public SurvivalMob Mob;
         public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
-        public DLTeamIds BlipTeam = DLTeamIds.Red;
+        public SurvivalMobStatIds StatId = SurvivalMobStatIds.None;
         public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
         public List<string> Behaviors = new List<string>();
 
@@ -58,7 +58,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     {
         public string Name;
         public int OClass;
-        public RaidsMobBangle Bangles;
+        public SurvivalMobBangle Bangles;
         public List<SurvivalMobDependency> Dependencies = new List<SurvivalMobDependency>();
 
         public SurvivalMobVariant() { }

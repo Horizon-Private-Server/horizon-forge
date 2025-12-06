@@ -324,15 +324,4 @@ void checkpointInit(void)
 
   DPRINTF("checkpoint manager pvar size %d\n", sizeof(struct CheckpointManagerPVar));
   DPRINTF("checkpoint pvar size %d\n", sizeof(struct CheckpointPVar));
-
-  int i;
-  Player** players = playerGetAll();
-  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
-    if (playerIsValid(player)) {
-      VECTOR pos,rot;
-      playerGetSpawnpoint(player, pos, rot, 1);
-      playerSetPosRot(player, pos, rot);
-    }
-  }
 }

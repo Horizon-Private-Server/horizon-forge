@@ -7,13 +7,12 @@
 #include <libdl/radar.h>
 #include <libdl/color.h>
 
-#include "../game.h"
-#include "../trailshot.h"
-#include "../mob.h"
+#include "game.h"
+#include "trailshot.h"
+#include "mob.h"
+#include "utils.h"
 #include "maputils.h"
 #include "shared.h"
-
-extern int aaa;
 
 VECTOR trailshotCenterOffset = {0,0,1,0};
 int trailshotGlobalIndex = 0;

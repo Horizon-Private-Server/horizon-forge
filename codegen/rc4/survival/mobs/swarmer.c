@@ -8,9 +8,10 @@
 #include <libdl/radar.h>
 #include <libdl/color.h>
 
-#include "../game.h"
-#include "../mob.h"
+#include "game.h"
+#include "mob.h"
 #include "pathfind.h"
+#include "utils.h"
 #include "maputils.h"
 #include "shared.h"
 
@@ -61,18 +62,15 @@ struct MobVTable SwarmerVTable = {
   .ShouldForceStateUpdateOnAction = &swarmerShouldForceStateUpdateOnAction,
 };
 
-extern u32 MobPrimaryColors[];
-extern u32 MobSecondaryColors[];
-extern u32 MobLODColors[];
-
 //--------------------------------------------------------------------------
 int swarmerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
 {
 	struct MobSpawnEventArgs args;
+  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(SWARMER_MOBY_OCLASS, sizeof(struct MobPVar), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -123,9 +121,10 @@ void swarmerPostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = mobGetScaleMultiplier(moby);
 
   // adjust animSpeed by speed and by animation
-	float animSpeed = 0.9 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) * (SWARMER_BASE_COLL_RADIUS / pvars->MobVars.Config.CollRadius);
+	float animSpeed = (0.9 / scale) * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) * (SWARMER_BASE_COLL_RADIUS / pvars->MobVars.Config.CollRadius);
   if (moby->AnimSeqId == SWARMER_ANIM_JUMP) {
     animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / 35, 2));
     if (pvars->MobVars.MoveVars.Grounded) {
@@ -158,7 +157,7 @@ void swarmerPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = MobLODColors[pvars->MobVars.SpawnParamsIdx] | (moby->Opacity << 24);
+  u32 color = SWARMER_LOD_COLOR | (moby->Opacity << 24);
   mobPostDrawQuad(moby, 127, color, 0);
 }
 
@@ -181,16 +180,15 @@ void swarmerMove(Moby* moby)
 //--------------------------------------------------------------------------
 void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
-  
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
   // set scale
-  float scale = (pvars->MobVars.Config.CollRadius / SWARMER_BASE_COLL_RADIUS);
+  float scale = mobGetScaleMultiplier(moby);
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = MobSecondaryColors[pvars->MobVars.SpawnParamsIdx];
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->GlowRGBA = SWARMER_GLOW_COLOR;
+	moby->PrimaryColor = SWARMER_PRIMARY_COLOR;
 
   // targeting
 	pvars->TargetVars.targetHeight = 1 + (scale * 0.25);
@@ -218,7 +216,7 @@ void swarmerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->PrimaryColor = SWARMER_PRIMARY_COLOR;
 }
 
 //--------------------------------------------------------------------------
@@ -243,7 +241,7 @@ void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 
 	// destroy
 	if (newHp <= 0) {
-    tremorForceLocalAction(moby, SWARMER_ACTION_DIE);
+    swarmerForceLocalAction(moby, SWARMER_ACTION_DIE);
     pvars->MobVars.LastHitBy = e->SourceUID;
     pvars->MobVars.LastHitByOClass = e->SourceOClass;
 	}
@@ -306,40 +304,7 @@ void swarmerOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 //--------------------------------------------------------------------------
 Moby* swarmerGetNextTarget(Moby* moby)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
-	Moby * currentTarget = pvars->MobVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
-
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = *players;
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-      float dist = vector_length(delta);
-
-			if (dist < 300) {
-				// favor existing target
-				if (playerGetTargetMoby(p) == currentTarget)
-					dist *= (1.0 / SWARMER_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-
-		++players;
-	}
-
-	if (closestPlayer)
-		return playerGetTargetMoby(closestPlayer);
-
-	return NULL;
+  return mobGetNextTarget(moby, SWARMER_TARGET_KEEP_CURRENT_FACTOR);
 }
 
 //--------------------------------------------------------------------------
@@ -496,9 +461,9 @@ void swarmerDoAction(Moby* moby)
         // move
         if (!isInAirFromFlinching) {
           if (target) {
-            pathGetTargetPos(t, moby);
-            mobTurnTowards(moby, t, turnSpeed);
-            mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+            if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+              pvars->MobVars.Dirty = 1; // new path, sync with other clients
+            mobJumpTowards(moby, t);
           } else {
             mobStand(moby);
           }
@@ -539,24 +504,9 @@ void swarmerDoAction(Moby* moby)
     case SWARMER_ACTION_WALK:
 		{
       if (target) {
-
-        float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
-
-        // determine next position
-        pathGetTargetPos(t, moby);
-        //vector_copy(t, target->Position);
-        vector_subtract(t, t, moby->Position);
-        float dist = vector_length(t);
-        if (dist < 10.0) {
-          swarmerAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * dir);
-          vector_add(t, t, t2);
-        }
-        vector_scale(t, t, 1 / dist);
-        vector_add(t, moby->Position, t);
-
-
-        mobTurnTowards(moby, t, turnSpeed);
-        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+        if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+          pvars->MobVars.Dirty = 1; // new path, sync with other clients
+        mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
       } else {
         // stand
         mobStand(moby);
@@ -651,8 +601,7 @@ void swarmerDoAction(Moby* moby)
 
       if (!isInAirFromFlinching) {
         if (target) {
-          mobTurnTowards(moby, target->Position, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult * pvars->MobVars.Config.Speed, acceleration);
+          mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
         } else {
           // stand
           mobStand(moby);
@@ -827,7 +776,7 @@ float swarmerGetDodgeProbability(Moby* moby)
   if (MapConfig.State) roundNo = MapConfig.State->RoundNumber;
 
   float factor = clamp(powf(roundNo / 100.0, 2), 0, 1);
-  return lerpf(0.03, 0.25, factor);
+  return lerpf(0.001, 0.01, factor);
 }
 
 //--------------------------------------------------------------------------

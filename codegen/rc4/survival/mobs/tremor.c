@@ -7,8 +7,9 @@
 #include <libdl/radar.h>
 #include <libdl/color.h>
 
-#include "../game.h"
-#include "../mob.h"
+#include "game.h"
+#include "mob.h"
+#include "utils.h"
 #include "maputils.h"
 #include "shared.h"
 
@@ -56,18 +57,15 @@ struct MobVTable TremorVTable = {
   .ShouldForceStateUpdateOnAction = &tremorShouldForceStateUpdateOnAction,
 };
 
-extern u32 MobPrimaryColors[];
-extern u32 MobSecondaryColors[];
-extern u32 MobLODColors[];
-
 //--------------------------------------------------------------------------
 int tremorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
 {
 	struct MobSpawnEventArgs args;
+  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(TREMOR_MOBY_OCLASS, sizeof(struct MobPVar), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -118,9 +116,10 @@ void tremorPostUpdate(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = mobGetScaleMultiplier(moby);
 
   // adjust animSpeed by speed and by animation
-	float animSpeed = 0.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+	float animSpeed = 0.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
   if (moby->AnimSeqId == TREMOR_ANIM_JUMP) {
     animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 21, 2));
     if (pvars->MobVars.MoveVars.Grounded) {
@@ -144,7 +143,7 @@ void tremorPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = MobLODColors[pvars->MobVars.SpawnParamsIdx] | (moby->Opacity << 24);
+  u32 color = TREMOR_LOD_COLOR | (moby->Opacity << 24);
   mobPostDrawQuad(moby, 127, color, 1);
 }
 
@@ -167,18 +166,18 @@ void tremorMove(Moby* moby)
 //--------------------------------------------------------------------------
 void tremorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
-  
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float scale = mobGetScaleMultiplier(moby);
 
   // set scale
-  moby->Scale = 0.256339;
+  moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = MobSecondaryColors[pvars->MobVars.SpawnParamsIdx];
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->GlowRGBA = TREMOR_GLOW_COLOR;
+	moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
 
   // targeting
-	pvars->TargetVars.targetHeight = 1;
+	pvars->TargetVars.targetHeight = 0.5 + (scale * 0.5);
   pvars->MobVars.BlipType = 4;
 
 #if MOB_DAMAGETYPES
@@ -203,7 +202,7 @@ void tremorOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = MobPrimaryColors[pvars->MobVars.SpawnParamsIdx];
+	moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
 }
 
 //--------------------------------------------------------------------------
@@ -287,40 +286,7 @@ void tremorOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 //--------------------------------------------------------------------------
 Moby* tremorGetNextTarget(Moby* moby)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
-	Moby * currentTarget = pvars->MobVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
-
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = *players;
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
-
-			if (dist < 300) {
-				// favor existing target
-				if (playerGetTargetMoby(p) == currentTarget)
-					dist *= (1.0 / TREMOR_TARGET_KEEP_CURRENT_FACTOR);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-					closestPlayer = p;
-					closestPlayerDist = dist;
-				}
-			}
-		}
-
-		++players;
-	}
-
-	if (closestPlayer)
-		return playerGetTargetMoby(closestPlayer);
-
-	return NULL;
+  return mobGetNextTarget(moby, TREMOR_TARGET_KEEP_CURRENT_FACTOR);
 }
 
 //--------------------------------------------------------------------------
@@ -431,9 +397,9 @@ void tremorDoAction(Moby* moby)
         // move
         if (!isInAirFromFlinching) {
           if (target) {
-            pathGetTargetPos(t, moby);
-            mobTurnTowards(moby, t, turnSpeed);
-            mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, 0, acceleration);
+            if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+              pvars->MobVars.Dirty = 1; // new path, sync with other clients
+            mobJumpTowards(moby, t);
           } else {
             mobStand(moby);
           }
@@ -475,25 +441,10 @@ void tremorDoAction(Moby* moby)
 		{
       if (!isInAirFromFlinching) {
         if (target) {
-
-          float dir = ((pvars->MobVars.ActionId + pvars->MobVars.Random) % 3) - 1;
-
-          // determine next position
-          pathGetTargetPos(t, moby);
-          //vector_copy(t, target->Position);
-          vector_subtract(t, t, moby->Position);
-          float dist = vector_length(t);
-          if (dist < 10.0) {
-            tremorAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * dir);
-            vector_add(t, t, t2);
-          }
-          vector_scale(t, t, 1 / dist);
-          vector_add(t, moby->Position, t);
-
-          mobTurnTowards(moby, t, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
+          if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
+            pvars->MobVars.Dirty = 1; // new path, sync with other clients
+          mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
         } else {
-          // stand
           mobStand(moby);
         }
       }
@@ -532,8 +483,7 @@ void tremorDoAction(Moby* moby)
 
       if (!isInAirFromFlinching) {
         if (target) {
-          mobTurnTowards(moby, target->Position, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult * pvars->MobVars.Config.Speed, acceleration);
+          mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
         } else {
           // stand
           mobStand(moby);

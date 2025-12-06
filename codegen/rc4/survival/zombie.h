@@ -30,6 +30,10 @@
 #define ZOMBIE_FLINCH_PROBABILITY             (1.0)
 #define ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR  (0.1)
 
+#define ZOMBIE_PRIMARY_COLOR                  (0x00464443)
+#define ZOMBIE_GLOW_COLOR                     (0x80202020)
+#define ZOMBIE_LOD_COLOR                      (0x00808080)
+
 enum ZombieAnimId
 {
 	ZOMBIE_ANIM_UNDERGROUND,
@@ -120,5 +124,10 @@ enum ZombieSubskeletonJoints
   ZOMBIE_SUBSKELETON_JOINT_LEFT_CHEST = 11,
   ZOMBIE_SUBSKELETON_JOINT_RIGHT_CHEST = 12,
 };
+
+struct MobConfig;
+int zombieCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
+
+extern struct MobVTable ZombieVTable;
 
 #endif // SURVIVAL_MOB_ZOMBIE_H

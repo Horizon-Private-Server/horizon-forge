@@ -31,6 +31,10 @@
 #define REAPER_FLINCH_PROBABILITY             (0.75)
 #define REAPER_FLINCH_PROBABILITY_PWR_FACTOR  (0.05)
 
+#define REAPER_PRIMARY_COLOR                  (0x00464443)
+#define REAPER_GLOW_COLOR                     (0x80FF2020)
+#define REAPER_LOD_COLOR                      (0x00202020)
+
 enum ReaperAnimId
 {
 	REAPER_ANIM_IDLE,
@@ -121,5 +125,10 @@ typedef struct ReaperMobVars
   Player* AggroTriggeredBy;
   char AggroTriggered;
 } ReaperMobVars_t;
+
+struct MobConfig;
+int reaperCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
+
+extern struct MobVTable ReaperVTable;
 
 #endif // SURVIVAL_MOB_REAPER_H

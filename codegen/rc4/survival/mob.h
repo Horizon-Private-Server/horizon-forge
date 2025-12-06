@@ -9,41 +9,45 @@
 #include <libdl/sound.h>
 #include "zombie.h"
 #include "executioner.h"
+#include "executioner2.h"
 #include "reactor.h"
 #include "tremor.h"
 #include "swarmer.h"
 #include "reaper.h"
+#include "leviathan.h"
 #include "game.h"
 
 enum MobAttributeType
 {
-	MOB_ATTRIBUTE_NONE = 0,
-	MOB_ATTRIBUTE_FREEZE,
-	MOB_ATTRIBUTE_ACID,
-	MOB_ATTRIBUTE_GHOST,
+  MOB_ATTRIBUTE_NONE = 0,
+  MOB_ATTRIBUTE_FREEZE,
+  MOB_ATTRIBUTE_ACID,
+  MOB_ATTRIBUTE_GHOST,
   MOB_ATTRIBUTE_EXPLODE,
   MOB_ATTRIBUTE_RUSSIAN_DOLL,
-	MOB_ATTRIBUTE_COUNT
+  MOB_ATTRIBUTE_RANGED_ATTACK,
+  MOB_ATTRIBUTE_BOSS,
+  MOB_ATTRIBUTE_COUNT
 };
 
 enum MobEvent
 {
-	MOB_EVENT_SPAWN,
-	MOB_EVENT_DESTROY,
-	MOB_EVENT_DAMAGE,
-	MOB_EVENT_STATE_UPDATE,
-	MOB_EVENT_TARGET_UPDATE,
-	MOB_EVENT_OWNER_UPDATE,
+  MOB_EVENT_SPAWN,
+  MOB_EVENT_DESTROY,
+  MOB_EVENT_DAMAGE,
+  MOB_EVENT_STATE_UPDATE,
+  MOB_EVENT_TARGET_UPDATE,
+  MOB_EVENT_OWNER_UPDATE,
   MOB_EVENT_CUSTOM,
 };
 
 // what kind of spawn a mob can have
 enum MobSpawnType {
-	SPAWN_TYPE_DEFAULT_RANDOM = 0,
-	SPAWN_TYPE_SEMI_NEAR_PLAYER = 1,
-	SPAWN_TYPE_NEAR_PLAYER = 2,
-	SPAWN_TYPE_ON_PLAYER = 4,
-	SPAWN_TYPE_NEAR_HEALTHBOX = 8,
+  SPAWN_TYPE_DEFAULT_RANDOM = 0,
+  SPAWN_TYPE_SEMI_NEAR_PLAYER = 1,
+  SPAWN_TYPE_NEAR_PLAYER = 2,
+  SPAWN_TYPE_ON_PLAYER = 4,
+  SPAWN_TYPE_NEAR_HEALTHBOX = 8,
 };
 
 // 
@@ -104,46 +108,51 @@ struct MobVTable {
 };
 
 struct MobConfig {
-	int Bolts;
-	float Damage;
-	float MaxDamage;
+  int Bolts;
+  float Damage;
+  float MaxDamage;
   float DamageScale;
-	float Speed;
-	float MaxSpeed;
+  float Speed;
+  float MaxSpeed;
   float SpeedScale;
-	float Health;
-	float MaxHealth;
+  float Health;
+  float MaxHealth;
   float HealthScale;
-	float AttackRadius;
-	float HitRadius;
+  float AttackRadius;
+  float HitRadius;
   float CollRadius;
-	u16 Bangles;
-	u16 Xp;
-	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
-	char MobAttribute;
+  u16 Bangles;
+  u16 Xp;
+  u8 ReactionTickCount;
+  u8 AttackCooldownTickCount;
+  char MobAttribute;
   char SharedXp;
 };
 
 struct MobSpawnParams {
-	int Cost;
+  MapOnMobCreate_func MobCreate;
+  struct MobVTable* MobVTable;
+  int RenderCost;
+  float Scale;
+  int OClass;
   int MaxSpawnedAtOnce;
   int MaxSpawnedPerRound;
-	int MinRound;
-	int CooldownTicks;
+  int MinRound;
+  int CooldownTicks;
   float CooldownOffsetPerRoundFactor; // 0 is unchanged, -1 is -1 tick per round, +1 is +1 tick per round
-	float Probability;
+  float Probability;
+  enum MobSpawnType SpawnType;
   enum MobStatId StatId;
-	enum MobSpawnType SpawnType;
-	char Name[32];
-	struct MobConfig Config;
+  char Name[32];
+  struct MobConfig Config;
   char SpecialRoundOnly;
+  char BlipType;
 };
 
 struct Knockback {
-	short Angle;
-	u8 Power;
-	u8 Ticks;
+  short Angle;
+  u8 Power;
+  u8 Ticks;
   char Force;
 };
 
@@ -160,12 +169,13 @@ struct MobMoveVars {
   float WallSlope;
   float PathEdgeAlpha;
   float LastPathEdgeAlphaForJump;
-	u16 StuckCounter;
+  u16 StuckCounter;
   char Grounded;
   char HitWall;
   char IsStuck;
   char MoveStep;
   char LastMoveStep;
+  char ForceUseTargetPosition;
   u8 UngroundedTicks;
   u8 StuckCheckTicks;
   u8 StuckJumpCount;
@@ -185,120 +195,121 @@ struct MobMoveVars {
 };
 
 struct MobVars {
-	struct MobConfig Config;
-	struct Knockback Knockback;
+  struct MobConfig Config;
+  struct Knockback Knockback;
   struct MobMoveVars MoveVars;
   int SpawnParamsIdx;
   int SpawnFlags;
   VECTOR TargetPosition;
-	int Action;
-	int NextAction;
-	int LastAction;
-	float Health;
-	float ClosestDist;
-	float LastSpeed;
-	Moby * Target;
-	int LastHitBy;
-	u16 LastHitByOClass;
-	u16 NextCheckActionDelayTicks;
-	u16 NextActionDelayTicks;
-	u16 ActionCooldownTicks;
-	u16 AttackCooldownTicks;
-	u16 ScoutCooldownTicks;
-	u16 FlinchCooldownTicks;
-	u16 AutoDirtyCooldownTicks;
-	u16 ForcedBlipCooldownTicks;
-	u16 TimeBombTicks;
-	u16 MovingTicks;
-	u16 CurrentActionForTicks;
-	u16 TimeLastGroundedTicks;
-	u8 ActionId;
-	u8 LastActionId;
+  int Action;
+  int NextAction;
+  int LastAction;
+  float Health;
+  float ClosestDist;
+  float LastSpeed;
+  Moby * Target;
+  int LastHitBy;
+  u16 LastHitByOClass;
+  u16 NextCheckActionDelayTicks;
+  u16 NextActionDelayTicks;
+  u16 ActionCooldownTicks;
+  u16 AttackCooldownTicks;
+  u16 ScoutCooldownTicks;
+  u16 FlinchCooldownTicks;
+  u16 AutoDirtyCooldownTicks;
+  u16 ForcedBlipCooldownTicks;
+  u16 TimeBombTicks;
+  u16 MovingTicks;
+  u16 CurrentActionForTicks;
+  u16 TimeLastGroundedTicks;
+  u8 ActionId;
+  u8 LastActionId;
   u8 SlowTicks;
-	char Owner;
-	char IsTraversing;
-	char AnimationLooped;
-	char AnimationReset;
-	char OpacityFlickerDirection;
-	char Destroy;
-	char Respawn;
-	char Dirty;
-	char Destroyed;
-	char Order;
-	char Random;
-	char DynamicRandom;
+  char Owner;
+  char IsTraversing;
+  char AnimationLooped;
+  char AnimationReset;
+  char OpacityFlickerDirection;
+  char Destroy;
+  char Respawn;
+  char Dirty;
+  char Destroyed;
+  char Order;
+  char Random;
+  char DynamicRandom;
   char BlipType;
+  char NoTargetCounter;
 };
 
 // warning: multiple differing types with the same name, only one recovered
 struct ReactVars {
-	/*   0 */ int flags;
-	/*   4 */ int lastReactFrame;
-	/*   8 */ Moby* pInfectionMoby;
-	/*   c */ float acidDamage;
-	/*  10 */ char eternalDeathCount;
-	/*  11 */ char doHotSpotChecks;
-	/*  12 */ char unchainable;
-	/*  13 */ char isShielded;
-	/*  14 */ char state;
-	/*  15 */ char deathState;
-	/*  16 */ char deathEffectState;
-	/*  17 */ char deathStateType;
-	/*  18 */ signed char knockbackRes;
-	/*  19 */ char padC;
-	/*  1a */ char padD;
-	/*  1b */ char padE;
-	/*  1c */ char padF;
-	/*  1d */ char padG;
-	/*  1e */ char padH;
-	/*  1f */ char padI;
-	/*  20 */ float minorReactPercentage;
-	/*  24 */ float majorReactPercentage;
-	/*  28 */ float deathHeight;
-	/*  2c */ float bounceDamp;
-	/*  30 */ int deadlyHotSpots;
-	/*  34 */ float curUpGravity;
-	/*  38 */ float curDownGravity;
-	/*  3c */ float shieldDamageReduction;
-	/*  40 */ float damageReductionSameOClass;
-	/*  44 */ int deathCorn;
-	/*  48 */ int deathType;
-	/*  4c */ short int deathSound;
-	/*  4e */ short int deathSound2;
-	/*  50 */ float peakFrame;
-	/*  54 */ float landFrame;
-	/*  58 */ float drag;
-	/*  5c */ short unsigned int effectStates;
-	/*  5e */ short unsigned int effectPrimMask;
-	/*  60 */ short unsigned int effectTimers[16];
+  /*   0 */ int flags;
+  /*   4 */ int lastReactFrame;
+  /*   8 */ Moby* pInfectionMoby;
+  /*   c */ float acidDamage;
+  /*  10 */ char eternalDeathCount;
+  /*  11 */ char doHotSpotChecks;
+  /*  12 */ char unchainable;
+  /*  13 */ char isShielded;
+  /*  14 */ char state;
+  /*  15 */ char deathState;
+  /*  16 */ char deathEffectState;
+  /*  17 */ char deathStateType;
+  /*  18 */ signed char knockbackRes;
+  /*  19 */ char padC;
+  /*  1a */ char padD;
+  /*  1b */ char padE;
+  /*  1c */ char padF;
+  /*  1d */ char padG;
+  /*  1e */ char padH;
+  /*  1f */ char padI;
+  /*  20 */ float minorReactPercentage;
+  /*  24 */ float majorReactPercentage;
+  /*  28 */ float deathHeight;
+  /*  2c */ float bounceDamp;
+  /*  30 */ int deadlyHotSpots;
+  /*  34 */ float curUpGravity;
+  /*  38 */ float curDownGravity;
+  /*  3c */ float shieldDamageReduction;
+  /*  40 */ float damageReductionSameOClass;
+  /*  44 */ int deathCorn;
+  /*  48 */ int deathType;
+  /*  4c */ short int deathSound;
+  /*  4e */ short int deathSound2;
+  /*  50 */ float peakFrame;
+  /*  54 */ float landFrame;
+  /*  58 */ float drag;
+  /*  5c */ short unsigned int effectStates;
+  /*  5e */ short unsigned int effectPrimMask;
+  /*  60 */ short unsigned int effectTimers[16];
 };
 
 struct MobPVar {
-	struct TargetVars * TargetVarsPtr;
-	char _pad0[0x0C];
-	struct ReactVars * ReactVarsPtr;
-	char _pad1[0x08];
+  struct TargetVars * TargetVarsPtr;
+  char _pad0[0x0C];
+  struct ReactVars * ReactVarsPtr;
+  char _pad1[0x08];
   struct MoveVars_V2 * MoveVarsPtr;
-	char _pad2[0x14];
- 	struct FlashVars * FlashVarsPtr;
-	char _pad3[0x14];
- 	void * AdditionalMobVarsPtr;
+  char _pad2[0x14];
+   struct FlashVars * FlashVarsPtr;
+  char _pad3[0x14];
+   void * AdditionalMobVarsPtr;
 
-	struct TargetVars TargetVars;
-	struct ReactVars ReactVars;
-	struct FlashVars FlashVars;
-	struct MobVars MobVars;
+  struct TargetVars TargetVars;
+  struct ReactVars ReactVars;
+  struct FlashVars FlashVars;
+  struct MobVars MobVars;
   struct MobVTable* VTable;
   int TicksSinceLastStateUpdate;
 };
 
 struct MobDamageEventArgs
 {
-	struct Knockback Knockback;
-	int SourceUID;
+  struct Knockback Knockback;
+  int SourceUID;
   u32 DamageFlags;
-	u32 DamageQuarters;
-	u16 SourceOClass;
+  u32 DamageQuarters;
+  u16 SourceOClass;
 };
 
 struct MobLocalDamageEventArgs
@@ -311,41 +322,41 @@ struct MobLocalDamageEventArgs
 
 struct MobActionUpdateEventArgs
 {
-	int Action;
-	u8 ActionId;
+  int Action;
+  u8 ActionId;
   char Random;
 };
 
 struct MobStateUpdateEventArgs
 {
-	VECTOR Position;
-	int TargetUID;
-	int Action;
+  VECTOR Position;
+  int TargetUID;
+  int Action;
   u8 PathStartNodeIdx;
   u8 PathEndNodeIdx;
   u8 PathCurrentEdgeIdx;
   char PathHasReachedStart;
   char PathHasReachedEnd;
-	u8 ActionId;
+  u8 ActionId;
   char Random;
 };
 
 struct MobSpawnEventArgs
 {
-	int Bolts;
-	int StartHealth;
-	u16 Bangles;
-	u16 SpeedEighths;
-	u16 Damage;
-	char MobType;
-	char MobAttribute;
+  int Bolts;
+  int StartHealth;
+  u16 Bangles;
+  u16 SpeedEighths;
+  u16 Damage;
+  u16 Xp;
+  char MobType;
+  char MobAttribute;
   u8 SpawnParamsIdx;
-	u8 Xp;
-	u8 AttackRadiusEighths;
-	u8 HitRadiusEighths;
+  u8 AttackRadiusEighths;
+  u8 HitRadiusEighths;
   u8 CollRadiusEighths;
-	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
+  u8 ReactionTickCount;
+  u8 AttackCooldownTickCount;
 };
 
 struct MobUnreliableBaseMsgArgs

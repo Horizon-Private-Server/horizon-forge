@@ -58,6 +58,7 @@ public class ObstacleCourseModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.LDFlags.Add("-DOBSTACLE");
+        state.InitBody.Add("respawnAllPlayers();");
     }
 
     public void Configure(BuildState state)

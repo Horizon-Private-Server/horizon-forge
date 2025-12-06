@@ -4,11 +4,70 @@
 #include <libdl/utils.h>
 #include "game.h"
 #include "messageid.h"
+#include "utils.h"
 #include "maputils.h"
 
 int stackableExtraJumpJumpCount[GAME_MAX_PLAYERS] = {0,0,0,0,0,0,0,0,0,0};
 int stackableHoverbootTicker[GAME_MAX_PLAYERS] = {0,0,0,0,0,0,0,0,0,0};
 int stackableHoverbootState[GAME_MAX_PLAYERS] = {0,0,0,0,0,0,0,0,0,0};
+
+//--------------------------------------------------------------------------
+void stackableOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId) {
+  if (killedByPlayerId >= 0 && killedByWeaponId >= 0) {
+    Player* killedByPlayer = playerGetAll()[killedByPlayerId];
+    if (!killedByPlayer->IsLocal) return; // only process dmg if local
+
+    float willOWispStrength = playerGetStackableCount(killedByPlayerId, STACKABLE_ITEM_EXPLODING_ENEMIES);
+    if (killedByPlayer && willOWispStrength > 0) {
+      u32 damageFlags = mobAmIOwner(moby) ? 0x00081801 : 0;
+      float radius = ITEM_STACKABLE_EXPLODINGENEMIES_RADIUS;
+      float damage = willOWispStrength * ITEM_STACKABLE_EXPLODINGENEMIES_DAMAGE;
+      u32 color = TEAM_COLORS[killedByPlayer->Team];
+      spawnExplosion(moby->Position, radius, color);
+
+      // damage
+      if (MapConfig.State && MapConfig.State->AllMobsSorted) {
+        Moby** allMobsSorted = MapConfig.State->AllMobsSorted;
+        int i;
+        for (i = 0; i < MAX_MOBS_ALIVE; ++i) {
+          Moby* mob = allMobsSorted[i];
+          if (!mob || mobyIsDestroyed(mob) || !mob->PVar || !mobyIsMob(mob)) continue;
+          if (vector_sqrdistance(mob->Position, moby->Position) > (radius*radius)) continue;
+
+          // create event
+          MobyColDamageIn in = {
+            .DamageFlags = damageFlags,
+            .DamageHp = damage,
+            .Damager = killedByPlayer->PlayerMoby,
+            .DamageClass = 0,
+            .DamageStrength = 1,
+            .DamageIndex = 0,
+            .Flags = 1,
+            .Momentum = 0
+          };
+          mobyCollDamageDirect(mob, &in);
+
+	        // Guber* guber = guberGetObjectByMoby(mob);
+          // GuberEvent * guberEvent = guberEventCreateEvent(guber, MOB_EVENT_DAMAGE, 0, 0);
+          // if (guberEvent) {
+          //   struct MobDamageEventArgs args;
+          //   args.SourceUID = killedByPlayer->Guber.Id.UID;
+          //   args.SourceOClass = 0;
+          //   args.DamageQuarters = damage*4;
+          //   args.DamageFlags = damageFlags;
+          //   args.Knockback.Angle = 0;
+          //   args.Knockback.Ticks = 0;
+          //   args.Knockback.Power = 0;
+          //   args.Knockback.Force = 0;
+          //   guberEventWrite(guberEvent, &args, sizeof(struct MobDamageEventArgs));
+          // }
+        }
+      }
+
+      //spawnExplosionDamage(moby->Position, radius, 0x800000C0, killedByPlayer->PlayerMoby, damage, damageFlags);
+    }
+  }
+}
 
 //--------------------------------------------------------------------------
 Player* stackableFindPlayerByGadgetBox(GadgetBox* gadgetBox) {
