@@ -39,7 +39,10 @@
 #include "maputils.h"
 #include "upgrade.h"
 #include "drop.h"
-#include "hackerorb.h"
+
+#if SOULCOLLECTOR
+#include "soulcollector.h"
+#endif
 
 #ifndef MAP_BASE_COMPLEXITY
 #define MAP_BASE_COMPLEXITY (5000)
@@ -56,6 +59,11 @@ void pathTick(void);
 #if STACKABLES
 void stackableInit(void);
 void stackableTick(void);
+#endif
+
+#if BLESSINGS
+void blessingsInit(void);
+void blessingsTick(void);
 #endif
 
 void stackableOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId);
@@ -120,6 +128,10 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId)
 {
 #if STACKABLES
   stackableOnMobKilled(moby, killedByPlayerId, killedByWeaponId);
+#endif
+
+#if SOULCOLLECTOR
+  soulcollectorOnSoul(moby->Position, killedByPlayerId);
 #endif
 }
 
@@ -336,6 +348,10 @@ void frameTick(void)
 #if STACKABLES
   sboxFrameTick();
 #endif
+
+#if SOULCOLLECTOR
+  soulcollectorFrameUpdate();
+#endif
 }
 
 //--------------------------------------------------------------------------
@@ -353,6 +369,19 @@ int mapConsiderMobSpawnPoint(struct MobSpawnParams* mobSpawnParams, VECTOR posit
 }
 
 //--------------------------------------------------------------------------
+int mapBlockPlayerUseTeleporter(Moby* moby, Player* player)
+{
+	// pointer to player is in $s1
+	asm volatile (
+    ".set noreorder;\n"
+		"move %0, $s1"
+		: : "r" (player)
+	);
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 void survivalInit(void)
 {
   static int initialized = 0;
@@ -360,7 +389,6 @@ void survivalInit(void)
     return;
 
   MapConfig.Magic = MAP_CONFIG_MAGIC;
-  MapConfig.WeaponPickupCooldownFactor = 0.65;
   MapConfig.OnUnhandledGetGuberFunc = mapGetGuber;
   MapConfig.OnUnhandledGuberEventFunc = mapHandleEvent;
   MapConfig.ConsiderMobSpawnPointFunc = mapConsiderMobSpawnPoint;
@@ -371,6 +399,7 @@ void survivalInit(void)
   configInit();
   upgradeInit();
   dropInit();
+  bboxInit();
 #if STACKABLES
   sboxInit();
   stackableInit();
@@ -378,12 +407,27 @@ void survivalInit(void)
 #if GAMBITS
   gambitsInit();
 #endif
-  hackerorbInit();
+#if BLESSINGS
+  blessingsInit();
+#endif
+#if RANDOMIZE_WEAPONS_AT_START
   randomizeWeaponPickups();
+#endif
   MapConfig.OnMobCreateFunc = &createMob;
 
   // disable jump pad effect
   POKE_U32(0x0042608C, 0);
+
+  // have moby 0x1BC6 use glowColor for particle color
+  // for reactor fire effect
+  POKE_U32(0x004171D8, 0x8FA80070);
+  POKE_U32(0x00417200, 0x8D080060);
+
+  // enable teleporter for everyone
+  HOOK_JAL(0x003dfd18, &mapBlockPlayerUseTeleporter);
+  POKE_U32(0x003dfd1c, 0x0240202D);
+  //POKE_U32(0x003DFD20, 0x10000006);
+  POKE_U32(0x003DFD6C, 0x00000000);
 
   DPRINTF("path %08X end %08X\n", (u32)&MOB_PATHFINDING_PATHS, (u32)&MOB_PATHFINDING_PATHS + (MOB_PATHFINDING_PATHS_MAX_PATH_LENGTH * MOB_PATHFINDING_NODES_COUNT * MOB_PATHFINDING_NODES_COUNT));
 
@@ -412,8 +456,11 @@ int survivalTick(void)
 #if GAMBITS
   gambitsTick();
 #endif
+#if BLESSINGS
+  blessingsTick();
+#endif
   mapReturnPlayersToMap();
-  //updateBossMeter();
+  updateBossMeter();
 
   if (MapConfig.State) {
     MapConfig.State->MapBaseComplexity = MAP_BASE_COMPLEXITY;
@@ -439,6 +486,7 @@ int survivalTick(void)
 #endif
       
     // enable prestige if round % 25
+#if SHOW_PRESTIGE_EVERY_25
     Moby* prestigeMachineMoby = MapConfig.State->PrestigeMachine;
     if (prestigeMachineMoby) {
       int enabled = MapConfig.State->RoundEndTime && ((MapConfig.State->RoundNumber + 0) % 25) == 0;
@@ -449,11 +497,14 @@ int survivalTick(void)
         }
         prestigeMachineMoby->DrawDist = 64;
         prestigeMachineMoby->CollActive = 0;
+        prestigeMachineMoby->ModeBits &= ~MOBY_MODE_BIT_DISABLED;
       } else {
         prestigeMachineMoby->DrawDist = 0;
         prestigeMachineMoby->CollActive = -1;
+        prestigeMachineMoby->ModeBits |= MOBY_MODE_BIT_DISABLED;
       }
     }
+#endif
   }
 
   dlPostUpdate();

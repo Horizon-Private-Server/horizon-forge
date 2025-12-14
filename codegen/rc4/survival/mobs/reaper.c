@@ -66,7 +66,7 @@ int reaperCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUI
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(ReaperMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -163,6 +163,7 @@ void reaperMove(Moby* moby)
 void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  memset(pvars->AdditionalMobVarsPtr, 0, sizeof(ReaperMobVars_t));
   float scale = mobGetScaleMultiplier(moby);
 
   // set scale
@@ -179,11 +180,6 @@ void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, REAPER_ACTION_BIG_FLINCH);
-  }
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;

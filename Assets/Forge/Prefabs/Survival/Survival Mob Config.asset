@@ -15,7 +15,7 @@ MonoBehaviour:
   Mobs:
   - Mob: 0
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 8438
@@ -31,7 +31,7 @@ MonoBehaviour:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
-    - Name: V Chest/Head
+    - Name: V Chest+Head
       OClass: 8438
       Bangles: 132
       Dependencies:
@@ -73,7 +73,7 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
   - Mob: 1
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Blue
       OClass: 9877
@@ -117,7 +117,7 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
   - Mob: 2
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 9215
@@ -147,7 +147,7 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
   - Mob: 3
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 0
@@ -176,9 +176,16 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
   - Mob: 4
     BlipType: 3
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
+      OClass: 8388
+      Bangles: 7199
+      Dependencies:
+      - OClass: 8388
+        SourceMapId: 4
+        SourceMissionId: -1
+    - Name: King
       OClass: 8388
       Bangles: 8191
       Dependencies:
@@ -186,26 +193,26 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     Behaviors: []
-    Xp: 5
-    Bolts: 50
+    Xp: 200
+    Bolts: 440
     Damage: 10
     DamageMax: 0
     DamageScale: 1
-    Speed: 3
-    SpeedMax: 15
-    SpeedScale: 1
-    Health: 30
-    HealthMax: 0
-    HealthScale: 1
+    Speed: 4.5
+    SpeedMax: 9
+    SpeedScale: 0.1
+    Health: 90
+    HealthMax: 100000000
+    HealthScale: 1.1
     TurnSpeed: 1
-    AttackRadius: 5
+    AttackRadius: 3.5
     HitRadius: 0.5
-    CollRadius: 0.5
+    CollRadius: 2
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 5
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 0
@@ -234,7 +241,7 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
   - Mob: 6
     BlipType: 3
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 8353
@@ -259,14 +266,14 @@ MonoBehaviour:
     HealthMax: 200000000
     HealthScale: 1
     TurnSpeed: 1
-    AttackRadius: 5
-    HitRadius: 0.5
-    CollRadius: 1.5
+    AttackRadius: 8
+    HitRadius: 1.5
+    CollRadius: 2
     ReactionDelaySeconds: 0.25
-    AttackCooldownSeconds: 7
+    AttackCooldownSeconds: 7.5
   - Mob: 7
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 9584
@@ -291,12 +298,12 @@ MonoBehaviour:
     TurnSpeed: 1
     AttackRadius: 5
     HitRadius: 1
-    CollRadius: 1.25
+    CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
   - Mob: 8
     BlipType: 4
-    BlipTeam: 1
+    StatId: 0
     Variants:
     - Name: Normal
       OClass: 9427
@@ -324,3 +331,179 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+  - Mob: 9
+    BlipType: 6
+    StatId: 0
+    Variants:
+    - Name: Normal
+      OClass: 8382
+      Bangles: 1
+      Dependencies:
+      - OClass: 8382
+        SourceMapId: 1
+        SourceMissionId: 16
+    Behaviors: []
+    Xp: 1000
+    Bolts: 11000
+    Damage: 10
+    DamageMax: 0
+    DamageScale: 2
+    Speed: 4.5
+    SpeedMax: 15
+    SpeedScale: 0.25
+    Health: 3000
+    HealthMax: 1e+9
+    HealthScale: 1.05
+    TurnSpeed: 1
+    AttackRadius: 5
+    HitRadius: 2
+    CollRadius: 1.5
+    ReactionDelaySeconds: 0.0875
+    AttackCooldownSeconds: 1
+  Patches:
+  - Name: Enable All Alpha Mods
+    CodeSegIndex: 6
+    CodeSegOffsetHex: 287D60
+    Hex: 03E00008 24020001
+  - Name: Stackables Vendor Table
+    CodeSegIndex: 3
+    CodeSegOffsetHex: 198
+    Hex: 2083
+  - Name: Mystery Box Table
+    CodeSegIndex: 3
+    CodeSegOffsetHex: 1BC
+    Hex: 2635
+  WeaponStats:
+  - Name: Wrench
+    Gadget: 1
+    BaseAmmo: 0
+    AmmoModAmount: 0
+    Damages:
+    - {x: 1, y: 4, z: 10, w: 30}
+    - {x: 3, y: 12, z: 10, w: 30}
+    - {x: 5, y: 20, z: 10, w: 0}
+    - {x: 7, y: 28, z: 10, w: 0}
+    - {x: 10, y: 40, z: 10, w: 0}
+    - {x: 15, y: 60, z: 10, w: 0}
+    - {x: 20, y: 80, z: 10, w: 0}
+    - {x: 25, y: 100, z: 10, w: 0}
+  - Name: Dual Vipers
+    Gadget: 2
+    BaseAmmo: 200
+    AmmoModAmount: 50
+    Damages:
+    - {x: 1, y: 1, z: 10, w: 0}
+    - {x: 1.75, y: 1.75, z: 16, w: 0}
+    - {x: 2.5, y: 2.5, z: 22, w: 0}
+    - {x: 3.25, y: 3.25, z: 28, w: 0}
+    - {x: 4, y: 4, z: 34, w: 0}
+    - {x: 4.75, y: 4.75, z: 40, w: 0}
+    - {x: 5.5, y: 5.5, z: 46, w: 0}
+    - {x: 6.25, y: 6.25, z: 52, w: 0}
+    - {x: 7, y: 7, z: 58, w: 0}
+    - {x: 8, y: 8, z: 64, w: 0}
+  - Name: Magma Cannon
+    Gadget: 3
+    BaseAmmo: 30
+    AmmoModAmount: 5
+    Damages:
+    - {x: 10, y: 10, z: 25, w: 2}
+    - {x: 14, y: 14, z: 40, w: 5}
+    - {x: 18, y: 18, z: 55, w: 9}
+    - {x: 22, y: 22, z: 70, w: 14}
+    - {x: 26, y: 26, z: 85, w: 19}
+    - {x: 30, y: 30, z: 100, w: 24}
+    - {x: 34, y: 34, z: 115, w: 29}
+    - {x: 38, y: 38, z: 130, w: 34}
+    - {x: 42, y: 42, z: 150, w: 39}
+    - {x: 50, y: 50, z: 180, w: 50}
+  - Name: Arbiter
+    Gadget: 4
+    BaseAmmo: 20
+    AmmoModAmount: 5
+    Damages:
+    - {x: 60, y: 60, z: 50, w: 30}
+    - {x: 80, y: 80, z: 65, w: 40}
+    - {x: 100, y: 100, z: 80, w: 50}
+    - {x: 120, y: 120, z: 95, w: 60}
+    - {x: 140, y: 140, z: 110, w: 70}
+    - {x: 160, y: 160, z: 125, w: 80}
+    - {x: 180, y: 180, z: 140, w: 90}
+    - {x: 200, y: 200, z: 155, w: 105}
+    - {x: 220, y: 220, z: 175, w: 120}
+    - {x: 250, y: 250, z: 200, w: 145}
+  - Name: Fusion Rifle
+    Gadget: 5
+    BaseAmmo: 16
+    AmmoModAmount: 5
+    Damages:
+    - {x: 50, y: 50, z: 35, w: 0}
+    - {x: 65, y: 65, z: 50, w: 0}
+    - {x: 80, y: 80, z: 65, w: 0}
+    - {x: 95, y: 95, z: 80, w: 0}
+    - {x: 110, y: 110, z: 95, w: 0}
+    - {x: 125, y: 125, z: 110, w: 0}
+    - {x: 140, y: 140, z: 125, w: 0}
+    - {x: 155, y: 155, z: 140, w: 0}
+    - {x: 170, y: 170, z: 155, w: 0}
+    - {x: 200, y: 200, z: 180, w: 0}
+  - Name: Mine Launcher
+    Gadget: 6
+    BaseAmmo: 12
+    AmmoModAmount: 5
+    Damages:
+    - {x: 12, y: 12, z: 25, w: 15}
+    - {x: 16, y: 16, z: 35, w: 20}
+    - {x: 20, y: 20, z: 45, w: 25}
+    - {x: 24, y: 24, z: 55, w: 30}
+    - {x: 28, y: 28, z: 65, w: 35}
+    - {x: 32, y: 32, z: 75, w: 40}
+    - {x: 36, y: 36, z: 85, w: 45}
+    - {x: 40, y: 40, z: 95, w: 50}
+    - {x: 44, y: 44, z: 105, w: 60}
+    - {x: 50, y: 50, z: 120, w: 75}
+  - Name: B6
+    Gadget: 7
+    BaseAmmo: 16
+    AmmoModAmount: 5
+    Damages:
+    - {x: 20, y: 20, z: 45, w: 22.5}
+    - {x: 25, y: 25, z: 60, w: 30}
+    - {x: 30, y: 30, z: 75, w: 37.5}
+    - {x: 35, y: 35, z: 90, w: 45}
+    - {x: 40, y: 40, z: 105, w: 52.5}
+    - {x: 45, y: 45, z: 120, w: 60}
+    - {x: 50, y: 50, z: 135, w: 67.5}
+    - {x: 55, y: 55, z: 150, w: 75}
+    - {x: 60, y: 60, z: 180, w: 90}
+    - {x: 75, y: 75, z: 225, w: 120}
+  - Name: Holoshield
+    Gadget: 8
+    BaseAmmo: 16
+    AmmoModAmount: 5
+    Damages:
+    - {x: 12, y: 12, z: 10, w: 0}
+    - {x: 16, y: 16, z: 15, w: 0}
+    - {x: 20, y: 20, z: 20, w: 0}
+    - {x: 24, y: 24, z: 25, w: 0}
+    - {x: 28, y: 28, z: 30, w: 0}
+    - {x: 32, y: 32, z: 35, w: 0}
+    - {x: 36, y: 36, z: 40, w: 0}
+    - {x: 40, y: 40, z: 45, w: 0}
+    - {x: 44, y: 44, z: 50, w: 0}
+    - {x: 50, y: 50, z: 60, w: 0}
+  - Name: Flail
+    Gadget: 15
+    BaseAmmo: 20
+    AmmoModAmount: 5
+    Damages:
+    - {x: 40, y: 40, z: 10, w: 20}
+    - {x: 50, y: 50, z: 15, w: 25}
+    - {x: 60, y: 60, z: 20, w: 30}
+    - {x: 70, y: 70, z: 25, w: 35}
+    - {x: 80, y: 80, z: 30, w: 40}
+    - {x: 90, y: 90, z: 35, w: 45}
+    - {x: 100, y: 100, z: 40, w: 50}
+    - {x: 110, y: 110, z: 45, w: 55}
+    - {x: 120, y: 120, z: 50, w: 60}
+    - {x: 150, y: 150, z: 65, w: 75}

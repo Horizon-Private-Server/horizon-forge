@@ -9,7 +9,6 @@
 #include <libdl/sound.h>
 #include "zombie.h"
 #include "executioner.h"
-#include "executioner2.h"
 #include "reactor.h"
 #include "tremor.h"
 #include "swarmer.h"
@@ -378,8 +377,5 @@ int mobHandleEvent(Moby* moby, GuberEvent* event);
 int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 void mobInitialize(void);
 void mobTick(void);
-
-extern int russianDollSpawnParamIdxs[];
-extern const int russianDollSpawnParamIdxsCount;
 
 #endif // SURVIVAL_MOB_H

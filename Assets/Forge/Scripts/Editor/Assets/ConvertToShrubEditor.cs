@@ -7,6 +7,7 @@ using UnityEngine;
 [CustomEditor(typeof(ConvertToShrub)), CanEditMultipleObjects]
 public class ConvertToShrubEditor : Editor
 {
+    private TextureSize m_BulkTextureSize = TextureSize._128;
     private MapConfig m_MapConfig;
     private SerializedProperty m_ShrubsProperty;
     private SerializedProperty m_MaterialsProperty;
@@ -103,12 +104,58 @@ public class ConvertToShrubEditor : Editor
 
         }
 
-        if (!invalid.Any() && m_MapConfig && GUILayout.Button("Reimport"))
+        if (!invalid.Any() && m_MapConfig)
         {
-            var db = m_MapConfig.GetConvertToShrubDatabase();
-            if (db)
+            GUILayout.Space(20);
+
+            // bulk remove alpha
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Bulk Alpha: Toggle Off"))
             {
-                _ = db.ConvertMany(force: true, silent: false, targets.Select(x => x as ConvertToShrub).ToArray());
+                var db = m_MapConfig.GetConvertToShrubDatabase();
+                if (db)
+                {
+                    foreach (var shrub in db.Shrubs)
+                        foreach (var material in shrub.Materials)
+                            material.RemoveAlpha = true;
+                }
+            }
+            if (GUILayout.Button("Bulk Alpha: Toggle On"))
+            {
+                var db = m_MapConfig.GetConvertToShrubDatabase();
+                if (db)
+                {
+                    foreach (var shrub in db.Shrubs)
+                        foreach (var material in shrub.Materials)
+                            material.RemoveAlpha = false;
+                }
+            }
+            GUILayout.EndHorizontal();
+
+            // bulk set texture size
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Bulk Set Texture Size"))
+            {
+                var db = m_MapConfig.GetConvertToShrubDatabase();
+                if (db)
+                {
+                    foreach (var shrub in db.Shrubs)
+                        foreach (var material in shrub.Materials)
+                            material.MaxTextureSize = m_BulkTextureSize;
+                }
+            }
+            m_BulkTextureSize = (TextureSize)EditorGUILayout.EnumPopup(m_BulkTextureSize);
+            GUILayout.EndHorizontal();
+
+            // reimport
+            GUILayout.Space(20);
+            if (GUILayout.Button("Reimport"))
+            {
+                var db = m_MapConfig.GetConvertToShrubDatabase();
+                if (db)
+                {
+                    _ = db.ConvertMany(force: true, silent: false, targets.Select(x => x as ConvertToShrub).ToArray());
+                }
             }
         }
 

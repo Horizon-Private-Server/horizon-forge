@@ -72,7 +72,7 @@ int leviathanCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFro
   
 	// create guber object
 	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(LeviathanMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
@@ -245,8 +245,8 @@ void leviathanMove(Moby* moby)
 //--------------------------------------------------------------------------
 void leviathanOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
-  
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  memset(pvars->AdditionalMobVarsPtr, 0, sizeof(LeviathanMobVars_t));
 
   // set scale
   float scale = leviathanGetScale(moby);

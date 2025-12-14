@@ -44,12 +44,7 @@ extern int aaa;
 #include "executioner.c"
 #endif
 
-#if MOB_EXECUTIONER2
-#include "executioner2.c"
-#endif
-
 #if MOB_LEVIATHAN
-#include "laserbeam.c"
 #include "leviathan.c"
 #endif
 

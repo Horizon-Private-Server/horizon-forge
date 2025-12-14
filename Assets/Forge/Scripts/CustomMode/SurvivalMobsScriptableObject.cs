@@ -17,7 +17,9 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     private const int BASE_SPEED = 3;
     private const int BASE_HEALTH = 30;
 
-    public List<SurvivalMobsConfig> Mobs;
+    public List<SurvivalMobsConfig> Mobs = new List<SurvivalMobsConfig>();
+    public List<SurvivalPatch> Patches = new List<SurvivalPatch>();
+    public List<SurvivalWeaponStats> WeaponStats = new List<SurvivalWeaponStats>();
 
 
     [Serializable]
@@ -81,6 +83,25 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public int OClass;
         public DLMapIds SourceMapId;
         public int SourceMissionId;
+    }
+
+    [Serializable]
+    public class SurvivalPatch
+    {
+        public string Name;
+        public int CodeSegIndex;
+        public string CodeSegOffsetHex;
+        public string Hex;
+    }
+
+    [Serializable]
+    public class SurvivalWeaponStats
+    {
+        public string Name;
+        public DLGadgetIds Gadget;
+        public int BaseAmmo = 16;
+        public int AmmoModAmount = 5;
+        public List<Vector4> Damages = new List<Vector4>();
     }
 
     public static SurvivalMobsScriptableObject Load()

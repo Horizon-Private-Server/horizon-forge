@@ -58,6 +58,7 @@ int UpgradeMax[UPGRADE_COUNT];
 
 void upgradeTick(void);
 void upgradeInit(void);
+struct GuberMoby* upgradeGetGuber(Moby* moby);
 int upgradeHandleEvent(Moby* moby, GuberEvent* event);
 int upgradeCreate(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType);
 void upgradePickup(Moby* moby, int pickedUpByPlayerId);

@@ -22,9 +22,9 @@ endif
 
 all: $(EE_BIN) clean
 	# payload and definition
-	cp -rf $(CURDIR)/out.bin $(OUT_BUILD_DIR)/$(OUT_MAPNAME).code
-	rm -rf $(OUT_CODE_DIR)/code.0008.*
-	rm -rf $(OUT_CODE_DIR)/code.0009.*
+	cp -rf "$(CURDIR)/out.bin" "$(OUT_BUILD_DIR)/$(OUT_MAPNAME).code"
+	rm -rf "$(OUT_CODE_DIR)/code.0008.*"
+	rm -rf "$(OUT_CODE_DIR)/code.0009.*"
 	
 clean:
 #	rm -rf *.o

@@ -65,7 +65,7 @@ typedef struct PatchConfig
 
 typedef struct SurvivalConfig
 {
-  //u8 difficulty;
+  u8 gambit;
 } SurvivalConfig_t;
 
 enum FixedCycleOrderMode
@@ -128,7 +128,8 @@ typedef struct PatchGameConfig
   char prWeatherId;
   char grNoPacks;
   char grV2s;
-  char prMirrorWorld;
+  char grNoSpawnImmunity;
+  //char prMirrorWorld;
   char grNoHealthBoxes;
   char grVampire;
   char grHalfTime;
@@ -145,18 +146,24 @@ typedef struct PatchGameConfig
   char grCqDisableTurrets;
   char grCqDisableUpgrades;
   char grNewPlayerSync;
-  char grQuickChat;
+  char grLagjump;
   char grNoFusionADS;
-  char prPlayerSize;
+  char grRespawnOverride;
+  char grFogOfWarRadar;
+  char grRadarShortDistance;
+  char grInstantDeath;
+  //char prPlayerSize;
   char prRotatingWeapons;
   char prHeadbutt;
   char prHeadbuttFriendlyFire;
   char prChargebootForever;
   char drFreecam;
-  SurvivalConfig_t survivalConfig;
+  char drNoRank;
+  char drLevelReload;
   PayloadConfig_t payloadConfig;
   TrainingConfig_t trainingConfig;
   HNSConfig_t hnsConfig;
+  SurvivalConfig_t survivalConfig;
 } PatchGameConfig_t;
 
 typedef struct PatchStateContainer

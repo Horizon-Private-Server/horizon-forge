@@ -10,6 +10,7 @@
 #include "game.h"
 
 extern struct SurvivalMapConfig MapConfig;
+extern struct SurvivalBakedConfig bakedConfig;
 
 void playPaidSound(Player* player);
 int tryPlayerInteract(Moby* moby, Player* player, char* message, char* lowerMessage, int boltCost, int tokenCost, int actionCooldown, float sqrDistance, int btns);

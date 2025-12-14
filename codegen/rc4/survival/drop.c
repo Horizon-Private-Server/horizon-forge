@@ -387,6 +387,15 @@ int dropHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
+struct GuberMoby* dropGetGuber(Moby* moby)
+{
+	if (moby->OClass == DROP_MOBY_OCLASS && moby->PVar)
+		return moby->GuberMoby;
+	
+	return 0;
+}
+
+//--------------------------------------------------------------------------
 int dropHandleEvent(Moby* moby, GuberEvent* event)
 {
 	struct DropPVar* pvars = (struct DropPVar*)moby->PVar;
@@ -453,6 +462,18 @@ int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int t
 //--------------------------------------------------------------------------
 void dropInit(void)
 {
+  Moby* temp = mobySpawn(DROP_MOBY_OCLASS, 0);
+  if (!temp)
+    return;
+
+  // set vtable callbacks
+  u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
+  if (mobyFunctionsPtr) {
+    mapInstallMobyFunctions(mobyFunctionsPtr);
+    DPRINTF("DROP oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+  }
+  mobyDestroy(temp);
+
   MapConfig.CreateMobDropFunc = &dropCreate;
   MapConfig.OnMobDropEventFunc = &dropHandleEvent;
 }

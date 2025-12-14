@@ -11,10 +11,14 @@ using UnityEngine.UIElements;
 public class SurvivalMobsScriptableObjectEditor : Editor
 {
     private SerializedProperty m_MobsProperty;
+    private SerializedProperty m_PatchesProperty;
+    private SerializedProperty m_WeaponStatsProperty;
 
     private void OnEnable()
     {
         m_MobsProperty = serializedObject.FindProperty("Mobs");
+        m_PatchesProperty = serializedObject.FindProperty("Patches");
+        m_WeaponStatsProperty = serializedObject.FindProperty("WeaponStats");
     }
 
 
@@ -25,26 +29,34 @@ public class SurvivalMobsScriptableObjectEditor : Editor
 
         serializedObject.Update();
 
-        foreach (SurvivalMob mob in Enum.GetValues(typeof(SurvivalMob)))
+        m_MobsProperty.isExpanded = EditorGUILayout.Toggle("Mobs", m_MobsProperty.isExpanded);
+        if (m_MobsProperty.isExpanded)
         {
-            var idx = manager.Mobs.FindIndex(x => x.Mob == mob);
-            if (idx < 0)
+            EditorGUI.indentLevel++;
+            foreach (SurvivalMob mob in Enum.GetValues(typeof(SurvivalMob)))
             {
-                manager.Mobs.Add(new SurvivalMobsScriptableObject.SurvivalMobsConfig()
+                var idx = manager.Mobs.FindIndex(x => x.Mob == mob);
+                if (idx < 0)
                 {
-                    Mob = mob,
-                    Variants = new List<SurvivalMobsScriptableObject.SurvivalMobVariant>()
+                    manager.Mobs.Add(new SurvivalMobsScriptableObject.SurvivalMobsConfig()
+                    {
+                        Mob = mob,
+                        Variants = new List<SurvivalMobsScriptableObject.SurvivalMobVariant>()
                     {
                         new SurvivalMobsScriptableObject.SurvivalMobVariant("Normal", 0, DLMapIds.SP_Battledome, 0)
                     }
-                });
-                EditorUtility.SetDirty(target);
-                idx = manager.Mobs.Count - 1;
+                    });
+                    EditorUtility.SetDirty(target);
+                    idx = manager.Mobs.Count - 1;
+                }
+
+                EditorGUILayout.PropertyField(m_MobsProperty.GetArrayElementAtIndex(idx), new GUIContent(mob.ToString()));
             }
-
-            EditorGUILayout.PropertyField(m_MobsProperty.GetArrayElementAtIndex(idx), new GUIContent(mob.ToString()));
+            EditorGUI.indentLevel--;
         }
-
+        
+        EditorGUILayout.PropertyField(m_PatchesProperty);
+        EditorGUILayout.PropertyField(m_WeaponStatsProperty);
         serializedObject.ApplyModifiedProperties();
     }
 

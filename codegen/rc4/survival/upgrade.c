@@ -359,6 +359,15 @@ int upgradeHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
+struct GuberMoby* upgradeGetGuber(Moby* moby)
+{
+	if (moby->OClass == UPGRADE_MOBY_OCLASS && moby->PVar)
+		return moby->GuberMoby;
+	
+	return 0;
+}
+
+//--------------------------------------------------------------------------
 int upgradeHandleEvent(Moby* moby, GuberEvent* event)
 {
 	struct UpgradePVar* pvars = (struct UpgradePVar*)moby->PVar;
@@ -409,6 +418,18 @@ int upgradeCreate(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType
 //--------------------------------------------------------------------------
 void upgradeInit(void)
 {
+  Moby* temp = mobySpawn(UPGRADE_MOBY_OCLASS, 0);
+  if (!temp)
+    return;
+
+  // set vtable callbacks
+  u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
+  if (mobyFunctionsPtr) {
+    mapInstallMobyFunctions(mobyFunctionsPtr);
+    DPRINTF("UPGRADE oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+  }
+  mobyDestroy(temp);
+
   MapConfig.CreateUpgradePickupFunc = &upgradeCreate;
   MapConfig.OnUpgradePickupEventFunc = &upgradeHandleEvent;
   MapConfig.PickupUpgradeFunc = &upgradePickup;

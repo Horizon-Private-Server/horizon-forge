@@ -18,8 +18,7 @@
 #define TPS																		(60)
 
 #define ZOMBIE_MOBY_OCLASS										(0x20F6)
-#define EXECUTIONER_MOBY_OCLASS							  (0x2468)
-#define EXECUTIONER2_MOBY_OCLASS							(0x20A1)
+#define EXECUTIONER_MOBY_OCLASS							  (0x20A1)
 #define TREMOR_MOBY_OCLASS							      (0x24D3)
 #define SWARMER_MOBY_OCLASS							      (0x2695)
 #define SWARMER2_MOBY_OCLASS							    (0x2051)
@@ -186,26 +185,25 @@
 #define REAPER_RENDER_COST                    (150)
 #define REACTOR_RENDER_COST                   (300)
 #define EXECUTIONER_RENDER_COST               (300)
-#define EXECUTIONER2_RENDER_COST              (300)
 #define LEVIATHAN_RENDER_COST                 (300)
 
 enum GameNetMessage
 {
-    CUSTOM_MSG_ROUND_COMPLETE = CUSTOM_MSG_ID_GAME_MODE_START,
-    CUSTOM_MSG_ROUND_START,
-    CUSTOM_MSG_UPDATE_SPAWN_VARS,
-    CUSTOM_MSG_WEAPON_UPGRADE,
-    CUSTOM_MSG_REVIVE_PLAYER,
-    CUSTOM_MSG_PLAYER_DIED,
-    CUSTOM_MSG_PLAYER_SET_WEAPON_MODS,
-    CUSTOM_MSG_PLAYER_SET_STATS,
-    CUSTOM_MSG_PLAYER_SET_DOUBLE_POINTS,
-    CUSTOM_MSG_PLAYER_SET_DOUBLE_XP,
-    CUSTOM_MSG_PLAYER_SET_FREEZE,
+  CUSTOM_MSG_ROUND_COMPLETE = CUSTOM_MSG_ID_GAME_MODE_START,
+  CUSTOM_MSG_ROUND_START,
+  CUSTOM_MSG_UPDATE_SPAWN_VARS,
+  CUSTOM_MSG_WEAPON_UPGRADE,
+  CUSTOM_MSG_REVIVE_PLAYER,
+  CUSTOM_MSG_PLAYER_DIED,
+  CUSTOM_MSG_PLAYER_SET_WEAPON_MODS,
+  CUSTOM_MSG_PLAYER_SET_STATS,
+  CUSTOM_MSG_PLAYER_SET_DOUBLE_POINTS,
+  CUSTOM_MSG_PLAYER_SET_DOUBLE_XP,
+  CUSTOM_MSG_PLAYER_SET_FREEZE,
   CUSTOM_MSG_PLAYER_USE_ITEM,
   CUSTOM_MSG_MOB_UNRELIABLE_MSG,
-    CUSTOM_MSG_WEAPON_PRESTIGE,
-    CUSTOM_MSG_INTERACT_BANK_BOX,
+  CUSTOM_MSG_WEAPON_PRESTIGE,
+  CUSTOM_MSG_INTERACT_BANK_BOX,
   CUSTOM_MSG_WITHDRAWN_BANK_BOX,
   CUSTOM_MSG_SET_ROUND_50_TIME,
   CUSTOM_MSG_TELEPORT_BIG_AL,
@@ -213,12 +211,12 @@ enum GameNetMessage
 
 enum BakedSpawnpointType
 {
-    BAKED_SPAWNPOINT_NONE = 0,
-    BAKED_SPAWNPOINT_UPGRADE = 1,
-    BAKED_SPAWNPOINT_PLAYER_START = 2,
-    BAKED_SPAWNPOINT_MYSTERY_BOX = 3,
-    BAKED_SPAWNPOINT_DEMON_BELL = 4,
-    BAKED_SPAWNPOINT_STACK_BOX = 5,
+  BAKED_SPAWNPOINT_NONE = 0,
+  BAKED_SPAWNPOINT_UPGRADE = 1,
+  BAKED_SPAWNPOINT_PLAYER_START = 2,
+  BAKED_SPAWNPOINT_MYSTERY_BOX = 3,
+  BAKED_SPAWNPOINT_DEMON_BELL = 4,
+  BAKED_SPAWNPOINT_STACK_BOX = 5,
 };
 
 enum MobStatId
@@ -486,6 +484,28 @@ struct SurvivalSpecialRoundParam
   char SpawnParamIds[4];
   char Name[32];
 };
+
+typedef void (*GambitCustomInit_func)(void);
+typedef void (*GambitCustomTick_func)(void);
+typedef void (*GambitCustomOnRoundComplete_func)(int roundNumber);
+typedef struct GambitDef {
+  GambitCustomInit_func CustomInit;
+  GambitCustomTick_func CustomTick;
+  GambitCustomOnRoundComplete_func CustomOnRoundComplete;
+  int CompleteAfterRound; // use 0 for manual completion
+  float DifficultyMultiplier;
+  float XpMultiplier;
+  float BoltMultiplier;
+  int InitialBolts;
+  int InitialTokens;
+  char ForceWeaponId;     // use 0 for none
+  char DisableRevives;
+  char DisableVendor;
+  char DisableBank;
+  char DisablePrestigeMachine;
+  char DisableStackables;
+  char InstantRespawnMysteryBox;
+} GambitDef_t;
 
 struct SurvivalGameData
 {

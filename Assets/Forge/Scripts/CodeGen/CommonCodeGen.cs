@@ -53,8 +53,10 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/launchstream.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/holder.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/soulcollector.o");
 
         state.LDFlags.Add("-DGATE");
+        state.LDFlags.Add("-DSOULCOLLECTOR");
 
         state.Includes.Add("#include \"checkpoint.h\"");
         state.Includes.Add("#include \"maputils.h\"");
@@ -70,6 +72,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.Includes.Add("#include \"dummy.h\"");
         state.Includes.Add("#include \"launchstream.h\"");
         state.Includes.Add("#include \"holder.h\"");
+        state.Includes.Add("#include \"soulcollector.h\"");
 
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
         state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
@@ -87,6 +90,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.InitBody.Add($"dummyInit();");
         state.InitBody.Add($"launchstreamInit();");
         state.InitBody.Add($"holderInit();");
+        state.InitBody.Add($"soulcollectorInit();");
 
         // get gubers
         state.GetGuberCase.Add("case CHECKPOINT_MANAGER_OCLASS: return checkpointGetGuber(moby);");
@@ -99,6 +103,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.GetGuberCase.Add("case DUMMY_OCLASS: return dummyGetGuber(moby);");
         state.GetGuberCase.Add("case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);");
         state.GetGuberCase.Add("case HOLDER_OCLASS: return holderGetGuber(moby);");
+        state.GetGuberCase.Add("case SOULCOLLECTOR_OCLASS: return soulcollectorGetGuber(moby);");
 
         // handle events
         state.HandleGuberEventCase.Add("case CHECKPOINT_MANAGER_OCLASS: checkpointHandleEvent(moby, event); break;");
@@ -111,6 +116,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.HandleGuberEventCase.Add("case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case HOLDER_OCLASS: holderHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case SOULCOLLECTOR_OCLASS: soulcollectorHandleEvent(moby, event); break;");
 
         state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
         state.InitBody.Add($"HOOK_JAL(0x0051f648, &onBeforeUpdateHeroes2);");
@@ -123,6 +129,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.MainBodyReady.Add("pvarpokeStart();");
         state.MainBodyReady.Add("dummyStart();");
         state.MainBodyReady.Add("holderStart();");
+        state.MainBodyReady.Add("soulcollectorStart();");
     }
 
     public void Configure(BuildState state)
@@ -211,7 +218,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
     }
 
     [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Gate Moby", priority = 10)]
-    public static void CreateGateMoby()
+    public static GameObject CreateGateMoby()
     {
         var mobyBin = Convert.FromBase64String("sAAAAAEAAAEAAAAAAQD/AMAAAAAAAQAAAAEAAAABAABgAgAAq6qqPAAAAAAABQAAnFNJvZxTybycU8m8PMQHR3h4eIAAAAAQYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgqh7vgAAAACcU8m8N8QHRwH/AAAAAAAAJAAAADAAAAACABQAAAAAAAAAAAAAAAAAAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAQAACAAEAJABAAANAwIIAAAAAAAAAAAQAAAAIAAAAAAAAKAAYAAAAAAAYABgAAAAAABgAKAAAAAAAKAAoAAAAAIBbwIAA28BAwBvAwECbwAAAAAAAAAAAAAAAAAAAADCgAh1AAAAEAAQABAAEAAAAAAAAAAAABAAEAAQABAAAAAAAAAtgQRu/gQBAACCBAOFhggHAQEBAAAAAAAxgQRskv8AAAQAAAAEAKBBAAAAAAAAAAAAAAAACAAAAAAAAAD/////AAAAAAYAAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAEAAAAAAAgAAAAIACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAAAAAAAAAAGAAYAAAAPQAAAAAAAAAAACgAGAAAAD0AAAAAAAAAAAAoACgAAAA9AAAAAAAAAAAAGAAoAAAAPQAAAAAgAAAAACgAGAAAAD0AAAAAIAAAAAAYABgAAAA9AAAAACAAAAAAGAAoP8AAPQAAAAAgAAAAACgAKD/AAAAAAAAAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAP8AAAD/AP8A/wD/AAAAAAD///////////////9AAQCA");
 
@@ -237,6 +244,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         }
 
         OnAfterCreateGameObject(go);
+        return go;
     }
 
     [MenuItem("GameObject/Forge/Deadlocked/Custom Moby/Messager Moby", priority = 10)]

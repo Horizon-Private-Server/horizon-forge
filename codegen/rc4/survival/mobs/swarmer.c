@@ -39,7 +39,6 @@ int swarmerCanAttack(struct MobPVar* pvars);
 int swarmerGetSideFlipLeftOrRight(struct MobPVar* pvars);
 int swarmerIsFlinching(Moby* moby);
 float swarmerGetDodgeProbability(Moby* moby);
-void swarmerSpawnRussianDolls(Moby* moby);
 
 struct MobVTable SwarmerVTable = {
   .PreUpdate = &swarmerPreUpdate,
@@ -197,11 +196,6 @@ void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, SWARMER_ACTION_BIG_FLINCH);
-  }
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
@@ -576,11 +570,6 @@ void swarmerDoAction(Moby* moby)
       mobTransAnimLerp(moby, SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND, 5, 0);
       if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND && moby->AnimSeqT > 25) {
         pvars->MobVars.Destroy = 1;
-
-        // spawn children
-        if (mobAmIOwner(moby) && pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_RUSSIAN_DOLL) {
-          swarmerSpawnRussianDolls(moby);
-        }
       }
 
       //mobStand(moby);
@@ -777,38 +766,4 @@ float swarmerGetDodgeProbability(Moby* moby)
 
   float factor = clamp(powf(roundNo / 100.0, 2), 0, 1);
   return lerpf(0.001, 0.01, factor);
-}
-
-//--------------------------------------------------------------------------
-void swarmerSpawnRussianDolls(Moby* moby)
-{
-  VECTOR position, from, to;
-  VECTOR hitOffset = {0,0,2,0};
-  int count = randRangeInt(1, 5);
-  const float radius = 5;
-  if (russianDollSpawnParamIdxsCount <= 0) return;
-
-  // default to spawn on moby
-  vector_copy(position, moby->Position);
-
-  // attempt to find a spot near moby that they can spawn on
-  int i;
-  for (i = 0; i < count; ++i)
-  {
-    int spawnIdx = russianDollSpawnParamIdxs[randRangeInt(0, russianDollSpawnParamIdxsCount - 1)];
-    struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnIdx];
-    if (spawnIdx < 0 || spawnIdx >= MAX_MOB_SPAWN_PARAMS) continue;
-
-    // don't go over max mobys alive
-    if (MapConfig.State) {
-      if (MapConfig.State->MobStats.TotalAlive >= MAX_MOBS_ALIVE) return;
-      if (spawnParams->MaxSpawnedAtOnce > 0 && MapConfig.State->MobStats.NumAlive[spawnIdx] >= spawnParams->MaxSpawnedAtOnce) continue;
-    }
-
-    // spawn
-    if (MapConfig.ModeCreateMobFunc)
-      MapConfig.ModeCreateMobFunc(spawnIdx, position, moby->Rotation[2], -1, MOB_SPAWN_FLAG_RUSSIAN_DOLL, &spawnParams->Config);
-    else
-      MapConfig.OnMobCreateFunc(spawnIdx, position, moby->Rotation[2], -1, MOB_SPAWN_FLAG_RUSSIAN_DOLL, &spawnParams->Config);
-  }
 }

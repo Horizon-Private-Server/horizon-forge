@@ -185,11 +185,6 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
 
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
-  }
-
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
 }

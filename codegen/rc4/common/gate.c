@@ -191,7 +191,7 @@ int gateCanInteract(Moby* moby, VECTOR point)
 
   // get closest point on gate to point
   float gateLength = pvars->Length;
-  vector_copy(gateTangent, moby->M0_03);
+  vector_normalize(gateTangent, moby->M1_03);
   //vector_scale(gateTangent, gateTangent, 1 / gateLength);
 
   vector_subtract(delta, point, moby->Position);
@@ -220,18 +220,17 @@ void gateHandleInteract(Moby* moby)
   if (pvars->CurrentCost > 0 && moby->State == GATE_STATE_ACTIVATED) {
     for (i = 0; i < GAME_MAX_LOCALS; ++i) {
       Player* lp = playerGetFromSlot(i);
-      if (lp) {
-        
-        // draw help popup
-        if (gateCanInteract(moby, lp->PlayerPosition)) {
+      if (!playerIsValid(lp)) continue;
+      
+      // draw help popup
+      if (gateCanInteract(moby, lp->PlayerPosition)) {
 #if SURVIVAL
-          snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
-          if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE)) {
-            gatePayToken(moby, lp->PlayerId);
-            break;
-          }
-#endif
+        snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
+        if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE)) {
+          gatePayToken(moby, lp->PlayerId);
+          break;
         }
+#endif
       }
     }
   }
