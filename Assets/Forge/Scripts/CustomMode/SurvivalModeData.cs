@@ -631,7 +631,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     static string _lastOpenFileDir;
 
-    [MenuItem("Forge/Read Survival Legacy PathGraph", priority = 10)]
+    //[MenuItem("Forge/Read Survival Legacy PathGraph", priority = 10)]
     public static void PortLegacyPath()
     {
         var path = EditorUtility.OpenFilePanelWithFilters("Open path.c", _lastOpenFileDir, new string[] { "C Files", "c" });
@@ -795,7 +795,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
     }
 
-    [MenuItem("Forge/Read Survival Legacy Config", priority = 10)]
+    //[MenuItem("Forge/Read Survival Legacy Config", priority = 10)]
     public static void PortLegacyConfig()
     {
         var path = EditorUtility.OpenFilePanelWithFilters("Open config.c", _lastOpenFileDir, new string[] { "C Files", "c" });
@@ -902,7 +902,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
     }
 
-    [MenuItem("Forge/Read Survival Legacy Gates", priority = 10)]
+    //[MenuItem("Forge/Read Survival Legacy Gates", priority = 10)]
     public static void PortLegacyGates()
     {
         var path = EditorUtility.OpenFilePanelWithFilters("Open main.c", _lastOpenFileDir, new string[] { "C Files", "c" });

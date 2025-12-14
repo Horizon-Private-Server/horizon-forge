@@ -137,13 +137,13 @@ int pathCanStartNodeBeSkipped(Moby* moby)
   // then circle back, we failed the jump
   // otherwise allow skipping
   float alpha = pathGetSegmentAlpha(moby, startEdge);
-  float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[startEdgeIdx] / 255.0;
+  float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[startEdgeIdx] / 65535.0;
   if (MOB_PATHFINDING_EDGES_JUMPPADSPEED[startEdgeIdx] > 0 && alpha >= jumpAt) {
     return 0;
   }
 
   // if segment is required and we haven't completed the required section then circle back
-  float requiredAt = MOB_PATHFINDING_EDGES_REQUIRED[startEdgeIdx] / 255.0;
+  float requiredAt = MOB_PATHFINDING_EDGES_REQUIRED[startEdgeIdx] / 65535.0;
   if (requiredAt > 0 && alpha <= requiredAt) {
     return 0;
   }
@@ -176,8 +176,8 @@ int pathSegmentCanBeSkipped(Moby* moby, int segmentStartEdgeIdx, int segmentCoun
 
   // check if current edge is required or there is a jump we haven't reached
   edge = pvars->MobVars.MoveVars.CurrentPath[segmentStartEdgeIdx];
-  float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[edge] / 255.0;
-  float requiredAt = MOB_PATHFINDING_EDGES_REQUIRED[edge] / 255.0;
+  float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[edge] / 65535.0;
+  float requiredAt = MOB_PATHFINDING_EDGES_REQUIRED[edge] / 65535.0;
   if ((requiredAt > 0 && segmentStartAlpha <= requiredAt) || (MOB_PATHFINDING_EDGES_JUMPPADSPEED[edge] > 0 && segmentStartAlpha <= jumpAt))
     return 0;
 
@@ -224,8 +224,8 @@ int pathCanBeSkippedForTarget(Moby* moby)
 
   // check if current edge is required or there is a jump we haven't reached
   edge = pvars->MobVars.MoveVars.CurrentPath[pvars->MobVars.MoveVars.PathEdgeCurrent];
-  float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[edge] / 255.0;
-  float requiredAt = MOB_PATHFINDING_EDGES_REQUIRED[edge] / 255.0;
+  float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[edge] / 65535.0;
+  float requiredAt = MOB_PATHFINDING_EDGES_REQUIRED[edge] / 65535.0;
   if ((requiredAt > 0 && pvars->MobVars.MoveVars.PathEdgeAlpha <= requiredAt) || (MOB_PATHFINDING_EDGES_JUMPPADSPEED[edge] > 0 && pvars->MobVars.MoveVars.LastPathEdgeAlphaForJump <= jumpAt))
     return 0;
 
@@ -907,7 +907,7 @@ int pathShouldJump(Moby* moby)
     // check if edge has jump
     int edgeIdx = pvars->MobVars.MoveVars.CurrentPath[pvars->MobVars.MoveVars.PathEdgeCurrent];
     float jumpSpeed = MOB_PATHFINDING_EDGES_JUMPPADSPEED[edgeIdx];
-    float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[edgeIdx] / 255.0;
+    float jumpAt = MOB_PATHFINDING_EDGES_JUMPPADAT[edgeIdx] / 65535.0;
     float lastDistOnEdge = pvars->MobVars.MoveVars.LastPathEdgeAlphaForJump;
     
     // get segment alpha if we haven't refreshed the path this tick

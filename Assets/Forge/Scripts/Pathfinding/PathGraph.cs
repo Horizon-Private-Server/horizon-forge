@@ -532,10 +532,10 @@ public class PathGraph : MonoBehaviour
         dataDefs += "};\n\n";
 
         // build list of edge requireds
-        dataDefs += $"u8 {edgesRequiredVarName}[] = {{\n";
+        dataDefs += $"u16 {edgesRequiredVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.Required ? (int)(Mathf.Clamp(edge.RequiredUntil * 255 + 1, 0, 255)) : 0)},\n";
+            dataDefs += $"\t{(edge.Required ? (int)(Mathf.Clamp(edge.RequiredUntil * ushort.MaxValue + 1, 0, ushort.MaxValue)) : 0)},\n";
         }
         dataDefs += "};\n\n";
 
@@ -548,7 +548,7 @@ public class PathGraph : MonoBehaviour
         dataDefs += "};\n\n";
 
         // build list of edge jump pad speeds
-        dataDefs += $"u8 {edgesJumpPadSpeedVarName}[] = {{\n";
+        dataDefs += $"u16 {edgesJumpPadSpeedVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
             dataDefs += $"\t{(edge.JumpPad ? (int)Math.Ceiling(edge.JumpPadSpeed + 0.01) : 0)},\n";
@@ -556,10 +556,10 @@ public class PathGraph : MonoBehaviour
         dataDefs += "};\n\n";
 
         // build list of edge jump pad ats
-        dataDefs += $"u8 {edgesJumpPadAtVarName}[] = {{\n";
+        dataDefs += $"u16 {edgesJumpPadAtVarName}[] = {{\n";
         foreach (var edge in this.Edges)
         {
-            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * byte.MaxValue) : 0)},\n";
+            dataDefs += $"\t{(edge.JumpPad ? (int)(edge.JumpPadAt * ushort.MaxValue) : 0)},\n";
         }
         dataDefs += "};\n\n";
         dataDefs += ExportPathsAsC(varPrefix, out int longestPath);
