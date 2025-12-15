@@ -97,6 +97,16 @@ int mobIsFrozen(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int mobGetBehavior(Moby* moby)
+{
+  if (!moby || !moby->PVar || !MapConfig.State)
+    return 0;
+
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return pvars->MobVars.Config.Behavior;
+}
+
+//--------------------------------------------------------------------------
 float mobGetScaleMultiplier(Moby* moby)
 {
   if (!moby || !moby->PVar) return 1;

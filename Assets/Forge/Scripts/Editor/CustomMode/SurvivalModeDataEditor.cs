@@ -265,7 +265,7 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
     {
         if (!property.isExpanded) return EditorGUIUtility.singleLineHeight;
 
-        return EditorGUIUtility.singleLineHeight * 32;
+        return EditorGUIUtility.singleLineHeight * 36;
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -291,6 +291,7 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
             line = PopupOverride(line, property, "Variant", mobData.Variants.Select(x => x.Name).ToArray());
             line = PopupOverride(line, property, "Behavior", mobData.Behaviors.ToArray());
             line = PropertyField(line, property, "Attributes");
+            line = EnumOverride(line, property, "BlipType", mobData.BlipType);
 
             line = PropertyField(line, property, "SpecialRoundOnly");
             line = PropertyField(line, property, "MinRound");
@@ -303,7 +304,7 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
 
             line = PropertyField(line, property, "SizeMultiplier");
             line = PropertyField(line, property, "TurnSpeedMultiplier");
-            line = PropertyField(line, property, "RangedAttackDistance");
+            line = FloatOverride(line, property, "RangedAttackDistance", mobData.RangedAttackDistance);
             line = FloatOverride(line, property, "Xp", mobData.Xp);
             line = FloatOverride(line, property, "Bolts", mobData.Bolts);
             line = FloatOverride(line, property, "Damage", mobData.Damage);
@@ -315,6 +316,9 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
             line = FloatOverride(line, property, "Health", mobData.Health);
             line = FloatOverride(line, property, "HealthMax", mobData.HealthMax);
             line = FloatOverride(line, property, "HealthScale", mobData.HealthScale);
+            line = ColorOverride(line, property, "BaseColor", mobData.BaseColor);
+            line = ColorOverride(line, property, "GlowColor", mobData.GlowColor);
+            line = ColorOverride(line, property, "SpriteColor", mobData.SpriteColor);
 
             EditorGUI.indentLevel = indent;
         }
@@ -342,6 +346,41 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
 
         var rect = EditorGUI.PrefixLabel(position, new GUIContent(prop.displayName));
         prop.intValue = EditorGUI.Popup(rect, prop.intValue, options);
+
+        position.y += height;
+        return position;
+    }
+
+    Rect EnumOverride<T>(Rect position, SerializedProperty property, string field, T defaultValue) where T : Enum
+    {
+        var prop = property.FindPropertyRelative(field);
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, prop.displayName);
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.EnumPopup(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
 
         position.y += height;
         return position;
@@ -375,6 +414,41 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
         {
             EditorGUI.BeginDisabledGroup(true);
             EditorGUI.FloatField(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    Rect ColorOverride(Rect position, SerializedProperty property, string field, Color defaultValue)
+    {
+        var prop = property.FindPropertyRelative(field);
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, prop.displayName);
+
+        // Draw color only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.ColorField(valueRect, GUIContent.none, defaultValue, true, false, false);
             EditorGUI.EndDisabledGroup();
         }
 

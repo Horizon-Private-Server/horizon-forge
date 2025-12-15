@@ -92,8 +92,9 @@ typedef struct HudBoss_CommonData { // 0x38
 	/* 0x34 */ int iFillMode;
 } HudBoss_CommonData_t;
 
-// set by mode
+// set by map
 extern int mobAllowedCuboidIdx;
+extern int mobSpawnPointsAreaIdx;
 extern SurvivalBakedConfig_t bakedConfig;
 struct SurvivalMapConfig MapConfig __attribute__((section(".config"))) = {
   .Magic = MAP_CONFIG_MAGIC,
@@ -154,14 +155,13 @@ void mapReturnPlayersToMap(void)
     // if we're under the map, teleport back up
     if (player->PlayerPosition[2] < (gameGetDeathHeight() + 1)) {
       
-      // use player start
-      if (bakedSpawnGetFirst(BAKED_SPAWNPOINT_PLAYER_START, p, r)) {
-        vector_fromyaw(o, (player->PlayerId / (float)GAME_MAX_PLAYERS) * MATH_TAU - MATH_PI);
-        vector_scale(o, o, 2.5);
-        vector_add(p, p, o);
-        playerSetPosRot(player, p, r);
-        playerSetHealth(player, maxf(0, player->Health - player->MaxHealth*0.5));
-      }
+      // move back to player start
+      playerGetSpawnpoint(player, p, r, 0);
+      vector_fromyaw(o, (player->PlayerId / (float)GAME_MAX_PLAYERS) * MATH_TAU - MATH_PI);
+      vector_scale(o, o, 2.5);
+      vector_add(p, p, o);
+      playerSetPosRot(player, p, r);
+      playerSetHealth(player, maxf(0, player->Health - player->MaxHealth*0.5));
     }
   }
 }
@@ -369,6 +369,19 @@ int mapConsiderMobSpawnPoint(struct MobSpawnParams* mobSpawnParams, VECTOR posit
 }
 
 //--------------------------------------------------------------------------
+int mapGetSpawnPoints(int** outSpawnPointIndices)
+{
+  Area_t area;
+  if (mobSpawnPointsAreaIdx < 0 || !areaGetArea(mobSpawnPointsAreaIdx, &area)) {
+    *outSpawnPointIndices = NULL;
+    return 0;
+  }
+
+  *outSpawnPointIndices = area.Cuboids;
+  return area.CuboidCount;
+}
+
+//--------------------------------------------------------------------------
 int mapBlockPlayerUseTeleporter(Moby* moby, Player* player)
 {
 	// pointer to player is in $s1
@@ -389,9 +402,9 @@ void survivalInit(void)
     return;
 
   MapConfig.Magic = MAP_CONFIG_MAGIC;
-  MapConfig.OnUnhandledGetGuberFunc = mapGetGuber;
-  MapConfig.OnUnhandledGuberEventFunc = mapHandleEvent;
   MapConfig.ConsiderMobSpawnPointFunc = mapConsiderMobSpawnPoint;
+  MapConfig.GetSpawnPointsFunc = mapGetSpawnPoints;
+  MapConfig.OnMobCreateFunc = &createMob;
 
   mapApplyFixes();
   mboxInit();
@@ -400,6 +413,7 @@ void survivalInit(void)
   upgradeInit();
   dropInit();
   bboxInit();
+  demonbellInit();
 #if STACKABLES
   sboxInit();
   stackableInit();
@@ -413,7 +427,6 @@ void survivalInit(void)
 #if RANDOMIZE_WEAPONS_AT_START
   randomizeWeaponPickups();
 #endif
-  MapConfig.OnMobCreateFunc = &createMob;
 
   // disable jump pad effect
   POKE_U32(0x0042608C, 0);
@@ -441,15 +454,13 @@ int survivalTick(void)
   if (MapConfig.ClientsReady || !netGetDmeServerConnection())
   {
     mboxSpawn();
-#if STACKABLES
-    sboxSpawn();
-#endif
   }
 
   mobTick();
   pathTick();
   upgradeTick();
   dropTick();
+  demonbellTick();
 #if STACKABLES
   stackableTick();
 #endif

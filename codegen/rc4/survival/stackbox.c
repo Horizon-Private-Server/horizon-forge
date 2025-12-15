@@ -17,6 +17,7 @@
 #include <libdl/game.h>
 #include <libdl/string.h>
 #include <libdl/math.h>
+#include <libdl/moby.h>
 #include <libdl/random.h>
 #include <libdl/math3d.h>
 #include <libdl/radar.h>
@@ -323,19 +324,19 @@ void sboxUpdate(Moby* moby)
 
 	// show/hide
   if (moby->State == STACK_BOX_STATE_DISABLED) {
-    moby->DrawDist = 0;
+    moby->ModeBits |= MOBY_MODE_BIT_DISABLED;
     moby->CollActive = -1;
     if (pvars->BaseMoby) {
       pvars->BaseMoby->CollActive = -1;
-      pvars->BaseMoby->DrawDist = 0;
+      pvars->BaseMoby->ModeBits |= MOBY_MODE_BIT_DISABLED;
     }
     return;
   } else {
-    moby->DrawDist = 255;
+    moby->ModeBits &= ~MOBY_MODE_BIT_DISABLED;
     moby->CollActive = 0;
     if (pvars->BaseMoby) {
       pvars->BaseMoby->CollActive = 0;
-      pvars->BaseMoby->DrawDist = 255;
+      pvars->BaseMoby->ModeBits &= ~MOBY_MODE_BIT_DISABLED;
     }
   }
 
@@ -533,7 +534,7 @@ int sboxHandleEvent(Moby* moby, GuberEvent* event)
 
 		switch (sboxEvent)
 		{
-			case STACK_BOX_EVENT_SPAWN: return sboxHandleEvent_Spawned(moby, event);
+			//case STACK_BOX_EVENT_SPAWN: return sboxHandleEvent_Spawned(moby, event);
 			case STACK_BOX_EVENT_ACTIVATE: return sboxHandleEvent_Activate(moby, event);
 			case STACK_BOX_EVENT_GIVE_PLAYER: return sboxHandleEvent_GivePlayer(moby, event);
 			case STACK_BOX_EVENT_PLAYER_BUY: return sboxHandleEvent_PlayerBuy(moby, event);
@@ -547,6 +548,36 @@ int sboxHandleEvent(Moby* moby, GuberEvent* event)
 	}
 
 	return 0;
+}
+
+//--------------------------------------------------------------------------
+void sboxOnGuberCreated(Moby* moby)
+{
+  struct StackBoxPVar* pvars = (struct StackBoxPVar*)moby->PVar;
+
+  pvars->Item = sboxGetRandomItem(NULL);
+	moby->PUpdate = &sboxUpdate;
+  moby->UpdateDist = -1;
+  moby->DrawDist = 255;
+  moby->ModeBits = MOBY_MODE_BIT_DISABLE_Z_WRITE | MOBY_MODE_BIT_LOCK_ROTATION | MOBY_MODE_BIT_DRAW_SHADOW;
+
+  // add base
+  Moby* baseMoby = pvars->BaseMoby = mobySpawn(8348, 0);
+  if (baseMoby) {
+    vector_copy(baseMoby->Position, moby->Position);
+    baseMoby->Scale = 0.14 * (moby->Scale / 0.25);
+    baseMoby->PUpdate = NULL;
+    baseMoby->ModeBits = MOBY_MODE_BIT_HIDE_BACKFACES | MOBY_MODE_BIT_HAS_GLOW;
+    baseMoby->Opacity = moby->Opacity;
+    baseMoby->DrawDist = moby->DrawDist;
+    mobyUpdateTransform(baseMoby);
+  }
+
+  // lower glass a bit
+  moby->Position[2] -= 1;
+
+  // set default state
+	mobySetState(moby, STACK_BOX_STATE_ACTIVE, -1);
 }
 
 //--------------------------------------------------------------------------
@@ -568,30 +599,6 @@ int sboxCreate(VECTOR position, VECTOR rotation)
 	}
   
   return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
-void sboxSpawn(void)
-{
-  static int spawned = 0;
-  VECTOR p,r;
-  int i;
-  
-  if (spawned)
-    return;
-
-  // spawn at all baked spawn points
-  if (gameAmIHost()) {
-    for (i = 0; i < BAKED_SPAWNPOINT_COUNT; ++i) {
-      if (MapConfig.BakedConfig->BakedSpawnPoints[i].Type == BAKED_SPAWNPOINT_STACK_BOX) {
-        memcpy(p, MapConfig.BakedConfig->BakedSpawnPoints[i].Position, 12);
-        memcpy(r, MapConfig.BakedConfig->BakedSpawnPoints[i].Rotation, 12);
-        sboxCreate(p, r);
-      }
-    }
-  }
-
-  spawned = 1;
 }
 
 //--------------------------------------------------------------------------
@@ -661,9 +668,23 @@ void sboxInit(void)
   // set vtable callbacks
   u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
-    *(u32*)(mobyFunctionsPtr + 0x04) = (u32)&sboxGetGuber;
-    *(u32*)(mobyFunctionsPtr + 0x14) = (u32)&sboxHandleEvent;
+    mapInstallMobyFunctions(mobyFunctionsPtr);
     DPRINTF("SBOX oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
   }
   mobyDestroy(temp);
+
+  // create gubers for stackboxes
+  Moby* moby = mobyListGetStart();
+	while ((moby = mobyFindNextByOClass(moby, STACK_BOX_OCLASS)))
+	{
+		if (!mobyIsDestroyed(moby) && moby->PVar) {
+      struct Guber* guber = guberGetOrCreateObjectByMoby(moby, -1, 1);
+      DPRINTF("created sbox guber %08X %08X\n", (u32)moby, (u32)guber);
+      if (guber) {
+        sboxOnGuberCreated(moby);
+      }
+    }
+
+		++moby;
+	}
 }

@@ -58,7 +58,7 @@ void bboxInit(void)
   }
   mobyDestroy(temp);
   
-  // create gubers for hacker orbs
+  // create gubers for bank boxes
   Moby* moby = mobyListGetStart();
 	while ((moby = mobyFindNextByOClass(moby, BANK_BOX_OCLASS)))
 	{

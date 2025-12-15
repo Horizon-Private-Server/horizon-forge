@@ -313,6 +313,11 @@ public class BuildWindow : EditorWindow
                 }
                 else
                 {
+                    // always rebuild code
+                    // to account for NTSC/PAL using different code segments
+                    // we must always keep the build folder's code up-to-date
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
+
                     if (toggleRebuildCollision.value) await ForgeBuilder.RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildTfrags.value) ForgeBuilder.RebuildTfrags(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildTies.value) ForgeBuilder.RebuildTies(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
@@ -327,12 +332,7 @@ public class BuildWindow : EditorWindow
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAmbientSounds(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAreas(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildLighting.value) ForgeBuilder.RebuildWorldLighting(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-
-                    // always rebuild code
-                    // to account for NTSC/PAL using different code segments
-                    // we must always keep the build folder's code up-to-date
-                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
-                }
+               }
 
                 EditorUtility.ClearProgressBar();
                 EditorUtility.DisplayProgressBar($"Rebuilding Level (rc{racVersion} {region})", "Packing", 0);

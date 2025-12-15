@@ -94,6 +94,13 @@ enum ExecutionerSubskeletonJoints
   EXECUTIONER_SUBSKELETON_JOINT_HIPS,
 };
 
+enum ExecutionerBehaviors
+{
+  EXECUTIONER_BEHAVIOR_NORMAL = 0,
+  EXECUTIONER_BEHAVIOR_MELEE = 1,
+  EXECUTIONER_BEHAVIOR_RANGED = 2,
+};
+
 typedef struct ExecutionerMobVars
 {
   int AnimationLoopLastFire;

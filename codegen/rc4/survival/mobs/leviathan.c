@@ -132,11 +132,7 @@ int leviathanIsAggressive(Moby* moby)
 //--------------------------------------------------------------------------
 float leviathanGetScale(Moby* moby)
 {
-  float scale = mobGetScaleMultiplier(moby);
-  //if (leviathanIsBoss(moby))
-  //  return 2 * scale;
-
-  return scale;
+  return mobGetScaleMultiplier(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -232,7 +228,7 @@ void leviathanPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = LEVIATHAN_LOD_COLOR | (moby->Opacity << 24);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
   mobPostDrawQuad(moby, 127, color, LEVIATHAN_SUBSKELETON_JOINT_BODY);
 }
 
@@ -253,12 +249,12 @@ void leviathanOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = LEVIATHAN_GLOW_COLOR;
-	moby->PrimaryColor = LEVIATHAN_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.5 + (scale * 0.25);
-  pvars->MobVars.BlipType = 6;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
@@ -283,7 +279,7 @@ void leviathanOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   }
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = LEVIATHAN_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
   
   // spawn corn
   //mobBlowCorn(moby);
@@ -443,8 +439,8 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
   vector_subtract(dt, target->Position, moby->Position);
   float distSqr = vector_sqrmag(dt);
   float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-  float rangedAttackRadiusSqr = LEVIATHAN_VISION_RANGE*LEVIATHAN_VISION_RANGE;
-  int canRanged = pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_RANGED_ATTACK || pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_BOSS;
+  float rangedAttackRadiusSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
+  int canRanged = mobGetBehavior(moby) != LEVIATHAN_BEHAVIOR_MELEE;
   if (distSqr > attackRadiusSqr && canRanged) {
 
     // check if moby is looking at (close to) target
@@ -1140,7 +1136,7 @@ int leviathanShouldStrafe(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-  float maxDistSqr = LEVIATHAN_VISION_RANGE*LEVIATHAN_VISION_RANGE;
+  float maxDistSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
   if (sqrDistToTarget > maxDistSqr)
     return 0;
 

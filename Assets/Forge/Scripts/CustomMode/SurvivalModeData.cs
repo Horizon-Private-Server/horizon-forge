@@ -11,6 +11,9 @@ using UnityEngine;
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
     public static readonly int SURVIVAL_VERSION = 4;
+    public const int DEMONBELL_OCLASS = 0x2479;
+    public const int BANK_OCLASS = 0x1F7;
+    public const int STACKBOX_OCLASS = 0x2083;
     public const int SURVIVAL_MAX_SPAWNED_MOBS = 50;
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
@@ -31,7 +34,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public bool HidePrestigeMachineEvery25Rounds = true;
     public bool RandomizeWeaponPickupsAtStart = true;
     public bool IsLegacySurvivalMap = false;
-    public List<SurvivalBakedSpawnPointItem> BakedSpawnPoints = new List<SurvivalBakedSpawnPointItem>();
 
     [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 10.")]
     public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
@@ -39,6 +41,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         new SurvivalMobSpawnParam() { Name = "Zombie" }
     };
     public Cuboid MobAllowedArea;
+    public Area MobSpawnPoints;
     public string ReactorMinionMobName;
 
     [Header("Special Rounds")]
@@ -124,6 +127,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         // write code seg patches
         WriteCodeSegPatches(mapConfig, new DirectoryInfo(buildFolder).Parent.FullName);
 
+        // ensure all custom mobys without pvar overlay have the correct pvar sizes
+        EnsureSurvivalMobysHaveCorrectPVarSize();
+
         // copy survival base code
         CodeManager.CopySourceFilesIntoWorkingDirectory(FolderNames.GetCodeGenFolder(RCVER.DL, "survival"), buildFolder);
 
@@ -138,6 +144,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/upgrade.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/drop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/demonbell.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bankbox.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mysterybox.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
@@ -149,6 +156,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/stackables.o");
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/stackbox.o");
             state.LDFlags.Add("-DSTACKABLES");
+            state.GetGuberCase.Add("case STACK_BOX_OCLASS: return sboxGetGuber(moby);");
+            state.HandleGuberEventCase.Add("case STACK_BOX_OCLASS: sboxHandleEvent(moby, event); break;");
         }
 
         if (EnableBlessings)
@@ -195,11 +204,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.GetGuberCase.Add("case MYSTERY_BOX_OCLASS: return mboxGetGuber(moby);");
         state.GetGuberCase.Add("case UPGRADE_MOBY_OCLASS: return upgradeGetGuber(moby);");
         state.GetGuberCase.Add("case DROP_MOBY_OCLASS: return dropGetGuber(moby);");
+        state.GetGuberCase.Add("case DEMONBELL_MOBY_OCLASS: return demonbellGetGuber(moby);");
 
         // handle events
         state.HandleGuberEventCase.Add("case MYSTERY_BOX_OCLASS: mboxHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case UPGRADE_MOBY_OCLASS: upgradeHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case DROP_MOBY_OCLASS: dropHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case DEMONBELL_MOBY_OCLASS: demonbellHandleEvent(moby, event); break;");
 
         // 
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
@@ -208,12 +219,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public void Configure(BuildState state)
     {
         state.MobyOClasses.Add(RaidsModeData.LASERBEAM_OCLASS);
+        state.MobyOClasses.Add(0x2075); // node base (sounds)
         state.MobyOClasses.Add(0x2635); // mysterybox
         state.MobyOClasses.Add(0x2124); // bigal
         state.MobyOClasses.Add(0x263A); // vendor
         state.MobyOClasses.Add(0x01F4); // drop
         state.MobyOClasses.Add(0x01F9); // upgrade
-        if (EnableStackables) state.MobyOClasses.Add(0x2083); // stackbox
+        if (EnableStackables) state.MobyOClasses.Add(8348); // stackbox base
 
         // add mob oclasses
         var mobConfig = SurvivalMobsScriptableObject.Load();
@@ -237,6 +249,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         var sb = new StringBuilder();
         var mapConfig = FindObjectOfType<MapConfig>();
         var enabledMobs = GetEnabledMobs();
+
+        // collect
+        var upgradeSpawns = HierarchicalSorting.Sort(FindObjectsOfType<SurvivalUpgradeSpawn>(false));
 
         sb.AppendLine("#include <libdl/utils.h>");
         sb.AppendLine("#include \"game.h\"");
@@ -272,8 +287,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
         sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
         sb.AppendLine("\t.BakedSpawnPoints = {");
-        foreach (var item in BakedSpawnPoints)
-            sb.AppendLine(item.GetDef());
+        foreach (var item in upgradeSpawns)
+            sb.AppendLine(SurvivalBakedSpawnPointItem.GetDef(item.transform, SurvivalBakedSpawnpointType.Upgrade));
         sb.AppendLine("\t}");
         sb.AppendLine("};");
         sb.AppendLine();
@@ -318,7 +333,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine($"int reactorMinionSpawnParamIdx = {enabledMobs.FindIndex(x => x.Name == ReactorMinionMobName)};");
         sb.AppendLine($"int mobAllowedCuboidIdx = {mapConfig.GetIndexOfCuboid(MobAllowedArea)};");
-
+        sb.AppendLine($"int mobSpawnPointsAreaIdx = {mapConfig.GetIndexOfArea(MobSpawnPoints)};");
+        
         sb.AppendLine();
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("void configInit(void)");
@@ -393,6 +409,35 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         return sb.ToString().TrimEnd();
     }
 
+    void EnsureSurvivalMobysHaveCorrectPVarSize()
+    {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+
+        foreach (var moby in mobys)
+        {
+            int? expectedPvarSize = null;
+            switch (moby.OClass)
+            {
+                case DEMONBELL_OCLASS: expectedPvarSize = 20; break;
+                case BANK_OCLASS: expectedPvarSize = 16; break;
+                case STACKBOX_OCLASS: expectedPvarSize = 16; break;
+            }
+
+            if (expectedPvarSize.HasValue)
+            {
+                var pvarData = moby.GetPVarData();
+                if (pvarData == null) pvarData = new byte[0];
+
+                if (pvarData.Length < expectedPvarSize)
+                {
+                    Array.Resize(ref pvarData, expectedPvarSize.Value);
+                    moby.SetPVarData(pvarData);
+                }
+            }
+        }
+    }
+
     #endregion
 
     #region Menu Items
@@ -438,7 +483,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     void WritePatches(SurvivalMobsScriptableObject survivalData, string codeFolder)
     {
-        foreach (var patch in survivalData.Patches)
+        foreach (var patch in survivalData.Patches.Where(x => !x.Disabled))
         {
             var path = Path.Combine(codeFolder, $"code.{patch.CodeSegIndex:D4}.bin");
             var offset = Convert.ToInt64(patch.CodeSegOffsetHex, 16);
@@ -891,14 +936,14 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
             go.transform.SetParent(rootGo.transform, true);
 
-            if (survivalModeData)
-            {
-                survivalModeData.BakedSpawnPoints.Add(new SurvivalBakedSpawnPointItem()
-                {
-                    Type = type,
-                    Transform = go.transform
-                });
-            }
+            //if (survivalModeData)
+            //{
+            //    survivalModeData.BakedSpawnPoints.Add(new SurvivalBakedSpawnPointItem()
+            //    {
+            //        Type = type,
+            //        Transform = go.transform
+            //    });
+            //}
         }
     }
 
@@ -1183,14 +1228,20 @@ public class SurvivalBakedSpawnPointItem
 
     public string GetDef()
     {
-        if (!Transform) return string.Empty;
+        return GetDef(Transform, Type);
+    }
+
+
+    public static string GetDef(Transform transform, SurvivalBakedSpawnpointType type)
+    {
+        if (!transform) return string.Empty;
 
         StringBuilder sb = new StringBuilder();
 
-        var pos = Transform.position;
-        var rot = Transform.eulerAngles;
+        var pos = transform.position;
+        var rot = transform.eulerAngles;
 
-        switch (Type)
+        switch (type)
         {
             case SurvivalBakedSpawnpointType.PlayerStart:
             case SurvivalBakedSpawnpointType.MysteryBox:
@@ -1203,7 +1254,7 @@ public class SurvivalBakedSpawnPointItem
         var rotX = Mathf.DeltaAngle(0, rot.x) * -Mathf.Deg2Rad;
         var rotY = Mathf.DeltaAngle(0, rot.y) * -Mathf.Deg2Rad;
         var rotZ = Mathf.DeltaAngle(0, rot.z) * -Mathf.Deg2Rad;
-        sb.Append($"\t\t{{ .Type = {(int)Type}, .Params = 0, .Position = {{ {pos.x}, {pos.z}, {pos.y} }}, .Rotation = {{ {rotX}, {rotZ}, {rotY} }} }},");
+        sb.Append($"\t\t{{ .Type = {(int)type}, .Params = 0, .Position = {{ {pos.x}, {pos.z}, {pos.y} }}, .Rotation = {{ {rotX}, {rotZ}, {rotY} }} }},");
 
         return sb.ToString();
     }
@@ -1218,6 +1269,7 @@ public class SurvivalMobSpawnParam
     public int Variant;
     public int Behavior;
     public SurvivalMobAttributes Attributes;
+    public SurvivalEnumOverride<DLBlipTypes> BlipType;
 
     [Header("Spawn Parameters")]
     public bool SpecialRoundOnly = false;
@@ -1232,7 +1284,7 @@ public class SurvivalMobSpawnParam
     [Header("Mob Parameters")]
     [Min(0)] public float SizeMultiplier = 1;
     [Min(0), Tooltip("Increase or decrease turn speed.")] public float TurnSpeedMultiplier = 1;
-    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public float RangedAttackDistance = 50;
+    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public SurvivalFloatOverride RangedAttackDistance;
     public SurvivalFloatOverride Xp;
     public SurvivalFloatOverride Bolts;
 
@@ -1250,6 +1302,11 @@ public class SurvivalMobSpawnParam
     public SurvivalFloatOverride Health;
     public SurvivalFloatOverride HealthMax;
     public SurvivalFloatOverride HealthScale;
+
+    [Header("Colors")]
+    public SurvivalColorOverride BaseColor;
+    public SurvivalColorOverride GlowColor;
+    public SurvivalColorOverride SpriteColor;
 
     public string GetDef(float? probabilityOverride = null)
     {
@@ -1270,16 +1327,20 @@ public class SurvivalMobSpawnParam
         sb.AppendLine($"\t\t.RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
         sb.AppendLine($"\t\t.Scale = {SizeMultiplier},");
         sb.AppendLine($"\t\t.OClass = {variant.OClass},");
-        sb.AppendLine($"\t\t.BlipType = {(int)defaults.BlipType},");
+        sb.AppendLine($"\t\t.BlipType = {(BlipType.HasOverride ? (int)BlipType.OverrideValue : (int)defaults.BlipType)},");
         sb.AppendLine($"\t\t.MaxSpawnedAtOnce = {MaxSpawnedAtOnce},");
         sb.AppendLine($"\t\t.MaxSpawnedPerRound = {MaxSpawnedPerRound},");
         sb.AppendLine($"\t\t.MinRound = {Math.Clamp(MinRound, 0, int.MaxValue)},");
         sb.AppendLine($"\t\t.CooldownTicks = {(int)CooldownTicks},");
         sb.AppendLine($"\t\t.CooldownOffsetPerRoundFactor = {CooldownOffsetPerRoundFactor},");
         sb.AppendLine($"\t\t.Probability = {probabilityOverride ?? Probability},");
+        sb.AppendLine($"\t\t.RangedAttackDistance = {(RangedAttackDistance.HasOverride ? RangedAttackDistance.OverrideValue : defaults.RangedAttackDistance)},");
         sb.AppendLine($"\t\t.SpawnType = {(int)SpawnType},");
         sb.AppendLine($"\t\t.SpecialRoundOnly = {(SpecialRoundOnly ? 1 : 0)},");
         sb.AppendLine($"\t\t.StatId = {(int)defaults.StatId},");
+        sb.AppendLine($"\t\t.BaseColor = 0x{RCHelper.GetAbgrHex(BaseColor.HasOverride ? BaseColor.OverrideValue : defaults.BaseColor, overrideAlpha: 0):X8},");
+        sb.AppendLine($"\t\t.GlowColor = 0x{RCHelper.GetAbgrHex(GlowColor.HasOverride ? GlowColor.OverrideValue : defaults.GlowColor, overrideAlpha: 0.5f):X8},");
+        sb.AppendLine($"\t\t.SpriteColor = 0x{RCHelper.GetAbgrHex(SpriteColor.HasOverride ? SpriteColor.OverrideValue : defaults.SpriteColor, overrideAlpha: 0):X8},");
         sb.AppendLine($"\t\t.Name = \"{name}\",");
         sb.AppendLine($"\t\t.Config = {{");
         sb.AppendLine($"\t\t\t.Xp = {(ushort)Math.Clamp(Xp.HasOverride ? Xp.OverrideValue : defaults.Xp, 0, ushort.MaxValue)},");
@@ -1300,6 +1361,7 @@ public class SurvivalMobSpawnParam
         sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
         sb.AppendLine($"\t\t\t.AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
         sb.AppendLine($"\t\t\t.MobAttribute = {(int)Attributes},");
+        sb.AppendLine($"\t\t\t.Behavior = {Behavior},");
         sb.AppendLine($"\t\t\t.SharedXp = {1},");
         sb.AppendLine($"\t\t}}");
         sb.AppendLine("\t},");
@@ -1314,6 +1376,20 @@ public struct SurvivalFloatOverride
 {
     public bool HasOverride;
     public float OverrideValue;
+}
+
+[Serializable]
+public struct SurvivalColorOverride
+{
+    public bool HasOverride;
+    [ColorUsage(false)] public Color OverrideValue;
+}
+
+[Serializable]
+public struct SurvivalEnumOverride<T>
+{
+    public bool HasOverride;
+    public T OverrideValue;
 }
 
 [Serializable]

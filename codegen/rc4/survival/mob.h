@@ -125,6 +125,7 @@ struct MobConfig {
   u8 ReactionTickCount;
   u8 AttackCooldownTickCount;
   char MobAttribute;
+  char Behavior;
   char SharedXp;
 };
 
@@ -140,6 +141,10 @@ struct MobSpawnParams {
   int CooldownTicks;
   float CooldownOffsetPerRoundFactor; // 0 is unchanged, -1 is -1 tick per round, +1 is +1 tick per round
   float Probability;
+  float RangedAttackDistance;
+  u32 BaseColor;
+  u32 GlowColor;
+  u32 SpriteColor;
   enum MobSpawnType SpawnType;
   enum MobStatId StatId;
   char Name[32];
@@ -350,6 +355,7 @@ struct MobSpawnEventArgs
   u16 Xp;
   char MobType;
   char MobAttribute;
+  char Behavior;
   u8 SpawnParamsIdx;
   u8 AttackRadiusEighths;
   u8 HitRadiusEighths;

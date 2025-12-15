@@ -11,6 +11,7 @@
 #include "mysterybox.h"
 #include "bankbox.h"
 #include "stackbox.h"
+#include "demonbell.h"
 #include "utils.h"
 
 #define MAP_CONFIG_MAGIC                      (0xDEADBEEF)
@@ -213,10 +214,6 @@ enum BakedSpawnpointType
 {
   BAKED_SPAWNPOINT_NONE = 0,
   BAKED_SPAWNPOINT_UPGRADE = 1,
-  BAKED_SPAWNPOINT_PLAYER_START = 2,
-  BAKED_SPAWNPOINT_MYSTERY_BOX = 3,
-  BAKED_SPAWNPOINT_DEMON_BELL = 4,
-  BAKED_SPAWNPOINT_STACK_BOX = 5,
 };
 
 enum MobStatId
@@ -283,6 +280,7 @@ typedef void (*MapOnMobSpawned_func)(Moby* moby);
 typedef int (*MapOnMobCreate_func)(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, int killedByWeaponId);
 typedef int (*MapCanSpawnMobs_func)(void);
+typedef int (*MapGetSpawnPoints_func)(int** outSpawnPointIndices);
 typedef int (*MapConsiderMobSpawnPoint_func)(struct MobSpawnParams* mobSpawnParams, VECTOR position, float yaw, Player* targetPlayer);
 typedef int (*OnPlayerGetRes_func)(Player* player, VECTOR outPos, VECTOR outRot, int firstRes);
 typedef int (*CreateUpgradePickup_func)(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType);
@@ -449,12 +447,15 @@ struct SurvivalMapConfig
   ModeSetDoubleXP_func ModeSetDoubleXPFunc;
   ModeSetFreezeMobs_func ModeSetFreezeMobsFunc;
   ModeRevivePlayer_func ModeRevivePlayerFunc;
+  GetGuber_func OnGetGuberFunc;
+  HandleGuberEvent_func OnGuberEventFunc;
 
   // map
   MapOnMobCreate_func OnMobCreateFunc;
   MapOnMobSpawned_func OnMobSpawnedFunc;
   MapOnMobKilled_func OnMobKilledFunc;
   MapCanSpawnMobs_func CanSpawnMobsFunc;
+  MapGetSpawnPoints_func GetSpawnPointsFunc;
   MapConsiderMobSpawnPoint_func ConsiderMobSpawnPointFunc;
   OnPlayerGetRes_func OnPlayerGetResFunc;
   CreateUpgradePickup_func CreateUpgradePickupFunc;
@@ -463,8 +464,6 @@ struct SurvivalMapConfig
   CreateMobDrop_func CreateMobDropFunc;
   HandleMobDropEvent_func OnMobDropEventFunc;
   FrameTick_func OnFrameTickFunc;
-  GetGuber_func OnUnhandledGetGuberFunc;
-  HandleGuberEvent_func OnUnhandledGuberEventFunc;
 
   // misc
   float WeaponPickupCooldownFactor;

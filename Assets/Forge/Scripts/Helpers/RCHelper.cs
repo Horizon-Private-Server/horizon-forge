@@ -65,4 +65,13 @@ public static class RCHelper
 
         return guiTeamColors[idx];
     }
+
+    public static uint GetAbgrHex(Color color, float? overrideAlpha = null)
+    {
+        return ((uint)Mathf.RoundToInt((overrideAlpha ?? color.a) * 255) << 24)
+            | ((uint)Mathf.RoundToInt((color.b) * 255) << 16)
+            | ((uint)Mathf.RoundToInt((color.g) * 255) << 8)
+            | ((uint)Mathf.RoundToInt((color.r) * 255) << 0)
+            ;
+    }
 }

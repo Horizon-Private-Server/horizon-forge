@@ -54,6 +54,9 @@ MonoBehaviour:
         SourceMissionId: -1
     Behaviors:
     - Normal
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     Xp: 15
     Bolts: 220
     Damage: 10
@@ -67,6 +70,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 0.5
     CollRadius: 1
     ReactionDelaySeconds: 0.25
@@ -98,6 +102,9 @@ MonoBehaviour:
         SourceMissionId: 14
     Behaviors:
     - Normal
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     Xp: 5
     Bolts: 55
     Damage: 2
@@ -111,6 +118,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 1.75
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
@@ -128,6 +136,9 @@ MonoBehaviour:
         SourceMissionId: -1
     Behaviors:
     - Normal
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     Xp: 5
     Bolts: 75
     Damage: 4
@@ -141,6 +152,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 2
     CollRadius: 1
     ReactionDelaySeconds: 0.25
@@ -157,6 +169,9 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 0
     Behaviors: []
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     Xp: 5
     Bolts: 50
     Damage: 10
@@ -170,6 +185,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 0.5
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
@@ -192,7 +208,13 @@ MonoBehaviour:
       - OClass: 8388
         SourceMapId: 4
         SourceMissionId: -1
-    Behaviors: []
+    Behaviors:
+    - Normal
+    - Melee Only
+    - Ranged Only
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0, g: 1, b: 0, a: 1}
     Xp: 200
     Bolts: 440
     Damage: 10
@@ -206,6 +228,7 @@ MonoBehaviour:
     HealthScale: 1.1
     TurnSpeed: 1
     AttackRadius: 3.5
+    RangedAttackDistance: 50
     HitRadius: 0.5
     CollRadius: 2
     ReactionDelaySeconds: 0.25
@@ -222,6 +245,9 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 0
     Behaviors: []
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     Xp: 5
     Bolts: 50
     Damage: 10
@@ -235,6 +261,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 0.5
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
@@ -254,6 +281,9 @@ MonoBehaviour:
     - Normal
     - Melee
     - Ranged
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 1, g: 0, b: 0, a: 1}
     Xp: 500
     Bolts: 660
     Damage: 15
@@ -266,7 +296,8 @@ MonoBehaviour:
     HealthMax: 200000000
     HealthScale: 1
     TurnSpeed: 1
-    AttackRadius: 8
+    AttackRadius: 7
+    RangedAttackDistance: 50
     HitRadius: 1.5
     CollRadius: 2
     ReactionDelaySeconds: 0.25
@@ -284,6 +315,9 @@ MonoBehaviour:
         SourceMissionId: 0
     Behaviors:
     - Normal
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     Xp: 150
     Bolts: 440
     Damage: 10
@@ -297,6 +331,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 1
     CollRadius: 1
     ReactionDelaySeconds: 0.25
@@ -314,6 +349,9 @@ MonoBehaviour:
         SourceMissionId: -1
     Behaviors:
     - Normal
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5019608, g: 1, b: 0.5019608, a: 1}
     Xp: 30
     Bolts: 330
     Damage: 7
@@ -327,6 +365,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 1
     CollRadius: 1
     ReactionDelaySeconds: 0.25
@@ -342,7 +381,11 @@ MonoBehaviour:
       - OClass: 8382
         SourceMapId: 1
         SourceMissionId: 16
-    Behaviors: []
+    Behaviors:
+    - Normal
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0, g: 0, b: 1, a: 1}
     Xp: 1000
     Bolts: 11000
     Damage: 10
@@ -356,20 +399,24 @@ MonoBehaviour:
     HealthScale: 1.05
     TurnSpeed: 1
     AttackRadius: 5
+    RangedAttackDistance: 50
     HitRadius: 2
     CollRadius: 1.5
     ReactionDelaySeconds: 0.0875
     AttackCooldownSeconds: 1
   Patches:
   - Name: Enable All Alpha Mods
+    Disabled: 0
     CodeSegIndex: 6
     CodeSegOffsetHex: 287D60
     Hex: 03E00008 24020001
   - Name: Stackables Vendor Table
+    Disabled: 0
     CodeSegIndex: 3
     CodeSegOffsetHex: 198
-    Hex: 2083
+    Hex: 266e
   - Name: Mystery Box Table
+    Disabled: 0
     CodeSegIndex: 3
     CodeSegOffsetHex: 1BC
     Hex: 2635

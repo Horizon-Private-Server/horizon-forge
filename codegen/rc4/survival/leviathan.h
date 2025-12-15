@@ -117,6 +117,13 @@ enum LeviathanSubskeletonJoints
   LEVIATHAN_SUBSKELETON_JOINT_BODY = 3,
 };
 
+enum LeviathanBehaviors
+{
+  LEVIATHAN_BEHAVIOR_NORMAL = 0,
+  LEVIATHAN_BEHAVIOR_MELEE = 1,
+  LEVIATHAN_BEHAVIOR_RANGED = 2,
+};
+
 typedef struct LeviathanMobVars {
   VECTOR LaserbeamDirection;
   VECTOR LaserbeamTarget1;

@@ -48,7 +48,7 @@ struct Guber* mapGetGuber(Moby* moby)
 ##GETGUBERCASES##
     default:
     {
-      #if RAIDS
+      #if RAIDS || SURVIVAL
         if (MapConfig.OnGetGuberFunc) {
           struct Guber* guber = MapConfig.OnGetGuberFunc(moby);
           if (guber) return guber;
@@ -83,7 +83,7 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
   ##HANDLEEVENTCASES##
       default:
 			{
-        #if RAIDS
+        #if RAIDS || SURVIVAL
           if (MapConfig.OnGuberEventFunc) {
             MapConfig.OnGuberEventFunc(moby, event);
             return;

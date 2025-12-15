@@ -81,12 +81,19 @@ void gambitsSetupDisableStackables(void)
   int i;
 
   // disable perk boxes
-  for (i = 0; i < BAKED_SPAWNPOINT_COUNT; ++i) {
-    if (bakedConfig.BakedSpawnPoints[i].Type == BAKED_SPAWNPOINT_STACK_BOX) {
-      bakedConfig.BakedSpawnPoints[i].Type = BAKED_SPAWNPOINT_NONE;
+  Moby* moby = mobyListGetStart();
+	while ((moby = mobyFindNextByOClass(moby, STACK_BOX_OCLASS)))
+	{
+		if (!mobyIsDestroyed(moby) && moby->PVar) {
+      if (guberGetObjectByMoby(moby)) {
+        guberMobyDestroy(moby);
+      } else {
+        mobyDestroy(moby);
+      }
     }
-  }
-  
+
+		++moby;
+	}
 }
 
 //--------------------------------------------------------------------------

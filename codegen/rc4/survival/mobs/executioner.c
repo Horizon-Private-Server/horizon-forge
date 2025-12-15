@@ -150,7 +150,7 @@ void executionerPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = EXECUTIONER_LOD_COLOR | (moby->Opacity << 24);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
   mobPostDrawQuad(moby, 127, color, 1);
 }
 
@@ -181,12 +181,12 @@ void executionerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID
   moby->Scale = 0.35 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = EXECUTIONER_GLOW_COLOR;
-	moby->PrimaryColor = EXECUTIONER_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 1.5 + (scale * 0.5);
-  pvars->MobVars.BlipType = 6;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
@@ -206,7 +206,7 @@ void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = EXECUTIONER_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // spawn explosion
   u32 expColor = 0x801E70D6;
@@ -357,8 +357,8 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
 		vector_subtract(t, t, moby->Position);
 		float distSqr = vector_sqrmag(t);
 		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-		float rangedAttackRadiusSqr = EXECUTIONER_VISION_RANGE * EXECUTIONER_VISION_RANGE;
-    int canRanged = pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_RANGED_ATTACK || pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_BOSS;
+    float rangedAttackRadiusSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
+    int canRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_NORMAL || mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_RANGED;
 
     if (1) {
       if (distSqr <= attackRadiusSqr) {
@@ -424,12 +424,13 @@ Moby* executionerFireShot(Moby* moby, Moby* target)
   vector_scale(vel, vel, 0.5);
 
   // fire shot
+  float rangedAttack = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
   Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4, pvars->MobVars.Config.Damage, from, vel, moby, 1, 0x222124, -1, 0);
   if (shotMoby) {
     ((void (*)(Moby*, int))0x0045d758)(shotMoby, 2); // shot type
     ((void (*)(Moby*, int))0x0045d788)(shotMoby, TEAM_RED); // shot color
     ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 1); // hit flag
-    ((void (*)(Moby*, int))0x0045d798)(shotMoby, 2*TPS + (int)EXECUTIONER_VISION_RANGE); // shot life (ticks)
+    ((void (*)(Moby*, int))0x0045d798)(shotMoby, 2*TPS + (int)rangedAttack); // shot life (ticks)
     shotMoby->Bolts = -1; // indicate to gamemode shot can damage player
     shotMoby->PParent = moby;
   }

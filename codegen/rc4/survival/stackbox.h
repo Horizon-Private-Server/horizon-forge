@@ -36,7 +36,6 @@ struct StackBoxPVar
   Moby* BaseMoby;
 };
 
-void sboxSpawn(void);
 void sboxFrameTick(void);
 void sboxInit(void);
 

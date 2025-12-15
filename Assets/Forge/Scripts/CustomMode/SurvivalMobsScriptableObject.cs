@@ -31,6 +31,10 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
         public List<string> Behaviors = new List<string>();
 
+        [ColorUsage(false)] public Color BaseColor = new Color(0.25f, 0.25f, 0.25f);
+        [ColorUsage(false)] public Color GlowColor = new Color(0.5f, 0.5f, 0.5f);
+        [ColorUsage(false)] public Color SpriteColor = new Color(0.5f, 0.5f, 0.5f);
+
         public int Xp = BASE_XP;
         public int Bolts = BASE_BOLTS;
 
@@ -48,6 +52,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
 
         public float TurnSpeed = 1;
         public float AttackRadius = 5;
+        public float RangedAttackDistance = 50;
         public float HitRadius = 0.5f;
         public float CollRadius = 0.5f;
 
@@ -89,6 +94,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public class SurvivalPatch
     {
         public string Name;
+        public bool Disabled;
         public int CodeSegIndex;
         public string CodeSegOffsetHex;
         public string Hex;

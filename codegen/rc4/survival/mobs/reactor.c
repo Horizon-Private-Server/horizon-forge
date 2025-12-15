@@ -231,7 +231,7 @@ void reactorPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = REACTOR_LOD_COLOR | (moby->Opacity << 24);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
   mobPostDrawQuad(moby, 127, color, 1);
 }
 
@@ -274,12 +274,12 @@ void reactorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
   moby->Scale = 0.6 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = REACTOR_GLOW_COLOR;
-	moby->PrimaryColor = REACTOR_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 1.0 + (scale * 0.5);
-  pvars->MobVars.BlipType = 6;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
   // move step
   pvars->MobVars.MoveVars.MoveStep = 1;
@@ -325,7 +325,7 @@ void reactorOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   reactorActiveMoby = NULL;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = REACTOR_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // destroy particle mobys
   if (reactorVars->PrepShotWithFireParticleMoby1) {

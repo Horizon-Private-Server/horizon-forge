@@ -21,6 +21,7 @@ enum MOB_DO_DAMAGE_HIT_FLAGS
 
 int mobAmIOwner(Moby* moby);
 int mobIsFrozen(Moby* moby);
+int mobGetBehavior(Moby* moby);
 void mobResetSoundTrigger(Moby* moby);
 void mobSpawnCorn(Moby* moby, int bangle);
 int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire, int jointId, int reactToThorns, int isAoE);
