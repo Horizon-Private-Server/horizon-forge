@@ -669,7 +669,7 @@ void mboxUpdate(Moby* moby)
     }
     case MYSTERY_BOX_STATE_IDLE:
     {
-      moby->DrawDist = 64;
+      moby->ModeBits &= ~MOBY_MODE_BIT_DISABLED;
       moby->CollActive = 0;
 
       // find local players to activate
@@ -686,7 +686,7 @@ void mboxUpdate(Moby* moby)
     }
     case MYSTERY_BOX_STATE_HIDDEN:
     {
-      moby->DrawDist = 0;
+      moby->ModeBits |= MOBY_MODE_BIT_DISABLED;
       moby->CollActive = -1;
 
       if (MapConfig.State && (MysteryBoxRespawnImmediately || MapConfig.State->RoundNumber != pvars->RoundHidden)) {

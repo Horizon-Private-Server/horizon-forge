@@ -7,6 +7,7 @@
 #define REACTOR_MELEE_HIT_RADIUS								(2)
 #define REACTOR_EXPLODE_HIT_RADIUS							(5)
 #define REACTOR_MELEE_ATTACK_RADIUS						  (5)
+#define REACTOR_TOO_CLOSE_TO_TARGET_RADIUS      (1.0)
 
 #define REACTOR_ADD_HEALTH_PER_PLAYER           (MOB_BASE_HEALTH * 10)
 
@@ -17,7 +18,7 @@
 #define REACTOR_CHARGE_ATTACK_MAX_COOLDOWN_TICKS    (TPS * 30)
 #define REACTOR_CHARGE_ATTACK_MIN_STALL_LOOPS   (1)
 #define REACTOR_CHARGE_ATTACK_MAX_STALL_LOOPS   (4)
-#define REACTOR_CHARGE_SPEED                    (50)
+#define REACTOR_CHARGE_SPEED                    (50 * 5)
 #define REACTOR_CHARGE_ACCELERATION             (60)
 #define REACTOR_CHARGE_MAX_SLOPE                (45 * MATH_DEG2RAD)
 
@@ -181,13 +182,11 @@ typedef struct ReactorMobVars
   char HasFiredTrailshotThisLoop;
   char SmashTargetCount;
   char HasSmashedThisLoop;
-  u8 LocalPlayerDamageHitInvTimer[GAME_MAX_LOCALS];
 } ReactorMobVars_t;
 
 extern int reactorMinionSpawnParamIdx;
 
 struct MobConfig;
-int reactorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 extern struct MobVTable ReactorVTable;
 

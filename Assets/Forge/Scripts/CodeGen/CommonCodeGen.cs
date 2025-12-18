@@ -132,8 +132,10 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.MainBodyReady.Add("soulcollectorStart();");
     }
 
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
     {
+        if (stage != BuildStateStage.BeforeBuild) return;
+
         state.MobyOClasses.Add(RaidsModeData.LASERBEAM_OCLASS);
     }
 

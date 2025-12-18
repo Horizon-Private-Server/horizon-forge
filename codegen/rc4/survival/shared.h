@@ -47,7 +47,7 @@ float mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float 
 void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float yaw, float speed, float acceleration);
 void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
 void mobGetVelocityToTargetSimple(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
-void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId);
+void mobPostDrawQuad(Moby* moby, float scale, u32 color, int jointId);
 void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
 void mobPreUpdate(Moby* moby);
 int mobIsProjectileComing(Moby* moby);

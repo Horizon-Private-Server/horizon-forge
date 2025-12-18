@@ -65,7 +65,7 @@ extern int aaa;
 #include "reactor.c"
 #endif
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
 VECTOR MoveCheckHit;
 VECTOR MoveCheckFrom;
 VECTOR MoveCheckTo;
@@ -587,7 +587,7 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
   vector_add(hitTo, hitTo, hitToEx);
   vector_subtract(hitFrom, hitFrom, hitToExBack);
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
     vector_copy(MoveCheckFrom, hitFrom);
     vector_copy(MoveCheckTo, hitTo);
 #endif
@@ -609,7 +609,7 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
       pvars->MobVars.MoveVars.HitWallMoby = NULL;
     }
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
     vector_copy(MoveCheckHit, CollLine_Fix_GetHitPosition());
 #endif
 
@@ -652,7 +652,7 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
 
     //vector_add(outputPos, to, reflectedDelta);
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
     vector_copy(MoveCheckFinal, outputPos);
 #endif
     return 1;
@@ -681,7 +681,7 @@ void mobMove(Moby* moby)
   u8 moveSkipTicks = decTimerU8(&pvars->MobVars.MoveVars.MoveSkipTicks);
   u8 slowTicks = decTimerU8(&pvars->MobVars.SlowTicks);
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
   if (pvars->MobVars.Target) {
     VECTOR from, to, delta;
     vector_subtract(delta, pvars->MobVars.Target->Position, moby->Position);
@@ -717,7 +717,7 @@ void mobMove(Moby* moby)
     pvars->MobVars.MoveVars.HitWall = 0;
     pvars->MobVars.MoveVars.HitWallMoby = NULL;
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
     vector_write(MoveCheckHit, 0);
     vector_write(MoveCheckFrom, 0);
     vector_write(MoveCheckTo, 0);
@@ -778,7 +778,7 @@ void mobMove(Moby* moby)
           vector_copy(nextPos, CollLine_Fix_GetHitPosition());
           nextPos[2] += 0.01;
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
           vector_copy(MoveCheckDown, CollLine_Fix_GetHitPosition());
 #endif
 
@@ -796,7 +796,7 @@ void mobMove(Moby* moby)
           //vector_copy(nextPos, CollLine_Fix_GetHitPosition());
           //nextPos[2] -= 0.01;
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
           vector_copy(MoveCheckUp, CollLine_Fix_GetHitPosition());
 #endif
 
@@ -810,7 +810,7 @@ void mobMove(Moby* moby)
         }
       }
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
       vector_copy(MoveNextPos, nextPos);
 #endif
 
@@ -1149,15 +1149,16 @@ int mobHitWallShouldJump(Moby* moby, float maxSlope)
 }
 
 //--------------------------------------------------------------------------
-void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
+void mobPostDrawQuad(Moby* moby, float scale, u32 color, int jointId)
 {
 	struct QuadDef quad;
-	float size = moby->Scale * 2;
+	float size = scale * mobGetScaleMultiplier(moby);
 	MATRIX m2;
 	VECTOR pTL = {0,size,size,1};
 	VECTOR pTR = {0,-size,size,1};
 	VECTOR pBL = {0,size,-size,1};
 	VECTOR pBR = {0,-size,-size,1};
+  VECTOR offset = {0,0,size};
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	if (!pvars)
 		return;
@@ -1181,7 +1182,7 @@ void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
   quad.VertexUVs[2] = (struct UV){0,1};
   quad.VertexUVs[3] = (struct UV){1,1};
 	quad.Clamp = 0x0000000100000001;
-	quad.Tex0 = gfxGetFrameTex(texId);
+	quad.Tex0 = gfxGetFrameTex(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteTexId);
 	quad.Tex1 = 0xFF9000000260;
 	quad.Alpha = 0x8000000044;
 
@@ -1190,7 +1191,11 @@ void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
 		return;
 	
 	// set world matrix by joint
-	mobyGetJointMatrix(moby, jointId, m2);
+	//mobyGetJointMatrix(moby, jointId, m2);
+
+  //memcpy(m2, moby->M0_03, sizeof(VECTOR) * 3);
+  memcpy(m2, camera->uMtx, sizeof(VECTOR) * 3);
+  vector_add(&m2[12], moby->Position, offset);
 
 	// draw
 	gfxDrawQuad((void*)0x00222590, &quad, m2, 1);
@@ -1220,7 +1225,7 @@ void mobPostDrawDebug(Moby* moby)
   }
 #endif
 
-#if DEBUGMOVE
+#if DEBUG_MOVE
   draw3DMarker(MoveCheckHit, 1, 0x80FF00FF, "-");
   draw3DMarker(MoveCheckFrom, 1, 0x80FFFFFF, "a");
   draw3DMarker(MoveCheckTo, 1, 0x80FFFFFF, "b");
@@ -1252,6 +1257,58 @@ void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 {
   // update pathfinding state
   pathSetPath(moby, e->PathStartNodeIdx, e->PathEndNodeIdx, e->PathCurrentEdgeIdx, e->PathHasReachedStart, e->PathHasReachedEnd);
+}
+
+//--------------------------------------------------------------------------
+int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
+{
+	struct MobSpawnEventArgs args;
+  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
+  int extraDataSize = 0;
+
+  // get extra data size
+  if (spawnParams->MobVTable->GetExtraDataSize) {
+    extraDataSize = spawnParams->MobVTable->GetExtraDataSize(spawnParamsIdx);
+  }
+
+	// create guber object
+	GuberEvent * guberEvent = 0;
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + extraDataSize, &guberEvent, NULL);
+	if (guberEvent)
+	{
+    if (MapConfig.PopulateSpawnArgsFunc) {
+      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
+    }
+
+		u8 random = (u8)rand(100);
+    position[2] += 1; // spawn slightly above point
+
+    // give mob change to make last minute changes
+    if (spawnParams->MobVTable->OnSpawning) {
+      spawnParams->MobVTable->OnSpawning(spawnParamsIdx, position, &yaw, &spawnFromUID, &spawnFlags, &random, &args);
+    }
+    
+    // pack position to 16bits per axis
+    // we assume position is always between 0 and 1024 on each axis (moby grid limits)
+    u16 pos16[3] = {
+      (u16)(position[0] * 64),
+      (u16)(position[1] * 64),
+      (u16)(position[2] * 64)
+    };
+		guberEventWrite(guberEvent, pos16, 2*3);
+		//guberEventWrite(guberEvent, position, 12);
+		guberEventWrite(guberEvent, &yaw, 4);
+		guberEventWrite(guberEvent, &spawnFromUID, 4);
+		guberEventWrite(guberEvent, &spawnFlags, 4);
+		guberEventWrite(guberEvent, &random, 1);
+		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
+	}
+	else
+	{
+		DPRINTF("failed to guberevent mob\n");
+	}
+  
+  return guberEvent != NULL;
 }
 
 //--------------------------------------------------------------------------

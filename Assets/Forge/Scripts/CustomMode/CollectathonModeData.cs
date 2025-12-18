@@ -18,8 +18,10 @@ public class CollectathonModeData : CustomModeData, IBuildHook
 
     public bool Enabled = true;
 
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
     {
+        if (stage != BuildStateStage.BeforeBuild) return;
+
         state.MobyOClasses.Add(13); // bolt (for gold bolt)
         state.MobyOClasses.Add(GOLDBOLT_OCLASS); // custom bolt
     }

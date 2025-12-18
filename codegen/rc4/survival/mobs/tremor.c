@@ -17,6 +17,8 @@ void tremorPreUpdate(Moby* moby);
 void tremorPostUpdate(Moby* moby);
 void tremorPostDraw(Moby* moby);
 void tremorMove(Moby* moby);
+int tremorGetExtraDataSize(int spawnParamsIdx);
+void tremorOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void tremorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void tremorOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void tremorOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -41,6 +43,8 @@ struct MobVTable TremorVTable = {
   .PostUpdate = &tremorPostUpdate,
   .PostDraw = &tremorPostDraw,
   .Move = &tremorMove,
+  .GetExtraDataSize = &tremorGetExtraDataSize,
+  .OnSpawning = &tremorOnSpawning,
   .OnSpawn = &tremorOnSpawn,
   .OnDestroy = &tremorOnDestroy,
   .OnDamage = &tremorOnDamage,
@@ -58,45 +62,18 @@ struct MobVTable TremorVTable = {
 };
 
 //--------------------------------------------------------------------------
-int tremorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void tremorPreUpdate(Moby* moby)
 {
+  int i;
   if (!moby || !moby->PVar)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  
+  // decrement tickers regardless of frozen state
+  for (i = 0; i < GAME_MAX_LOCALS; ++i)
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+
   if (mobIsFrozen(moby))
     return;
 
@@ -144,7 +121,7 @@ void tremorPostDraw(Moby* moby)
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  mobPostDrawQuad(moby, 1.25, color, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -161,6 +138,18 @@ void tremorAlterTarget(VECTOR out, Moby* moby, VECTOR forward, float amount)
 void tremorMove(Moby* moby)
 {
   mobMove(moby);
+}
+
+//--------------------------------------------------------------------------
+int tremorGetExtraDataSize(int spawnParamsIdx)
+{
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+void tremorOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
 }
 
 //--------------------------------------------------------------------------
@@ -268,8 +257,20 @@ void tremorOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int tremorOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  // we want to give each local player a cooldown on damage they can apply to tremor
+  if (!e->PlayerDamager) return 1;
+  if (!e->PlayerDamager->IsLocal) return 1;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // only accept local damage when timer is 0
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  if (timer == 0) {
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+    return 1;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------

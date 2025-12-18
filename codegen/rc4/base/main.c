@@ -25,6 +25,7 @@
 #include <libdl/color.h>
 #include <libdl/utils.h>
 #include <libdl/moby.h>
+#include "common.h"
 ##INCLUDES##
 
 MobyGetGuberObject_func baseGetGuberFunc = NULL;
@@ -117,6 +118,22 @@ void mapInstallMobyFunctions(MobyFunctions* mobyFunctions)
 }
 
 //--------------------------------------------------------------------------
+void mapDrawDebugWatermark(void)
+{
+  gfxHelperDrawText(5, 5, 0, 0, 1, 0x80FFFFFF, "DEBUG BUILD", -1, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+}
+
+//--------------------------------------------------------------------------
+void draw(void)
+{
+
+#if DEBUG
+  // draw debug watermark
+  mapDrawDebugWatermark();
+#endif
+}
+
+//--------------------------------------------------------------------------
 void cleanup(void)
 {
   if (baseCleanedUp)
@@ -144,6 +161,7 @@ void initialize(void)
   randSeed(gs->GameLoadStartTime);
   
   HOOK_J(0x004E24C8, &baseOnLoadLevel);
+  HOOK_J(0x005BAE50, &draw);
 
 ##INITBODY##
 

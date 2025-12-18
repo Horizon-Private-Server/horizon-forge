@@ -202,6 +202,13 @@ void gambitsSetup(void)
   bakedConfig.BoltMultiplier *= gambit->BoltMultiplier;
   bakedConfig.XpMultiplier *= gambit->XpMultiplier;
 
+  // mob scale factors
+  for (i = 0; i < MapConfig.DefaultSpawnParamsCount; ++i) {
+    MapConfig.DefaultSpawnParams[i].Config.DamageScale *= gambit->MobDamageScaleMultiplier;
+    MapConfig.DefaultSpawnParams[i].Config.SpeedScale *= gambit->MobSpeedScaleMultiplier;
+    MapConfig.DefaultSpawnParams[i].Config.HealthScale *= gambit->MobHealthScaleMultiplier;
+  }
+
   if (gambit->DisableRevives) gambitsSetupDisableRevives();
   if (gambit->DisableVendor) gambitsSetupDisableVendor();
   if (gambit->DisableStackables) gambitsSetupDisableStackables();

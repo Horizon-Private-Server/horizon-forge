@@ -25,6 +25,7 @@ public class MapConfigEditor : Editor
     SerializedProperty m_DLThumbnail;
     SerializedProperty m_DLMinimap;
     SerializedProperty m_DLMobysIncludedInExport;
+    SerializedProperty m_DLSprites;
 
     SerializedProperty m_UYABaseMap;
     SerializedProperty m_UYAThumbnail;
@@ -57,7 +58,8 @@ public class MapConfigEditor : Editor
         m_DLThumbnail = serializedObject.FindProperty("DLThumbnail");
         m_DLMinimap = serializedObject.FindProperty("DLMinimap");
         m_DLMobysIncludedInExport = serializedObject.FindProperty("DLMobysIncludedInExport");
-
+        m_DLSprites = serializedObject.FindProperty("DLSprites");
+        
         m_UYABaseMap = serializedObject.FindProperty("UYABaseMap");
         m_UYAThumbnail = serializedObject.FindProperty("UYAThumbnail");
         m_UYAMinimap = serializedObject.FindProperty("UYAMinimap");
@@ -99,7 +101,8 @@ public class MapConfigEditor : Editor
             EditorGUILayout.PropertyField(m_DLLoadingScreen);
             EditorGUILayout.PropertyField(m_DLThumbnail);
             EditorGUILayout.PropertyField(m_DLMinimap);
-            EditorGUILayout.PropertyField(m_DLMobysIncludedInExport);
+            EditorGUILayout.PropertyField(m_DLMobysIncludedInExport); 
+            EditorGUILayout.PropertyField(m_DLSprites); 
         }
         else
         {

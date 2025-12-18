@@ -12,20 +12,67 @@ using UnityEngine.UIElements;
 [CustomEditor(typeof(SurvivalModeData))]
 public class SurvivalModeDataEditor : Editor
 {
+    private SerializedProperty m_DebugEnabledProperty;
+    private SerializedProperty m_DebugPathProperty;
+    private SerializedProperty m_DebugMoveProperty;
+    private SerializedProperty m_DebugManualSpawningProperty;
+    private SerializedProperty m_DebugInfiniteHealthProperty;
+    private SerializedProperty m_DebugInfiniteAmmoProperty;
+    private SerializedProperty m_DebugPaydayProperty;
+    private SerializedProperty m_DebugMoonjumpProperty;
+    
+    private void OnEnable()
+    {
+        m_DebugEnabledProperty = serializedObject.FindProperty("DebugEnabled");
+        m_DebugPathProperty = serializedObject.FindProperty("DebugPath");
+        m_DebugMoveProperty = serializedObject.FindProperty("DebugMove");
+        m_DebugManualSpawningProperty = serializedObject.FindProperty("DebugManualSpawning");
+        m_DebugInfiniteHealthProperty = serializedObject.FindProperty("DebugInfiniteHealth");
+        m_DebugInfiniteAmmoProperty = serializedObject.FindProperty("DebugInfiniteAmmo");
+        m_DebugPaydayProperty = serializedObject.FindProperty("DebugPayday");
+        m_DebugMoonjumpProperty = serializedObject.FindProperty("DebugMoonjump");
+    }
+
     public override void OnInspectorGUI()
     {
         var manager = (target as SurvivalModeData);
 
+        // draw base
         base.OnInspectorGUI();
 
+        // draw debug options
+        serializedObject.Update();
+        GUILayout.Space(20);
+        EditorGUILayout.PropertyField(m_DebugEnabledProperty, new GUIContent("Debug"));
+        if (m_DebugEnabledProperty.boolValue)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(m_DebugPathProperty, new GUIContent("Mob Pathfinding"));
+            EditorGUILayout.PropertyField(m_DebugMoveProperty, new GUIContent("Mob Move"));
+            EditorGUILayout.PropertyField(m_DebugInfiniteHealthProperty, new GUIContent("Infinite Health"));
+            EditorGUILayout.PropertyField(m_DebugInfiniteAmmoProperty, new GUIContent("Infinite Ammo"));
+            EditorGUILayout.PropertyField(m_DebugPaydayProperty, new GUIContent("Max Money/Tokens"));
+            EditorGUILayout.PropertyField(m_DebugMoonjumpProperty, new GUIContent("Moonjump"));
+            EditorGUILayout.PropertyField(m_DebugManualSpawningProperty, new GUIContent("Manual Mob Spawning"));
+            if (m_DebugManualSpawningProperty.boolValue)
+            {
+                EditorGUILayout.HelpBox("Use PAD LEFT/RIGHT to select a mob. Refer to the PCSX2 console for logging.\nUse PAD DOWN to spawn selected mob.\nUse PAD UP to destroy all mobs.", MessageType.Info, true);
+            }
+            EditorGUI.indentLevel--;
+        }
+        serializedObject.ApplyModifiedProperties();
+
+        // draw asset functions
         CheckForMissingMobAssets(manager);
     }
 
     private void CheckForMissingMobAssets(SurvivalModeData survivalModeData)
     {
         var mobConfig = SurvivalMobsScriptableObject.Load();
-        var mobyDir = $"{FolderNames.GetMapFolder(SceneManager.GetActiveScene().name)}/{FolderNames.GetMapMobyFolder(RCVER.DL)}";
-        var missingVariants = new List<SurvivalMobsScriptableObject.SurvivalMobVariant>();
+        var mapName = SceneManager.GetActiveScene().name;
+        var racVersion = RCVER.DL;
+        var mobyDir = $"{FolderNames.GetMapFolder(mapName)}/{FolderNames.GetMapMobyFolder(racVersion)}";
+        var missingVariants = new List<(string, SurvivalMobsScriptableObject.SurvivalMobVariant)>();
         foreach (var mob in survivalModeData.Mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
@@ -41,7 +88,7 @@ public class SurvivalModeDataEditor : Editor
                 var mobyAssetPath = Path.Combine(mobyDir, $"{dependency.OClass}", "core.bin");
                 if (!File.Exists(mobyAssetPath))
                 {
-                    missingVariants.Add(variant);
+                    missingVariants.Add((mob.Name, variant));
                     continue;
                 }
             }
@@ -53,11 +100,12 @@ public class SurvivalModeDataEditor : Editor
             EditorGUILayout.HelpBox($"Some mob mobys are not in your Map yet. Please use the button below to install them.", MessageType.Error);
             if (GUILayout.Button("Extract and Install"))
             {
-                foreach (var variant in missingVariants)
+                foreach (var item in missingVariants)
                 {
+                    var variant = item.Item2;
                     foreach (var dependency in variant.Dependencies)
                     {
-                        ExtractAndInstallMoby(mobyDir, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass);
+                        PackerHelper.ExtractAndInstallMoby(mapName, racVersion, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass, name: $"{item.Item1}:{variant.Name}", overwrite: true);
                     }
                 }
             }
@@ -65,7 +113,6 @@ public class SurvivalModeDataEditor : Editor
 
         if (GUILayout.Button("Reinstall All Mobs"))
         {
-            RunInitialSetup();
             foreach (var mob in survivalModeData.Mobs)
             {
                 var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
@@ -74,186 +121,11 @@ public class SurvivalModeDataEditor : Editor
 
                 foreach (var dependency in variant.Dependencies)
                 {
-                    ExtractAndInstallMoby(mobyDir, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass);
+                    PackerHelper.ExtractAndInstallMoby(mapName, racVersion, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass, name: $"{mob.Name}:{variant.Name}", overwrite: true);
                 }
             }
         }
     }
-
-    private void RunInitialSetup()
-    {
-        var mobConfig = SurvivalMobsScriptableObject.Load();
-        var mobyDir = $"{FolderNames.GetMapFolder(SceneManager.GetActiveScene().name)}/{FolderNames.GetMapMobyFolder(RCVER.DL)}";
-
-        // install auxillary mobys
-        ExtractAndInstallMoby(mobyDir, DLMapIds.SP_Battledome, 43, 9786, "Vendor");
-        ExtractAndInstallMoby(mobyDir, DLMapIds.SP_Battledome, 43, 8484, "Big Al");
-        ExtractAndInstallMoby(mobyDir, DLMapIds.SP_Battledome, 43, 9795, "Prestige Machine");
-        ExtractAndInstallMoby(mobyDir, DLMapIds.SP_Torval, 6, 9781, "Mystery Box");
-        ExtractAndInstallMoby(mobyDir, DLMapIds.SP_Torval, 6, 8323, "Stackables Vendor");
-    }
-
-    private void ExtractAndInstallMoby(string destMobyFolder, DLMapIds map, int mission, int oclass, string name = null)
-    {
-        try
-        {
-            var title = $"Install Moby {name ?? oclass.ToString()}";
-            EditorUtility.DisplayProgressBar(title, "Preparing", 0);
-
-            var forgeSettings = ForgeSettings.Load();
-            var levelFolder = Path.Combine(FolderNames.GetTempFolder(), $"rc4-{(int)map}");
-            var imports = new List<PackerImporterWindow.PackerAssetImport>();
-
-            // reset temp folder
-            if (Directory.Exists(levelFolder)) Directory.Delete(levelFolder, true);
-            Directory.CreateDirectory(levelFolder);
-
-            EditorUtility.DisplayProgressBar(title, $"Extracting {map}", 0.1f);
-            if (PackerHelper.ExtractLevelWads(forgeSettings.PathToCleanDeadlockedIso, levelFolder, (int)map, RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                return;
-
-            EditorUtility.DisplayProgressBar(title, $"Unpacking {map}", 0.2f);
-            if (PackerHelper.DecompressAndUnpackLevelWad(Path.Combine(levelFolder, "core_level.wad"), levelFolder) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                return;
-
-            EditorUtility.DisplayProgressBar(title, $"Unpacking Sounds {map}", 0.3f);
-            if (PackerHelper.UnpackSounds(Path.Combine(levelFolder, "sound.bnk"), Path.Combine(levelFolder, FolderNames.BinarySoundsFolder), RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                return;
-
-            EditorUtility.DisplayProgressBar(title, $"Unpacking Assets {map}", 0.4f);
-            if (PackerHelper.UnpackAssets(levelFolder, Path.Combine(levelFolder, FolderNames.BinaryAssetsFolder), RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                return;
-
-            var mobyAssetPath = Path.Combine(levelFolder, FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(oclass));
-            if (mission >= 0)
-            {
-                EditorUtility.DisplayProgressBar(title, $"Unpacking Mission #{mission}", 0.5f);
-                var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
-                PackerHelper.UnpackMission(missionsPath, mission);
-                mobyAssetPath = Path.Combine(missionsPath, $"{mission:0000}", FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(oclass));
-            }
-
-            if (!Directory.Exists(mobyAssetPath))
-            {
-                Debug.LogError($"Unable to find moby class {oclass} in {map} (mission:{mission})");
-                return;
-            }
-
-            EditorUtility.DisplayProgressBar(title, $"Preprocessing", 0.7f);
-            PreprocessMoby(imports, levelFolder, mobyAssetPath, oclass, RCVER.DL);
-
-            EditorUtility.DisplayProgressBar(title, $"Importing", 0.9f);
-            ImportMoby(imports, destMobyFolder, mobyAssetPath, oclass, RCVER.DL, true);
-
-            if (imports.Any())
-                PackerImporterWindow.Import(imports, true);
-        }
-        finally
-        {
-            EditorUtility.ClearProgressBar();
-        }
-    }
-
-    private void ImportMoby(List<PackerImporterWindow.PackerAssetImport> imports, string destMobyFolder, string srcMobyFolder, int oClass, int racVersion, bool overwrite)
-    {
-        // recreate moby asset dir
-        var localMobyAssetDir = Path.Combine(destMobyFolder, oClass.ToString());
-        if (Directory.Exists(localMobyAssetDir))
-        {
-            if (!overwrite) return;
-
-            Directory.Delete(localMobyAssetDir, true);
-        }
-        Directory.CreateDirectory(localMobyAssetDir);
-
-        // import sounds
-        var soundsFolder = Path.Combine(srcMobyFolder, FolderNames.BinarySoundsFolder);
-        if (Directory.Exists(soundsFolder))
-        {
-            var mobyAssetSoundsFolder = Path.Combine(localMobyAssetDir, FolderNames.SoundsFolder);
-            if (!Directory.Exists(mobyAssetSoundsFolder)) Directory.CreateDirectory(mobyAssetSoundsFolder);
-
-            var soundsInFolder = Directory.GetDirectories(soundsFolder);
-            foreach (var soundFolder in soundsInFolder)
-            {
-                var idxStr = Path.GetFileName(soundFolder);
-                if (Directory.Exists(soundFolder))
-                {
-                    PackerHelper.PackSound(soundFolder, Path.Combine(mobyAssetSoundsFolder, $"{idxStr}.sound"));
-                }
-            }
-        }
-
-        // add import
-        imports.Add(new PackerImporterWindow.PackerAssetImport()
-        {
-            AssetFolder = srcMobyFolder,
-            DestinationFolder = localMobyAssetDir,
-            Name = oClass.ToString(),
-            AssetType = FolderNames.MobyFolder,
-            PrependModelNameToTextures = true,
-            RacVersion = racVersion,
-            AdditionalTags = new string[] { Constants.GameAssetTag[racVersion] }
-        });
-    }
-
-    private void PreprocessMoby(List<PackerImporterWindow.PackerAssetImport> imports, string levelFolder, string srcMobyFolder, int oClass, int racVersion)
-    {
-        var parentMobyDir = Directory.GetParent(srcMobyFolder).FullName;
-
-        // some mobys need to be tweaked before import
-        // swarmers for example store animations in the Orange swarmer
-        // so other swarmers need to be rebuilt with a copy of the Orange swarmer's animations
-        switch (oClass)
-        {
-            // rebuild swarmer animations
-            case 9877:
-            case 9952:
-                {
-                    var orangeSwarmerOClass = 8273;
-                    var orangeSwarmerMobyDir = Path.Combine(parentMobyDir, PackerHelper.GetAssetOClassFolderName(orangeSwarmerOClass));
-                    if (!Directory.Exists(orangeSwarmerMobyDir)) orangeSwarmerMobyDir = Path.Combine(levelFolder, FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(orangeSwarmerOClass));
-                    if (!Directory.Exists(orangeSwarmerMobyDir))
-                    {
-                        Debug.LogError($"Unable to find required swarmer {orangeSwarmerOClass} in {orangeSwarmerMobyDir}");
-                        return;
-                    }
-
-                    var srcUnpackedDir = Path.Combine(orangeSwarmerMobyDir, "unpacked");
-                    if (PackerHelper.UnpackMobyModel(Path.Combine(orangeSwarmerMobyDir, "moby.bin"), srcUnpackedDir, racVersion) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                        return;
-
-                    var dstUnpackedDir = Path.Combine(srcMobyFolder, "unpacked");
-                    if (PackerHelper.UnpackMobyModel(Path.Combine(srcMobyFolder, "moby.bin"), dstUnpackedDir, racVersion) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                        return;
-
-                    var srcAnimationsDir = Path.Combine(srcUnpackedDir, FolderNames.BinaryMobyAnimationsFolder);
-                    var dstAnimationsDir = Path.Combine(dstUnpackedDir, FolderNames.BinaryMobyAnimationsFolder);
-                    if (Directory.Exists(dstAnimationsDir)) Directory.Delete(dstAnimationsDir, true);
-                    if (!Directory.Exists(srcAnimationsDir))
-                    {
-                        Debug.LogError($"Required swarmer {orangeSwarmerOClass} missing animations");
-                        return;
-                    }
-
-                    IOHelper.CopyDirectory(srcAnimationsDir, dstAnimationsDir);
-                    if (PackerHelper.PackMobyModel(dstUnpackedDir, srcMobyFolder, racVersion) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
-                        return;
-
-                    var srcSoundsDir = Path.Combine(orangeSwarmerMobyDir, FolderNames.BinarySoundsFolder);
-                    var dstSoundsDir = Path.Combine(srcMobyFolder, FolderNames.BinarySoundsFolder);
-                    if (Directory.Exists(srcSoundsDir))
-                    {
-                        if (Directory.Exists(dstSoundsDir)) Directory.Delete(dstSoundsDir, true);
-                        IOHelper.CopyDirectory(srcSoundsDir, dstSoundsDir);
-                    }
-
-                    break;
-                }
-        }
-    }
-
-
 }
 
 [CustomPropertyDrawer(typeof(SurvivalMobSpawnParam))]
@@ -271,8 +143,9 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         if (!survivalData) survivalData = SurvivalMobsScriptableObject.Load();
-        var mob = (SurvivalMob)property.FindPropertyRelative("Mob").enumValueIndex;
+        var mob = ((SurvivalMob[])Enum.GetValues(typeof(SurvivalMob)))[property.FindPropertyRelative("Mob").enumValueIndex];
         var mobData = survivalData.Mobs.FirstOrDefault(x => x.Mob == mob);
+        if (mobData == null) return;
 
         EditorGUI.BeginProperty(position, label, property);
 

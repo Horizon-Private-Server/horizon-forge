@@ -7,7 +7,7 @@
 #define EXECUTIONER_MELEE_HIT_RADIUS								(1.00)
 #define EXECUTIONER_EXPLODE_HIT_RADIUS							(5)
 #define EXECUTIONER_MELEE_ATTACK_RADIUS						  (4)
-#define EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS		  (2.5)
+#define EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS		  (1.0)
 #define EXECUTIONER_VISION_RANGE                    (50.0)
 
 #define EXECUTIONER_HIT_INV_TICKS                   (0.1 * TPS)
@@ -104,11 +104,9 @@ enum ExecutionerBehaviors
 typedef struct ExecutionerMobVars
 {
   int AnimationLoopLastFire;
-  u8 LocalPlayerDamageHitInvTimer[GAME_MAX_LOCALS];
 } ExecutionerMobVars_t;
 
 struct MobConfig;
-int executionerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 extern struct MobVTable ExecutionerVTable;
 

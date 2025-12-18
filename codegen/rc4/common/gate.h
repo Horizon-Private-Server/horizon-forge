@@ -37,6 +37,7 @@ struct GatePVar
 
 void gateBroadcastNewState(Moby* moby, enum GateState state);
 void gateSetCollision(int enabled);
+void gateResetRandomGate(void);
 struct Guber* gateGetGuber(Moby* moby);
 int gateHandleEvent(Moby* moby, GuberEvent* event);
 void gateStart(void);

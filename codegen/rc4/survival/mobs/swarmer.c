@@ -19,6 +19,8 @@ void swarmerPreUpdate(Moby* moby);
 void swarmerPostUpdate(Moby* moby);
 void swarmerPostDraw(Moby* moby);
 void swarmerMove(Moby* moby);
+int swarmerGetExtraDataSize(int spawnParamsIdx);
+void swarmerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void swarmerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -45,6 +47,8 @@ struct MobVTable SwarmerVTable = {
   .PostUpdate = &swarmerPostUpdate,
   .PostDraw = &swarmerPostDraw,
   .Move = &swarmerMove,
+  .GetExtraDataSize = &swarmerGetExtraDataSize,
+  .OnSpawning = &swarmerOnSpawning,
   .OnSpawn = &swarmerOnSpawn,
   .OnDestroy = &swarmerOnDestroy,
   .OnDamage = &swarmerOnDamage,
@@ -62,45 +66,18 @@ struct MobVTable SwarmerVTable = {
 };
 
 //--------------------------------------------------------------------------
-int swarmerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void swarmerPreUpdate(Moby* moby)
 {
+  int i;
   if (!moby || !moby->PVar)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // decrement tickers regardless of frozen state
+  for (i = 0; i < GAME_MAX_LOCALS; ++i)
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+
   if (mobIsFrozen(moby))
     return;
 
@@ -157,7 +134,7 @@ void swarmerPostDraw(Moby* moby)
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 0);
+  mobPostDrawQuad(moby, 0.5, color, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -174,6 +151,18 @@ void swarmerAlterTarget(VECTOR out, Moby* moby, VECTOR forward, float amount)
 void swarmerMove(Moby* moby)
 {
   mobMove(moby);
+}
+
+//--------------------------------------------------------------------------
+int swarmerGetExtraDataSize(int spawnParamsIdx)
+{
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+void swarmerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
 }
 
 //--------------------------------------------------------------------------
@@ -285,8 +274,20 @@ void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int swarmerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  // we want to give each local player a cooldown on damage they can apply to swarmer
+  if (!e->PlayerDamager) return 1;
+  if (!e->PlayerDamager->IsLocal) return 1;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // only accept local damage when timer is 0
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  if (timer == 0) {
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+    return 1;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -367,7 +368,7 @@ int swarmerGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH
+#if DEBUG_PATH
 void swarmerRenderPath(Moby* moby)
 {
   int x,y;
@@ -414,7 +415,7 @@ void swarmerDoAction(Moby* moby)
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
-#if DEBUGPATH
+#if DEBUG_PATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&swarmerRenderPath, moby);
 #endif
 

@@ -18,6 +18,7 @@ int tryPlayerInteract(Moby* moby, Player* player, char* message, char* lowerMess
 int mobyIsMob(Moby* moby);
 int playerHasBlessing(int playerId, int blessing);
 int playerGetStackableCount(int playerId, int stackable);
+int localPlayerHasInput(void);
 
 int bakedSpawnGetFirst(int bakedSpawnType, VECTOR outPos, VECTOR outRot);
 

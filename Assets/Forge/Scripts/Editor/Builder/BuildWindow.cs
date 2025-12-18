@@ -44,6 +44,7 @@ public class BuildWindow : EditorWindow
     Toggle toggleRebuildMobys;
     Toggle toggleRebuildCuboidsSplinesAreas;
     Toggle toggleRebuildLighting;
+    Toggle toggleRebuildSprites;
     Toggle toggleRebuildDZO;
 
     // pack
@@ -109,7 +110,8 @@ public class BuildWindow : EditorWindow
         CreateGUI_Toggle(ref toggleRebuildTfrags, "Tfrags", true);
         CreateGUI_Toggle(ref toggleRebuildTies, "Ties", true);
         CreateGUI_Toggle(ref toggleRebuildLighting, "World Lighting", true);
-
+        CreateGUI_Toggle(ref toggleRebuildSprites, "Sprites", true);
+        
         root.Add(dropdownBuildCode);
         root.Add(toggleRebuildCollision);
         root.Add(toggleRebuildCuboidsSplinesAreas);
@@ -119,6 +121,7 @@ public class BuildWindow : EditorWindow
         root.Add(toggleRebuildTfrags);
         root.Add(toggleRebuildTies);
         root.Add(toggleRebuildLighting);
+        root.Add(toggleRebuildSprites);
     }
 
     void CreateGUI_Pack(VisualElement root)
@@ -277,9 +280,9 @@ public class BuildWindow : EditorWindow
             if (!scene.isLoaded || !mapConfig)
                 return false;
 
+            var state = new BuildState(scene.name, racVersion, region);
             try
             {
-                var state = new BuildState(scene.name, racVersion, region);
                 var ctx = new ForgeBuilder.RebuildContext()
                 {
                     MapSceneName = scene.name,
@@ -301,7 +304,7 @@ public class BuildWindow : EditorWindow
                 state.MobyOClasses.AddRange(mobysToExport);
 
                 // pass to build hook
-                IBuildHook.Run(state);
+                IBuildHook.Run(state, BuildStateStage.BeforeBuild);
 
                 // PAL is always built after NTSC
                 // PAL only needs to be rebuilt with new PAL code segment
@@ -332,18 +335,26 @@ public class BuildWindow : EditorWindow
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAmbientSounds(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAreas(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (toggleRebuildLighting.value) ForgeBuilder.RebuildWorldLighting(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-               }
+                    if (toggleRebuildSprites.value) ForgeBuilder.RebuildSprites(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                }
 
                 EditorUtility.ClearProgressBar();
                 EditorUtility.DisplayProgressBar($"Rebuilding Level (rc{racVersion} {region})", "Packing", 0);
+
+                // pass to build hook
+                IBuildHook.Run(state, BuildStateStage.AfterBuild);
 
                 PackerHelper.PACKER_PACK_OPS packOps = PackerHelper.PACKER_PACK_OPS.PACK_CODE;
                 if (togglePackOcclusion.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_OCCLUSION;
                 if (togglePackWorldInstances.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_WORLD_INSTANCES;
                 if (togglePackAssets.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_ASSETS;
                 if (togglePackGameplay.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_GAMEPLAY;
+                if (toggleRebuildSprites.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_SPRITES;
                 if (togglePackLevel.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_LEVEL_WAD;
                 if (togglePackSound.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_SOUND_WAD;
+
+                // pass to build hook
+                IBuildHook.Run(state, BuildStateStage.AfterPack);
 
                 var result = PackerHelper.Pack(binFolder, baseMap, racVersion, packOps, (p) => EditorUtility.DisplayProgressBar($"Rebuilding Level (rc{racVersion} {region})", "Packing", p));
                 if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
@@ -366,6 +377,9 @@ public class BuildWindow : EditorWindow
             {
                 // cleanup generators
                 UnityHelper.RunGeneratorsPostBake(BakeType.BUILD);
+
+                // pass to build hook
+                IBuildHook.Run(state, BuildStateStage.Cleanup);
 
                 EditorUtility.ClearProgressBar();
             }

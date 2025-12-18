@@ -20,8 +20,10 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public List<SurvivalMobsConfig> Mobs = new List<SurvivalMobsConfig>();
     public List<SurvivalPatch> Patches = new List<SurvivalPatch>();
     public List<SurvivalWeaponStats> WeaponStats = new List<SurvivalWeaponStats>();
-
-
+    public List<SpriteDef> SurvivalMysteryBoxSprites = new List<SpriteDef>();
+    public List<SpriteDef> SurvivalStackableSprites = new List<SpriteDef>();
+    public List<SpriteDef> SurvivalBlessingSprites = new List<SpriteDef>();
+    
     [Serializable]
     public class SurvivalMobsConfig
     {
@@ -58,6 +60,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
 
         public float ReactionDelaySeconds = 0.25f;
         public float AttackCooldownSeconds = 2;
+        public float DamageCooldownSeconds = 0;
     }
 
     [Serializable]
@@ -66,6 +69,11 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public string Name;
         public int OClass;
         public SurvivalMobBangle Bangles;
+        public Texture2D SpriteTexture;
+        public Color SpriteTextureTint = Color.white;
+        public Texture2D BossTexture;
+        public Color BossTextureTint = Color.white;
+        public ushort ExistingBossSpriteUid;
         public List<SurvivalMobDependency> Dependencies = new List<SurvivalMobDependency>();
 
         public SurvivalMobVariant() { }

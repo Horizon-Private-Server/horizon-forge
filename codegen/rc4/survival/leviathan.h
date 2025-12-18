@@ -134,7 +134,6 @@ typedef struct LeviathanMobVars {
 } LeviathanMobVars_t;
 
 struct MobConfig;
-int leviathanCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 extern struct MobVTable LeviathanVTable;
 

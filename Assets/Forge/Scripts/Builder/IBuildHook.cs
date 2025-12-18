@@ -5,6 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
+public enum BuildStateStage
+{
+    BeforeBuild,
+    AfterBuild,
+    AfterPack,
+    Cleanup
+}
+
 public class BuildState
 {
     public string MapSceneName { get; }
@@ -23,16 +31,16 @@ public class BuildState
 public interface IBuildHook
 {
     bool IsEnabled { get; }
-    void Configure(BuildState state);
+    void Configure(BuildState state, BuildStateStage stage);
 
 
-    public static void Run(BuildState state)
+    public static void Run(BuildState state, BuildStateStage stage)
     {
-        var hooks = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<IBuildHook>()).Where(x => x != null).ToArray();
+        var hooks = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<IBuildHook>()).Where(x => x != null).Distinct().ToArray();
         foreach (var hook in hooks)
         {
             if (!hook.IsEnabled) continue;
-            hook.Configure(state);
+            hook.Configure(state, stage);
         }
     }
 }

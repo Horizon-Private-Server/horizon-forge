@@ -7,10 +7,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 4;
+    public static readonly int SURVIVAL_VERSION = 6;
     public const int DEMONBELL_OCLASS = 0x2479;
     public const int BANK_OCLASS = 0x1F7;
     public const int STACKBOX_OCLASS = 0x2083;
@@ -33,7 +34,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [Min(0), Tooltip("Lower values will increase weapon pickup respawn frequency.")] public float WeaponPickupCooldownFactor = 1;
     public bool HidePrestigeMachineEvery25Rounds = true;
     public bool RandomizeWeaponPickupsAtStart = true;
-    public bool IsLegacySurvivalMap = false;
 
     [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 10.")]
     public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
@@ -59,7 +59,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public int StackableIncrementCost = 250000;
     public List<SurvivalStackableItemId> Stackables = new List<SurvivalStackableItemId>();
 
-    [Header("Blessings")]
+    [Header("Blessings"), HideInInspector]
     public bool EnableBlessings;
 
     [Header("Mystery Box")]
@@ -78,15 +78,20 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1, ProbabilityLucky = 0f },
     };
 
-    [Header("Debug")]
-    public bool DebugPath;
-    public bool DebugMove;
+    [HideInInspector] public bool DebugEnabled;
+    [HideInInspector] public bool DebugPath;
+    [HideInInspector] public bool DebugMove;
+    [HideInInspector] public bool DebugManualSpawning;
+    [HideInInspector] public bool DebugInfiniteHealth;
+    [HideInInspector] public bool DebugInfiniteAmmo;
+    [HideInInspector] public bool DebugPayday;
+    [HideInInspector] public bool DebugMoonjump;
 
     public List<SurvivalMobSpawnParam> GetEnabledMobs() => Mobs.Where(x => !x.Disabled).OrderBy(x => x.Probability).ThenBy(x => Mobs.IndexOf(x)).ToList();
 
     private void OnValidate()
     {
-        while (Mobs != null && Mobs.Count > 10) Mobs.RemoveAt(10);
+        while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
         while (SpecialRounds != null && SpecialRounds.Count > 16) SpecialRounds.RemoveAt(16);
 
         foreach (var gambit in Gambits)
@@ -123,6 +128,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         var enabledMobs = GetEnabledMobs();
 
         state.SeparateCodeFile = true;
+        state.Debug = DebugEnabled; // override build settings
 
         // write code seg patches
         WriteCodeSegPatches(mapConfig, new DirectoryInfo(buildFolder).Parent.FullName);
@@ -144,6 +150,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/upgrade.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/drop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pool.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/demonbell.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bankbox.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mysterybox.o");
@@ -180,10 +187,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         if (state.Debug)
         {
-            if (DebugPath)
-                state.LDFlags.Add("-DDEBUGPATH");
-            if (DebugMove)
-                state.LDFlags.Add("-DDEBUGMOVE");
+            if (DebugPath) state.LDFlags.Add("-DDEBUG_PATH");
+            if (DebugMove) state.LDFlags.Add("-DDEBUG_MOVE");
+            if (DebugManualSpawning) state.LDFlags.Add("-DDEBUG_MANUAL_SPAWNING");
+            if (DebugInfiniteHealth) state.LDFlags.Add("-DDEBUG_INFINITE_HEALTH");
+            if (DebugInfiniteAmmo) state.LDFlags.Add("-DDEBUG_INFINITE_AMMO");
+            if (DebugPayday) state.LDFlags.Add("-DDEBUG_PAYDAY");
+            if (DebugMoonjump) state.LDFlags.Add("-DDEBUG_MOONJUMP");
         }
 
         state.Includes.Add("#include \"game.h\"");
@@ -216,7 +226,18 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
     }
 
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
+    {
+        if (state.RacVersion != RCVER.DL) return;
+
+        switch (stage)
+        {
+            case BuildStateStage.BeforeBuild: OnBeforeBuild(state); break;
+            case BuildStateStage.Cleanup: OnCleanupBuild(state); break;
+        }
+    }
+
+    void OnBeforeBuild(BuildState state)
     {
         state.MobyOClasses.Add(RaidsModeData.LASERBEAM_OCLASS);
         state.MobyOClasses.Add(0x2075); // node base (sounds)
@@ -225,6 +246,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(0x263A); // vendor
         state.MobyOClasses.Add(0x01F4); // drop
         state.MobyOClasses.Add(0x01F9); // upgrade
+        state.MobyOClasses.Add(0x01F8); // trailshot
         if (EnableStackables) state.MobyOClasses.Add(8348); // stackbox base
 
         // add mob oclasses
@@ -240,8 +262,59 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
                 state.MobyOClasses.AddRange(variant.Dependencies.Select(x => x.OClass));
         }
 
-        // todo
-        // add custom sprites
+        // add survival sprites if base sprites exist
+        var mapConfig = FindObjectOfType<MapConfig>();
+        if (mapConfig == null || mapConfig.DLSprites == null || mapConfig.DLSprites.Count == 0) return;
+
+        var spriteContainer = new GameObject("Survival Sprites").AddComponent<SpriteContainer>();
+        spriteContainer.transform.SetParent(this.transform, false);
+        spriteContainer.gameObject.hideFlags = HideFlags.HideAndDontSave;
+        spriteContainer.RacVersion = state.RacVersion;
+        spriteContainer.Sprites = mobConfig.SurvivalMysteryBoxSprites.ToList();
+        if (EnableStackables) spriteContainer.Sprites.AddRange(mobConfig.SurvivalStackableSprites);
+        if (EnableBlessings) spriteContainer.Sprites.AddRange(mobConfig.SurvivalBlessingSprites);
+
+        // add mob sprites
+        foreach (var mob in this.Mobs.Where(x => !x.Disabled))
+        {
+            var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
+            var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
+            if (variant == null) continue;
+
+            // check sprite texture
+            if (variant.SpriteTexture && !spriteContainer.Sprites.Any(x => x.m_Texture == variant.SpriteTexture))
+            {
+                spriteContainer.Sprites.Add(new SpriteDef()
+                {
+                    m_Bank = SpriteDef.SpriteDefBank.Bank1,
+                    m_Texture = variant.SpriteTexture,
+                    m_TextureSizeOverride = TextureSize._64,
+                    m_Tint = variant.SpriteTextureTint,
+                    m_Uid = (ushort)(30200 + spriteContainer.Sprites.Count),
+                    m_Unknown = 1
+                });
+            }
+
+            // check boss texture
+            if (mob.Attributes == SurvivalMobAttributes.Boss && variant.BossTexture && !spriteContainer.Sprites.Any(x => x.m_Texture == variant.BossTexture))
+            {
+                spriteContainer.Sprites.Add(new SpriteDef()
+                {
+                    m_Bank = SpriteDef.SpriteDefBank.Bank1,
+                    m_Texture = variant.BossTexture,
+                    m_TextureSizeOverride = TextureSize._64,
+                    m_Tint = variant.BossTextureTint,
+                    m_Uid = (ushort)(30200 + spriteContainer.Sprites.Count),
+                    m_Unknown = 1
+                });
+            }
+        }
+    }
+
+    void OnCleanupBuild(BuildState state)
+    {
+        var spriteContainer = this.transform.Find("Survival Sprites");
+        if (spriteContainer) GameObject.DestroyImmediate(spriteContainer.gameObject);
     }
 
     string GetConfigContents()
@@ -249,6 +322,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         var sb = new StringBuilder();
         var mapConfig = FindObjectOfType<MapConfig>();
         var enabledMobs = GetEnabledMobs();
+        var spriteDefs = mapConfig.GetSpriteDefs(RCVER.DL);
 
         // collect
         var upgradeSpawns = HierarchicalSorting.Sort(FindObjectsOfType<SurvivalUpgradeSpawn>(false));
@@ -264,7 +338,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         // mob config
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("struct MobSpawnParams defaultSpawnParams[] = {");
-        sb.AppendLine(GetMobDefs(enabledMobs));
+        sb.AppendLine(GetMobDefs(enabledMobs, spriteDefs));
         sb.AppendLine("};");
         sb.AppendLine();
 
@@ -387,7 +461,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         return sb.ToString().TrimEnd();
     }
 
-    string GetMobDefs(List<SurvivalMobSpawnParam> mobs)
+    string GetMobDefs(List<SurvivalMobSpawnParam> mobs, SpriteDef[] spriteDefs)
     {
         var sb = new StringBuilder();
 
@@ -401,7 +475,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             var probability = mob.Probability / totalProbability;
             if (i == (mobs.Count - 1)) probability = 1; // last item is guaranteed to match roll if all others fail
 
-            sb.Append(mob.GetDef(probability));
+            sb.Append(mob.GetDef(spriteDefs, probability));
 
             totalProbability *= (1 - mob.Probability);
         }
@@ -445,22 +519,330 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [MenuItem("GameObject/Forge/Deadlocked/Survival/Create Survival Data", priority = 10)]
     public static void CreateSurvivalData()
     {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+        var cuboids = mapConfig.GetCuboids();
+        var areas = mapConfig.GetAreas();
+        var mobys = mapConfig.GetMobys(RCVER.DL);
+        var mapName = SceneManager.GetActiveScene().name;
+        var racVersion = RCVER.DL;
+
+        // import missing mobys
+        PackerHelper.ExtractAndInstallMobys(mapName, racVersion, DLMapIds.SP_Battledome, 36, false, new Dictionary<int, string>()
+        {
+            { 9786, "Vendor" },
+            { 8484, "Big Al" },
+            { 9795, "Prestige Machine" },
+        });
+        PackerHelper.ExtractAndInstallMoby(mapName, racVersion, DLMapIds.SP_Torval, 6, 9781, "Mystery Box", overwrite: false);
+        PackerHelper.ExtractAndInstallMoby(mapName, racVersion, DLMapIds.SP_Maraxus, 3, 8323, "Stackables Vendor", overwrite: false);
+        PackerHelper.ExtractAndInstallMoby(mapName, racVersion, DLMapIds.SP_Catacrom, -1, 8348, "Stackables Vendor Base", overwrite: false);
+        PackerHelper.ExtractAndInstallMoby(mapName, racVersion, DLMapIds.SP_Catacrom, 2, 503, "Bank Box", overwrite: false);
+
+        // check for existing survival data
+        if (FindObjectOfType<SurvivalModeData>())
+        {
+            EditorUtility.DisplayDialog("Survival Importer", "Survival data already exists for this map! If you want to do a full reimport, delete your survival data first.", "Okay");
+            return;
+        }
+
+        // create data
         var go = new GameObject("Survival");
         var survivalData = go.AddComponent<SurvivalModeData>();
+        UnityHelper.OnAfterCreateGameObject(go);
 
-        OnAfterCreateGameObject(go);
+        // set defaults
+        survivalData.HidePrestigeMachineEvery25Rounds = true;
+        survivalData.RandomizeWeaponPickupsAtStart = true;
+        mapConfig.DLForceCustomMode = DLCustomModeIds.Survival;
+
+        // enable code gen
+        FindObjectOfType<CodeManager>().Enabled = true;
+        if (!FindObjectOfType<CommonCodeGen>())
+            go.AddComponent<CommonCodeGen>();
+
+        // enable stackables
+        survivalData.EnableStackables = true;
+        survivalData.Stackables = ((SurvivalStackableItemId[])Enum.GetValues(typeof(SurvivalStackableItemId))).ToList();
+
+        // create default mobs
+        survivalData.Mobs = new List<SurvivalMobSpawnParam>()
+        {
+            new SurvivalMobSpawnParam()
+            {
+                Name = "Reactor",
+                Mob = SurvivalMob.Reactor,
+                Probability = 1f,
+                Variant = 0,
+                SpecialRoundOnly = true,
+                MaxSpawnedPerRound = 1,
+                Attributes = SurvivalMobAttributes.Boss,
+            },
+            new SurvivalMobSpawnParam()
+            {
+                Name = "Reaper",
+                Mob = SurvivalMob.Reaper,
+                Probability = 0.1f,
+                Variant = 0,
+                CooldownTicks = 60,
+                CooldownOffsetPerRoundFactor = -0.6f,
+                MinRound = 5
+            },
+            new SurvivalMobSpawnParam()
+            {
+                Name = "Zombie",
+                Mob = SurvivalMob.Zombie,
+                Probability = 0.5f,
+                Variant = 1,
+                CooldownTicks = 0,
+            },
+            new SurvivalMobSpawnParam()
+            {
+                Name = "Swarmer",
+                Mob = SurvivalMob.Swarmer,
+                Probability = 1f,
+                Variant = 0,
+                CooldownTicks = 0,
+            },
+        };
+
+        // create boss round
+        survivalData.SpecialRounds = new List<SurvivalMobSpecialRoundParam>()
+        {
+            new SurvivalMobSpecialRoundParam()
+            {
+                Name = "Boss Round",
+                MinRound = 25,
+                RepeatCount = 0,
+                RepeatEveryNRounds = 25,
+                MobNamesToSpawn = new List<string>() { "Zombie", "Swarmer" },
+                SpawnRateFactor = 0.1f,
+                SpawnCountFactor = 0.25f,
+                UnlimitedPostRoundTime = true,
+                DisableDrops = true,
+            }
+        };
+
+        // create gambits
+        survivalData.Gambits = new List<SurvivalGambit>()
+        {
+            new SurvivalGambit()
+            {
+                Name = "Easy Mode",
+                Description = "Complete 100 rounds with reduced difficulty scaling and increased bolt/xp rates.",
+                CompleteAfterRound = 100,
+                BoltMultiplier = 2,
+                XpMultiplier = 2,
+                DifficultyMultiplier = 0.5f,
+            },
+            new SurvivalGambit()
+            {
+                Name = "Impossible Mode",
+                Description = "Complete 50 rounds with increased difficulty scaling and reduced bolt/xp rates. Revives are disabled.",
+                CompleteAfterRound = 50,
+                BoltMultiplier = 0.5f,
+                XpMultiplier = 0.5f,
+                DifficultyMultiplier = 2f,
+                MobHealthScaleMultiplier = 0.5f,
+                DisableRevives = true,
+                DisableBank = true,
+            },
+            new SurvivalGambit()
+            {
+                Name = "Flail Only",
+                Description = "Complete 50 rounds using only the Scorpion Flail.",
+                CompleteAfterRound = 50,
+                ForceWeapon = DLGadgetIds.Flail
+            },
+        };
+
+        // create player spawn
+        var playerSpawnCuboid = new GameObject("Player Spawn").AddComponent<Cuboid>();
+        if (playerSpawnCuboid)
+        {
+            playerSpawnCuboid.CuboidType = CuboidMaskType.Player;
+            playerSpawnCuboid.transform.SetParent(go.transform, false);
+            if (cuboids.FirstOrDefault(x => x.CuboidType == CuboidMaskType.Player) is Cuboid cuboid && cuboid)
+                playerSpawnCuboid.transform.position = cuboid.transform.position;
+        }
+
+        // create mob allowed cuboid
+        var mobAllowedCuboid = new GameObject("Mob Allowed Region").AddComponent<Cuboid>();
+        if (mobAllowedCuboid)
+        {
+            survivalData.MobAllowedArea = mobAllowedCuboid;
+            mobAllowedCuboid.transform.SetParent(go.transform, false);
+
+            var center = cuboids.Select(x => x.transform.position).Average();
+            var bounds = new Bounds(center, Vector3.one);
+            foreach (var cuboid in cuboids)
+                bounds.Encapsulate(cuboid.transform.position);
+            bounds.Expand(50);
+
+            mobAllowedCuboid.transform.position = bounds.center;
+            mobAllowedCuboid.transform.localScale = bounds.size;
+        }
+
+        // create mob spawn area
+        var mobSpawnArea = new GameObject("Mob Spawns").AddComponent<Area>();
+        if (mobSpawnArea)
+        {
+            survivalData.MobSpawnPoints = mobSpawnArea;
+            mobSpawnArea.transform.SetParent(go.transform, false);
+
+            var mobSpawnCuboid = new GameObject("mob spawn").AddComponent<Cuboid>();
+            mobSpawnCuboid.transform.SetParent(mobSpawnArea.transform, false);
+            if (playerSpawnCuboid) mobSpawnCuboid.transform.position = playerSpawnCuboid.transform.position;
+            mobSpawnCuboid.transform.localScale = new Vector3(10, 3, 10);
+            mobSpawnArea.Cuboids.Add(mobSpawnCuboid);
+        }
+
+        // create default path graph
+        var pathGraphPrefab = UnityHelper.GetRaidsPrefab("PathGraph");
+        if (pathGraphPrefab)
+        {
+            var pathGraphGo = Instantiate(pathGraphPrefab);
+            pathGraphGo.transform.SetParent(go.transform, false);
+            pathGraphGo.transform.position = playerSpawnCuboid.transform.position;
+            survivalData.MobPathGraph = pathGraphGo.GetComponent<PathGraph>();
+        }
+
+        // create mobys
+        {
+            var right = playerSpawnCuboid.transform.right;
+            var forward = playerSpawnCuboid.transform.forward;
+            var position = playerSpawnCuboid.transform.position + right * 5f;
+
+            // misc mobys
+            SurvivalSetupAddMoby(go.transform, 9786, "Vendor", position + forward * 0f);
+            SurvivalSetupAddMoby(go.transform, 8484, "Big Al", position + forward * 5f);
+            SurvivalSetupAddMoby(go.transform, 9795, "Prestige Machine", position + forward * 10f);
+
+            // mystery boxes
+            position += right * 5f;
+            var mysteryBoxGo = new GameObject("Mystery Boxes");
+            mysteryBoxGo.transform.SetParent(go.transform, false);
+            mysteryBoxGo.transform.position = position;
+            SurvivalSetupAddMoby(mysteryBoxGo.transform, 9781, "Mysterybox", position + forward * 1f);
+            SurvivalSetupAddMoby(mysteryBoxGo.transform, 9781, "Mysterybox", position + forward * 3f);
+            SurvivalSetupAddMoby(mysteryBoxGo.transform, 9781, "Mysterybox", position + forward * 5f);
+
+            // vendors
+            position += right * 5f;
+            var stackablesGo = new GameObject("Stackable Vendors");
+            stackablesGo.transform.SetParent(go.transform, false);
+            stackablesGo.transform.position = position;
+            SurvivalSetupAddMoby(stackablesGo.transform, 8323, "Stackbox", position + forward * 0f);
+            SurvivalSetupAddMoby(stackablesGo.transform, 8323, "Stackbox", position + forward * 5f);
+            SurvivalSetupAddMoby(stackablesGo.transform, 8323, "Stackbox", position + forward * 10f);
+
+            // upgrades
+            position += right * 5f;
+            var upgradesGo = new GameObject("Upgrades");
+            upgradesGo.transform.SetParent(go.transform, false);
+            upgradesGo.transform.position = position;
+            SurvivalSetupAddUpgrade(upgradesGo.transform, "Upgrade", position + forward * 0f);
+            SurvivalSetupAddUpgrade(upgradesGo.transform, "Upgrade", position + forward * 2f);
+            SurvivalSetupAddUpgrade(upgradesGo.transform, "Upgrade", position + forward * 4f);
+            SurvivalSetupAddUpgrade(upgradesGo.transform, "Upgrade", position + forward * 6f);
+            SurvivalSetupAddUpgrade(upgradesGo.transform, "Upgrade", position + forward * 8f);
+
+            // demon bells
+            position += right * 5f;
+            position += Vector3.up * 5f;
+            var demonbellsGo = new GameObject("Demonbells");
+            demonbellsGo.transform.SetParent(go.transform, false);
+            demonbellsGo.transform.position = position;
+            SurvivalSetupAddMoby(demonbellsGo.transform, 9337, "Demonbell", position + forward * 0f).transform.localScale = Vector3.one * 0.5f;
+            SurvivalSetupAddMoby(demonbellsGo.transform, 9337, "Demonbell", position + forward * 3f).transform.localScale = Vector3.one * 0.5f;
+            SurvivalSetupAddMoby(demonbellsGo.transform, 9337, "Demonbell", position + forward * 6f).transform.localScale = Vector3.one * 0.5f;
+        }
+
+        // lastly install mobs
+        survivalData.InstallMobDependencies(false);
+
+        // prompt for cleanup
+        if (EditorUtility.DisplayDialog("Survival Importer", "Would you like to also cleanup the extranneous mobys/cuboids from the base map? It's recommended to free up space for survival.", "Cleanup", "Skip"))
+        {
+            // remove all cuboids except the first
+            // since the first is reserved
+            foreach (var cuboid in cuboids.Skip(1))
+                GameObject.DestroyImmediate(cuboid.gameObject);
+
+            foreach (var area in areas)
+                GameObject.DestroyImmediate(area.gameObject);
+
+            foreach (var moby in mobys)
+            {
+                switch (moby.OClass)
+                {
+                    case 8309: // node base
+                    case 9838: // flag base
+                    case 4291: // teleport pad
+                    case 5000: // ammo pad
+                    case 4290: // player turret
+                    case 5614: // health pad
+                    case 6703: // node upgrade config
+                    case 9758: // node container
+                    case 9759: // pickup pad
+                    case 9732: // hill
+                    case 7215: // red flag
+                    case 7217: // blue flag
+                    case 9916: // green flag
+                    case 9917: // orange flag
+                    case 6529: // vehicle pad
+                    case 8276: // hoverbike
+                    case 8292: // puma
+                    case 8366: // hovership
+                    case 8248: // landstalker base
+                    case 8249: // landstalker cabin
+                        {
+                            GameObject.DestroyImmediate(moby.gameObject);
+                            break;
+                        }
+                }
+            }
+        }
     }
 
-    private static void OnAfterCreateGameObject(GameObject go)
+    private static Moby SurvivalSetupAddMoby(Transform parent, int oclass, string name, Vector3 position)
     {
-        // place under selected object
-        // or try and spawn on top of scene camera
-        if (Selection.activeGameObject)
-            go.transform.SetParent(Selection.activeGameObject.transform, false);
-        else if (SceneView.lastActiveSceneView.camera)
-            go.transform.position = SceneView.lastActiveSceneView.camera.transform.position + (SceneView.lastActiveSceneView.camera.transform.forward * 5);
+        var moby = new GameObject(name).AddComponent<Moby>();
+        moby.transform.SetParent(parent, false);
+        moby.transform.position = position;
+        moby.RCVersion = RCVER.DL;
+        moby.OClass = oclass;
+        moby.InitializePVarReferences(true);
+        moby.UpdateAsset();
 
-        Selection.activeGameObject = go;
+        return moby;
+    }
+
+    private static SurvivalUpgradeSpawn SurvivalSetupAddUpgrade(Transform parent, string name, Vector3 position)
+    {
+        var upgrade = new GameObject(name).AddComponent<SurvivalUpgradeSpawn>();
+        upgrade.transform.SetParent(parent, false);
+        upgrade.transform.position = position;
+        return upgrade;
+    }
+
+    public void InstallMobDependencies(bool overwrite = false)
+    {
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+        var mapName = SceneManager.GetActiveScene().name;
+        var racVersion = RCVER.DL;
+
+        foreach (var mob in Mobs)
+        {
+            var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
+            var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
+            if (variant == null) continue;
+
+            foreach (var dependency in variant.Dependencies)
+            {
+                PackerHelper.ExtractAndInstallMoby(mapName, racVersion, dependency.SourceMapId, dependency.SourceMissionId, dependency.OClass, name: $"{mob.Name}:{variant.Name}", overwrite: overwrite);
+            }
+        }
     }
 
     #endregion
@@ -474,8 +856,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         if (!survivalData) throw new Exception("missing survival mobs data");
 
         // write patches if not legacy
-        if (!IsLegacySurvivalMap)
-            WritePatches(survivalData, codeFolder);
+        WritePatches(survivalData, codeFolder);
 
         // write weapon stats
         WriteWeaponStats(survivalData, codeFolder);
@@ -1031,16 +1412,16 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
 public enum SurvivalMob
 {
-    Zombie,
-    Swarmer,
-    Swamper,
-    StalkerTurret,
-    Leviathan,
-    DZStriker,
-    Executioner,
-    Reaper,
-    Tremor,
-    Reactor
+    Zombie = 0,
+    Swarmer = 1,
+    Swamper = 2,
+    //StalkerTurret = 3,
+    Leviathan = 4,
+    //DZStriker = 5,
+    Executioner = 6,
+    Reaper = 7,
+    Tremor = 8,
+    Reactor = 9
 }
 
 public enum SurvivalMobAttributes
@@ -1115,7 +1496,6 @@ public enum SurvivalStackableItemId
     AlphaModAmmo = 7, // stack +2 ammo mod
     Vampire = 8, // stack +X health gain
     ExplodingEnemies = 9, // stack +X damage per explosion
-    Count
 };
 
 public enum SurvivalMobStatIds
@@ -1163,6 +1543,9 @@ public class SurvivalGambit
     public float DifficultyMultiplier = 1;
     public float XpMultiplier = 1;
     public float BoltMultiplier = 1;
+    public float MobDamageScaleMultiplier = 1;
+    public float MobSpeedScaleMultiplier = 1;
+    public float MobHealthScaleMultiplier = 1;
     public int InitialBolts = 0;
     public int InitialTokens = 0;
 
@@ -1197,6 +1580,9 @@ public class SurvivalGambit
         sb.AppendLine($"\t\t.DifficultyMultiplier = {DifficultyMultiplier},");
         sb.AppendLine($"\t\t.XpMultiplier = {XpMultiplier},");
         sb.AppendLine($"\t\t.BoltMultiplier = {BoltMultiplier},");
+        sb.AppendLine($"\t\t.MobDamageScaleMultiplier = {MobDamageScaleMultiplier},");
+        sb.AppendLine($"\t\t.MobSpeedScaleMultiplier = {MobSpeedScaleMultiplier},");
+        sb.AppendLine($"\t\t.MobHealthScaleMultiplier = {MobHealthScaleMultiplier},");
         sb.AppendLine($"\t\t.InitialBolts = {InitialBolts},");
         sb.AppendLine($"\t\t.InitialTokens = {InitialTokens},");
         sb.AppendLine($"\t\t.ForceWeaponId = {(int)ForceWeapon},");
@@ -1308,7 +1694,7 @@ public class SurvivalMobSpawnParam
     public SurvivalColorOverride GlowColor;
     public SurvivalColorOverride SpriteColor;
 
-    public string GetDef(float? probabilityOverride = null)
+    public string GetDef(SpriteDef[] spriteDefs, float? probabilityOverride = null)
     {
         var sb = new StringBuilder();
 
@@ -1316,13 +1702,14 @@ public class SurvivalMobSpawnParam
         var mobConfig = SurvivalMobsScriptableObject.Load();
         var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new SurvivalMobsScriptableObject.SurvivalMobsConfig();
         var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
+        var spriteIdx = Array.FindIndex(spriteDefs, x => x.m_Texture == variant.SpriteTexture);
+        var bossSpriteDef = Array.Find(spriteDefs, x => (variant.ExistingBossSpriteUid > 0 && x.m_Uid == variant.ExistingBossSpriteUid && !variant.BossTexture) || x.m_Texture == variant.BossTexture);
 
         var name = Name?.Replace("\"", "") ?? string.Empty;
         if (name.Length >= 32)
             name = name.Substring(0, 31);
 
         sb.AppendLine("\t{");
-        sb.AppendLine($"\t\t.MobCreate = &{mobPrefix}Create,");
         sb.AppendLine($"\t\t.MobVTable = &{this.Mob}VTable,");
         sb.AppendLine($"\t\t.RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
         sb.AppendLine($"\t\t.Scale = {SizeMultiplier},");
@@ -1341,6 +1728,8 @@ public class SurvivalMobSpawnParam
         sb.AppendLine($"\t\t.BaseColor = 0x{RCHelper.GetAbgrHex(BaseColor.HasOverride ? BaseColor.OverrideValue : defaults.BaseColor, overrideAlpha: 0):X8},");
         sb.AppendLine($"\t\t.GlowColor = 0x{RCHelper.GetAbgrHex(GlowColor.HasOverride ? GlowColor.OverrideValue : defaults.GlowColor, overrideAlpha: 0.5f):X8},");
         sb.AppendLine($"\t\t.SpriteColor = 0x{RCHelper.GetAbgrHex(SpriteColor.HasOverride ? SpriteColor.OverrideValue : defaults.SpriteColor, overrideAlpha: 0):X8},");
+        sb.AppendLine($"\t\t.SpriteTexId = {(spriteIdx < 0 ? 127 : spriteIdx)},");
+        sb.AppendLine($"\t\t.BossTexUid = {(bossSpriteDef != null ? bossSpriteDef.m_Uid : 30130)},");
         sb.AppendLine($"\t\t.Name = \"{name}\",");
         sb.AppendLine($"\t\t.Config = {{");
         sb.AppendLine($"\t\t\t.Xp = {(ushort)Math.Clamp(Xp.HasOverride ? Xp.OverrideValue : defaults.Xp, 0, ushort.MaxValue)},");
@@ -1360,6 +1749,7 @@ public class SurvivalMobSpawnParam
         sb.AppendLine($"\t\t\t.CollRadius = {defaults.CollRadius * SizeMultiplier},");
         sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
         sb.AppendLine($"\t\t\t.AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
+        sb.AppendLine($"\t\t\t.DamageCooldownTickCount = {(int)(defaults.DamageCooldownSeconds * 60)},");
         sb.AppendLine($"\t\t\t.MobAttribute = {(int)Attributes},");
         sb.AppendLine($"\t\t\t.Behavior = {Behavior},");
         sb.AppendLine($"\t\t\t.SharedXp = {1},");

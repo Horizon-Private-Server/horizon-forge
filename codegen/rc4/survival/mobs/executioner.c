@@ -17,6 +17,8 @@ void executionerPreUpdate(Moby* moby);
 void executionerPostUpdate(Moby* moby);
 void executionerPostDraw(Moby* moby);
 void executionerMove(Moby* moby);
+int executionerGetExtraDataSize(int spawnParamsIdx);
+void executionerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void executionerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void executionerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -41,6 +43,8 @@ struct MobVTable ExecutionerVTable = {
   .PostUpdate = &executionerPostUpdate,
   .PostDraw = &executionerPostDraw,
   .Move = &executionerMove,
+  .GetExtraDataSize = &executionerGetExtraDataSize,
+  .OnSpawning = &executionerOnSpawning,
   .OnSpawn = &executionerOnSpawn,
   .OnDestroy = &executionerOnDestroy,
   .OnDamage = &executionerOnDamage,
@@ -58,39 +62,6 @@ struct MobVTable ExecutionerVTable = {
 };
 
 //--------------------------------------------------------------------------
-int executionerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(ExecutionerMobVars_t), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void executionerPreUpdate(Moby* moby)
 {
   int i;
@@ -102,7 +73,7 @@ void executionerPreUpdate(Moby* moby)
   
   // decrement tickers regardless of frozen state
   for (i = 0; i < GAME_MAX_LOCALS; ++i)
-    decTimerU8(&executionerVars->LocalPlayerDamageHitInvTimer[i]);
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
 
   if (mobIsFrozen(moby))
     return;
@@ -151,7 +122,7 @@ void executionerPostDraw(Moby* moby)
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  mobPostDrawQuad(moby, 2.6, color, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -168,6 +139,18 @@ void executionerAlterTarget(VECTOR out, Moby* moby, VECTOR forward, float amount
 void executionerMove(Moby* moby)
 {
   mobMove(moby);
+}
+
+//--------------------------------------------------------------------------
+int executionerGetExtraDataSize(int spawnParamsIdx)
+{
+  return sizeof(ExecutionerMobVars_t);
+}
+
+//--------------------------------------------------------------------------
+void executionerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
 }
 
 //--------------------------------------------------------------------------
@@ -287,17 +270,16 @@ void executionerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int executionerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // we want to give each local player a cooldown on damage they can apply to reactor
+  // we want to give each local player a cooldown on damage they can apply to executioner
   if (!e->PlayerDamager) return 1;
   if (!e->PlayerDamager->IsLocal) return 1;
 
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  ExecutionerMobVars_t* executionerVars = (ExecutionerMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   // only accept local damage when timer is 0
-  int timer = executionerVars->LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
   if (timer == 0) {
-    executionerVars->LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = EXECUTIONER_HIT_INV_TICKS;
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
     return 1;
   }
 
@@ -358,7 +340,8 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
 		float distSqr = vector_sqrmag(t);
 		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
     float rangedAttackRadiusSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
-    int canRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_NORMAL || mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_RANGED;
+    int preferredRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_RANGED;
+    int canRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_NORMAL || preferredRanged;
 
     if (1) {
       if (distSqr <= attackRadiusSqr) {
@@ -367,6 +350,9 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
           if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
           return EXECUTIONER_ACTION_ATTACK;
         }
+        return EXECUTIONER_ACTION_WALK;
+      } else if (!preferredRanged && distSqr <= (attackRadiusSqr*4) && rand(101)) {
+        // chase most of the time, sometimes defer to ranged attack
         return EXECUTIONER_ACTION_WALK;
       } else if (canRanged && distSqr <= rangedAttackRadiusSqr && mobCanSeeMoby(moby, target)) {
         // away from target
@@ -550,13 +536,18 @@ void executionerDoAction(Moby* moby)
           float dist = vector_length(t);
 
           // walk backwards if too close
-          if (dist < EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS) {
+          if (dist < (EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS + pvars->MobVars.Config.CollRadius)) {
             walkBackwards = 1;
+            
+            if (dist < 0.1) {
+              vector_fromyaw(t, moby->Rotation[2]);
+            } else {
+              vector_normalize(t, t);
+            }
 
-            vector_normalize(t, t);
             vector_scale(t, t, 5);
-            vector_subtract(t, target->Position, t);
-            mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
+            vector_subtract(t, moby->Position, t);
+            mobGetVelocityToTargetSimple(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
             DPRINTF("%f\n", vector_length(pvars->MobVars.MoveVars.Velocity));
           }
           else if (dist > (pvars->MobVars.Config.AttackRadius - pvars->MobVars.Config.HitRadius)) {

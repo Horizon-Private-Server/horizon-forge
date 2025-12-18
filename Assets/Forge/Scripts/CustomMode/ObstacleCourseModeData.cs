@@ -61,11 +61,11 @@ public class ObstacleCourseModeData : CustomModeData, ICodeGen, IBuildHook
         state.InitBody.Add("respawnAllPlayers();");
     }
 
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
     {
 
     }
-    
+
     public override void Write(BinaryWriter writer)
     {
         var mapConfig = FindObjectOfType<MapConfig>();

@@ -126,7 +126,6 @@ enum ZombieSubskeletonJoints
 };
 
 struct MobConfig;
-int zombieCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 extern struct MobVTable ZombieVTable;
 

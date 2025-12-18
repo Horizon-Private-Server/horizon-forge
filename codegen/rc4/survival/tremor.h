@@ -104,7 +104,6 @@ enum TremorSubskeletonJoints
 };
 
 struct MobConfig;
-int tremorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 extern struct MobVTable TremorVTable;
 

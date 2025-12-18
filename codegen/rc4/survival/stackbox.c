@@ -64,7 +64,7 @@ char* STACKABLE_ITEM_DESC[] = {
 };
 
 int STACKABLE_ITEM_TEX_IDS[] = {
-  [STACKABLE_ITEM_EXTRA_JUMP] 138,
+  [STACKABLE_ITEM_EXTRA_JUMP] 111,
   [STACKABLE_ITEM_EXTRA_SHOT] 108,
   [STACKABLE_ITEM_HOVERBOOTS] 60,
   [STACKABLE_ITEM_LOW_HEALTH_DMG_BUF] 109,
@@ -365,7 +365,7 @@ void sboxUpdate(Moby* moby)
     } else {
 
       int cost = sboxGetStackableCost(player->PlayerId, pvars->Item);
-      snprintf(buf, sizeof(buf), "\x11 %s \x0E%'d\x08", STACKABLE_ITEM_NAMES[pvars->Item], cost);
+      snprintf(buf, sizeof(buf), "\x11 %s\x01\x0E%'d\x08", STACKABLE_ITEM_NAMES[pvars->Item], cost);
       if (tryPlayerInteract(moby, player, buf, STACKABLE_ITEM_DESC[pvars->Item], 0, 0, PLAYER_STACK_BOX_COOLDOWN_TICKS, STACK_BOX_MAX_DIST*STACK_BOX_MAX_DIST, PAD_CIRCLE)) {
         sboxPlayerBuy(moby, player->PlayerId, pvars->Item);
       }
@@ -407,9 +407,6 @@ int sboxHandleEvent_Spawned(Moby* moby, GuberEvent* event)
 
   // lower glass a bit
   moby->Position[2] -= 1;
-
-  // update mode reference
-  if (MapConfig.State) MapConfig.State->Stackbox = moby;
 
   // set default state
 	mobySetState(moby, STACK_BOX_STATE_ACTIVE, -1);

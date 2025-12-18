@@ -28,6 +28,7 @@ public class MapConfig : MonoBehaviour
     [Tooltip("Aspect ratio 2:1")] public Texture2D DLThumbnail;
     public Texture2D DLMinimap;
     public int[] DLMobysIncludedInExport;
+    public List<SpriteDef> DLSprites = new List<SpriteDef>();
 
     [Header("UYA")]
     [ReadOnly] public UYAMapIds UYABaseMap = UYAMapIds.SP_Veldin;
@@ -345,6 +346,33 @@ public class MapConfig : MonoBehaviour
     public int GetIndexOfWorldLight(WorldLight area)
     {
         return Array.IndexOf(HierarchicalSorting.Sort(FindObjectsOfType<WorldLight>()), area);
+    }
+
+    #endregion
+
+    #region Sprites
+
+    public SpriteDef[] GetSpriteDefs(int racVersion)
+    {
+        var spriteDefs = DLSprites.ToList();
+        var spriteContainers = HierarchicalSorting.Sort(Resources.FindObjectsOfTypeAll<SpriteContainer>());
+
+        // add extra sprites
+        foreach (var spriteContainer in spriteContainers.Where(x => x.isActiveAndEnabled))
+        {
+            if (spriteContainer.RacVersion != racVersion) continue;
+
+            for (int i = 0; i < spriteContainer.Sprites.Count; ++i)
+            {
+                var idx = spriteDefs.FindIndex(x => x.m_Uid == spriteContainer.Sprites[i].m_Uid);
+                if (idx < 0)
+                    spriteDefs.Add(spriteContainer.Sprites[i]);
+                else
+                    spriteDefs[idx] = spriteContainer.Sprites[i];
+            }
+        }
+
+        return spriteDefs.ToArray();
     }
 
     #endregion

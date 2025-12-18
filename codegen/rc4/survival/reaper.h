@@ -127,7 +127,6 @@ typedef struct ReaperMobVars
 } ReaperMobVars_t;
 
 struct MobConfig;
-int reaperCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 extern struct MobVTable ReaperVTable;
 

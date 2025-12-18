@@ -171,7 +171,7 @@ int demonbellHandleEvent_Activate(Moby* moby, GuberEvent* event)
   mobySetState(moby, 1, -1);
   demonbellPlayActivateSound(moby);
   pushSnack(0, "Spawn Rate Increased!", 120);
-	DPRINTF("demonbell activated at %08X by %d (%d/%d)\n", (u32)moby, activatedByPlayerId, State.RoundDemonBellCount, State.DemonBellCount);
+  DPRINTF("demonbell activated at %08X by %d\n", (u32)moby, activatedByPlayerId);
 	return 0;
 }
 

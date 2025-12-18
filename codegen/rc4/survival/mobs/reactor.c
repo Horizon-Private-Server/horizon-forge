@@ -19,6 +19,8 @@ void reactorPreUpdate(Moby* moby);
 void reactorPostUpdate(Moby* moby);
 void reactorPostDraw(Moby* moby);
 void reactorMove(Moby* moby);
+int reactorGetExtraDataSize(int spawnParamsIdx);
+void reactorOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void reactorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void reactorOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void reactorOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -55,6 +57,8 @@ struct MobVTable ReactorVTable = {
   .PostUpdate = &reactorPostUpdate,
   .PostDraw = &reactorPostDraw,
   .Move = &reactorMove,
+  .GetExtraDataSize = &reactorGetExtraDataSize,
+  .OnSpawning = &reactorOnSpawning,
   .OnSpawn = &reactorOnSpawn,
   .OnDestroy = &reactorOnDestroy,
   .OnDamage = &reactorOnDamage,
@@ -105,43 +109,6 @@ void reactorTransAnim(Moby* moby, int animId, float startOff)
 }
 
 //--------------------------------------------------------------------------
-int reactorCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(ReactorMobVars_t), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    // scale health by # players
-    if (MapConfig.State)
-      args.StartHealth += MapConfig.State->ActivePlayerCount * REACTOR_ADD_HEALTH_PER_PLAYER;
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void reactorPreUpdate(Moby* moby)
 {
   int i;
@@ -153,7 +120,7 @@ void reactorPreUpdate(Moby* moby)
   
   // decrement tickers regardless of frozen state
   for (i = 0; i < GAME_MAX_LOCALS; ++i)
-    decTimerU8(&reactorVars->LocalPlayerDamageHitInvTimer[i]);
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
 
   if (mobIsFrozen(moby))
     return;
@@ -232,7 +199,7 @@ void reactorPostDraw(Moby* moby)
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  mobPostDrawQuad(moby, 2.3, color, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -259,6 +226,21 @@ void reactorMove(Moby* moby)
   vector_copy(reactorVars->LastRightHandPosition, &m[12]);
   
   mobMove(moby);
+}
+
+//--------------------------------------------------------------------------
+int reactorGetExtraDataSize(int spawnParamsIdx)
+{
+  return sizeof(ReactorMobVars_t);
+}
+
+//--------------------------------------------------------------------------
+void reactorOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+  // scale health by # players if boss
+  if (MapConfig.State && args->MobAttribute == MOB_ATTRIBUTE_BOSS) {
+    args->StartHealth += MapConfig.State->ActivePlayerCount * REACTOR_ADD_HEALTH_PER_PLAYER;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -443,12 +425,11 @@ int reactorOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
   if (!e->PlayerDamager->IsLocal) return 1;
 
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  ReactorMobVars_t* reactorVars = (ReactorMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   // only accept local damage when timer is 0
-  int timer = reactorVars->LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
   if (timer == 0) {
-    reactorVars->LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = REACTOR_HIT_INV_TICKS;
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
     return 1;
   }
 
@@ -627,6 +608,7 @@ void reactorDoAction(Moby* moby)
 	VECTOR t, t2;
   u32 damageFlags = 0x00081801;
   int i;
+  int walkBackwards = 0;
   float difficulty = 1;
   float turnSpeed = pvars->MobVars.MoveVars.Grounded ? REACTOR_TURN_RADIANS_PER_SEC : REACTOR_TURN_AIR_RADIANS_PER_SEC;
   float acceleration = pvars->MobVars.MoveVars.Grounded ? REACTOR_MOVE_ACCELERATION : REACTOR_MOVE_AIR_ACCELERATION;
@@ -789,30 +771,24 @@ void reactorDoAction(Moby* moby)
         vector_subtract(t, t, moby->Position);
         float dist = vector_length(t);
 
-        if (dist < REACTOR_BASE_COLL_RADIUS) {
-          
-          // if reactor is on top of its target then we want to have him move backwards, away from the target
-          VECTOR backTarget, forward;
-          if (dist < 0.1) {
-            vector_fromyaw(forward, moby->Rotation[2]);
-          } else {
-            vector_projectonhorizontal(forward, t);
-          }
-          vector_scale(forward, forward, 5);
-          vector_subtract(backTarget, target->Position, forward);
+        if (dist < (REACTOR_TOO_CLOSE_TO_TARGET_RADIUS + pvars->MobVars.Config.CollRadius)) {
+          walkBackwards = 1;
 
-          mobMoveTowards(moby, backTarget, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
+          // mobMoveTowards(moby, backTarget, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
+          if (dist < 0.1) {
+            vector_fromyaw(t, moby->Rotation[2]);
+          } else {
+            vector_normalize(t, t);
+          }
+          vector_scale(t, t, 5);
+          vector_subtract(t, moby->Position, t);
+          mobGetVelocityToTargetSimple(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
         } else if (dist > (pvars->MobVars.Config.AttackRadius - pvars->MobVars.Config.HitRadius)) {
 
           if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
             pvars->MobVars.Dirty = 1; // new path, sync with other clients
           mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
 
-        } else if (dist < (0.5 * pvars->MobVars.Config.CollRadius)) {
-          vector_fromyaw(t, moby->Rotation[2]);
-          vector_scale(t, t, -2 * pvars->MobVars.Config.CollRadius);
-          vector_add(t, moby->Position, t);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
         } else {
           mobStand(moby);
         }
@@ -827,7 +803,7 @@ void reactorDoAction(Moby* moby)
         reactorForceLocalAction(moby, REACTOR_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
 				reactorTransAnim(moby, REACTOR_ANIM_RUN, 0);
-			} else if (moby->AnimSeqId != REACTOR_ANIM_RUN || pvars->MobVars.AnimationLooped) {
+			} else if (moby->AnimSeqId != REACTOR_ANIM_RUN || moby->AnimSeqT > 4) {
 				reactorTransAnim(moby, REACTOR_ANIM_IDLE, 0);
       }
       break;
@@ -964,7 +940,7 @@ void reactorDoAction(Moby* moby)
           } else if (moby->AnimSeqT > 7 && moby->AnimSeqT < 13) {
             
             speedMult = REACTOR_CHARGE_SPEED;
-            reactorVars->AnimSpeedAdditive = 0.5;
+            reactorVars->AnimSpeedAdditive = 0.25;
             facePlayer = 0;
           }
 
@@ -990,7 +966,7 @@ void reactorDoAction(Moby* moby)
 
 			if (target) {
         if (facePlayer) mobTurnTowards(moby, target->Position, turnSpeed);
-        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult * pvars->MobVars.Config.Speed, acceleration);
+        mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult, acceleration);
 			} else {
 				// stand
 				mobStand(moby);

@@ -12,6 +12,7 @@ public static class FolderNames
     public static readonly string MobyFolder = "Moby";
     public static readonly string TfragFolder = "Tfrag";
     public static readonly string SkyFolder = "Sky";
+    public static readonly string SpriteFolder = "Sprite";
     public static readonly string CodeFolder = "Code";
     public static readonly string SoundsFolder = "Sounds";
     public static readonly string HUDFolder = "HUD";
@@ -40,6 +41,8 @@ public static class FolderNames
     public static readonly string BinaryCollisionBinFile = $"{BinaryAssetsFolder}/collision.bin";
     public static readonly string BinaryCollisionColladaFile = $"{BinaryAssetsFolder}/collision.dae";
     public static readonly string BinaryCollisionAssetFile = $"{BinaryAssetsFolder}/collision.asset";
+    public static readonly string BinarySprites1Folder = $"{BinaryAssetsFolder}/sprite1";
+    public static readonly string BinarySprites2Folder = $"{BinaryAssetsFolder}/sprite2";
     public static readonly string BinarySkyFolder = $"{BinaryAssetsFolder}/sky";
     public static readonly string BinarySkyBinFile = $"{BinaryAssetsFolder}/sky.bin";
     public static readonly string BinarySkyMeshFile = $"{BinarySkyFolder}/mesh.glb";

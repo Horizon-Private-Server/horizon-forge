@@ -35,7 +35,6 @@
 #include "controller.h"
 #include "soulcollector.h"
 #include "common.h"
-#include "shared.h"
 
 #define MAX_SOULCOLLECTORS      (20)
 

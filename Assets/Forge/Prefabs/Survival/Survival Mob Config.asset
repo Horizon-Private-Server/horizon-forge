@@ -20,6 +20,11 @@ MonoBehaviour:
     - Name: Normal
       OClass: 8438
       Bangles: 33
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5, g: 0.5, b: 0.5, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
@@ -27,6 +32,11 @@ MonoBehaviour:
     - Name: Goggle Eyes
       OClass: 8438
       Bangles: 66
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
@@ -34,6 +44,11 @@ MonoBehaviour:
     - Name: V Chest+Head
       OClass: 8438
       Bangles: 132
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
@@ -41,6 +56,11 @@ MonoBehaviour:
     - Name: Striped Head
       OClass: 8438
       Bangles: 264
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
@@ -48,6 +68,11 @@ MonoBehaviour:
     - Name: Spike Head
       OClass: 8438
       Bangles: 48
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
@@ -75,6 +100,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0
   - Mob: 1
     BlipType: 4
     StatId: 0
@@ -82,6 +108,11 @@ MonoBehaviour:
     - Name: Blue
       OClass: 9877
       Bangles: 0
+      SpriteTexture: {fileID: 2800000, guid: bf3381224ced89e4da7f500d0f2aa460, type: 3}
+      SpriteTextureTint: {r: 0.7, g: 0.7, b: 0.7, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9877
         SourceMapId: 6
@@ -89,6 +120,11 @@ MonoBehaviour:
     - Name: Orange
       OClass: 8273
       Bangles: 0
+      SpriteTexture: {fileID: 2800000, guid: 641ae97836734af428e8f22572539433, type: 3}
+      SpriteTextureTint: {r: 0.7, g: 0.7, b: 0.7, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8273
         SourceMapId: 1
@@ -96,6 +132,11 @@ MonoBehaviour:
     - Name: Desert
       OClass: 9952
       Bangles: 0
+      SpriteTexture: {fileID: 2800000, guid: a3b7c1ae46dcfa34c9cf02b5394a460b, type: 3}
+      SpriteTextureTint: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9952
         SourceMapId: 1
@@ -123,6 +164,7 @@ MonoBehaviour:
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0
   - Mob: 2
     BlipType: 4
     StatId: 0
@@ -130,6 +172,11 @@ MonoBehaviour:
     - Name: Normal
       OClass: 9215
       Bangles: 0
+      SpriteTexture: {fileID: 0}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9215
         SourceMapId: 4
@@ -157,39 +204,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-  - Mob: 3
-    BlipType: 4
-    StatId: 0
-    Variants:
-    - Name: Normal
-      OClass: 0
-      Bangles: 0
-      Dependencies:
-      - OClass: 0
-        SourceMapId: 1
-        SourceMissionId: 0
-    Behaviors: []
-    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
-    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-    Xp: 5
-    Bolts: 50
-    Damage: 10
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 3
-    SpeedMax: 15
-    SpeedScale: 1
-    Health: 30
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
-    AttackRadius: 5
-    RangedAttackDistance: 50
-    HitRadius: 0.5
-    CollRadius: 0.5
-    ReactionDelaySeconds: 0.25
-    AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0
   - Mob: 4
     BlipType: 3
     StatId: 0
@@ -197,6 +212,11 @@ MonoBehaviour:
     - Name: Normal
       OClass: 8388
       Bangles: 7199
+      SpriteTexture: {fileID: 2800000, guid: 7e0a5c193766ae143a0cc5ac7df3b35a, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: aa9eb35cc825e6941bafcd532466fd36, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8388
         SourceMapId: 4
@@ -204,6 +224,11 @@ MonoBehaviour:
     - Name: King
       OClass: 8388
       Bangles: 8191
+      SpriteTexture: {fileID: 2800000, guid: e80cc84031f88e3408c3a998561f6834, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: aa9eb35cc825e6941bafcd532466fd36, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8388
         SourceMapId: 4
@@ -214,7 +239,7 @@ MonoBehaviour:
     - Ranged Only
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
-    SpriteColor: {r: 0, g: 1, b: 0, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
     Xp: 200
     Bolts: 440
     Damage: 10
@@ -233,39 +258,7 @@ MonoBehaviour:
     CollRadius: 2
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-  - Mob: 5
-    BlipType: 4
-    StatId: 0
-    Variants:
-    - Name: Normal
-      OClass: 0
-      Bangles: 0
-      Dependencies:
-      - OClass: 0
-        SourceMapId: 1
-        SourceMissionId: 0
-    Behaviors: []
-    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
-    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-    Xp: 5
-    Bolts: 50
-    Damage: 10
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 3
-    SpeedMax: 15
-    SpeedScale: 1
-    Health: 30
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
-    AttackRadius: 5
-    RangedAttackDistance: 50
-    HitRadius: 0.5
-    CollRadius: 0.5
-    ReactionDelaySeconds: 0.25
-    AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0
   - Mob: 6
     BlipType: 3
     StatId: 0
@@ -273,6 +266,11 @@ MonoBehaviour:
     - Name: Normal
       OClass: 8353
       Bangles: 63
+      SpriteTexture: {fileID: 2800000, guid: 4aa807d23356093428a7e7ef9a22292e, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8353
         SourceMapId: 6
@@ -283,7 +281,7 @@ MonoBehaviour:
     - Ranged
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
-    SpriteColor: {r: 1, g: 0, b: 0, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
     Xp: 500
     Bolts: 660
     Damage: 15
@@ -302,13 +300,19 @@ MonoBehaviour:
     CollRadius: 2
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 7.5
+    DamageCooldownSeconds: 0.1
   - Mob: 7
-    BlipType: 4
+    BlipType: 3
     StatId: 0
     Variants:
     - Name: Normal
       OClass: 9584
       Bangles: 3
+      SpriteTexture: {fileID: 2800000, guid: d4d69a07d08f02d43901aa01320a31b2, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: d4d69a07d08f02d43901aa01320a31b2, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9584
         SourceMapId: 13
@@ -336,6 +340,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0
   - Mob: 8
     BlipType: 4
     StatId: 0
@@ -343,6 +348,11 @@ MonoBehaviour:
     - Name: Normal
       OClass: 9427
       Bangles: 21
+      SpriteTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9427
         SourceMapId: 5
@@ -351,7 +361,7 @@ MonoBehaviour:
     - Normal
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
-    SpriteColor: {r: 0.5019608, g: 1, b: 0.5019608, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
     Xp: 30
     Bolts: 330
     Damage: 7
@@ -370,6 +380,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0
   - Mob: 9
     BlipType: 6
     StatId: 0
@@ -377,6 +388,11 @@ MonoBehaviour:
     - Name: Normal
       OClass: 8382
       Bangles: 1
+      SpriteTexture: {fileID: 2800000, guid: 901b81b8dca48b24399fd08a5d4303b1, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 30127
       Dependencies:
       - OClass: 8382
         SourceMapId: 1
@@ -385,7 +401,7 @@ MonoBehaviour:
     - Normal
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
-    SpriteColor: {r: 0, g: 0, b: 1, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
     Xp: 1000
     Bolts: 11000
     Damage: 10
@@ -404,6 +420,7 @@ MonoBehaviour:
     CollRadius: 1.5
     ReactionDelaySeconds: 0.0875
     AttackCooldownSeconds: 1
+    DamageCooldownSeconds: 0.25
   Patches:
   - Name: Enable All Alpha Mods
     Disabled: 0
@@ -554,3 +571,70 @@ MonoBehaviour:
     - {x: 110, y: 110, z: 45, w: 55}
     - {x: 120, y: 120, z: 50, w: 60}
     - {x: 150, y: 150, z: 65, w: 75}
+  SurvivalMysteryBoxSprites:
+  - m_Texture: {fileID: 2800000, guid: 2396326ec9e92c64482adac532b4c052, type: 3}
+    m_Bank: 1
+    m_Uid: 30054
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: dd3a606f722464a40bee94ab0c789fcc, type: 3}
+    m_Bank: 1
+    m_Uid: 30055
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: e50888e2927c8334a915fbf3baebd6e9, type: 3}
+    m_Bank: 1
+    m_Uid: 30138
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: bbce572f2fe00f641b3d094eb05706dd, type: 3}
+    m_Bank: 1
+    m_Uid: 30044
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: 0ce955766ecf4db41babcde865d6ff67, type: 3}
+    m_Bank: 1
+    m_Uid: 30094
+    m_Unknown: 1
+  SurvivalStackableSprites:
+  - m_Texture: {fileID: 2800000, guid: 578e99fdb20b170419435d9f18c1e081, type: 3}
+    m_Bank: 1
+    m_Uid: 30110
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: a70f3f8c4c676f74cb516c0ff22258ca, type: 3}
+    m_Bank: 1
+    m_Uid: 30109
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: f13cebac928e86a4f9d2911f13277e8d, type: 3}
+    m_Bank: 1
+    m_Uid: 30112
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: ac1463fbada8c9142afd73aef0c66bd5, type: 3}
+    m_Bank: 1
+    m_Uid: 30020
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: aea5710ef99fa894a9f09adb39892684, type: 3}
+    m_Bank: 1
+    m_Uid: 30111
+    m_Unknown: 1
+  SurvivalBlessingSprites:
+  - m_Texture: {fileID: 2800000, guid: d2dfbd4ca38335c408506b16435e7b51, type: 3}
+    m_Bank: 0
+    m_Uid: 30109
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: 6e2f188ecc2542540b6537d089870787, type: 3}
+    m_Bank: 0
+    m_Uid: 30110
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: 65edc4c34e1a47c49a3a5241cab4c895, type: 3}
+    m_Bank: 0
+    m_Uid: 30111
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: 06d0db80253fad9448245ab0b9c97276, type: 3}
+    m_Bank: 0
+    m_Uid: 30113
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: 63af52276edd11e47a88840e69c95929, type: 3}
+    m_Bank: 0
+    m_Uid: 30114
+    m_Unknown: 1
+  - m_Texture: {fileID: 2800000, guid: 16869751f044a9d489399db81bcb299e, type: 3}
+    m_Bank: 0
+    m_Uid: 30115
+    m_Unknown: 1

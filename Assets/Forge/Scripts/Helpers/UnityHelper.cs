@@ -1827,7 +1827,7 @@ public static class UnityHelper
             {
                 if (maxTexSize == null || (tex.width <= maxTexSize && tex.height <= maxTexSize))
                 {
-                    if (!forcePowerOfTwo || (Mathf.Log(tex.width, 2) == tex.width && Mathf.Log(tex.height, 2) == tex.height))
+                    if (!forcePowerOfTwo || (Mathf.ClosestPowerOfTwo(tex.width) == tex.width && Mathf.ClosestPowerOfTwo(tex.height) == tex.height))
                     {
                         File.Copy(assetPath, path, true);
                         return true;

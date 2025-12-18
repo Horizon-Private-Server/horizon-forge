@@ -320,8 +320,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MainBody.Add("mapTickEnd();");
     }
 
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
     {
+        if (stage != BuildStateStage.BeforeBuild) return;
+
         state.MobyOClasses.Add(8309); // node base (for capture sound)
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)

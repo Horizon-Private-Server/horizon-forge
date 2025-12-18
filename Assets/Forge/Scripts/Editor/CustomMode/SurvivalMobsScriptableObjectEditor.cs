@@ -13,12 +13,18 @@ public class SurvivalMobsScriptableObjectEditor : Editor
     private SerializedProperty m_MobsProperty;
     private SerializedProperty m_PatchesProperty;
     private SerializedProperty m_WeaponStatsProperty;
+    private SerializedProperty m_SurvivalMysteryBoxSprites;
+    private SerializedProperty m_SurvivalStackableSprites;
+    private SerializedProperty m_SurvivalBlessingSprites;
 
     private void OnEnable()
     {
         m_MobsProperty = serializedObject.FindProperty("Mobs");
         m_PatchesProperty = serializedObject.FindProperty("Patches");
         m_WeaponStatsProperty = serializedObject.FindProperty("WeaponStats");
+        m_SurvivalMysteryBoxSprites = serializedObject.FindProperty("SurvivalMysteryBoxSprites");
+        m_SurvivalStackableSprites = serializedObject.FindProperty("SurvivalStackableSprites");
+        m_SurvivalBlessingSprites = serializedObject.FindProperty("SurvivalBlessingSprites");
     }
 
 
@@ -55,8 +61,12 @@ public class SurvivalMobsScriptableObjectEditor : Editor
             EditorGUI.indentLevel--;
         }
         
+        //EditorGUILayout.PropertyField(m_MobsProperty);
         EditorGUILayout.PropertyField(m_PatchesProperty);
         EditorGUILayout.PropertyField(m_WeaponStatsProperty);
+        EditorGUILayout.PropertyField(m_SurvivalMysteryBoxSprites);
+        EditorGUILayout.PropertyField(m_SurvivalStackableSprites);
+        EditorGUILayout.PropertyField(m_SurvivalBlessingSprites);
         serializedObject.ApplyModifiedProperties();
     }
 

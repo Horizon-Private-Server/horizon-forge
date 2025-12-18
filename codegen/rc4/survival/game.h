@@ -171,7 +171,7 @@
 #define SNACK_ITEM_MAX_COUNT                  (8)
 #define DAMAGE_BUBBLE_MAX_COUNT               (16)
 
-#define MAX_MOB_SPAWN_PARAMS                  (10)
+#define MAX_MOB_SPAWN_PARAMS                  (16)
 #define MAX_MOB_COMPLEXITY_DRAWN              (7500)
 #define MAX_MOB_COMPLEXITY_DRAWN_DZO          (MAX_MOB_COMPLEXITY_DRAWN * 1)
 #define MOB_COMPLEXITY_SKIN_FACTOR            (500)
@@ -331,8 +331,6 @@ struct SurvivalPlayerState
   int TimesActivatedPower;
   int TokensUsedOnGates;
   int BlessingSlots;
-  int KillsPerMob[MAX_MOB_SPAWN_PARAMS];
-  short DeathsByMob[MAX_MOB_SPAWN_PARAMS];
   short Upgrades[UPGRADE_COUNT];
   short AlphaMods[8];
   char ItemBlessings[PLAYER_MAX_BLESSINGS];
@@ -404,9 +402,7 @@ struct SurvivalState
   Moby* BigAl;
   Moby* PrestigeMachine;
   Moby* Bankbox;
-  Moby* Stackbox;
   Moby* UpgradeMobies[UPGRADE_COUNT];
-  Moby* GateMobies[GATE_MAX_COUNT];
   Moby* MysteryBoxMoby;
   struct SurvivalPlayer* LocalPlayerState;
   int GameOver;
@@ -495,6 +491,9 @@ typedef struct GambitDef {
   float DifficultyMultiplier;
   float XpMultiplier;
   float BoltMultiplier;
+  float MobDamageScaleMultiplier;
+  float MobSpeedScaleMultiplier;
+  float MobHealthScaleMultiplier;
   int InitialBolts;
   int InitialTokens;
   char ForceWeaponId;     // use 0 for none
@@ -515,17 +514,7 @@ struct SurvivalGameData
   int Kills[GAME_MAX_PLAYERS];
   int Revives[GAME_MAX_PLAYERS];
   int TimesRevived[GAME_MAX_PLAYERS];
-  int KillsPerMob[GAME_MAX_PLAYERS][MAX_MOB_SPAWN_PARAMS];
-  short DeathsByMob[GAME_MAX_PLAYERS][MAX_MOB_SPAWN_PARAMS];
-  short MobIds[MAX_MOB_SPAWN_PARAMS];
   short BestRound[GAME_MAX_PLAYERS];
-  short PlayerUpgrades[GAME_MAX_PLAYERS][UPGRADE_COUNT];
-  short TimesRolledMysteryBox[GAME_MAX_PLAYERS];
-  short TimesActivatedDemonBell[GAME_MAX_PLAYERS];
-  short TimesActivatedPower[GAME_MAX_PLAYERS];
-  short TokensUsedOnGates[GAME_MAX_PLAYERS];
-  char AlphaMods[GAME_MAX_PLAYERS][8];
-  char BestWeaponLevel[GAME_MAX_PLAYERS][9];
 };
 
 typedef struct SurvivalRoundCompleteMessage
