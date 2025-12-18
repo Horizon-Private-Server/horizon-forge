@@ -673,6 +673,7 @@ public class LevelImporterWindow : EditorWindow
             ImportCameras(destMapBinFolder, destMapFolder, postActions, rootGo);
             ImportAmbientSounds(destMapBinFolder, destMapFolder, postActions, rootGo);
             if (ImportSourceIsDL()) ImportAreas(destMapBinFolder, destMapFolder, postActions, rootGo);
+            ImportSprites(destMapBinFolder, destMapFolder, assetImports, rootGo);
 
             // postprocess hill moby cuboids
             FindAndSetHillCuboidTypes(destMapBinFolder, destMapFolder, assetImports, rootGo);
