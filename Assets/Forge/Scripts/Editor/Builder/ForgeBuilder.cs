@@ -176,7 +176,7 @@ public static class ForgeBuilder
 
     public static async Task<bool> RebuildLevel(UnityEngine.SceneManagement.Scene scene)
     {
-        if (scene == null) return false;
+        if (scene == null || !scene.isLoaded) return false;
 
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         if (!mapConfig)
@@ -208,12 +208,20 @@ public static class ForgeBuilder
             // validate level folder
             if (!Directory.Exists(binFolder))
             {
-                EditorUtility.DisplayDialog($"Cannot build (rc{racVersion} {region})", $"Scene does not have matching level folder \"{scene.name}\"", "Ok");
+                // prompt user to import base maps again
+                var baseMapsStr = (mapConfig.HasDeadlockedBaseMap() ? $"dl:{mapConfig.DLBaseMap} " : string.Empty) + (mapConfig.HasUYABaseMap() ? $"uya:{mapConfig.UYABaseMap}" : string.Empty);
+                if (!EditorUtility.DisplayDialog($"Cannot build (rc{racVersion} {region})", $"Scene does not have matching level folder \"{scene.name}\".\n\nWould you like to rebuild the missing level folder from the base map ({baseMapsStr.Trim()})?", "Continue", "Cancel"))
+                    return false;
+
+                // extract base map(s) into level folder
+                LevelImporterWindow importerWindow = ScriptableObject.CreateInstance<LevelImporterWindow>();
+                if (mapConfig.HasDeadlockedBaseMap())
+                    importerWindow.ReimportBaseMap(mapConfig, (int)mapConfig.DLBaseMap, RCVER.DL);
+                if (mapConfig.HasUYABaseMap())
+                    importerWindow.ReimportBaseMap(mapConfig, (int)mapConfig.UYABaseMap, RCVER.UYA);
+
                 return false;
             }
-
-            if (!scene.isLoaded || !mapConfig)
-                return false;
 
             var state = new BuildState(scene.name, racVersion, region);
             try

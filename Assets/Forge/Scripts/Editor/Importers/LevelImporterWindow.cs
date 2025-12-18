@@ -648,7 +648,7 @@ public class LevelImporterWindow : EditorWindow
             ExtractWadFromISO(GetSelectedIsoPath(), baseMapId, destMapWadFile);
 
             // unpack level wad
-            if (!DecompressAndUnpackLevelWad(destMapWadFile, 0, racVersion)) return;
+            if (!DecompressAndUnpackLevelWad(destMapWadFile, 0, racVersion, true)) return;
 
             // if uya we also need the PAL version of the map
             if (ImportSourceIsUYA())
@@ -737,6 +737,77 @@ public class LevelImporterWindow : EditorWindow
 
             if (rootGo) rootGo.transform.SetAsLastSibling();
             FinalizeImport();
+        }
+    }
+
+    public void ReimportBaseMap(MapConfig mapConfig, int baseMapId, int racVersion)
+    {
+        var forgeSettings = ForgeSettings.Load();
+        if (!forgeSettings) return;
+
+        // configure
+        this.importBaseLevelIdx = racVersion == RCVER.DL ? DLBaseMaps.IndexOf(((DLMapIds)baseMapId).ToString()) : UYABaseMaps.IndexOf(((UYAMapIds)baseMapId).ToString());
+        this.importChunkId = 0;
+        this.importSource = racVersion == RCVER.DL ? (int)ImportSource.DL_ISO : (int)ImportSource.UYA_ISO;
+
+        // get dest paths
+        var scene = SceneManager.GetActiveScene();
+        var racVersionOther = racVersion == RCVER.DL ? RCVER.UYA : RCVER.DL;
+        var destMapName = scene.name;
+        var destMapFolder = FolderNames.GetMapFolder(destMapName);
+        var destMapBinFolder = FolderNames.GetMapBinFolder(destMapName, racVersion);
+        var tempPalBinFolder = Path.Combine(FolderNames.GetTempFolder(), "level-import-pal");
+        var destMapWadFile = Path.Combine(destMapBinFolder, $"{destMapName}.wad");
+        var assetImports = new List<PackerImporterWindow.PackerAssetImport>();
+        var baseLevelName = baseMapId.ToString();
+
+        // validate clean iso paths
+        switch (racVersion)
+        {
+            case RCVER.UYA:
+                {
+                    if (!File.Exists(forgeSettings.PathToCleanUyaNtscIso)) return;
+                    if (!File.Exists(forgeSettings.PathToCleanUyaPalIso)) return;
+
+                    baseLevelName = ((UYAMapIds)baseMapId).ToString();
+                    break;
+                }
+            case RCVER.DL:
+                {
+                    if (!File.Exists(forgeSettings.PathToCleanDeadlockedIso)) return;
+
+                    baseLevelName = ((DLMapIds)baseMapId).ToString();
+                    break;
+                }
+            default: return;
+        }
+
+        try
+        {
+            IsImporting = true;
+
+            // prepare
+            UpdateImportProgressBar(ImportStage.Preparing_Map_Files);
+            PrepareMapResourceFolder(destMapFolder, destMapBinFolder);
+
+            // extract and copy wad to map bin directory
+            UpdateImportProgressBar(ImportStage.Preparing_Level_WAD);
+            ExtractWadFromISO(GetSelectedIsoPath(), baseMapId, destMapWadFile);
+
+            // unpack level wad
+            if (!DecompressAndUnpackLevelWad(destMapWadFile, 0, racVersion, true)) return;
+
+            // copy sky from first map
+            CopySky(FolderNames.GetMapBinFolder(destMapName, racVersionOther), destMapBinFolder, racVersionOther, racVersion);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
+        finally
+        {
+            IsImporting = false;
+            EditorUtility.ClearProgressBar();
         }
     }
 
@@ -1251,7 +1322,7 @@ public class LevelImporterWindow : EditorWindow
         }
     }
 
-    bool DecompressAndUnpackLevelWad(string wadPath, int chunkId, int racVersion)
+    bool DecompressAndUnpackLevelWad(string wadPath, int chunkId, int racVersion, bool forceUnpackAll = false)
     {
         var workingDir = Path.GetDirectoryName(wadPath);
         var assetsFolder = Path.Combine(workingDir, FolderNames.BinaryAssetsFolder);
@@ -1260,7 +1331,7 @@ public class LevelImporterWindow : EditorWindow
         var levelId = GetLevelId();
         var bResult = false;
 
-        var unpackAll = !importIntoExistingMap;
+        var unpackAll = forceUnpackAll || !importIntoExistingMap;
         var unpackSounds = unpackAll || importMobys > 0;
         var unpackAssets = unpackAll || importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
         var unpackSprites = unpackAll || importSprites > 0;
