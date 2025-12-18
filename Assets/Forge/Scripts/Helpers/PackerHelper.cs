@@ -117,8 +117,9 @@ public static class PackerHelper
         PACK_CODE = 4,
         PACK_GAMEPLAY = 8,
         PACK_ASSETS = 16,
-        PACK_LEVEL_WAD = 32,
-        PACK_SOUND_WAD = 64,
+        PACK_SPRITES = 32,
+        PACK_LEVEL_WAD = 64,
+        PACK_SOUND_WAD = 128,
     }
 
     private static string GetPackerPath()
@@ -283,6 +284,11 @@ public static class PackerHelper
         return RunPacker(out _, "unpack-gameplay", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString(), "-l", levelId.ToString());
     }
 
+    public static PACKER_STATUS_CODES UnpackSprites(string inFolder, string outFolder, int racVersion)
+    {
+        return RunPacker(out _, "unpack-sprites", "-i", inFolder, "-o", outFolder, "-v", racVersion.ToString());
+    }
+
     public static PACKER_STATUS_CODES UnpackMobyModel(string inFile, string outFolder, int racVersion)
     {
         return RunPacker(out _, "unpack-moby-model", "-i", inFile, "-o", outFolder, "-v", racVersion.ToString());
@@ -335,14 +341,14 @@ public static class PackerHelper
             // pack ties
             result = RunPacker(out _, "pack-world-instance-ties", "-i", Path.Combine(inFolder, FolderNames.GetWorldInstanceTiesFolder(racVersion)), "-o", Path.Combine(inFolder, worldInstanceFolder), "-v", racVersion.ToString());
             if (result != PACKER_STATUS_CODES.SUCCESS) return result;
-            onProgressCallback?.Invoke(0.2f);
+            onProgressCallback?.Invoke(0.15f);
 
             // pack occlusion before world instances
             if (ops.HasFlag(PACKER_PACK_OPS.PACK_OCCLUSION))
             {
                 result = RunPacker(out _, "pack-occlusion", "-i", Path.Combine(inFolder, FolderNames.GetWorldInstanceOcclusionFolder(racVersion)), "--out-mapping", Path.Combine(inFolder, worldInstanceFolder, racVersion == RCVER.DL ? "28.bin" : "144.bin"), "--out-level", Path.Combine(inFolder, FolderNames.BinaryOcclusionFile));
                 if (result != PACKER_STATUS_CODES.SUCCESS) return result;
-                onProgressCallback?.Invoke(0.3f);
+                onProgressCallback?.Invoke(0.2f);
             }
 
             // pack world instances
@@ -350,7 +356,7 @@ public static class PackerHelper
             {
                 result = RunPacker(out _, "pack-world-instances", "-i", Path.Combine(inFolder, worldInstanceFolder), "-o", Path.Combine(inFolder, "58.wad"));
                 if (result != PACKER_STATUS_CODES.SUCCESS) return result;
-                onProgressCallback?.Invoke(0.4f);
+                onProgressCallback?.Invoke(0.3f);
             }
         }
 
@@ -367,7 +373,22 @@ public static class PackerHelper
         {
             result = RunPacker(out _, "pack-code", "-i", Path.Combine(inFolder, FolderNames.BinaryCodeFolder), "-o", Path.Combine(inFolder, racVersion == RCVER.DL ? "08.bin" : "00.bin"));
             if (result != PACKER_STATUS_CODES.SUCCESS) return result;
-            onProgressCallback?.Invoke(0.5f);
+            onProgressCallback?.Invoke(0.4f);
+        }
+
+        // sprites -- dl only
+        if (ops.HasFlag(PACKER_PACK_OPS.PACK_SPRITES) && racVersion == RCVER.DL)
+        {
+            // backwards compatibility with existing forge maps
+            // only pack if the expected sprite folders exist
+            // otherwise we can assume the map was loaded into forge without sprites (before they were added)
+            // user can choose to import sprites by reimporting the base map
+            if (Directory.Exists(Path.Combine(inFolder, FolderNames.BinarySprites1Folder)) && Directory.Exists(Path.Combine(inFolder, FolderNames.BinarySprites2Folder)))
+            {
+                result = RunPacker(out _, "pack-sprites", "-i", Path.Combine(inFolder, FolderNames.BinaryAssetsFolder), "-o", inFolder, "-v", racVersion.ToString());
+                if (result != PACKER_STATUS_CODES.SUCCESS) return result;
+                onProgressCallback?.Invoke(0.5f);
+            }
         }
 
         // gameplay
@@ -444,9 +465,9 @@ public static class PackerHelper
         return RunPacker(out _, "texture", "-i", inFile, "-m", "PIF_8BPP_TO_PNG", "-o", outFile, outSwizzle ? "--out-swizzle" : "");
     }
 
-    public static PACKER_STATUS_CODES ConvertAssetTextures(string rootFolder, bool mipmaps = true, bool outSwizzle = true)
+    public static PACKER_STATUS_CODES ConvertAssetTextures(string rootFolder, bool mipmaps = true, bool outSwizzle = true, bool sprite = false)
     {
-        return RunPacker(out _, "texture", "-i", rootFolder, "-m", "PNG_FOLDER_TO_ASSET_TEXTURE", "-o", rootFolder, "-r", mipmaps ? "--mipmaps" : "", outSwizzle ? "--out-swizzle" : "");
+        return RunPacker(out _, "texture", "-i", rootFolder, "-m", "PNG_FOLDER_TO_ASSET_TEXTURE", "-o", rootFolder, "-r", mipmaps ? "--mipmaps" : "", outSwizzle ? "--out-swizzle" : "", sprite ? "--sprite" : "");
     }
 
     public static PACKER_STATUS_CODES ConvertPngToPif4bpp(string inFile, string outFolder, bool half_alpha = true, bool outSwizzle = true)
@@ -1018,4 +1039,289 @@ public static class PackerHelper
 
         return idx;
     }
+
+
+    #region Direct Moby Import
+
+    public static void ExtractAndInstallMoby(string destMapName, int destRacVersion, DLMapIds map, int mission, int oclass, string name = null, bool overwrite = false)
+    {
+        try
+        {
+            var imports = new List<PackerImporterWindow.PackerAssetImport>();
+            ExtractAndInstallMoby(imports, destMapName, destRacVersion, map, mission, oclass, name, overwrite);
+            if (imports.Any())
+                PackerImporterWindow.Import(imports, true);
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
+    public static void ExtractAndInstallMobys(string destMapName, int destRacVersion, DLMapIds map, int mission, bool overwrite, Dictionary<int, string> classesAndNames)
+    {
+        try
+        {
+            var imports = new List<PackerImporterWindow.PackerAssetImport>();
+            var destMobyFolder = $"{FolderNames.GetMapFolder(destMapName)}/{FolderNames.GetMapMobyFolder(destRacVersion)}";
+
+            // check if there's any work to do first
+            if (!overwrite)
+            {
+                var foundItem = false;
+                foreach (var item in classesAndNames)
+                {
+                    if (!Directory.Exists(Path.Combine(destMobyFolder, item.Key.ToString())))
+                    {
+                        foundItem = true;
+                        break;
+                    }
+                }
+
+                // no work
+                if (!foundItem) return;
+            }
+
+            // unpack level
+            var title = $"Install Mobys";
+            EditorUtility.DisplayProgressBar(title, "Preparing", 0);
+            var forgeSettings = ForgeSettings.Load();
+            var levelFolder = Path.Combine(FolderNames.GetTempFolder(), $"rc4-{(int)map}");
+
+            // reset temp folder
+            if (Directory.Exists(levelFolder)) Directory.Delete(levelFolder, true);
+            Directory.CreateDirectory(levelFolder);
+
+            EditorUtility.DisplayProgressBar(title, $"Extracting {map}", 0.1f);
+            if (PackerHelper.ExtractLevelWads(forgeSettings.PathToCleanDeadlockedIso, levelFolder, (int)map, RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            EditorUtility.DisplayProgressBar(title, $"Unpacking {map}", 0.2f);
+            if (PackerHelper.DecompressAndUnpackLevelWad(Path.Combine(levelFolder, "core_level.wad"), levelFolder) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            EditorUtility.DisplayProgressBar(title, $"Unpacking Sounds {map}", 0.3f);
+            if (PackerHelper.UnpackSounds(Path.Combine(levelFolder, "sound.bnk"), Path.Combine(levelFolder, FolderNames.BinarySoundsFolder), RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            EditorUtility.DisplayProgressBar(title, $"Unpacking Assets {map}", 0.4f);
+            if (PackerHelper.UnpackAssets(levelFolder, Path.Combine(levelFolder, FolderNames.BinaryAssetsFolder), RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            if (mission >= 0)
+            {
+                EditorUtility.DisplayProgressBar(title, $"Unpacking Mission #{mission}", 0.5f);
+                var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
+                PackerHelper.UnpackMission(missionsPath, mission);
+            }
+
+            // import mobys
+            foreach (var item in classesAndNames)
+            {
+                var oclass = item.Key;
+                var name = item.Value;
+
+                // check for overwrite
+                if (!overwrite && Directory.Exists(Path.Combine(destMobyFolder, oclass.ToString())))
+                    continue;
+
+                title = $"Install Moby {oclass}";
+                if (!string.IsNullOrEmpty(name))
+                    title = $"Install Moby {name} ({oclass})";
+
+                // get moby path
+                var mobyAssetPath = Path.Combine(levelFolder, FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(oclass));
+                if (mission >= 0)
+                {
+                    var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
+                    mobyAssetPath = Path.Combine(missionsPath, $"{mission:0000}", FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(oclass));
+                }
+
+                if (!Directory.Exists(mobyAssetPath))
+                {
+                    Debug.LogError($"Unable to find moby class {oclass} in {map} (mission:{mission})");
+                    continue;
+                }
+
+                EditorUtility.DisplayProgressBar(title, $"Preprocessing", 0.7f);
+                PreprocessMoby(imports, levelFolder, mobyAssetPath, oclass, RCVER.DL);
+
+                EditorUtility.DisplayProgressBar(title, $"Importing", 0.9f);
+                ImportMoby(imports, destMobyFolder, mobyAssetPath, oclass, RCVER.DL, true);
+            }
+
+            if (imports.Any())
+                PackerImporterWindow.Import(imports, true);
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
+    public static void ExtractAndInstallMoby(List<PackerImporterWindow.PackerAssetImport> imports, string destMapName, int destRacVersion, DLMapIds map, int mission, int oclass, string name = null, bool overwrite = false)
+    {
+        try
+        {
+            var destMobyFolder = $"{FolderNames.GetMapFolder(destMapName)}/{FolderNames.GetMapMobyFolder(destRacVersion)}";
+            if (!overwrite && Directory.Exists(Path.Combine(destMobyFolder, oclass.ToString())))
+                return;
+
+            var title = $"Install Moby {oclass}";
+            if (!string.IsNullOrEmpty(name))
+                title = $"Install Moby {name} ({oclass})";
+
+            EditorUtility.DisplayProgressBar(title, "Preparing", 0);
+
+            var forgeSettings = ForgeSettings.Load();
+            var levelFolder = Path.Combine(FolderNames.GetTempFolder(), $"rc4-{(int)map}");
+
+            // reset temp folder
+            if (Directory.Exists(levelFolder)) Directory.Delete(levelFolder, true);
+            Directory.CreateDirectory(levelFolder);
+
+            EditorUtility.DisplayProgressBar(title, $"Extracting {map}", 0.1f);
+            if (PackerHelper.ExtractLevelWads(forgeSettings.PathToCleanDeadlockedIso, levelFolder, (int)map, RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            EditorUtility.DisplayProgressBar(title, $"Unpacking {map}", 0.2f);
+            if (PackerHelper.DecompressAndUnpackLevelWad(Path.Combine(levelFolder, "core_level.wad"), levelFolder) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            EditorUtility.DisplayProgressBar(title, $"Unpacking Sounds {map}", 0.3f);
+            if (PackerHelper.UnpackSounds(Path.Combine(levelFolder, "sound.bnk"), Path.Combine(levelFolder, FolderNames.BinarySoundsFolder), RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            EditorUtility.DisplayProgressBar(title, $"Unpacking Assets {map}", 0.4f);
+            if (PackerHelper.UnpackAssets(levelFolder, Path.Combine(levelFolder, FolderNames.BinaryAssetsFolder), RCVER.DL) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                return;
+
+            var mobyAssetPath = Path.Combine(levelFolder, FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(oclass));
+            if (mission >= 0)
+            {
+                EditorUtility.DisplayProgressBar(title, $"Unpacking Mission #{mission}", 0.5f);
+                var missionsPath = Path.Combine(levelFolder, FolderNames.BinaryMissionsFolder);
+                PackerHelper.UnpackMission(missionsPath, mission);
+                mobyAssetPath = Path.Combine(missionsPath, $"{mission:0000}", FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(oclass));
+            }
+
+            if (!Directory.Exists(mobyAssetPath))
+            {
+                Debug.LogError($"Unable to find moby class {oclass} in {map} (mission:{mission})");
+                return;
+            }
+
+            EditorUtility.DisplayProgressBar(title, $"Preprocessing", 0.7f);
+            PreprocessMoby(imports, levelFolder, mobyAssetPath, oclass, RCVER.DL);
+
+            EditorUtility.DisplayProgressBar(title, $"Importing", 0.9f);
+            ImportMoby(imports, destMobyFolder, mobyAssetPath, oclass, RCVER.DL, true);
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
+    private static void ImportMoby(List<PackerImporterWindow.PackerAssetImport> imports, string destMobyFolder, string srcMobyFolder, int oClass, int racVersion, bool overwrite)
+    {
+        // recreate moby asset dir
+        var localMobyAssetDir = Path.Combine(destMobyFolder, oClass.ToString());
+        if (Directory.Exists(localMobyAssetDir))
+        {
+            if (!overwrite) return;
+
+            Directory.Delete(localMobyAssetDir, true);
+        }
+        Directory.CreateDirectory(localMobyAssetDir);
+
+        // import sounds
+        var soundsFolder = Path.Combine(srcMobyFolder, FolderNames.BinarySoundsFolder);
+        if (Directory.Exists(soundsFolder))
+        {
+            var mobyAssetSoundsFolder = Path.Combine(localMobyAssetDir, FolderNames.SoundsFolder);
+            if (!Directory.Exists(mobyAssetSoundsFolder)) Directory.CreateDirectory(mobyAssetSoundsFolder);
+
+            var soundsInFolder = Directory.GetDirectories(soundsFolder);
+            foreach (var soundFolder in soundsInFolder)
+            {
+                var idxStr = Path.GetFileName(soundFolder);
+                if (Directory.Exists(soundFolder))
+                {
+                    PackerHelper.PackSound(soundFolder, Path.Combine(mobyAssetSoundsFolder, $"{idxStr}.sound"));
+                }
+            }
+        }
+
+        // add import
+        imports.Add(new PackerImporterWindow.PackerAssetImport()
+        {
+            AssetFolder = srcMobyFolder,
+            DestinationFolder = localMobyAssetDir,
+            Name = oClass.ToString(),
+            AssetType = FolderNames.MobyFolder,
+            PrependModelNameToTextures = true,
+            RacVersion = racVersion,
+            AdditionalTags = new string[] { Constants.GameAssetTag[racVersion] }
+        });
+    }
+
+    private static void PreprocessMoby(List<PackerImporterWindow.PackerAssetImport> imports, string levelFolder, string srcMobyFolder, int oClass, int racVersion)
+    {
+        var parentMobyDir = Directory.GetParent(srcMobyFolder).FullName;
+
+        // some mobys need to be tweaked before import
+        // swarmers for example store animations in the Orange swarmer
+        // so other swarmers need to be rebuilt with a copy of the Orange swarmer's animations
+        switch (oClass)
+        {
+            // rebuild swarmer animations
+            case 9877:
+            case 9952:
+                {
+                    var orangeSwarmerOClass = 8273;
+                    var orangeSwarmerMobyDir = Path.Combine(parentMobyDir, PackerHelper.GetAssetOClassFolderName(orangeSwarmerOClass));
+                    if (!Directory.Exists(orangeSwarmerMobyDir)) orangeSwarmerMobyDir = Path.Combine(levelFolder, FolderNames.BinaryMobyFolder, PackerHelper.GetAssetOClassFolderName(orangeSwarmerOClass));
+                    if (!Directory.Exists(orangeSwarmerMobyDir))
+                    {
+                        Debug.LogError($"Unable to find required swarmer {orangeSwarmerOClass} in {orangeSwarmerMobyDir}");
+                        return;
+                    }
+
+                    var srcUnpackedDir = Path.Combine(orangeSwarmerMobyDir, "unpacked");
+                    if (PackerHelper.UnpackMobyModel(Path.Combine(orangeSwarmerMobyDir, "moby.bin"), srcUnpackedDir, racVersion) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                        return;
+
+                    var dstUnpackedDir = Path.Combine(srcMobyFolder, "unpacked");
+                    if (PackerHelper.UnpackMobyModel(Path.Combine(srcMobyFolder, "moby.bin"), dstUnpackedDir, racVersion) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                        return;
+
+                    var srcAnimationsDir = Path.Combine(srcUnpackedDir, FolderNames.BinaryMobyAnimationsFolder);
+                    var dstAnimationsDir = Path.Combine(dstUnpackedDir, FolderNames.BinaryMobyAnimationsFolder);
+                    if (Directory.Exists(dstAnimationsDir)) Directory.Delete(dstAnimationsDir, true);
+                    if (!Directory.Exists(srcAnimationsDir))
+                    {
+                        Debug.LogError($"Required swarmer {orangeSwarmerOClass} missing animations");
+                        return;
+                    }
+
+                    IOHelper.CopyDirectory(srcAnimationsDir, dstAnimationsDir);
+                    if (PackerHelper.PackMobyModel(dstUnpackedDir, srcMobyFolder, racVersion) != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
+                        return;
+
+                    var srcSoundsDir = Path.Combine(orangeSwarmerMobyDir, FolderNames.BinarySoundsFolder);
+                    var dstSoundsDir = Path.Combine(srcMobyFolder, FolderNames.BinarySoundsFolder);
+                    if (Directory.Exists(srcSoundsDir))
+                    {
+                        if (Directory.Exists(dstSoundsDir)) Directory.Delete(dstSoundsDir, true);
+                        IOHelper.CopyDirectory(srcSoundsDir, dstSoundsDir);
+                    }
+
+                    break;
+                }
+        }
+    }
+
+    #endregion
+
 }

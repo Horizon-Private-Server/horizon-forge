@@ -74,6 +74,7 @@ struct DropPickupEventArgs
 void dropTick(void);
 void dropInit(void);
 int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int team);
+struct GuberMoby* dropGetGuber(Moby* moby);
 int dropHandleEvent(Moby* moby, GuberEvent* event);
 
 #endif // SURVIVAL_DROP_H

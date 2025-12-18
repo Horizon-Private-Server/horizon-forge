@@ -12,6 +12,7 @@
 #define MYSTERY_BOX_COST                        (10000)
 #define MYSTERY_BOX_COST_PER_VOX                (5000)
 #define MYSTERY_BOX_CYCLE_ITEMS_DURATION        (TIME_SECOND * 3)
+#define MYSTERY_BOX_MAX_LOCATIONS               (32)
 #define PLAYER_MYSTERY_BOX_COOLDOWN_TICKS       (30)
 
 enum MysteryBoxEventType {

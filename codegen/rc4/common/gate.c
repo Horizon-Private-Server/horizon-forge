@@ -191,7 +191,7 @@ int gateCanInteract(Moby* moby, VECTOR point)
 
   // get closest point on gate to point
   float gateLength = pvars->Length;
-  vector_copy(gateTangent, moby->M0_03);
+  vector_normalize(gateTangent, moby->M1_03);
   //vector_scale(gateTangent, gateTangent, 1 / gateLength);
 
   vector_subtract(delta, point, moby->Position);
@@ -220,19 +220,62 @@ void gateHandleInteract(Moby* moby)
   if (pvars->CurrentCost > 0 && moby->State == GATE_STATE_ACTIVATED) {
     for (i = 0; i < GAME_MAX_LOCALS; ++i) {
       Player* lp = playerGetFromSlot(i);
-      if (lp) {
-        
-        // draw help popup
-        if (gateCanInteract(moby, lp->PlayerPosition)) {
+      if (!playerIsValid(lp)) continue;
+      
+      // draw help popup
+      if (gateCanInteract(moby, lp->PlayerPosition)) {
 #if SURVIVAL
-          snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
-          if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE)) {
-            gatePayToken(moby, lp->PlayerId);
-            break;
-          }
-#endif
+        snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
+        if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE)) {
+          gatePayToken(moby, lp->PlayerId);
+          break;
         }
+#endif
       }
+    }
+  }
+}
+
+//--------------------------------------------------------------------------
+void gateResetRandomGate(void)
+{
+  int i = 0;
+  int r = 1 + rand(GATE_MAX_COUNT);
+  int loops = 0;
+  Moby* gateToReset = NULL;
+
+  while (r > 0) {
+    gateToReset = gateMobies[i];
+
+    // skip mobies that are NULL, don't have pvars, or gates that aren't deactivated yet
+    // we only want to reset an open gate
+    if (!gateToReset || !gateToReset->PVar || gateToReset->State != GATE_STATE_DEACTIVATED) {
+      i = (i+1) % GATE_MAX_COUNT;
+
+      // we've looped through the entire list without finding
+      // a gate that we can reset
+      // so stop
+      if (loops == 0 && i == 0) {
+        return;
+      }
+
+      continue;
+    }
+
+    // increment gate index
+    // and decrement random number
+    i = (i+1) % GATE_MAX_COUNT;
+    --r;
+
+    ++loops;
+  }
+  
+  // create event set cost event
+  if (gateToReset) {
+    struct GatePVar* pvars = (struct GatePVar*)gateToReset->PVar;
+    GuberEvent * guberEvent = guberCreateEvent(gateToReset, GATE_EVENT_SET_COST);
+    if (guberEvent) {
+      guberEventWrite(guberEvent, &pvars->InitialCost, 4);
     }
   }
 }

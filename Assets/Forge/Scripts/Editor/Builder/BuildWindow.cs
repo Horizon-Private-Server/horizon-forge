@@ -44,6 +44,7 @@ public class BuildWindow : EditorWindow
     Toggle toggleRebuildMobys;
     Toggle toggleRebuildCuboidsSplinesAreas;
     Toggle toggleRebuildLighting;
+    Toggle toggleRebuildSprites;
     Toggle toggleRebuildDZO;
 
     // pack
@@ -109,7 +110,8 @@ public class BuildWindow : EditorWindow
         CreateGUI_Toggle(ref toggleRebuildTfrags, "Tfrags", true);
         CreateGUI_Toggle(ref toggleRebuildTies, "Ties", true);
         CreateGUI_Toggle(ref toggleRebuildLighting, "World Lighting", true);
-
+        CreateGUI_Toggle(ref toggleRebuildSprites, "Sprites", true);
+        
         root.Add(dropdownBuildCode);
         root.Add(toggleRebuildCollision);
         root.Add(toggleRebuildCuboidsSplinesAreas);
@@ -119,6 +121,7 @@ public class BuildWindow : EditorWindow
         root.Add(toggleRebuildTfrags);
         root.Add(toggleRebuildTies);
         root.Add(toggleRebuildLighting);
+        root.Add(toggleRebuildSprites);
     }
 
     void CreateGUI_Pack(VisualElement root)
@@ -230,7 +233,7 @@ public class BuildWindow : EditorWindow
 
     async Task<bool> RebuildLevel(UnityEngine.SceneManagement.Scene scene, ForgeBuildTargets buildTargets)
     {
-        if (scene == null) return false;
+        if (scene == null || !scene.isLoaded) return false;
 
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         if (!mapConfig)
@@ -239,6 +242,7 @@ public class BuildWindow : EditorWindow
             return false;
         }
 
+        var forceRebuildAll = false;
         var buildBothRC3Regions = buildTargets.HasFlag(ForgeBuildTargets.UYA_NTSC) && buildTargets.HasFlag(ForgeBuildTargets.RAC3_PAL);
 
         // build dzo first
@@ -270,16 +274,30 @@ public class BuildWindow : EditorWindow
             // validate level folder
             if (!Directory.Exists(binFolder))
             {
-                EditorUtility.DisplayDialog($"Cannot build (rc{racVersion} {region})", $"Scene does not have matching level folder \"{scene.name}\"", "Ok");
-                return false;
+                // prompt user to import base maps again
+                var baseMapsStr = (mapConfig.HasDeadlockedBaseMap() ? $"dl:{mapConfig.DLBaseMap} " : string.Empty) + (mapConfig.HasUYABaseMap() ? $"uya:{mapConfig.UYABaseMap}" : string.Empty);
+                if (!EditorUtility.DisplayDialog($"Cannot build (rc{racVersion} {region})", $"Scene does not have matching level folder \"{scene.name}\".\n\nWould you like to rebuild the missing level folder from the base map ({baseMapsStr.Trim()})?", "Continue", "Cancel"))
+                    return false;
+
+                // extract base map(s) into level folder
+                LevelImporterWindow importerWindow = new LevelImporterWindow();
+                if (mapConfig.HasDeadlockedBaseMap())
+                    importerWindow.ReimportBaseMap(mapConfig, (int)mapConfig.DLBaseMap, RCVER.DL);
+                if (mapConfig.HasUYABaseMap())
+                    importerWindow.ReimportBaseMap(mapConfig, (int)mapConfig.UYABaseMap, RCVER.UYA);
+
+                // we have to do a full rebuild to write back the custom level data
+                forceRebuildAll = true;
+                //return false;
             }
 
-            if (!scene.isLoaded || !mapConfig)
-                return false;
+            // validate build dir
+            var buildPath = FolderNames.GetMapBuildFolder(scene.name, racVersion);
+            if (!Directory.Exists(buildPath)) Directory.CreateDirectory(buildPath);
 
+            var state = new BuildState(scene.name, racVersion, region);
             try
             {
-                var state = new BuildState(scene.name, racVersion, region);
                 var ctx = new ForgeBuilder.RebuildContext()
                 {
                     MapSceneName = scene.name,
@@ -301,7 +319,7 @@ public class BuildWindow : EditorWindow
                 state.MobyOClasses.AddRange(mobysToExport);
 
                 // pass to build hook
-                IBuildHook.Run(state);
+                IBuildHook.Run(state, BuildStateStage.BeforeBuild);
 
                 // PAL is always built after NTSC
                 // PAL only needs to be rebuilt with new PAL code segment
@@ -309,41 +327,49 @@ public class BuildWindow : EditorWindow
                 if (region == GameRegion.PAL && buildBothRC3Regions)
                 {
                     // we need to rebuild code if PAL otherwise we 
-                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: forceRebuildAll || dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
                 }
                 else
                 {
-                    if (toggleRebuildCollision.value) await ForgeBuilder.RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildTfrags.value) ForgeBuilder.RebuildTfrags(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildTies.value) ForgeBuilder.RebuildTies(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildTies.value) ForgeBuilder.RebuildTieInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildShrubs.value) await ForgeBuilder.RebuildShrubs(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildShrubs.value) ForgeBuilder.RebuildShrubInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobys(ctx, resourcesFolder, binFolder, state.MobyOClasses); if (ctx.Cancel) return false;
-                    if (toggleRebuildMobys.value) ForgeBuilder.RebuildMobyInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildCuboids(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildSplines(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildCameras(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAmbientSounds(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAreas(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-                    if (toggleRebuildLighting.value) ForgeBuilder.RebuildWorldLighting(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
-
                     // always rebuild code
                     // to account for NTSC/PAL using different code segments
                     // we must always keep the build folder's code up-to-date
-                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
+                    await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: forceRebuildAll || dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
+
+                    if (forceRebuildAll || toggleRebuildCollision.value) await ForgeBuilder.RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildTfrags.value) ForgeBuilder.RebuildTfrags(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildTies.value) ForgeBuilder.RebuildTies(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildTies.value) ForgeBuilder.RebuildTieInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildShrubs.value) await ForgeBuilder.RebuildShrubs(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildShrubs.value) ForgeBuilder.RebuildShrubInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildMobys.value) ForgeBuilder.RebuildMobys(ctx, resourcesFolder, binFolder, state.MobyOClasses); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildMobys.value) ForgeBuilder.RebuildMobyInstances(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildCuboids(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildSplines(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildCameras(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAmbientSounds(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildCuboidsSplinesAreas.value) ForgeBuilder.RebuildAreas(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildLighting.value) ForgeBuilder.RebuildWorldLighting(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    if (forceRebuildAll || toggleRebuildSprites.value) ForgeBuilder.RebuildSprites(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                 }
 
                 EditorUtility.ClearProgressBar();
                 EditorUtility.DisplayProgressBar($"Rebuilding Level (rc{racVersion} {region})", "Packing", 0);
 
+                // pass to build hook
+                IBuildHook.Run(state, BuildStateStage.AfterBuild);
+
                 PackerHelper.PACKER_PACK_OPS packOps = PackerHelper.PACKER_PACK_OPS.PACK_CODE;
-                if (togglePackOcclusion.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_OCCLUSION;
-                if (togglePackWorldInstances.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_WORLD_INSTANCES;
-                if (togglePackAssets.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_ASSETS;
-                if (togglePackGameplay.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_GAMEPLAY;
-                if (togglePackLevel.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_LEVEL_WAD;
-                if (togglePackSound.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_SOUND_WAD;
+                if (forceRebuildAll || togglePackOcclusion.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_OCCLUSION;
+                if (forceRebuildAll || togglePackWorldInstances.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_WORLD_INSTANCES;
+                if (forceRebuildAll || togglePackAssets.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_ASSETS;
+                if (forceRebuildAll || togglePackGameplay.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_GAMEPLAY;
+                if (forceRebuildAll || toggleRebuildSprites.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_SPRITES;
+                if (forceRebuildAll || togglePackLevel.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_LEVEL_WAD;
+                if (forceRebuildAll || togglePackSound.value) packOps |= PackerHelper.PACKER_PACK_OPS.PACK_SOUND_WAD;
+
+                // pass to build hook
+                IBuildHook.Run(state, BuildStateStage.AfterPack);
 
                 var result = PackerHelper.Pack(binFolder, baseMap, racVersion, packOps, (p) => EditorUtility.DisplayProgressBar($"Rebuilding Level (rc{racVersion} {region})", "Packing", p));
                 if (result != PackerHelper.PACKER_STATUS_CODES.SUCCESS)
@@ -366,6 +392,9 @@ public class BuildWindow : EditorWindow
             {
                 // cleanup generators
                 UnityHelper.RunGeneratorsPostBake(BakeType.BUILD);
+
+                // pass to build hook
+                IBuildHook.Run(state, BuildStateStage.Cleanup);
 
                 EditorUtility.ClearProgressBar();
             }

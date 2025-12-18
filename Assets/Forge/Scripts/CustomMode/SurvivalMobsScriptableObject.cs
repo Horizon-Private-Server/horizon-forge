@@ -17,9 +17,13 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     private const int BASE_SPEED = 3;
     private const int BASE_HEALTH = 30;
 
-    public List<SurvivalMobsConfig> Mobs;
-
-
+    public List<SurvivalMobsConfig> Mobs = new List<SurvivalMobsConfig>();
+    public List<SurvivalPatch> Patches = new List<SurvivalPatch>();
+    public List<SurvivalWeaponStats> WeaponStats = new List<SurvivalWeaponStats>();
+    public List<SpriteDef> SurvivalMysteryBoxSprites = new List<SpriteDef>();
+    public List<SpriteDef> SurvivalStackableSprites = new List<SpriteDef>();
+    public List<SpriteDef> SurvivalBlessingSprites = new List<SpriteDef>();
+    
     [Serializable]
     public class SurvivalMobsConfig
     {
@@ -28,6 +32,10 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public SurvivalMobStatIds StatId = SurvivalMobStatIds.None;
         public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
         public List<string> Behaviors = new List<string>();
+
+        [ColorUsage(false)] public Color BaseColor = new Color(0.25f, 0.25f, 0.25f);
+        [ColorUsage(false)] public Color GlowColor = new Color(0.5f, 0.5f, 0.5f);
+        [ColorUsage(false)] public Color SpriteColor = new Color(0.5f, 0.5f, 0.5f);
 
         public int Xp = BASE_XP;
         public int Bolts = BASE_BOLTS;
@@ -46,11 +54,13 @@ public class SurvivalMobsScriptableObject : ScriptableObject
 
         public float TurnSpeed = 1;
         public float AttackRadius = 5;
+        public float RangedAttackDistance = 50;
         public float HitRadius = 0.5f;
         public float CollRadius = 0.5f;
 
         public float ReactionDelaySeconds = 0.25f;
         public float AttackCooldownSeconds = 2;
+        public float DamageCooldownSeconds = 0;
     }
 
     [Serializable]
@@ -59,6 +69,11 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public string Name;
         public int OClass;
         public SurvivalMobBangle Bangles;
+        public Texture2D SpriteTexture;
+        public Color SpriteTextureTint = Color.white;
+        public Texture2D BossTexture;
+        public Color BossTextureTint = Color.white;
+        public ushort ExistingBossSpriteUid;
         public List<SurvivalMobDependency> Dependencies = new List<SurvivalMobDependency>();
 
         public SurvivalMobVariant() { }
@@ -81,6 +96,26 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public int OClass;
         public DLMapIds SourceMapId;
         public int SourceMissionId;
+    }
+
+    [Serializable]
+    public class SurvivalPatch
+    {
+        public string Name;
+        public bool Disabled;
+        public int CodeSegIndex;
+        public string CodeSegOffsetHex;
+        public string Hex;
+    }
+
+    [Serializable]
+    public class SurvivalWeaponStats
+    {
+        public string Name;
+        public DLGadgetIds Gadget;
+        public int BaseAmmo = 16;
+        public int AmmoModAmount = 5;
+        public List<Vector4> Damages = new List<Vector4>();
     }
 
     public static SurvivalMobsScriptableObject Load()

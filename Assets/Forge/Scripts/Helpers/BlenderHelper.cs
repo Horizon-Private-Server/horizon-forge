@@ -52,7 +52,7 @@ public static class BlenderHelper
 
         var success = false;
         var p = new System.Diagnostics.Process() { StartInfo = startInfo };
-        p.OutputDataReceived += (s, e) => { sbOut.Append(e.Data); if (e.Data?.Trim() == "FORGE SCRIPT COMPLETE") success = true; };
+        p.OutputDataReceived += (s, e) => { sbOut.Append(e.Data); if (e.Data?.Contains("FORGE SCRIPT COMPLETE") == true) success = true; };
         p.ErrorDataReceived += (s, e) => { sbError.Append(e.Data); };
         p.Start();
         p.BeginOutputReadLine();

@@ -26,8 +26,10 @@ public class TfragManipulator : MonoBehaviour, IBuildHook
     private Matrix4x4 _lastTRS;
 
     // make sure tfrag chunks are up to date on build
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
     {
+        if (stage != BuildStateStage.BeforeBuild) return;
+
         Register();
     }
 

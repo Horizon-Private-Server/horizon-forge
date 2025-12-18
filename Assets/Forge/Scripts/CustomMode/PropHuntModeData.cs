@@ -60,8 +60,10 @@ public class PropHuntModeData : CustomModeData, IBuildHook, ICodeGen
     [HelpBox(MOBY_HELP_TEXT, MessageType.Info, false)]
     public int PropMobyHelp = 0;
 
-    public void Configure(BuildState state)
+    public void Configure(BuildState state, BuildStateStage stage)
     {
+        if (stage != BuildStateStage.BeforeBuild) return;
+
         var mapConfig = FindObjectOfType<MapConfig>();
         var mobys = mapConfig.GetMobys(RCVER.DL);
 

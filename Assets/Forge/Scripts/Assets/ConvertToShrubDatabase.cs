@@ -314,8 +314,10 @@ public class ConvertToShrubDatabase : ScriptableObject
                     var tint = matData.TintColor * mat.color;
                     if (matData.CorrectForAlphaBloom)
                         tint.a *= 0.5f;
+                    if (matData.RemoveAlpha)
+                        tint.a = 0.5f;
 
-                    UnityHelper.SaveTexture(tex, texPath, tint: tint);
+                    UnityHelper.SaveTexture(tex, texPath, tint: tint, hasAlpha: !matData.RemoveAlpha);
                     textures.Add(tex);
 
                     // reconfigure texture size per tex
@@ -604,7 +606,7 @@ public class ConvertToShrubDatabase : ScriptableObject
                 {
                     foreach (var mat in data.Materials)
                     {
-                        hash.Append($"{mat.Name}-{mat.CorrectForAlphaBloom}-{mat.TintColor}-{(int)mat.MaxTextureSize}");
+                        hash.Append($"{mat.Name}-{mat.CorrectForAlphaBloom}-{mat.RemoveAlpha}-{mat.TintColor}-{(int)mat.MaxTextureSize}");
                         if (mat.TextureOverride)
                             hash.Append(mat.TextureOverride.imageContentsHash.ToString());
                     }
@@ -639,6 +641,7 @@ public class ConvertToShrubMaterialData
     public TextureSize MaxTextureSize = TextureSize._128;
     public Color TintColor = Color.white;
     public bool CorrectForAlphaBloom = true;
+    public bool RemoveAlpha = false;
     public Texture2D TextureOverride;
 }
 

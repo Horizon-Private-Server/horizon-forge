@@ -45,6 +45,10 @@ int MysteryBoxItemCounts[MYSTERY_BOX_ITEM_COUNT];
 int MysteryBoxTotalRolls = 0;
 #endif
 
+VECTOR MysteryBoxPositions[MYSTERY_BOX_MAX_LOCATIONS];
+VECTOR MysteryBoxRotations[MYSTERY_BOX_MAX_LOCATIONS];
+int MysteryBoxLocationCount = 0;
+
 char* ITEM_NAMES[] = {
   [MYSTERY_BOX_ITEM_RESET_GATE] "",
   [MYSTERY_BOX_ITEM_TEDDY_BEAR] "",
@@ -337,26 +341,12 @@ void mboxGetRandomRespawn(int random, VECTOR outPos, VECTOR outRot)
 {
   int i;
 
-  // find next spawn point
-  if (MapConfig.BakedConfig) {
-    int foundSpot = 1;
-    int r = 1 + (random % BAKED_SPAWNPOINT_COUNT);
-    while (foundSpot) {
-      foundSpot = 0;
-      for (i = 0; i < BAKED_SPAWNPOINT_COUNT; ++i) {
-        if (MapConfig.BakedConfig->BakedSpawnPoints[i].Type == BAKED_SPAWNPOINT_MYSTERY_BOX) {
-          --r;
-          foundSpot = 1;
-          if (!r) {
-            memcpy(outPos, MapConfig.BakedConfig->BakedSpawnPoints[i].Position, 12);
-            memcpy(outRot, MapConfig.BakedConfig->BakedSpawnPoints[i].Rotation, 12);
-            foundSpot = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
+  if (!MysteryBoxLocationCount) return;
+
+  // get random index into locations
+  int r = random % MysteryBoxLocationCount;
+  vector_copy(outPos, MysteryBoxPositions[r]);
+  vector_copy(outRot, MysteryBoxRotations[r]);
 }
 
 //--------------------------------------------------------------------------
@@ -679,7 +669,7 @@ void mboxUpdate(Moby* moby)
     }
     case MYSTERY_BOX_STATE_IDLE:
     {
-      moby->DrawDist = 64;
+      moby->ModeBits &= ~MOBY_MODE_BIT_DISABLED;
       moby->CollActive = 0;
 
       // find local players to activate
@@ -696,7 +686,7 @@ void mboxUpdate(Moby* moby)
     }
     case MYSTERY_BOX_STATE_HIDDEN:
     {
-      moby->DrawDist = 0;
+      moby->ModeBits |= MOBY_MODE_BIT_DISABLED;
       moby->CollActive = -1;
 
       if (MapConfig.State && (MysteryBoxRespawnImmediately || MapConfig.State->RoundNumber != pvars->RoundHidden)) {
@@ -1016,11 +1006,28 @@ void mboxInit(void)
   // set vtable callbacks
   u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
-    *(u32*)(mobyFunctionsPtr + 0x04) = (u32)&mboxGetGuber;
-    *(u32*)(mobyFunctionsPtr + 0x14) = (u32)&mboxHandleEvent;
+    mapInstallMobyFunctions(mobyFunctionsPtr);
     DPRINTF("MBOX oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
   }
   mobyDestroy(temp);
+
+  // collect mbox locations by finding and destroying all placed mobies
+  Moby* moby = mobyListGetStart();
+  MysteryBoxLocationCount = 0;
+	while ((moby = mobyFindNextByOClass(moby, MYSTERY_BOX_OCLASS)))
+	{
+		if (!mobyIsDestroyed(moby)) {
+      if (MysteryBoxLocationCount < MYSTERY_BOX_MAX_LOCATIONS) {
+        vector_copy(MysteryBoxPositions[MysteryBoxLocationCount], moby->Position);
+        vector_copy(MysteryBoxRotations[MysteryBoxLocationCount], moby->Rotation);
+        MysteryBoxLocationCount++;
+      }
+
+      mobyDestroy(moby); // destroy
+    }
+
+		++moby;
+	}
 
 #if DEBUGMBOX
   memset(MysteryBoxItemCounts, 0, sizeof(MysteryBoxItemCounts));

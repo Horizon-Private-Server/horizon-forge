@@ -9,7 +9,6 @@
 #include <libdl/sound.h>
 #include "zombie.h"
 #include "executioner.h"
-#include "executioner2.h"
 #include "reactor.h"
 #include "tremor.h"
 #include "swarmer.h"
@@ -70,6 +69,8 @@ struct MobStateUpdateEventArgs;
 typedef void (*MobGenericCallback_func)(Moby* moby);
 typedef Moby* (*MobGetNextTarget_func)(Moby* moby);
 typedef int (*MobGetPreferredAction_func)(Moby* moby, int * delayTicks);
+typedef int (*MobGetExtraDataSize_func)(int spawnParamsIdx);
+typedef void (*MobOnSpawning_func)(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 typedef void (*MobOnSpawn_func)(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 typedef void (*MobOnDestroy_func)(Moby* moby, int killedByPlayerId, int weaponId);
 typedef void (*MobOnDamage_func)(Moby* moby, struct MobDamageEventArgs* e);
@@ -89,6 +90,8 @@ struct MobVTable {
   MobGenericCallback_func PostUpdate;
   MobGenericCallback_func PostDraw;
   MobGenericCallback_func Move;
+  MobGetExtraDataSize_func GetExtraDataSize;
+  MobOnSpawning_func OnSpawning;
   MobOnSpawn_func OnSpawn;
   MobOnDestroy_func OnDestroy;
   MobOnDamage_func OnDamage;
@@ -123,14 +126,15 @@ struct MobConfig {
   float CollRadius;
   u16 Bangles;
   u16 Xp;
+  u16 DamageCooldownTickCount;
   u8 ReactionTickCount;
   u8 AttackCooldownTickCount;
   char MobAttribute;
+  char Behavior;
   char SharedXp;
 };
 
 struct MobSpawnParams {
-  MapOnMobCreate_func MobCreate;
   struct MobVTable* MobVTable;
   int RenderCost;
   float Scale;
@@ -141,6 +145,12 @@ struct MobSpawnParams {
   int CooldownTicks;
   float CooldownOffsetPerRoundFactor; // 0 is unchanged, -1 is -1 tick per round, +1 is +1 tick per round
   float Probability;
+  float RangedAttackDistance;
+  u32 BaseColor;
+  u32 GlowColor;
+  u32 SpriteColor;
+  int SpriteTexId;
+  int BossTexUid;
   enum MobSpawnType SpawnType;
   enum MobStatId StatId;
   char Name[32];
@@ -222,6 +232,7 @@ struct MobVars {
   u16 MovingTicks;
   u16 CurrentActionForTicks;
   u16 TimeLastGroundedTicks;
+  u16 LocalPlayerDamageHitInvTimer[GAME_MAX_LOCALS];
   u8 ActionId;
   u8 LastActionId;
   u8 SlowTicks;
@@ -349,8 +360,10 @@ struct MobSpawnEventArgs
   u16 SpeedEighths;
   u16 Damage;
   u16 Xp;
+  u16 DamageCooldownTickCount;
   char MobType;
   char MobAttribute;
+  char Behavior;
   u8 SpawnParamsIdx;
   u8 AttackRadiusEighths;
   u8 HitRadiusEighths;
@@ -378,8 +391,5 @@ int mobHandleEvent(Moby* moby, GuberEvent* event);
 int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 void mobInitialize(void);
 void mobTick(void);
-
-extern int russianDollSpawnParamIdxs[];
-extern const int russianDollSpawnParamIdxsCount;
 
 #endif // SURVIVAL_MOB_H

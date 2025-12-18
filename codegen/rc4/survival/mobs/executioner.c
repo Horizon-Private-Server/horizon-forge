@@ -17,6 +17,8 @@ void executionerPreUpdate(Moby* moby);
 void executionerPostUpdate(Moby* moby);
 void executionerPostDraw(Moby* moby);
 void executionerMove(Moby* moby);
+int executionerGetExtraDataSize(int spawnParamsIdx);
+void executionerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void executionerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void executionerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -41,6 +43,8 @@ struct MobVTable ExecutionerVTable = {
   .PostUpdate = &executionerPostUpdate,
   .PostDraw = &executionerPostDraw,
   .Move = &executionerMove,
+  .GetExtraDataSize = &executionerGetExtraDataSize,
+  .OnSpawning = &executionerOnSpawning,
   .OnSpawn = &executionerOnSpawn,
   .OnDestroy = &executionerOnDestroy,
   .OnDamage = &executionerOnDamage,
@@ -58,39 +62,6 @@ struct MobVTable ExecutionerVTable = {
 };
 
 //--------------------------------------------------------------------------
-int executionerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void executionerPreUpdate(Moby* moby)
 {
   int i;
@@ -102,7 +73,7 @@ void executionerPreUpdate(Moby* moby)
   
   // decrement tickers regardless of frozen state
   for (i = 0; i < GAME_MAX_LOCALS; ++i)
-    decTimerU8(&executionerVars->LocalPlayerDamageHitInvTimer[i]);
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
 
   if (mobIsFrozen(moby))
     return;
@@ -150,8 +121,8 @@ void executionerPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = EXECUTIONER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 2.6, color, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -171,30 +142,38 @@ void executionerMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int executionerGetExtraDataSize(int spawnParamsIdx)
+{
+  return sizeof(ExecutionerMobVars_t);
+}
+
+//--------------------------------------------------------------------------
+void executionerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
+}
+
+//--------------------------------------------------------------------------
 void executionerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  memset(pvars->AdditionalMobVarsPtr, 0, sizeof(ExecutionerMobVars_t));
   float scale = mobGetScaleMultiplier(moby);
 
   // set scale
   moby->Scale = 0.35 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = EXECUTIONER_GLOW_COLOR;
-	moby->PrimaryColor = EXECUTIONER_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 1.5 + (scale * 0.5);
-  pvars->MobVars.BlipType = 6;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, EXECUTIONER_ACTION_BIG_FLINCH);
-  }
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
@@ -210,7 +189,7 @@ void executionerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = EXECUTIONER_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // spawn explosion
   u32 expColor = 0x801E70D6;
@@ -291,17 +270,16 @@ void executionerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int executionerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // we want to give each local player a cooldown on damage they can apply to reactor
+  // we want to give each local player a cooldown on damage they can apply to executioner
   if (!e->PlayerDamager) return 1;
   if (!e->PlayerDamager->IsLocal) return 1;
 
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  ExecutionerMobVars_t* executionerVars = (ExecutionerMobVars_t*)pvars->AdditionalMobVarsPtr;
 
   // only accept local damage when timer is 0
-  int timer = executionerVars->LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
   if (timer == 0) {
-    executionerVars->LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = EXECUTIONER_HIT_INV_TICKS;
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
     return 1;
   }
 
@@ -361,19 +339,93 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
 		vector_subtract(t, t, moby->Position);
 		float distSqr = vector_sqrmag(t);
 		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+    float rangedAttackRadiusSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
+    int preferredRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_RANGED;
+    int canRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_NORMAL || preferredRanged;
 
-		if (distSqr <= attackRadiusSqr) {
-			if (executionerCanAttack(pvars) && distSqr > (EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS*EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS)) {
-        if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return EXECUTIONER_ACTION_ATTACK;
+    if (1) {
+      if (distSqr <= attackRadiusSqr) {
+        // near target, swing
+        if (executionerCanAttack(pvars) && distSqr > (EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS*EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS)) {
+          if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
+          return EXECUTIONER_ACTION_ATTACK;
+        }
+        return EXECUTIONER_ACTION_WALK;
+      } else if (!preferredRanged && distSqr <= (attackRadiusSqr*4) && rand(101)) {
+        // chase most of the time, sometimes defer to ranged attack
+        return EXECUTIONER_ACTION_WALK;
+      } else if (canRanged && distSqr <= rangedAttackRadiusSqr && mobCanSeeMoby(moby, target)) {
+        // away from target
+        // check if facing
+        // and fire
+        t[2] = 0;
+        float theta = acosf(vector_innerproduct(t, moby->M0_03));
+        if (fabsf(theta) < (30 * MATH_DEG2RAD))
+          return EXECUTIONER_ACTION_FIRE;
       }
-			return EXECUTIONER_ACTION_WALK;
-		} else {
-			return EXECUTIONER_ACTION_WALK;
-		}
+    }
+
+    return EXECUTIONER_ACTION_WALK;
 	}
 	
 	return EXECUTIONER_ACTION_IDLE;
+}
+
+//--------------------------------------------------------------------------
+Moby* executionerFireShot(Moby* moby, Moby* target)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  int jointId = EXECUTIONER_SUBSKELETON_JOINT_STAFF_END;
+
+  VECTOR from, to={0,0,1,0}, dir, vel, offset;
+  MATRIX m;
+  mobyGetJointMatrix(moby, jointId, m);
+  vector_copy(from, &m[12]);
+  vector_copy(vel, &m[0]);
+  
+  // move shot from forward
+  //vector_scale(offset, &m[0], 0.15);
+  //vector_add(from, from, offset);
+
+  if (target) {
+
+    // determine if we should shoot directly towards target
+    vector_subtract(dir, target->Position, moby->Position);
+    vector_normalize(dir, dir);
+    VECTOR planarForward;
+    vector_projectonplane(planarForward, dir, moby->M2_03);
+    float angle = acosf(vector_innerproduct(planarForward, moby->M0_03));
+    if (angle < (1*MATH_DEG2RAD)) {
+      mobGetTargetCenter(target, to);
+      vector_subtract(vel, to, from);
+      vector_normalize(vel, vel);
+    } else {
+      vector_subtract(dir, dir, planarForward);
+      vector_projectonplane(vel, vel, moby->M2_03);
+      vector_normalize(vel, vel);
+      vector_add(vel, vel, dir);
+    }
+  }
+
+  vector_scale(vel, vel, 0.5);
+
+  // fire shot
+  float rangedAttack = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
+  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4, pvars->MobVars.Config.Damage, from, vel, moby, 1, 0x222124, -1, 0);
+  if (shotMoby) {
+    ((void (*)(Moby*, int))0x0045d758)(shotMoby, 2); // shot type
+    ((void (*)(Moby*, int))0x0045d788)(shotMoby, TEAM_RED); // shot color
+    ((void (*)(Moby*, int))0x0045d7A8)(shotMoby, 1); // hit flag
+    ((void (*)(Moby*, int))0x0045d798)(shotMoby, 2*TPS + (int)rangedAttack); // shot life (ticks)
+    shotMoby->Bolts = -1; // indicate to gamemode shot can damage player
+    shotMoby->PParent = moby;
+  }
+
+  // spawn flare
+  //((void (*)(float, float, float, Moby*, int, int, int))0x0042c178)(0.75, 0.75, 1.0, moby, 0, 0, jointId);
+  
+  // play sound
+  //mobyPlaySoundByClass(1, 0, moby, MOBY_ID_LANDSTALKER);
 }
 
 //--------------------------------------------------------------------------
@@ -381,6 +433,7 @@ void executionerDoAction(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 	Moby* target = pvars->MobVars.Target;
+  ExecutionerMobVars_t* executionerVars = (ExecutionerMobVars_t*)pvars->AdditionalMobVarsPtr;
 	VECTOR t, t2;
   float difficulty = 1;
   float turnSpeed = pvars->MobVars.MoveVars.Grounded ? EXECUTIONER_TURN_RADIANS_PER_SEC : EXECUTIONER_TURN_AIR_RADIANS_PER_SEC;
@@ -474,6 +527,7 @@ void executionerDoAction(Moby* moby)
 
       if (!isInAirFromFlinching) {
         if (target) {
+
           float dir = mobGetCurrentWalkAngle(moby);
 
           // determine next position
@@ -482,13 +536,18 @@ void executionerDoAction(Moby* moby)
           float dist = vector_length(t);
 
           // walk backwards if too close
-          if (dist < EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS) {
+          if (dist < (EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS + pvars->MobVars.Config.CollRadius)) {
             walkBackwards = 1;
+            
+            if (dist < 0.1) {
+              vector_fromyaw(t, moby->Rotation[2]);
+            } else {
+              vector_normalize(t, t);
+            }
 
-            vector_normalize(t, t);
             vector_scale(t, t, 5);
-            vector_subtract(t, target->Position, t);
-            mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
+            vector_subtract(t, moby->Position, t);
+            mobGetVelocityToTargetSimple(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, t, pvars->MobVars.Config.Speed, acceleration);
             DPRINTF("%f\n", vector_length(pvars->MobVars.MoveVars.Velocity));
           }
           else if (dist > (pvars->MobVars.Config.AttackRadius - pvars->MobVars.Config.HitRadius)) {
@@ -496,6 +555,7 @@ void executionerDoAction(Moby* moby)
             if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
               pvars->MobVars.Dirty = 1; // new path, sync with other clients
             mobMoveTowards(moby, t, pvars->MobVars.Config.Speed, turnSpeed, acceleration, dir);
+
           } else {
             mobStand(moby);
           }
@@ -564,6 +624,25 @@ void executionerDoAction(Moby* moby)
 			}
 			break;
 		}
+    case EXECUTIONER_ACTION_FIRE:
+    {
+      int animId = EXECUTIONER_ANIM_FIRE;
+
+      if (!isInAirFromFlinching) {
+        mobStand(moby);
+        if (target) {
+          mobTurnTowards(moby, target->Position, turnSpeed*0.5);
+
+          if (moby->AnimSeqId == animId && moby->AnimSeqT >= 31.5 && moby->AnimSeqT < 33 && executionerVars->AnimationLoopLastFire != pvars->MobVars.AnimationLooped) {
+            executionerFireShot(moby, target);
+            executionerVars->AnimationLoopLastFire = pvars->MobVars.AnimationLooped;
+          }
+        }
+      }
+
+      mobTransAnim(moby, animId, 0);
+      break;
+    }
 	}
 
   pvars->MobVars.CurrentActionForTicks ++;
@@ -579,6 +658,7 @@ void executionerDoDamage(Moby* moby, float radius, float amount, int damageFlags
 void executionerForceLocalAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  ExecutionerMobVars_t* executionerVars = (ExecutionerMobVars_t*)pvars->AdditionalMobVarsPtr;
   float difficulty = 1;
 
   if (MapConfig.State)
@@ -619,6 +699,12 @@ void executionerForceLocalAction(Moby* moby, int action)
 			
 			break;
 		}
+    case EXECUTIONER_ACTION_FIRE:
+    {
+      executionerVars->AnimationLoopLastFire = -1;
+			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+      break;
+    }
 		case EXECUTIONER_ACTION_ATTACK:
 		{
 			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
@@ -664,7 +750,13 @@ short executionerGetArmor(Moby* moby)
 int executionerIsAttacking(Moby* moby)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == EXECUTIONER_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
+
+  switch (pvars->MobVars.Action)
+  {
+    case EXECUTIONER_ACTION_FIRE: return !pvars->MobVars.AnimationLooped;
+    case EXECUTIONER_ACTION_ATTACK: return !pvars->MobVars.AnimationLooped;
+    default: return 0;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -679,8 +771,11 @@ int executionerCanNonOwnerTransitionToAction(Moby* moby, int action)
 //--------------------------------------------------------------------------
 int executionerShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
   // only send state updates at regular intervals, unless dying
   if (action == EXECUTIONER_ACTION_DIE) return 1;
+  if (pvars->MobVars.Action == EXECUTIONER_ACTION_FIRE || action == EXECUTIONER_ACTION_FIRE) return 1;
 
   return 0;
 }

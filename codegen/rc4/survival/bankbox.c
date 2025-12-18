@@ -35,34 +35,42 @@
 #include "maputils.h"
 
 //--------------------------------------------------------------------------
-int bboxCreate(VECTOR position, VECTOR rotation)
+void bboxUpdate(Moby* moby)
 {
-  Moby* moby = mobySpawn(BANK_BOX_OCLASS, sizeof(struct BankBoxPVar));
-  if (!moby) return 0;
-
-  struct BankBoxPVar* pvars = (struct BankBoxPVar*)moby->PVar;
-  if (!pvars)
-    return 0;
-  
-  vector_copy(moby->Position, position);
-  vector_copy(moby->Rotation, rotation);
-
-	// set update
-	moby->PUpdate = NULL;
-  moby->DrawDist = 0x40;
-  moby->UpdateDist = 0x40;
-  moby->ModeBits = 0x40;
-  moby->Scale = 0.08;
-
   // update mode reference
-  if (MapConfig.State) MapConfig.State->Bankbox = moby;
-
-  DPRINTF("bbox spawned %08X\n", (u32)moby);
-  return 1;
+  if (MapConfig.State) {
+    MapConfig.State->Bankbox = moby;
+  }
 }
 
 //--------------------------------------------------------------------------
 void bboxInit(void)
 {
+  Moby* temp = mobySpawn(BANK_BOX_OCLASS, 0);
+  if (!temp)
+    return;
+
+  // set vtable callbacks
+  MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
+  if (mobyFunctionsPtr) {
+    mapInstallMobyFunctions(mobyFunctionsPtr);
+    DPRINTF("BANKBOX oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+  }
+  mobyDestroy(temp);
   
+  // create gubers for bank boxes
+  Moby* moby = mobyListGetStart();
+	while ((moby = mobyFindNextByOClass(moby, BANK_BOX_OCLASS)))
+	{
+		if (!mobyIsDestroyed(moby) && moby->PVar) {
+      struct Guber* guber = guberGetOrCreateObjectByMoby(moby, -1, 1);
+      DPRINTF("found bank box %08X %08X\n", (u32)moby, (u32)guber);
+      if (guber) {
+        moby->PUpdate = &bboxUpdate;
+        moby->ModeBits = 0x40;
+      }
+    }
+
+		++moby;
+	}
 }

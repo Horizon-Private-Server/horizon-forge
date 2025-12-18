@@ -164,6 +164,15 @@ int bakedSpawnGetFirst(int bakedSpawnType, VECTOR outPos, VECTOR outRot) {
 }
 
 //--------------------------------------------------------------------------
+int localPlayerHasInput(void)
+{
+  Player* localPlayer = playerGetFromSlot(0);
+  if (!localPlayer) return 0;
+
+  return !localPlayer->timers.noInput && !gameIsStartMenuOpen(0) && (!MapConfig.State || !MapConfig.State->PlayerStates[localPlayer->PlayerId].IsInWeaponsMenu);
+}
+
+//--------------------------------------------------------------------------
 Moby* mapOnGuberEventCreateMoby(int oclass, int pvarSize)
 {
   if (mobyGetNumSpawnableMobys() < 50) {
@@ -181,7 +190,7 @@ Moby* mapOnGuberEventCreateMoby(int oclass, int pvarSize)
 //--------------------------------------------------------------------------
 void mapApplyFixes(void)
 {
-  HOOK_JAL(0x0061c3ec, &mapOnGuberEventCreateMoby);
+  //HOOK_JAL(0x0061c3ec, &mapOnGuberEventCreateMoby);
 }
 
 //--------------------------------------------------------------------------
@@ -289,50 +298,5 @@ void mapEnforceSingleWeaponRestriction(int weaponId)
   int i;
   for (i = 0; i < GAME_MAX_LOCALS; ++i) {
     mapLocalPlayerEnforceSingleWeaponRestriction(i, weaponId, 1);
-  }
-}
-
-//--------------------------------------------------------------------------
-extern Moby* gateMobies[GATE_MAX_COUNT];
-void gateResetRandomGate(void)
-{
-  int i = 0;
-  int r = 1 + rand(GATE_MAX_COUNT);
-  int loops = 0;
-  Moby* gateToReset = NULL;
-
-  while (r > 0) {
-    gateToReset = gateMobies[i];
-
-    // skip mobies that are NULL, don't have pvars, or gates that aren't deactivated yet
-    // we only want to reset an open gate
-    if (!gateToReset || !gateToReset->PVar || gateToReset->State != GATE_STATE_DEACTIVATED) {
-      i = (i+1) % GATE_MAX_COUNT;
-
-      // we've looped through the entire list without finding
-      // a gate that we can reset
-      // so stop
-      if (loops == 0 && i == 0) {
-        return;
-      }
-
-      continue;
-    }
-
-    // increment gate index
-    // and decrement random number
-    i = (i+1) % GATE_MAX_COUNT;
-    --r;
-
-    ++loops;
-  }
-  
-  // create event set cost event
-  if (gateToReset) {
-    struct GatePVar* pvars = (struct GatePVar*)gateToReset->PVar;
-    GuberEvent * guberEvent = guberCreateEvent(gateToReset, GATE_EVENT_SET_COST);
-    if (guberEvent) {
-      guberEventWrite(guberEvent, &pvars->InitialCost, 4);
-    }
   }
 }

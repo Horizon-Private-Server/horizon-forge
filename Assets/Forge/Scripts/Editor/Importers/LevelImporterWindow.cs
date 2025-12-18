@@ -31,6 +31,7 @@ public class LevelImporterWindow : EditorWindow
         Unpacking_Sounds,
         Unpacking_Assets,
         Unpacking_Chunk,
+        Unpacking_Sprites,
         Unpacking_Gameplay,
         Unpacking_World_Instances,
         Unpacking_World_Instance_Ties,
@@ -42,6 +43,7 @@ public class LevelImporterWindow : EditorWindow
         Importing_Code,
         Importing_Sky,
         Importing_Collision,
+        Importing_Sprites,
         Importing_Ties,
         Importing_Shrubs,
         Importing_Mobys,
@@ -81,6 +83,7 @@ public class LevelImporterWindow : EditorWindow
     int importTies = 1;
     int importShrubs = 1;
     int importMobys = 1;
+    int importSprites = 1;
     int importMisc = 1;
     int importWorldConfig = 1;
     int importMinimap = 1;
@@ -88,7 +91,7 @@ public class LevelImporterWindow : EditorWindow
     string mapName = "New Map";
     string wadPath = "";
 
-    bool ImportMergeRequireUnpack => importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0 || importMobys > 0 || importMisc > 0 || importWorldConfig > 0 || importMinimap > 0;
+    bool ImportMergeRequireUnpack => importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0 || importMobys > 0 || importSprites > 0 || importMisc > 0 || importWorldConfig > 0 || importMinimap > 0;
 
     [MenuItem("Forge/Tools/Importers/Open Level Importer")]
     public static void CreateNewWindow()
@@ -376,6 +379,16 @@ public class LevelImporterWindow : EditorWindow
         });
 
         // 
+        root.BuildRow("Sprites", (container) =>
+        {
+            var field = new DropdownField();
+            field.choices = AssetImportOptions;
+            field.index = importSprites;
+            field.RegisterValueChangedCallback((e) => importSprites = AssetImportOptions.IndexOf(e.newValue));
+            container.Add(field);
+        });
+
+        // 
         root.BuildRow("Tfrags", (container) =>
         {
             var field = new DropdownField();
@@ -635,7 +648,7 @@ public class LevelImporterWindow : EditorWindow
             ExtractWadFromISO(GetSelectedIsoPath(), baseMapId, destMapWadFile);
 
             // unpack level wad
-            if (!DecompressAndUnpackLevelWad(destMapWadFile, 0, racVersion)) return;
+            if (!DecompressAndUnpackLevelWad(destMapWadFile, 0, racVersion, true)) return;
 
             // if uya we also need the PAL version of the map
             if (ImportSourceIsUYA())
@@ -660,6 +673,7 @@ public class LevelImporterWindow : EditorWindow
             ImportCameras(destMapBinFolder, destMapFolder, postActions, rootGo);
             ImportAmbientSounds(destMapBinFolder, destMapFolder, postActions, rootGo);
             if (ImportSourceIsDL()) ImportAreas(destMapBinFolder, destMapFolder, postActions, rootGo);
+            ImportSprites(destMapBinFolder, destMapFolder, assetImports, rootGo);
 
             // postprocess hill moby cuboids
             FindAndSetHillCuboidTypes(destMapBinFolder, destMapFolder, assetImports, rootGo);
@@ -724,6 +738,77 @@ public class LevelImporterWindow : EditorWindow
 
             if (rootGo) rootGo.transform.SetAsLastSibling();
             FinalizeImport();
+        }
+    }
+
+    public void ReimportBaseMap(MapConfig mapConfig, int baseMapId, int racVersion)
+    {
+        var forgeSettings = ForgeSettings.Load();
+        if (!forgeSettings) return;
+
+        // configure
+        this.importBaseLevelIdx = racVersion == RCVER.DL ? DLBaseMaps.IndexOf(((DLMapIds)baseMapId).ToString()) : UYABaseMaps.IndexOf(((UYAMapIds)baseMapId).ToString());
+        this.importChunkId = 0;
+        this.importSource = racVersion == RCVER.DL ? (int)ImportSource.DL_ISO : (int)ImportSource.UYA_ISO;
+
+        // get dest paths
+        var scene = SceneManager.GetActiveScene();
+        var racVersionOther = racVersion == RCVER.DL ? RCVER.UYA : RCVER.DL;
+        var destMapName = scene.name;
+        var destMapFolder = FolderNames.GetMapFolder(destMapName);
+        var destMapBinFolder = FolderNames.GetMapBinFolder(destMapName, racVersion);
+        var tempPalBinFolder = Path.Combine(FolderNames.GetTempFolder(), "level-import-pal");
+        var destMapWadFile = Path.Combine(destMapBinFolder, $"{destMapName}.wad");
+        var assetImports = new List<PackerImporterWindow.PackerAssetImport>();
+        var baseLevelName = baseMapId.ToString();
+
+        // validate clean iso paths
+        switch (racVersion)
+        {
+            case RCVER.UYA:
+                {
+                    if (!File.Exists(forgeSettings.PathToCleanUyaNtscIso)) return;
+                    if (!File.Exists(forgeSettings.PathToCleanUyaPalIso)) return;
+
+                    baseLevelName = ((UYAMapIds)baseMapId).ToString();
+                    break;
+                }
+            case RCVER.DL:
+                {
+                    if (!File.Exists(forgeSettings.PathToCleanDeadlockedIso)) return;
+
+                    baseLevelName = ((DLMapIds)baseMapId).ToString();
+                    break;
+                }
+            default: return;
+        }
+
+        try
+        {
+            IsImporting = true;
+
+            // prepare
+            UpdateImportProgressBar(ImportStage.Preparing_Map_Files);
+            PrepareMapResourceFolder(destMapFolder, destMapBinFolder);
+
+            // extract and copy wad to map bin directory
+            UpdateImportProgressBar(ImportStage.Preparing_Level_WAD);
+            ExtractWadFromISO(GetSelectedIsoPath(), baseMapId, destMapWadFile);
+
+            // unpack level wad
+            if (!DecompressAndUnpackLevelWad(destMapWadFile, 0, racVersion, true)) return;
+
+            // copy sky from first map
+            CopySky(FolderNames.GetMapBinFolder(destMapName, racVersionOther), destMapBinFolder, racVersionOther, racVersion);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
+        finally
+        {
+            IsImporting = false;
+            EditorUtility.ClearProgressBar();
         }
     }
 
@@ -844,6 +929,7 @@ public class LevelImporterWindow : EditorWindow
             ImportCode(destMapBinFolder, destMapFolder, GameRegion.NTSC, assetImports, rootGo);
             ImportSky(destMapBinFolder, destMapFolder, assetImports, rootGo);
             ImportCollision(destMapBinFolder, destMapFolder, assetImports, rootGo);
+            ImportSprites(destMapBinFolder, destMapFolder, assetImports, rootGo);
             ImportTies(destMapBinFolder, destMapFolder, assetImports, rootGo);
             ImportTieInstances(destMapBinFolder, destMapFolder, postActions, rootGo);
             ImportShrubs(destMapBinFolder, destMapFolder, assetImports, rootGo);
@@ -1029,10 +1115,16 @@ public class LevelImporterWindow : EditorWindow
                 CopyTfrags(tempMapBinFolder, FolderNames.GetMapBinFolder(destMapName, mapConfig.FirstRacVersion), mapConfig.FirstRacVersion);
                 CopyTfrags(tempMapBinFolder, FolderNames.GetMapBinFolder(destMapName, mapConfig.SecondRacVersion), mapConfig.SecondRacVersion);
             }
+            if (importSprites == 1)
+            {
+                CopySprites(tempMapBinFolder, FolderNames.GetMapBinFolder(destMapName, mapConfig.FirstRacVersion), mapConfig.FirstRacVersion);
+                CopySprites(tempMapBinFolder, FolderNames.GetMapBinFolder(destMapName, mapConfig.SecondRacVersion), mapConfig.SecondRacVersion);
+            }
 
             // import assets
             if (importSky == 1) ImportSky(destMapBinFolder, destMapFolder, assetImports, rootGo);
             if (importCollision == 1) ImportCollision(destMapBinFolder, destMapFolder, assetImports, rootGo);
+            if (importSprites == 1) ImportSprites(destMapBinFolder, destMapFolder, assetImports, rootGo);
             if (importTies > 0) ImportTies(tempMapBinFolder, destMapFolder, assetImports, rootGo);
             if (importTies > 0) ImportTieInstances(tempMapBinFolder, destMapFolder, postActions, rootGo);
             if (importShrubs > 0) ImportShrubs(tempMapBinFolder, destMapFolder, assetImports, rootGo);
@@ -1231,7 +1323,7 @@ public class LevelImporterWindow : EditorWindow
         }
     }
 
-    bool DecompressAndUnpackLevelWad(string wadPath, int chunkId, int racVersion)
+    bool DecompressAndUnpackLevelWad(string wadPath, int chunkId, int racVersion, bool forceUnpackAll = false)
     {
         var workingDir = Path.GetDirectoryName(wadPath);
         var assetsFolder = Path.Combine(workingDir, FolderNames.BinaryAssetsFolder);
@@ -1240,9 +1332,10 @@ public class LevelImporterWindow : EditorWindow
         var levelId = GetLevelId();
         var bResult = false;
 
-        var unpackAll = !importIntoExistingMap;
+        var unpackAll = forceUnpackAll || !importIntoExistingMap;
         var unpackSounds = unpackAll || importMobys > 0;
         var unpackAssets = unpackAll || importMobys > 0 || importSky > 0 || importCollision > 0 || importTfrags > 0 || importTies > 0 || importShrubs > 0;
+        var unpackSprites = unpackAll || importSprites > 0;
         var unpackGameplay = unpackAll || importMobys > 0 || importWorldConfig > 0 || importMisc > 0;
         var unpackOcclusion = unpackAll || importTies > 0 || importTfrags > 0 || importMobys > 0;
         var unpackWorldInstances = unpackAll || importTies > 0 || importShrubs > 0 || importWorldConfig > 0 || unpackOcclusion;
@@ -1296,6 +1389,14 @@ public class LevelImporterWindow : EditorWindow
                 bResult = WrenchHelper.ExportSky(Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyBinFile), Path.Combine(Environment.CurrentDirectory, workingDir, FolderNames.BinarySkyFolder), racVersion);
                 if (!CheckResult(bResult, $"Failed to unpack sky.")) return false;
             }
+        }
+
+        // unpack sprites -- dl only
+        if (unpackSprites && racVersion == RCVER.DL)
+        {
+            UpdateImportProgressBar(ImportStage.Unpacking_Sprites);
+            scResult = PackerHelper.UnpackSprites(workingDir, Path.Combine(workingDir, FolderNames.BinaryAssetsFolder), racVersion);
+            if (!CheckResult(scResult, $"Failed to unpack sprites: {scResult}.")) return false;
         }
 
         // unpack gameplay
@@ -1601,6 +1702,119 @@ public class LevelImporterWindow : EditorWindow
 
         if (File.Exists(srcCollisionColladaFile))
             File.Copy(srcCollisionColladaFile, Path.Combine(destMapBinFolder, FolderNames.BinaryCollisionColladaFile), true);
+    }
+
+    #endregion
+
+    #region Import Sprites
+
+    void ImportSprites(string mapBinFolder, string mapResourcesFolder, List<PackerImporterWindow.PackerAssetImport> assetImports, GameObject rootGo)
+    {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var spriteSubfolderName = $"rc{ImportSourceRacVersion()}_level{GetLevelId()}";
+        var racVersion = ImportSourceRacVersion();
+        var texturesToImport = new List<string>();
+        var postAssetImportCallbacks = new List<Action>();
+        int t = 0;
+
+        // dl only
+        if (racVersion != RCVER.DL) return;
+
+        List<SpriteDef> spriteDefs;
+        if (mapConfig.DLSprites.Count == 0)
+        {
+            // map doesn't already have sprites
+            // set the base ones
+            spriteDefs = mapConfig.DLSprites;
+        }
+        else
+        {
+            //
+            var spriteContainer = new GameObject($"Sprites rc{racVersion}").AddComponent<SpriteContainer>();
+            spriteContainer.RacVersion = racVersion;
+            spriteContainer.transform.SetParent(rootGo.transform, false);
+            spriteDefs = spriteContainer.Sprites;
+        }
+
+        // import
+        UpdateImportProgressBar(ImportStage.Importing_Sprites);
+
+        // iterate subfolders
+        for (int i = 0; i < 2; ++i)
+        {
+            var srcSpriteFolder = Path.Combine(mapBinFolder, i == 0 ? FolderNames.BinarySprites1Folder : FolderNames.BinarySprites2Folder);
+            var resourcesSpriteFolder = Path.Combine(mapResourcesFolder, FolderNames.SpriteFolder, spriteSubfolderName);
+            if (!Directory.Exists(srcSpriteFolder)) continue;
+            if (!Directory.Exists(resourcesSpriteFolder)) Directory.CreateDirectory(resourcesSpriteFolder);
+
+            while (true)
+            {
+                var defPath = Path.Combine(srcSpriteFolder, $"{t:D4}.def");
+                var texPath = Path.Combine(srcSpriteFolder, $"tex.{t:D4}.png");
+                if (!File.Exists(texPath)) break;
+
+                using var fs = File.OpenRead(defPath);
+                using var reader = new BinaryReader(fs);
+
+                var idx = reader.ReadInt32();
+                var uid = reader.ReadUInt16();
+                var unk = reader.ReadUInt16();
+                var bank = i == 0 ? SpriteDef.SpriteDefBank.Bank1 : SpriteDef.SpriteDefBank.Bank2;
+
+                var dstTexPath = Path.Combine(resourcesSpriteFolder, $"{t}.png");
+                IOHelper.CopyFile(texPath, dstTexPath);
+                texturesToImport.Add(dstTexPath);
+                postAssetImportCallbacks.Add(() =>
+                {
+                    var spriteDef = new SpriteDef()
+                    {
+                        m_Bank = bank,
+                        m_Uid = uid,
+                        m_Unknown = unk,
+                        m_Texture = AssetDatabase.LoadAssetAtPath<Texture2D>(dstTexPath)
+                    };
+
+                    while (spriteDefs.Count <= idx)
+                        spriteDefs.Add(null);
+                    spriteDefs[idx] = spriteDef;
+                });
+
+                ++t;
+            }
+        }
+
+        // import textures in bulk
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (var tex in texturesToImport)
+                UnityHelper.ImportTexture(tex);
+        } catch { }
+        AssetDatabase.StopAssetEditing();
+        AssetDatabase.Refresh();
+
+        // run post import callbacks
+        foreach (var callback in postAssetImportCallbacks)
+            callback();
+    }
+
+    void CopySprites(string srcMapBinFolder, string destMapBinFolder, int destRacVersion)
+    {
+        if (destRacVersion <= 0) return;
+
+        var subFolders = new string[] { FolderNames.BinarySprites1Folder, FolderNames.BinarySprites2Folder };
+        foreach (var subFolder in subFolders)
+        {
+            var srcFolder = Path.Combine(srcMapBinFolder, subFolder);
+            var destFolder = Path.Combine(destMapBinFolder, subFolder);
+
+            // copy folder
+            if (Directory.Exists(srcFolder))
+            {
+                if (Directory.Exists(destFolder)) Directory.Delete(destFolder, true);
+                IOHelper.CopyDirectory(srcFolder, destFolder);
+            }
+        }
     }
 
     #endregion

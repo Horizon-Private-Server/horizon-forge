@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -104,5 +105,39 @@ public static class BinaryHelper
         writer.Write(value.x);
         writer.Write(value.z);
         writer.Write(value.y);
+    }
+
+    public static byte[] GetBytesFromHexString(string hex)
+    {
+        var bytes = new List<byte[]>();
+
+        // grouping by whitespace
+        var groups = hex.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var group in groups)
+        {
+            var bits = group.Length * 4;
+            if (bits > 64)
+            {
+                // parse per byte
+                for (int i = 0; i < group.Length; i += 2)
+                {
+                    byte b = byte.Parse(group.Substring(i, 2));
+                    bytes.Add(new byte[] { b });
+                }
+            }
+            else
+            {
+                if (!ulong.TryParse(group, System.Globalization.NumberStyles.HexNumber, System.Globalization.NumberFormatInfo.InvariantInfo, out var value))
+                    throw new InvalidOperationException();
+
+                if (bits > 64) throw new NotImplementedException();
+                else if (bits > 32) bytes.Add(BitConverter.GetBytes((ulong)value));
+                else if (bits > 16) bytes.Add(BitConverter.GetBytes((uint)value));
+                else if (bits > 8) bytes.Add(BitConverter.GetBytes((ushort)value));
+                else if (bits > 0) bytes.Add(BitConverter.GetBytes((byte)value));
+            }
+        }
+
+        return bytes.SelectMany(x => x).ToArray();
     }
 }

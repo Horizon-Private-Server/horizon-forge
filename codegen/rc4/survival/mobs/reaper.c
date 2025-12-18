@@ -18,6 +18,8 @@ void reaperPreUpdate(Moby* moby);
 void reaperPostUpdate(Moby* moby);
 void reaperPostDraw(Moby* moby);
 void reaperMove(Moby* moby);
+int reaperGetExtraDataSize(int spawnParamsIdx);
+void reaperOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void reaperOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void reaperOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -42,6 +44,8 @@ struct MobVTable ReaperVTable = {
   .PostUpdate = &reaperPostUpdate,
   .PostDraw = &reaperPostDraw,
   .Move = &reaperMove,
+  .GetExtraDataSize = &reaperGetExtraDataSize,
+  .OnSpawning = &reaperOnSpawning,
   .OnSpawn = &reaperOnSpawn,
   .OnDestroy = &reaperOnDestroy,
   .OnDamage = &reaperOnDamage,
@@ -59,45 +63,18 @@ struct MobVTable ReaperVTable = {
 };
 
 //--------------------------------------------------------------------------
-int reaperCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void reaperPreUpdate(Moby* moby)
 {
+  int i;
   if (!moby || !moby->PVar)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // decrement tickers regardless of frozen state
+  for (i = 0; i < GAME_MAX_LOCALS; ++i)
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+
   if (mobIsFrozen(moby))
     return;
 
@@ -139,8 +116,8 @@ void reaperPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = REAPER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, REAPER_SUBSKELETON_HEAD);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 1.45, color, REAPER_SUBSKELETON_HEAD);
 }
 
 //--------------------------------------------------------------------------
@@ -160,30 +137,38 @@ void reaperMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int reaperGetExtraDataSize(int spawnParamsIdx)
+{
+  return sizeof(ReaperMobVars_t);
+}
+
+//--------------------------------------------------------------------------
+void reaperOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
+}
+
+//--------------------------------------------------------------------------
 void reaperOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  memset(pvars->AdditionalMobVarsPtr, 0, sizeof(ReaperMobVars_t));
   float scale = mobGetScaleMultiplier(moby);
 
   // set scale
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = REAPER_GLOW_COLOR;
-	moby->PrimaryColor = REAPER_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
-  pvars->MobVars.BlipType = 4;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, REAPER_ACTION_BIG_FLINCH);
-  }
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
@@ -198,7 +183,7 @@ void reaperOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = REAPER_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
   
 	// limit corn spawning to prevent freezing/framelag
 	if (MapConfig.State && MapConfig.State->MobStats.TotalAlive < 30) {
@@ -285,8 +270,20 @@ void reaperOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int reaperOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  // we want to give each local player a cooldown on damage they can apply to reaper
+  if (!e->PlayerDamager) return 1;
+  if (!e->PlayerDamager->IsLocal) return 1;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // only accept local damage when timer is 0
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  if (timer == 0) {
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+    return 1;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -388,7 +385,7 @@ int reaperGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH
+#if DEBUG_PATH
 void reaperRenderPath(Moby* moby)
 {
   int x,y;
@@ -427,7 +424,7 @@ void reaperDoAction(Moby* moby)
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
-#if DEBUGPATH
+#if DEBUG_PATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&reaperRenderPath, moby);
 #endif
 

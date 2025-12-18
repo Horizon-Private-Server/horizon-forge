@@ -19,6 +19,8 @@ void swarmerPreUpdate(Moby* moby);
 void swarmerPostUpdate(Moby* moby);
 void swarmerPostDraw(Moby* moby);
 void swarmerMove(Moby* moby);
+int swarmerGetExtraDataSize(int spawnParamsIdx);
+void swarmerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void swarmerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -39,13 +41,14 @@ int swarmerCanAttack(struct MobPVar* pvars);
 int swarmerGetSideFlipLeftOrRight(struct MobPVar* pvars);
 int swarmerIsFlinching(Moby* moby);
 float swarmerGetDodgeProbability(Moby* moby);
-void swarmerSpawnRussianDolls(Moby* moby);
 
 struct MobVTable SwarmerVTable = {
   .PreUpdate = &swarmerPreUpdate,
   .PostUpdate = &swarmerPostUpdate,
   .PostDraw = &swarmerPostDraw,
   .Move = &swarmerMove,
+  .GetExtraDataSize = &swarmerGetExtraDataSize,
+  .OnSpawning = &swarmerOnSpawning,
   .OnSpawn = &swarmerOnSpawn,
   .OnDestroy = &swarmerOnDestroy,
   .OnDamage = &swarmerOnDamage,
@@ -63,45 +66,18 @@ struct MobVTable SwarmerVTable = {
 };
 
 //--------------------------------------------------------------------------
-int swarmerCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void swarmerPreUpdate(Moby* moby)
 {
+  int i;
   if (!moby || !moby->PVar)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // decrement tickers regardless of frozen state
+  for (i = 0; i < GAME_MAX_LOCALS; ++i)
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+
   if (mobIsFrozen(moby))
     return;
 
@@ -157,8 +133,8 @@ void swarmerPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = SWARMER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 0);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 0.5, color, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -178,6 +154,18 @@ void swarmerMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int swarmerGetExtraDataSize(int spawnParamsIdx)
+{
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+void swarmerOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
+}
+
+//--------------------------------------------------------------------------
 void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -187,21 +175,16 @@ void swarmerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, ch
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = SWARMER_GLOW_COLOR;
-	moby->PrimaryColor = SWARMER_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 1 + (scale * 0.25);
-  pvars->MobVars.BlipType = 4;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, SWARMER_ACTION_BIG_FLINCH);
-  }
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
@@ -216,7 +199,7 @@ void swarmerOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = SWARMER_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 }
 
 //--------------------------------------------------------------------------
@@ -291,8 +274,20 @@ void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int swarmerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  // we want to give each local player a cooldown on damage they can apply to swarmer
+  if (!e->PlayerDamager) return 1;
+  if (!e->PlayerDamager->IsLocal) return 1;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // only accept local damage when timer is 0
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  if (timer == 0) {
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+    return 1;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -373,7 +368,7 @@ int swarmerGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH
+#if DEBUG_PATH
 void swarmerRenderPath(Moby* moby)
 {
   int x,y;
@@ -420,7 +415,7 @@ void swarmerDoAction(Moby* moby)
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
-#if DEBUGPATH
+#if DEBUG_PATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&swarmerRenderPath, moby);
 #endif
 
@@ -576,11 +571,6 @@ void swarmerDoAction(Moby* moby)
       mobTransAnimLerp(moby, SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND, 5, 0);
       if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND && moby->AnimSeqT > 25) {
         pvars->MobVars.Destroy = 1;
-
-        // spawn children
-        if (mobAmIOwner(moby) && pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_RUSSIAN_DOLL) {
-          swarmerSpawnRussianDolls(moby);
-        }
       }
 
       //mobStand(moby);
@@ -777,38 +767,4 @@ float swarmerGetDodgeProbability(Moby* moby)
 
   float factor = clamp(powf(roundNo / 100.0, 2), 0, 1);
   return lerpf(0.001, 0.01, factor);
-}
-
-//--------------------------------------------------------------------------
-void swarmerSpawnRussianDolls(Moby* moby)
-{
-  VECTOR position, from, to;
-  VECTOR hitOffset = {0,0,2,0};
-  int count = randRangeInt(1, 5);
-  const float radius = 5;
-  if (russianDollSpawnParamIdxsCount <= 0) return;
-
-  // default to spawn on moby
-  vector_copy(position, moby->Position);
-
-  // attempt to find a spot near moby that they can spawn on
-  int i;
-  for (i = 0; i < count; ++i)
-  {
-    int spawnIdx = russianDollSpawnParamIdxs[randRangeInt(0, russianDollSpawnParamIdxsCount - 1)];
-    struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnIdx];
-    if (spawnIdx < 0 || spawnIdx >= MAX_MOB_SPAWN_PARAMS) continue;
-
-    // don't go over max mobys alive
-    if (MapConfig.State) {
-      if (MapConfig.State->MobStats.TotalAlive >= MAX_MOBS_ALIVE) return;
-      if (spawnParams->MaxSpawnedAtOnce > 0 && MapConfig.State->MobStats.NumAlive[spawnIdx] >= spawnParams->MaxSpawnedAtOnce) continue;
-    }
-
-    // spawn
-    if (MapConfig.ModeCreateMobFunc)
-      MapConfig.ModeCreateMobFunc(spawnIdx, position, moby->Rotation[2], -1, MOB_SPAWN_FLAG_RUSSIAN_DOLL, &spawnParams->Config);
-    else
-      MapConfig.OnMobCreateFunc(spawnIdx, position, moby->Rotation[2], -1, MOB_SPAWN_FLAG_RUSSIAN_DOLL, &spawnParams->Config);
-  }
 }

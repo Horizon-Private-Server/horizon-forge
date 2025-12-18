@@ -39,7 +39,11 @@
 #include "maputils.h"
 #include "upgrade.h"
 #include "drop.h"
-#include "hackerorb.h"
+#include "pool.h"
+
+#if SOULCOLLECTOR
+#include "soulcollector.h"
+#endif
 
 #ifndef MAP_BASE_COMPLEXITY
 #define MAP_BASE_COMPLEXITY (5000)
@@ -56,6 +60,11 @@ void pathTick(void);
 #if STACKABLES
 void stackableInit(void);
 void stackableTick(void);
+#endif
+
+#if BLESSINGS
+void blessingsInit(void);
+void blessingsTick(void);
 #endif
 
 void stackableOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId);
@@ -84,8 +93,9 @@ typedef struct HudBoss_CommonData { // 0x38
 	/* 0x34 */ int iFillMode;
 } HudBoss_CommonData_t;
 
-// set by mode
+// set by map
 extern int mobAllowedCuboidIdx;
+extern int mobSpawnPointsAreaIdx;
 extern SurvivalBakedConfig_t bakedConfig;
 struct SurvivalMapConfig MapConfig __attribute__((section(".config"))) = {
   .Magic = MAP_CONFIG_MAGIC,
@@ -121,11 +131,19 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId)
 #if STACKABLES
   stackableOnMobKilled(moby, killedByPlayerId, killedByWeaponId);
 #endif
+
+#if SOULCOLLECTOR
+  soulcollectorOnSoul(moby->Position, killedByPlayerId);
+#endif
 }
 
 //--------------------------------------------------------------------------
 int mapCanSpawnMobs(void)
 {
+#if DEBUG_MANUAL_SPAWNING
+  return 0;
+#endif
+
   return 1;
 }
 
@@ -142,14 +160,13 @@ void mapReturnPlayersToMap(void)
     // if we're under the map, teleport back up
     if (player->PlayerPosition[2] < (gameGetDeathHeight() + 1)) {
       
-      // use player start
-      if (bakedSpawnGetFirst(BAKED_SPAWNPOINT_PLAYER_START, p, r)) {
-        vector_fromyaw(o, (player->PlayerId / (float)GAME_MAX_PLAYERS) * MATH_TAU - MATH_PI);
-        vector_scale(o, o, 2.5);
-        vector_add(p, p, o);
-        playerSetPosRot(player, p, r);
-        playerSetHealth(player, maxf(0, player->Health - player->MaxHealth*0.5));
-      }
+      // move back to player start
+      playerGetSpawnpoint(player, p, r, 0);
+      vector_fromyaw(o, (player->PlayerId / (float)GAME_MAX_PLAYERS) * MATH_TAU - MATH_PI);
+      vector_scale(o, o, 2.5);
+      vector_add(p, p, o);
+      playerSetPosRot(player, p, r);
+      playerSetHealth(player, maxf(0, player->Health - player->MaxHealth*0.5));
     }
   }
 }
@@ -208,12 +225,11 @@ int createMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, 
     return 0;
   }
 
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  if (spawnParams->MobCreate)
-    return spawnParams->MobCreate(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
+  //struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
+  //if (spawnParams->MobCreate)
+  //  return spawnParams->MobCreate(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
 
-  DPRINTF("unhandled create spawnParamsIdx %d\\n", spawnParamsIdx);
-  return 0;
+  return mobCreate(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
 }
 
 //--------------------------------------------------------------------------
@@ -327,7 +343,7 @@ void updateBossMeter(void)
   // set boss image to reactor sprite
   u32 id = hudPanelGetElement((void*)0x222b18, 6);
   struct HUDWidgetRectangleObject* bossImgRectObject = (struct HUDWidgetRectangleObject*)hudCanvasGetObject(hudGetCanvas(4), id);
-  if (bossImgRectObject) ((void (*)(u32, u32))0x005ca3e8)(bossImgRectObject, 0x75AF + 3);
+  if (bossImgRectObject) ((void (*)(u32, u32))0x005ca3e8)(bossImgRectObject, MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BossTexUid /*0x75AF + 3*/);
 }
 
 //--------------------------------------------------------------------------
@@ -336,6 +352,14 @@ void frameTick(void)
 #if STACKABLES
   sboxFrameTick();
 #endif
+
+#if SOULCOLLECTOR
+  soulcollectorFrameUpdate();
+#endif
+
+  //char buf[32];
+  //snprintf(buf, sizeof(buf), "%d", mobyGetNumSpawnableMobys());
+  //gfxHelperDrawText(5, SCREEN_HEIGHT - 5, 0, 0, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMLEFT, COMMON_DZO_DRAW_NORMAL);
 }
 
 //--------------------------------------------------------------------------
@@ -353,6 +377,121 @@ int mapConsiderMobSpawnPoint(struct MobSpawnParams* mobSpawnParams, VECTOR posit
 }
 
 //--------------------------------------------------------------------------
+int mapGetSpawnPoints(int** outSpawnPointIndices)
+{
+  Area_t area;
+  if (mobSpawnPointsAreaIdx < 0 || !areaGetArea(mobSpawnPointsAreaIdx, &area)) {
+    *outSpawnPointIndices = NULL;
+    return 0;
+  }
+
+  *outSpawnPointIndices = area.Cuboids;
+  return area.CuboidCount;
+}
+
+//--------------------------------------------------------------------------
+int mapBlockPlayerUseTeleporter(Moby* moby, Player* player)
+{
+	// pointer to player is in $s1
+	asm volatile (
+    ".set noreorder;\n"
+		"move %0, $s1"
+		: : "r" (player)
+	);
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+void survivalDebugManualSpawn(void)
+{
+  static int manSpawnMobId = 0;
+  if (MapConfig.DefaultSpawnParamsCount <= 0) return; // no mobs
+  if (!localPlayerHasInput()) return;
+
+  Player* localPlayer = playerGetFromSlot(0);
+  if (!playerIsValid(localPlayer)) return;
+  
+  // check for destroy all mobs
+  if (MapConfig.ModeMobNukeFunc && padGetButtonDown(0, PAD_UP) > 0) {
+    MapConfig.ModeMobNukeFunc(-1);
+  }
+
+  // nav mobs
+  int dir = 0;
+  if (padGetButtonDown(0, PAD_LEFT) > 0) {
+    dir = -1;
+  } else if (padGetButtonDown(0, PAD_RIGHT) > 0) {
+    dir = 1;
+  }
+
+  if (dir) {
+    manSpawnMobId = (manSpawnMobId + dir + MapConfig.DefaultSpawnParamsCount) % MapConfig.DefaultSpawnParamsCount;
+    DPRINTF("selected mob: %s (%d)\n", MapConfig.DefaultSpawnParams[manSpawnMobId].Name, manSpawnMobId);
+  }
+
+  // check for spawn pad button
+  if (padGetButtonDown(0, PAD_DOWN) <= 0) return;
+
+  // build spawn position
+  VECTOR t;
+  VECTOR offset = {1,1,1,0};
+  vector_scale(t, offset, MapConfig.DefaultSpawnParams[manSpawnMobId].Config.CollRadius*2);
+  vector_add(t, t, localPlayer->PlayerPosition);
+
+  int r = mapSpawnMob(manSpawnMobId, t, 0, -1, 0);
+  DPRINTF("manual spawn mob %s (idx %d) returned %d\n", MapConfig.DefaultSpawnParams[manSpawnMobId].Name, manSpawnMobId, r);
+}
+
+//--------------------------------------------------------------------------
+void survivalDebugInfiniteHealth(void)
+{
+  int i;
+  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
+    Player* player = playerGetFromSlot(i);
+    if (!playerIsValid(player)) continue;
+
+    player->Health = 125;
+  }
+}
+
+//--------------------------------------------------------------------------
+void survivalDebugInfiniteAmmo(void)
+{
+  GameOptions* go = gameGetOptions();
+  go->GameFlags.MultiplayerGameFlags.UnlimitedAmmo = 1;
+}
+
+//--------------------------------------------------------------------------
+void survivalDebugPayday(void)
+{
+  static int init = 0;
+  if (!MapConfig.State) return;
+  if (init) return;
+
+  int i;
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    MapConfig.State->PlayerStates[i].State.Bolts = 100000000;
+    MapConfig.State->PlayerStates[i].State.CurrentTokens = 10000;
+  }
+
+  init = 1;
+}
+
+//--------------------------------------------------------------------------
+void survivalDebugMoonjump(void)
+{
+  int i;
+  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
+    Player* player = playerGetFromSlot(i);
+    if (!playerIsValid(player)) continue;
+    if (padGetButton(i, PAD_CROSS) <= 0) continue;
+
+    player->Velocity[2] = 0.125;
+  }
+}
+
+//--------------------------------------------------------------------------
 void survivalInit(void)
 {
   static int initialized = 0;
@@ -360,17 +499,19 @@ void survivalInit(void)
     return;
 
   MapConfig.Magic = MAP_CONFIG_MAGIC;
-  MapConfig.WeaponPickupCooldownFactor = 0.65;
-  MapConfig.OnUnhandledGetGuberFunc = mapGetGuber;
-  MapConfig.OnUnhandledGuberEventFunc = mapHandleEvent;
   MapConfig.ConsiderMobSpawnPointFunc = mapConsiderMobSpawnPoint;
+  MapConfig.GetSpawnPointsFunc = mapGetSpawnPoints;
+  MapConfig.OnMobCreateFunc = &createMob;
 
   mapApplyFixes();
+  poolInit();
   mboxInit();
   mobInit();
   configInit();
   upgradeInit();
   dropInit();
+  bboxInit();
+  demonbellInit();
 #if STACKABLES
   sboxInit();
   stackableInit();
@@ -378,12 +519,26 @@ void survivalInit(void)
 #if GAMBITS
   gambitsInit();
 #endif
-  hackerorbInit();
+#if BLESSINGS
+  blessingsInit();
+#endif
+#if RANDOMIZE_WEAPONS_AT_START
   randomizeWeaponPickups();
-  MapConfig.OnMobCreateFunc = &createMob;
+#endif
 
   // disable jump pad effect
   POKE_U32(0x0042608C, 0);
+
+  // have moby 0x1BC6 use glowColor for particle color
+  // for reactor fire effect
+  POKE_U32(0x004171D8, 0x8FA80070);
+  POKE_U32(0x00417200, 0x8D080060);
+
+  // enable teleporter for everyone
+  HOOK_JAL(0x003dfd18, &mapBlockPlayerUseTeleporter);
+  POKE_U32(0x003dfd1c, 0x0240202D);
+  //POKE_U32(0x003DFD20, 0x10000006);
+  POKE_U32(0x003DFD6C, 0x00000000);
 
   DPRINTF("path %08X end %08X\n", (u32)&MOB_PATHFINDING_PATHS, (u32)&MOB_PATHFINDING_PATHS + (MOB_PATHFINDING_PATHS_MAX_PATH_LENGTH * MOB_PATHFINDING_NODES_COUNT * MOB_PATHFINDING_NODES_COUNT));
 
@@ -397,23 +552,25 @@ int survivalTick(void)
   if (MapConfig.ClientsReady || !netGetDmeServerConnection())
   {
     mboxSpawn();
-#if STACKABLES
-    sboxSpawn();
-#endif
   }
 
+  poolTick();
   mobTick();
   pathTick();
   upgradeTick();
   dropTick();
+  demonbellTick();
 #if STACKABLES
   stackableTick();
 #endif
 #if GAMBITS
   gambitsTick();
 #endif
+#if BLESSINGS
+  blessingsTick();
+#endif
   mapReturnPlayersToMap();
-  //updateBossMeter();
+  updateBossMeter();
 
   if (MapConfig.State) {
     MapConfig.State->MapBaseComplexity = MAP_BASE_COMPLEXITY;
@@ -439,6 +596,7 @@ int survivalTick(void)
 #endif
       
     // enable prestige if round % 25
+#if SHOW_PRESTIGE_EVERY_25
     Moby* prestigeMachineMoby = MapConfig.State->PrestigeMachine;
     if (prestigeMachineMoby) {
       int enabled = MapConfig.State->RoundEndTime && ((MapConfig.State->RoundNumber + 0) % 25) == 0;
@@ -449,12 +607,35 @@ int survivalTick(void)
         }
         prestigeMachineMoby->DrawDist = 64;
         prestigeMachineMoby->CollActive = 0;
+        prestigeMachineMoby->ModeBits &= ~MOBY_MODE_BIT_DISABLED;
       } else {
         prestigeMachineMoby->DrawDist = 0;
         prestigeMachineMoby->CollActive = -1;
+        prestigeMachineMoby->ModeBits |= MOBY_MODE_BIT_DISABLED;
       }
     }
+#endif
   }
+
+#if DEBUG_MANUAL_SPAWNING
+  survivalDebugManualSpawn();
+#endif
+
+#if DEBUG_INFINITE_HEALTH
+  survivalDebugInfiniteHealth();
+#endif
+
+#if DEBUG_INFINITE_AMMO
+  survivalDebugInfiniteAmmo();
+#endif
+
+#if DEBUG_MOONJUMP
+  survivalDebugMoonjump();
+#endif
+
+#if DEBUG_PAYDAY
+  survivalDebugPayday();
+#endif
 
   dlPostUpdate();
 	return 0;

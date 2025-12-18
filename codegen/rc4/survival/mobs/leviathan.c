@@ -18,6 +18,8 @@ void leviathanPreUpdate(Moby* moby);
 void leviathanPostUpdate(Moby* moby);
 void leviathanPostDraw(Moby* moby);
 void leviathanMove(Moby* moby);
+int leviathanGetExtraDataSize(int spawnParamsIdx);
+void leviathanOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void leviathanOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void leviathanOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void leviathanOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -48,6 +50,8 @@ struct MobVTable LeviathanVTable = {
   .PostUpdate = &leviathanPostUpdate,
   .PostDraw = &leviathanPostDraw,
   .Move = &leviathanMove,
+  .GetExtraDataSize = &leviathanGetExtraDataSize,
+  .OnSpawning = &leviathanOnSpawning,
   .OnSpawn = &leviathanOnSpawn,
   .OnDestroy = &leviathanOnDestroy,
   .OnDamage = &leviathanOnDamage,
@@ -63,39 +67,6 @@ struct MobVTable LeviathanVTable = {
   .CanNonOwnerTransitionToAction = &leviathanCanNonOwnerTransitionToAction,
   .ShouldForceStateUpdateOnAction = &leviathanShouldForceStateUpdateOnAction,
 };
-
-//--------------------------------------------------------------------------
-int leviathanCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
 
 //--------------------------------------------------------------------------
 int leviathanIsBoss(Moby* moby)
@@ -132,11 +103,7 @@ int leviathanIsAggressive(Moby* moby)
 //--------------------------------------------------------------------------
 float leviathanGetScale(Moby* moby)
 {
-  float scale = mobGetScaleMultiplier(moby);
-  //if (leviathanIsBoss(moby))
-  //  return 2 * scale;
-
-  return scale;
+  return mobGetScaleMultiplier(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -154,11 +121,16 @@ int leviathanGetLaserCooldownTicks(Moby* moby)
 //--------------------------------------------------------------------------
 void leviathanPreUpdate(Moby* moby)
 {
+  int i;
   if (!moby || !moby->PVar)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   LeviathanMobVars_t* leviathanVars = (LeviathanMobVars_t*)pvars->AdditionalMobVarsPtr;
+
+  // decrement tickers regardless of frozen state
+  for (i = 0; i < GAME_MAX_LOCALS; ++i)
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
 
   if (mobIsFrozen(moby))
     return;
@@ -232,8 +204,8 @@ void leviathanPostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = LEVIATHAN_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, LEVIATHAN_SUBSKELETON_JOINT_BODY);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 2.2, color, LEVIATHAN_SUBSKELETON_JOINT_BODY);
 }
 
 //--------------------------------------------------------------------------
@@ -243,22 +215,34 @@ void leviathanMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int leviathanGetExtraDataSize(int spawnParamsIdx)
+{
+  return sizeof(LeviathanMobVars_t);
+}
+
+//--------------------------------------------------------------------------
+void leviathanOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
+}
+
+//--------------------------------------------------------------------------
 void leviathanOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
-  
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  memset(pvars->AdditionalMobVarsPtr, 0, sizeof(LeviathanMobVars_t));
 
   // set scale
   float scale = leviathanGetScale(moby);
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = LEVIATHAN_GLOW_COLOR;
-	moby->PrimaryColor = LEVIATHAN_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.5 + (scale * 0.25);
-  pvars->MobVars.BlipType = 6;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
 
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
@@ -283,7 +267,7 @@ void leviathanOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   }
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = LEVIATHAN_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
   
   // spawn corn
   //mobBlowCorn(moby);
@@ -383,8 +367,20 @@ void leviathanOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int leviathanOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  // we want to give each local player a cooldown on damage they can apply to leviathan
+  if (!e->PlayerDamager) return 1;
+  if (!e->PlayerDamager->IsLocal) return 1;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // only accept local damage when timer is 0
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  if (timer == 0) {
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+    return 1;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -443,8 +439,8 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
   vector_subtract(dt, target->Position, moby->Position);
   float distSqr = vector_sqrmag(dt);
   float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-  float rangedAttackRadiusSqr = LEVIATHAN_VISION_RANGE*LEVIATHAN_VISION_RANGE;
-  int canRanged = pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_RANGED_ATTACK || pvars->MobVars.Config.MobAttribute == MOB_ATTRIBUTE_BOSS;
+  float rangedAttackRadiusSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
+  int canRanged = mobGetBehavior(moby) != LEVIATHAN_BEHAVIOR_MELEE;
   if (distSqr > attackRadiusSqr && canRanged) {
 
     // check if moby is looking at (close to) target
@@ -539,7 +535,7 @@ int leviathanGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH
+#if DEBUG_PATH
 void leviathanRenderPath(Moby* moby)
 {
   int x,y;
@@ -599,7 +595,7 @@ int leviathanDoActionMove(Moby* moby)
 
   pvars->MobVars.MoveVars.ForceUseTargetPosition = strafe;
   float strafeDir = (pvars->MobVars.DynamicRandom % 2) ? 1 : -1;
-#if DEBUGMOVE
+#if DEBUG_MOVE
   strafeDir = fabsf(strafeDir);
 #endif
 
@@ -654,7 +650,7 @@ void leviathanDoAction(Moby* moby)
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
-#if DEBUGPATH
+#if DEBUG_PATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&leviathanRenderPath, moby);
 #endif
 
@@ -1140,7 +1136,7 @@ int leviathanShouldStrafe(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-  float maxDistSqr = LEVIATHAN_VISION_RANGE*LEVIATHAN_VISION_RANGE;
+  float maxDistSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
   if (sqrDistToTarget > maxDistSqr)
     return 0;
 

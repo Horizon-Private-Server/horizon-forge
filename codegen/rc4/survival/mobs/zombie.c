@@ -18,6 +18,8 @@ void zombiePreUpdate(Moby* moby);
 void zombiePostUpdate(Moby* moby);
 void zombiePostDraw(Moby* moby);
 void zombieMove(Moby* moby);
+int zombieGetExtraDataSize(int spawnParamsIdx);
+void zombieOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args);
 void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 void zombieOnDestroy(Moby* moby, int killedByPlayerId, int weaponId);
 void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e);
@@ -42,6 +44,8 @@ struct MobVTable ZombieVTable = {
   .PostUpdate = &zombiePostUpdate,
   .PostDraw = &zombiePostDraw,
   .Move = &zombieMove,
+  .GetExtraDataSize = &zombieGetExtraDataSize,
+  .OnSpawning = &zombieOnSpawning,
   .OnSpawn = &zombieOnSpawn,
   .OnDestroy = &zombieOnDestroy,
   .OnDamage = &zombieOnDamage,
@@ -59,45 +63,18 @@ struct MobVTable ZombieVTable = {
 };
 
 //--------------------------------------------------------------------------
-int zombieCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	struct MobSpawnEventArgs args;
-  struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
-	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
-    }
-
-		u8 random = (u8)rand(100);
-
-    position[2] += 1; // spawn slightly above point
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 4);
-		guberEventWrite(guberEvent, &spawnFromUID, 4);
-		guberEventWrite(guberEvent, &spawnFlags, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args, sizeof(struct MobSpawnEventArgs));
-	}
-	else
-	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
 void zombiePreUpdate(Moby* moby)
 {
+  int i;
   if (!moby || !moby->PVar)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  
+  // decrement tickers regardless of frozen state
+  for (i = 0; i < GAME_MAX_LOCALS; ++i)
+    decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+
   if (mobIsFrozen(moby))
     return;
 
@@ -144,8 +121,8 @@ void zombiePostDraw(Moby* moby)
     return;
     
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  u32 color = ZOMBIE_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, 1);
+  u32 color = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 1, color, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -165,6 +142,18 @@ void zombieMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int zombieGetExtraDataSize(int spawnParamsIdx)
+{
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+void zombieOnSpawning(int spawnParamsIdx, VECTOR position, float* yaw, int* spawnFromUID, int* spawnFlags, char* random, struct MobSpawnEventArgs *args)
+{
+
+}
+
+//--------------------------------------------------------------------------
 void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -174,21 +163,16 @@ void zombieOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, cha
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = ZOMBIE_GLOW_COLOR;
-	moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+	moby->GlowRGBA = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
 
   // targeting
 	pvars->TargetVars.targetHeight = 0.5 + (scale * 0.5);
-  pvars->MobVars.BlipType = 4;
+  pvars->MobVars.BlipType = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
   
 #if MOB_DAMAGETYPES
   pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
-
-  // russion doll
-  if (pvars->MobVars.SpawnFlags & MOB_SPAWN_FLAG_RUSSIAN_DOLL) {
-    mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
-  }
 
   // default move step
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
@@ -203,7 +187,7 @@ void zombieOnDestroy(Moby* moby, int killedByPlayerId, int weaponId)
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
 
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = ZOMBIE_PRIMARY_COLOR;
+	moby->PrimaryColor = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
   
 	// limit corn spawning to prevent freezing/framelag
 	if (MapConfig.State && MapConfig.State->MobStats.TotalAlive < 30 && mobyGetNumSpawnableMobys() > 100) {
@@ -288,8 +272,20 @@ void zombieOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int zombieOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  // we want to give each local player a cooldown on damage they can apply to zombie
+  if (!e->PlayerDamager) return 1;
+  if (!e->PlayerDamager->IsLocal) return 1;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  // only accept local damage when timer is 0
+  int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+  if (timer == 0) {
+    pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+    return 1;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -361,7 +357,7 @@ int zombieGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH
+#if DEBUG_PATH
 void zombieRenderPath(Moby* moby)
 {
   int x,y;
@@ -403,7 +399,7 @@ void zombieDoAction(Moby* moby)
   if (MapConfig.State)
     difficulty = MapConfig.State->Difficulty;
 
-#if DEBUGPATH
+#if DEBUG_PATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&zombieRenderPath, moby);
 #endif
 
