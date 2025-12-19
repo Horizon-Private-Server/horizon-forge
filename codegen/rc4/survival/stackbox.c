@@ -365,7 +365,7 @@ void sboxUpdate(Moby* moby)
     } else {
 
       int cost = sboxGetStackableCost(player->PlayerId, pvars->Item);
-      snprintf(buf, sizeof(buf), "\x11 %s\x01\x0E%'d\x08", STACKABLE_ITEM_NAMES[pvars->Item], cost);
+      snprintf(buf, sizeof(buf), "\x11 %s \x01\x0E%'d\x08", STACKABLE_ITEM_NAMES[pvars->Item], cost);
       if (tryPlayerInteract(moby, player, buf, STACKABLE_ITEM_DESC[pvars->Item], 0, 0, PLAYER_STACK_BOX_COOLDOWN_TICKS, STACK_BOX_MAX_DIST*STACK_BOX_MAX_DIST, PAD_CIRCLE)) {
         sboxPlayerBuy(moby, player->PlayerId, pvars->Item);
       }

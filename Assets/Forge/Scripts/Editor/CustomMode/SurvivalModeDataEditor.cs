@@ -20,6 +20,7 @@ public class SurvivalModeDataEditor : Editor
     private SerializedProperty m_DebugInfiniteAmmoProperty;
     private SerializedProperty m_DebugPaydayProperty;
     private SerializedProperty m_DebugMoonjumpProperty;
+    private SerializedProperty m_DebugStartRoundProperty;
     
     private void OnEnable()
     {
@@ -31,6 +32,7 @@ public class SurvivalModeDataEditor : Editor
         m_DebugInfiniteAmmoProperty = serializedObject.FindProperty("DebugInfiniteAmmo");
         m_DebugPaydayProperty = serializedObject.FindProperty("DebugPayday");
         m_DebugMoonjumpProperty = serializedObject.FindProperty("DebugMoonjump");
+        m_DebugStartRoundProperty = serializedObject.FindProperty("DebugStartRound");
     }
 
     public override void OnInspectorGUI()
@@ -53,6 +55,7 @@ public class SurvivalModeDataEditor : Editor
             EditorGUILayout.PropertyField(m_DebugInfiniteAmmoProperty, new GUIContent("Infinite Ammo"));
             EditorGUILayout.PropertyField(m_DebugPaydayProperty, new GUIContent("Max Money/Tokens"));
             EditorGUILayout.PropertyField(m_DebugMoonjumpProperty, new GUIContent("Moonjump"));
+            EditorGUILayout.PropertyField(m_DebugStartRoundProperty, new GUIContent("Start at Round"));
             EditorGUILayout.PropertyField(m_DebugManualSpawningProperty, new GUIContent("Manual Mob Spawning"));
             if (m_DebugManualSpawningProperty.boolValue)
             {

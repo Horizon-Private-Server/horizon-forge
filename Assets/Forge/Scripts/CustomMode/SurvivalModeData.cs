@@ -86,6 +86,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [HideInInspector] public bool DebugInfiniteAmmo;
     [HideInInspector] public bool DebugPayday;
     [HideInInspector] public bool DebugMoonjump;
+    [HideInInspector] public int DebugStartRound;
 
     public List<SurvivalMobSpawnParam> GetEnabledMobs() => Mobs.Where(x => !x.Disabled).OrderBy(x => x.Probability).ThenBy(x => Mobs.IndexOf(x)).ToList();
 
@@ -194,6 +195,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             if (DebugInfiniteAmmo) state.LDFlags.Add("-DDEBUG_INFINITE_AMMO");
             if (DebugPayday) state.LDFlags.Add("-DDEBUG_PAYDAY");
             if (DebugMoonjump) state.LDFlags.Add("-DDEBUG_MOONJUMP");
+            if (DebugStartRound > 0) state.LDFlags.Add($"-DDEBUG_START_ROUND={DebugStartRound}");
         }
 
         state.Includes.Add("#include \"game.h\"");

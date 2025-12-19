@@ -108,14 +108,16 @@ Moby* poolSpawn(int oclass, int pvarSize)
 #endif
 
     void* pvar = moby->PVar;
+    int deathCount = moby->Xp;
     ((void (*)(Moby*, int, int))0x004f7330)(moby, oclass, 1); // init moby instance
+    moby->Xp = (deathCount + 1) % 128; // indicate pool moby respawned
     if (pvar) {
       memset(pvar, 0, pvarSize);
       moby->PVar = pvar;
     }
   }
 
-  moby->Pad = poolIdx;
+  moby->Pad = 0x80 | poolIdx;
   group->PoolIndex = (poolIdx + 1) % group->PoolSize;
   return moby;
 }
@@ -129,7 +131,7 @@ void poolDestroy(Moby* moby)
     return;
   }
   
-  int poolIdx = moby->Pad;
+  int poolIdx = (u8)moby->Pad & ~0x80;
   if (poolIdx >= 0 && poolIdx < group->PoolSize && poolGetMoby(group, poolIdx) == moby) {
     moby->ModeBits |= MOBY_MODE_BIT_NO_POST_UPDATE | MOBY_MODE_BIT_DISABLED | MOBY_MODE_BIT_NO_UPDATE;
     moby->CollActive = -1;
