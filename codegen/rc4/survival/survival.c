@@ -512,6 +512,51 @@ void survivalDebugMoonjump(void)
 }
 
 //--------------------------------------------------------------------------
+void survivalDebugStartRound(int roundNumber)
+{
+  struct SurvivalState* state = MapConfig.State;
+  if (!state) return;
+  if (roundNumber <= 1) return; // no round skip
+
+  static int init = 0;
+  if (init == 2) return;
+  if (init == 1) {
+      
+    // set round to immediately end after it is initialized by the game mode
+    if (state->RoundMaxMobCount) {
+      state->MobStats.TotalSpawnedThisRound = state->RoundMaxMobCount;
+      init = 2;
+    }
+
+    return;
+  }
+
+  // set to round prior to target round number
+  // once the game initializes the round we'll force it to end
+  // starting the target round (with the interum period)
+  state->RoundNumber = roundNumber - 2;
+  state->RoundMaxMobCount = 0;
+
+  // set initial bolt/token
+  // also bump health upgrades up a bit for testing convenience
+  int j;
+  for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
+    state->PlayerStates[j].State.Bolts = powf(1.225, roundNumber) * 10000;
+    state->PlayerStates[j].State.CurrentTokens = roundNumber * 5;
+    state->PlayerStates[j].State.Upgrades[UPGRADE_HEALTH] = roundNumber;
+  }
+
+  // iterate each round
+  int i;
+  for (i = 0; i < state->RoundNumber; ++i) {
+    state->MobStats.TotalSpawned += MAX_MOBS_BASE + (int)(MAX_MOBS_ROUND_WEIGHT * (1 + i));
+  }
+
+  DPRINTF("Skipped to Round #%d with %d mobs spawned\n", state->RoundNumber + 1, state->MobStats.TotalSpawned);
+  init = 1;
+}
+
+//--------------------------------------------------------------------------
 void survivalInit(void)
 {
   static int initialized = 0;
@@ -636,6 +681,10 @@ int survivalTick(void)
     }
 #endif
   }
+
+#if DEBUG_START_ROUND
+  survivalDebugStartRound(DEBUG_START_ROUND);
+#endif
 
 #if DEBUG_MANUAL_SPAWNING
   survivalDebugManualSpawn();
