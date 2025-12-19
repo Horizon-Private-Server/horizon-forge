@@ -465,11 +465,31 @@ void survivalDebugInfiniteAmmo(void)
 //--------------------------------------------------------------------------
 void survivalDebugPayday(void)
 {
+  int i;
   static int init = 0;
   if (!MapConfig.State) return;
+  
+  // give max alpha mods
+  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
+    Player* player = playerGetFromSlot(i);
+    if (!playerIsValid(player)) continue;
+
+    GadgetBox* gbox = player->GadgetBox;
+    if (!gbox) continue;
+  
+    gbox->ModBasic[0] = 64;
+    gbox->ModBasic[1] = 64;
+    gbox->ModBasic[2] = 64;
+    gbox->ModBasic[3] = 64;
+    gbox->ModBasic[4] = 64;
+    gbox->ModBasic[5] = 64;
+    gbox->ModBasic[6] = 64;
+    gbox->ModBasic[7] = 64;
+  }
+
   if (init) return;
 
-  int i;
+  // set bolts/tokens once
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     MapConfig.State->PlayerStates[i].State.Bolts = 100000000;
     MapConfig.State->PlayerStates[i].State.CurrentTokens = 10000;
