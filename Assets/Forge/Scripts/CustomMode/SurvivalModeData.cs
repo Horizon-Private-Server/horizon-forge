@@ -355,11 +355,11 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         // baked config
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("SurvivalBakedConfig_t bakedConfig = {");
-        sb.AppendLine($"\t.Difficulty = {Difficulty},");
-        sb.AppendLine($"\t.BoltMultiplier = {BoltMultiplier},");
-        sb.AppendLine($"\t.XpMultiplier = {XpMultiplier},");
-        sb.AppendLine($"\t.SpawnDistanceFactor = {SpawnDistanceFactor},");
-        sb.AppendLine($"\t.BoltRankMultiplier = {BoltRankMultiplier},");
+        sb.AppendLine($"\t.Difficulty = {Difficulty.ToInvariantCulture()},");
+        sb.AppendLine($"\t.BoltMultiplier = {BoltMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t.XpMultiplier = {XpMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t.SpawnDistanceFactor = {SpawnDistanceFactor.ToInvariantCulture()},");
+        sb.AppendLine($"\t.BoltRankMultiplier = {BoltRankMultiplier.ToInvariantCulture()},");
         sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
         sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
         sb.AppendLine("\t.BakedSpawnPoints = {");
@@ -455,7 +455,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             var probability = item.Probability / totalProbability;
             if (i == (sortedItems.Count - 1)) probability = 1; // last item is guaranteed to match roll if all others fail
 
-            sb.AppendLine($"\t{{ {(int)item.Item}, {probability} }},");
+            sb.AppendLine($"\t{{ {(int)item.Item}, {probability.ToInvariantCulture()} }},");
 
             totalProbability *= (1 - item.Probability);
         }
@@ -1579,12 +1579,12 @@ public class SurvivalGambit
         sb.AppendLine($"\t\t.CustomTick = {(string.IsNullOrEmpty(CustomTickFunctionName) ? "NULL" : CustomTickFunctionName)},");
         sb.AppendLine($"\t\t.CustomOnRoundComplete = {(string.IsNullOrEmpty(CustomOnRoundCompleteFunctionName) ? "NULL" : CustomOnRoundCompleteFunctionName)},");
         sb.AppendLine($"\t\t.CompleteAfterRound = {CompleteAfterRound},");
-        sb.AppendLine($"\t\t.DifficultyMultiplier = {DifficultyMultiplier},");
-        sb.AppendLine($"\t\t.XpMultiplier = {XpMultiplier},");
-        sb.AppendLine($"\t\t.BoltMultiplier = {BoltMultiplier},");
-        sb.AppendLine($"\t\t.MobDamageScaleMultiplier = {MobDamageScaleMultiplier},");
-        sb.AppendLine($"\t\t.MobSpeedScaleMultiplier = {MobSpeedScaleMultiplier},");
-        sb.AppendLine($"\t\t.MobHealthScaleMultiplier = {MobHealthScaleMultiplier},");
+        sb.AppendLine($"\t\t.DifficultyMultiplier = {DifficultyMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.XpMultiplier = {XpMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.BoltMultiplier = {BoltMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.MobDamageScaleMultiplier = {MobDamageScaleMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.MobSpeedScaleMultiplier = {MobSpeedScaleMultiplier.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.MobHealthScaleMultiplier = {MobHealthScaleMultiplier.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.InitialBolts = {InitialBolts},");
         sb.AppendLine($"\t\t.InitialTokens = {InitialTokens},");
         sb.AppendLine($"\t\t.ForceWeaponId = {(int)ForceWeapon},");
@@ -1642,7 +1642,7 @@ public class SurvivalBakedSpawnPointItem
         var rotX = Mathf.DeltaAngle(0, rot.x) * -Mathf.Deg2Rad;
         var rotY = Mathf.DeltaAngle(0, rot.y) * -Mathf.Deg2Rad;
         var rotZ = Mathf.DeltaAngle(0, rot.z) * -Mathf.Deg2Rad;
-        sb.Append($"\t\t{{ .Type = {(int)type}, .Params = 0, .Position = {{ {pos.x}, {pos.z}, {pos.y} }}, .Rotation = {{ {rotX}, {rotZ}, {rotY} }} }},");
+        sb.Append($"\t\t{{ .Type = {(int)type}, .Params = 0, .Position = {{ {pos.x.ToInvariantCulture()}, {pos.z.ToInvariantCulture()}, {pos.y.ToInvariantCulture()} }}, .Rotation = {{ {rotX.ToInvariantCulture()}, {rotZ.ToInvariantCulture()}, {rotY.ToInvariantCulture()} }} }},");
 
         return sb.ToString();
     }
@@ -1714,16 +1714,16 @@ public class SurvivalMobSpawnParam
         sb.AppendLine("\t{");
         sb.AppendLine($"\t\t.MobVTable = &{this.Mob}VTable,");
         sb.AppendLine($"\t\t.RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
-        sb.AppendLine($"\t\t.Scale = {SizeMultiplier},");
+        sb.AppendLine($"\t\t.Scale = {SizeMultiplier.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.OClass = {variant.OClass},");
         sb.AppendLine($"\t\t.BlipType = {(BlipType.HasOverride ? (int)BlipType.OverrideValue : (int)defaults.BlipType)},");
         sb.AppendLine($"\t\t.MaxSpawnedAtOnce = {MaxSpawnedAtOnce},");
         sb.AppendLine($"\t\t.MaxSpawnedPerRound = {MaxSpawnedPerRound},");
         sb.AppendLine($"\t\t.MinRound = {Math.Clamp(MinRound, 0, int.MaxValue)},");
         sb.AppendLine($"\t\t.CooldownTicks = {(int)CooldownTicks},");
-        sb.AppendLine($"\t\t.CooldownOffsetPerRoundFactor = {CooldownOffsetPerRoundFactor},");
-        sb.AppendLine($"\t\t.Probability = {probabilityOverride ?? Probability},");
-        sb.AppendLine($"\t\t.RangedAttackDistance = {(RangedAttackDistance.HasOverride ? RangedAttackDistance.OverrideValue : defaults.RangedAttackDistance)},");
+        sb.AppendLine($"\t\t.CooldownOffsetPerRoundFactor = {CooldownOffsetPerRoundFactor.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.Probability = {(probabilityOverride ?? Probability).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.RangedAttackDistance = {(RangedAttackDistance.HasOverride ? RangedAttackDistance.OverrideValue : defaults.RangedAttackDistance).ToInvariantCulture()},");
         sb.AppendLine($"\t\t.SpawnType = {(int)SpawnType},");
         sb.AppendLine($"\t\t.SpecialRoundOnly = {(SpecialRoundOnly ? 1 : 0)},");
         sb.AppendLine($"\t\t.StatId = {(int)defaults.StatId},");
@@ -1737,18 +1737,18 @@ public class SurvivalMobSpawnParam
         sb.AppendLine($"\t\t\t.Xp = {(ushort)Math.Clamp(Xp.HasOverride ? Xp.OverrideValue : defaults.Xp, 0, ushort.MaxValue)},");
         sb.AppendLine($"\t\t\t.Bolts = {(int)(Bolts.HasOverride ? Bolts.OverrideValue : defaults.Bolts)},");
         sb.AppendLine($"\t\t\t.Bangles = 0x{(int)variant.Bangles:X4},");
-        sb.AppendLine($"\t\t\t.Damage = {(Damage.HasOverride ? Damage.OverrideValue : defaults.Damage)},");
-        sb.AppendLine($"\t\t\t.MaxDamage = {(DamageMax.HasOverride ? DamageMax.OverrideValue : defaults.DamageMax)},");
-        sb.AppendLine($"\t\t\t.DamageScale = {(DamageScale.HasOverride ? DamageScale.OverrideValue : defaults.DamageScale)},");
-        sb.AppendLine($"\t\t\t.Speed = {(Speed.HasOverride ? Speed.OverrideValue : defaults.Speed)},");
-        sb.AppendLine($"\t\t\t.MaxSpeed = {(SpeedMax.HasOverride ? SpeedMax.OverrideValue : defaults.SpeedMax)},");
-        sb.AppendLine($"\t\t\t.SpeedScale = {(SpeedScale.HasOverride ? SpeedScale.OverrideValue : defaults.SpeedScale)},");
-        sb.AppendLine($"\t\t\t.Health = {(Health.HasOverride ? Health.OverrideValue : defaults.Health)},");
-        sb.AppendLine($"\t\t\t.MaxHealth = {(HealthMax.HasOverride ? HealthMax.OverrideValue : defaults.HealthMax)},");
-        sb.AppendLine($"\t\t\t.HealthScale = {(HealthScale.HasOverride ? HealthScale.OverrideValue : defaults.HealthScale)},");
-        sb.AppendLine($"\t\t\t.AttackRadius = {defaults.AttackRadius * SizeMultiplier},");
-        sb.AppendLine($"\t\t\t.HitRadius = {defaults.HitRadius * SizeMultiplier},");
-        sb.AppendLine($"\t\t\t.CollRadius = {defaults.CollRadius * SizeMultiplier},");
+        sb.AppendLine($"\t\t\t.Damage = {(Damage.HasOverride ? Damage.OverrideValue : defaults.Damage).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.MaxDamage = {(DamageMax.HasOverride ? DamageMax.OverrideValue : defaults.DamageMax).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.DamageScale = {(DamageScale.HasOverride ? DamageScale.OverrideValue : defaults.DamageScale).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.Speed = {(Speed.HasOverride ? Speed.OverrideValue : defaults.Speed).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.MaxSpeed = {(SpeedMax.HasOverride ? SpeedMax.OverrideValue : defaults.SpeedMax).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.SpeedScale = {(SpeedScale.HasOverride ? SpeedScale.OverrideValue : defaults.SpeedScale).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.Health = {(Health.HasOverride ? Health.OverrideValue : defaults.Health).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.MaxHealth = {(HealthMax.HasOverride ? HealthMax.OverrideValue : defaults.HealthMax).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.HealthScale = {(HealthScale.HasOverride ? HealthScale.OverrideValue : defaults.HealthScale).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius * SizeMultiplier).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.HitRadius = {(defaults.HitRadius * SizeMultiplier).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.CollRadius = {(defaults.CollRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
         sb.AppendLine($"\t\t\t.AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
         sb.AppendLine($"\t\t\t.DamageCooldownTickCount = {(int)(defaults.DamageCooldownSeconds * 60)},");
@@ -1831,8 +1831,8 @@ public class SurvivalMobSpecialRoundParam
         sb.AppendLine($"\t\t.UnlimitedPostRoundTime = {(UnlimitedPostRoundTime ? 1 : 0)},");
         sb.AppendLine($"\t\t.DisableDrops = {(DisableDrops ? 1 : 0)},");
         sb.AppendLine($"\t\t.MaxSpawnedAtOnce = {maxSpawnedAtOnce},");
-        sb.AppendLine($"\t\t.SpawnCountFactor = {SpawnCountFactor},");
-        sb.AppendLine($"\t\t.SpawnRateFactor = {SpawnRateFactor},");
+        sb.AppendLine($"\t\t.SpawnCountFactor = {SpawnCountFactor.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.SpawnRateFactor = {SpawnRateFactor.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.SpawnParamCount = {Math.Min(4, spawnParamIdxs.Count)},");
         sb.AppendLine("\t\t.SpawnParamIds = {");
         for (int i = 0; i < 4; ++i)

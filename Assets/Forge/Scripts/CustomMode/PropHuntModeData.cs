@@ -124,13 +124,13 @@ public class PropHuntModeData : CustomModeData, IBuildHook, ICodeGen
         state.LDFlags.Add($"-DMAX_SPAWN_PROPS={NumberOfPropsToSpawn}");
         state.LDFlags.Add($"-DPROP_SPAWN_CLUSTER_MIN={SpawnClusterSizeMin}");
         state.LDFlags.Add($"-DPROP_SPAWN_CLUSTER_MAX={SpawnClusterSizeMax}");
-        state.LDFlags.Add($"-DPROP_SPAWN_CLUSTER_SPREAD={SpawnClusterSpread}");
+        state.LDFlags.Add($"-DPROP_SPAWN_CLUSTER_SPREAD={SpawnClusterSpread.ToInvariantCulture()}");
         if (!SpawnClusterAllowVerticalMagnetWalls) state.LDFlags.Add("-DPROP_SPAWN_CLUSTER_STRAIGHT");
         state.LDFlags.Add($"-DMAX_DRAW_PROPS={MaxNumberOfPropMobysCanDraw}");
         state.LDFlags.Add($"-DPROP_MAX_SPAWN_DIST={0x40}");
         state.LDFlags.Add($"-DPROP_MOBY_DRAW_DIST={0x30}");
-        state.LDFlags.Add($"-DPROP_SCALE_RAND_MIN={PropScaleMin}");
-        state.LDFlags.Add($"-DPROP_SCALE_RAND_MAX={PropScaleMax}");
+        state.LDFlags.Add($"-DPROP_SCALE_RAND_MIN={PropScaleMin.ToInvariantCulture()}");
+        state.LDFlags.Add($"-DPROP_SCALE_RAND_MAX={PropScaleMax.ToInvariantCulture()}");
         state.LDFlags.Add($"-DPROP_SOUND_PERIOD_SEC={15}");
         state.LDFlags.Add($"-DPROP_SOUND_PERIOD_DEC={3}");
 
