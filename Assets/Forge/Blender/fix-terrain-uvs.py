@@ -50,5 +50,5 @@ if bpy.context.selected_objects != []:
 print('done')
 
 # success
-print("FORGE SCRIPT COMPLETE")
+print("FORGE SCRIPT COMPLETE", flush=True)
 sys.exit(1)
