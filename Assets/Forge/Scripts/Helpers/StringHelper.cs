@@ -12,4 +12,8 @@ public static class StringHelper
         str = str.Replace(str.Split(' ')[0], firstword);
         return str;
     }
+
+    public static string ToInvariantCulture(this float value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    public static string ToInvariantCulture(this double value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    public static string ToInvariantCulture(this decimal value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }

@@ -502,7 +502,7 @@ public class PathGraph : MonoBehaviour
         foreach (var node in _cachedNodes)
         {
             var p = node.GetCenterPosition();
-            dataDefs += $"\t{{ {p.x}, {p.z}, {p.y}, {node.Radius} }},\n";
+            dataDefs += $"\t{{ {p.x.ToInvariantCulture()}, {p.z.ToInvariantCulture()}, {p.y.ToInvariantCulture()}, {node.Radius.ToInvariantCulture()} }},\n";
         }
         dataDefs += "};\n\n";
 
