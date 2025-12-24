@@ -419,7 +419,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("\tMapConfig.DefaultSpawnParamsCount = COUNT_OF(defaultSpawnParams);");
         sb.AppendLine("\tMapConfig.SpecialRoundParams = specialRoundParams;");
         sb.AppendLine("\tMapConfig.SpecialRoundParamsCount = COUNT_OF(specialRoundParams);");
-        sb.AppendLine($"\tMapConfig.WeaponPickupCooldownFactor = {WeaponPickupCooldownFactor};");
+        sb.AppendLine($"\tMapConfig.WeaponPickupCooldownFactor = {WeaponPickupCooldownFactor.ToInvariantCulture()};");
         sb.AppendLine("}");
         sb.AppendLine();
 
