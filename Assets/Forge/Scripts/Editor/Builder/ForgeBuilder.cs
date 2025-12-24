@@ -219,8 +219,6 @@ public static class ForgeBuilder
                     importerWindow.ReimportBaseMap(mapConfig, (int)mapConfig.DLBaseMap, RCVER.DL);
                 if (mapConfig.HasUYABaseMap())
                     importerWindow.ReimportBaseMap(mapConfig, (int)mapConfig.UYABaseMap, RCVER.UYA);
-
-                return false;
             }
 
             var state = new BuildState(scene.name, racVersion, region);
