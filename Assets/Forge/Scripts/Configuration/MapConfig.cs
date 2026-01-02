@@ -55,6 +55,8 @@ public class MapConfig : MonoBehaviour
 
     private int sceneCameraCount = -1;
     private ForgeSettings forgeSettings;
+    private OcclusionDatabase occlusionDb;
+    private TieDatabase tieDb;
 
     public bool HasDeadlockedBaseMap() => DLBaseMap >= DLMapIds.MP_Battledome;
     public bool HasUYABaseMap() => UYABaseMap >= UYAMapIds.MP_Bakisi_Isles;
@@ -65,6 +67,9 @@ public class MapConfig : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!occlusionDb) occlusionDb = GetOcclusionDatabase();
+        if (!tieDb) tieDb = GetTieDatabase();
+
         UpdateShaderGlobals();
     }
 
@@ -153,6 +158,8 @@ public class MapConfig : MonoBehaviour
 
     public TieDatabase GetTieDatabase()
     {
+        if (tieDb) return tieDb;
+
         var mapFolder = FolderNames.GetMapFolder(SceneManager.GetActiveScene().name);
         var dbFile = Path.Combine(mapFolder, "tiedb.asset");
         var db = AssetDatabase.LoadAssetAtPath<TieDatabase>(dbFile);
@@ -160,6 +167,24 @@ public class MapConfig : MonoBehaviour
         if (!db)
         {
             db = ScriptableObject.CreateInstance<TieDatabase>();
+            AssetDatabase.CreateAsset(db, dbFile);
+            AssetDatabase.SaveAssets();
+        }
+
+        return db;
+    }
+
+    public OcclusionDatabase GetOcclusionDatabase()
+    {
+        if (occlusionDb) return occlusionDb;
+
+        var mapFolder = FolderNames.GetMapFolder(SceneManager.GetActiveScene().name);
+        var dbFile = Path.Combine(mapFolder, "occlusiondb.asset");
+        var db = AssetDatabase.LoadAssetAtPath<OcclusionDatabase>(dbFile);
+
+        if (!db)
+        {
+            db = ScriptableObject.CreateInstance<OcclusionDatabase>();
             AssetDatabase.CreateAsset(db, dbFile);
             AssetDatabase.SaveAssets();
         }

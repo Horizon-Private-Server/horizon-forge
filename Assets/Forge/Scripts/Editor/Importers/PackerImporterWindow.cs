@@ -153,277 +153,282 @@ public class PackerImporterWindow : EditorWindow
             List<string> materialsToConfigureImporterSettings = new List<string>();
             var cancel = false;
 
-            AssetDatabase.StartAssetEditing();
-
-            // create an action for each asset to import
-            var importActions = imports.Select((import) => (Action)(() =>
+            try
             {
-                if (cancel)
+                AssetDatabase.StartAssetEditing();
+
+                // create an action for each asset to import
+                var importActions = imports.Select((import) => (Action)(() =>
                 {
-                    lock (lockObject) { ++i; }
-                    return;
-                }
-
-                try
-                {
-                    // get files in wrench asset folder
-                    var assetFiles = Directory.EnumerateFiles(import.AssetFolder).ToList();
-
-                    // prepare asset folder for import
-                    var className = import.Name;
-                    var assetDestFolder = import.DestinationFolder;
-                    var textureDestFolder = Path.Combine(assetDestFolder, "Textures");
-                    var materialDestFolder = Path.Combine(assetDestFolder, "Materials");
-                    var texCount = 0;
-                    if (!Directory.Exists(assetDestFolder)) { Directory.CreateDirectory(assetDestFolder); }
-                    if (!Directory.Exists(textureDestFolder)) { Directory.CreateDirectory(textureDestFolder); }
-                    //if (!Directory.Exists(materialDestFolder)) { Directory.CreateDirectory(materialDestFolder); }
-
-                    // count textures
-                    foreach (var assetFile in assetFiles)
+                    if (cancel)
                     {
-                        if (!assetFile.EndsWith(".png")) continue;
-
-                        var filename = Path.GetFileNameWithoutExtension(assetFile);
-
-                        // count textures as #.png
-                        if (!filename.Contains(".") && int.TryParse(filename, out var texId))
-                        {
-                            if (texId >= texCount) texCount = texId + 1;
-                            continue;
-                        }
-
-                        // count high lod tex.#.png
-                        if (filename.StartsWith("tex.") && filename.Count(x => x == '.') == 1 && int.TryParse(filename.Split('.')[1], out texId))
-                        {
-                            if (texId >= texCount) texCount = texId + 1;
-                            continue;
-                        }
-
-                        // count high lod or gs stash textures tex.#.0.png or tex.#.3.png
-                        if (filename.StartsWith("tex.") && (filename.EndsWith(".0") || filename.EndsWith(".3")) && int.TryParse(filename.Split('.')[1], out texId))
-                        {
-                            if (texId >= texCount) texCount = texId + 1;
-                            continue;
-                        }
+                        lock (lockObject) { ++i; }
+                        return;
                     }
 
-                    // import textures
-                    foreach (var assetFile in assetFiles)
+                    try
                     {
-                        var ext = Path.GetExtension(assetFile);
-                        var name = Path.GetFileNameWithoutExtension(assetFile);
+                        // get files in wrench asset folder
+                        var assetFiles = Directory.EnumerateFiles(import.AssetFolder).ToList();
 
-                        switch (ext)
+                        // prepare asset folder for import
+                        var className = import.Name;
+                        var assetDestFolder = import.DestinationFolder;
+                        var textureDestFolder = Path.Combine(assetDestFolder, "Textures");
+                        var materialDestFolder = Path.Combine(assetDestFolder, "Materials");
+                        var texCount = 0;
+                        if (!Directory.Exists(assetDestFolder)) { Directory.CreateDirectory(assetDestFolder); }
+                        if (!Directory.Exists(textureDestFolder)) { Directory.CreateDirectory(textureDestFolder); }
+                        //if (!Directory.Exists(materialDestFolder)) { Directory.CreateDirectory(materialDestFolder); }
+
+                        // count textures
+                        foreach (var assetFile in assetFiles)
                         {
-                            case ".png":
-                                {
-                                    // parse tex idx from name
-                                    var parts = name.Split('.');
-                                    var idx = "0000";
-                                    var mipmap = "0";
-                                    var postfix = "";
-                                    if (parts.Length == 1)
+                            if (!assetFile.EndsWith(".png")) continue;
+
+                            var filename = Path.GetFileNameWithoutExtension(assetFile);
+
+                            // count textures as #.png
+                            if (!filename.Contains(".") && int.TryParse(filename, out var texId))
+                            {
+                                if (texId >= texCount) texCount = texId + 1;
+                                continue;
+                            }
+
+                            // count high lod tex.#.png
+                            if (filename.StartsWith("tex.") && filename.Count(x => x == '.') == 1 && int.TryParse(filename.Split('.')[1], out texId))
+                            {
+                                if (texId >= texCount) texCount = texId + 1;
+                                continue;
+                            }
+
+                            // count high lod or gs stash textures tex.#.0.png or tex.#.3.png
+                            if (filename.StartsWith("tex.") && (filename.EndsWith(".0") || filename.EndsWith(".3")) && int.TryParse(filename.Split('.')[1], out texId))
+                            {
+                                if (texId >= texCount) texCount = texId + 1;
+                                continue;
+                            }
+                        }
+
+                        // import textures
+                        foreach (var assetFile in assetFiles)
+                        {
+                            var ext = Path.GetExtension(assetFile);
+                            var name = Path.GetFileNameWithoutExtension(assetFile);
+
+                            switch (ext)
+                            {
+                                case ".png":
                                     {
-                                        idx = parts[0];
-                                    }
-                                    else if (parts.Length == 2)
-                                    {
-                                        idx = parts[1];
-                                    }
-                                    else if (parts.Length == 3)
-                                    {
-                                        idx = parts[1];
-                                        mipmap = parts[2];
-                                    }
-
-                                    // only copy highest quality mipmap
-                                    if (mipmap == "1" || mipmap == "2") continue;
-
-                                    // gs stash
-                                    if (mipmap == "3")
-                                    {
-                                        postfix = ".gs";
-                                    }
-
-                                    var texIdx = int.TryParse(idx, out var tidx) ? tidx : -1;
-                                    if (import.GetTexName != null)
-                                    {
-                                        idx = import.GetTexName(Path.GetFileName(assetFile)) ?? idx;
-                                    }
-                                    else
-                                    {
-                                        idx = int.Parse(idx).ToString();
-                                    }
-
-                                    // copy texture
-                                    var texName = $"{idx}{postfix}{ext}";
-                                    var matName = $"{idx}.mat";
-                                    if (import.PrependModelNameToTextures)
-                                    {
-                                        texName = $"{className}-{idx}{postfix}{ext}";
-                                        matName = $"{className}-{idx}.mat";
-                                    }
-
-                                    var texOutPath = Path.Combine(textureDestFolder, texName);
-                                    var matOutPath = Path.Combine(materialDestFolder, matName);
-                                    var texAssetPath = UnityHelper.GetProjectRelativePath(texOutPath);
-                                    var matAssetPath = UnityHelper.GetProjectRelativePath(matOutPath);
-
-                                    // copy if not exists or overwrite existing
-                                    if (!overwrite && File.Exists(texOutPath)) continue;
-                                    File.Copy(assetFile, texOutPath, true);
-
-                                    lock (lockObject)
-                                    {
-                                        texturesToConfigureImporterSettings.Add((import, texAssetPath, texIdx));
-                                        materialsToConfigureImporterSettings.Add(matAssetPath);
-                                    }
-                                    break;
-                                }
-                            case ".bin":
-                                {
-                                    // copy asset bin
-                                    if (name != "shrub" && name != "tie" && name != "moby") break;
-                                    var coreOutPath = Path.Combine(assetDestFolder, $"core.bin");
-
-                                    // copy if not exists or overwrite existing
-                                    if (!overwrite && File.Exists(coreOutPath)) continue;
-                                    File.Copy(assetFile, coreOutPath, true);
-
-                                    // convert to collada
-                                    var meshFileName = assetFile;
-                                    switch (name)
-                                    {
-                                        case "shrub":
-                                            meshFileName = assetFile + ".glb";
-                                            WrenchHelper.ExportShrub(assetFile, meshFileName, texCount, import.RacVersion);
-                                            break;
-                                        case "tie":
-                                            meshFileName = assetFile + ".dae";
-                                            WrenchHelper.ExportTie(assetFile, meshFileName, import.RacVersion);
-                                            importedColladaFiles.Add((import, meshFileName));
-                                            break;
-                                        case "moby":
-
-                                            // read team tex count
-                                            // if moby has team textures then save copy of raw textures
-                                            // since repacking won't produce the correct palettes
-                                            var teamTexCnt = File.ReadAllBytes(assetFile)[0xb];
-                                            if (teamTexCnt > 0)
-                                            {
-                                                var dir = Path.GetDirectoryName(assetFile);
-                                                var outTeamTexFile = Path.Combine(assetDestFolder, "tex.bin");
-                                                PackerHelper.PackAssetTextures(dir, outTeamTexFile);
-                                            }
-
-                                            meshFileName = assetFile + ".dae";
-                                            WrenchHelper.ExportMoby(assetFile, meshFileName, import.RacVersion);
-                                            break;
-                                    }
-
-                                    // import mesh
-                                    if (!BlenderHelper.ImportMesh(meshFileName, assetDestFolder, className, overwrite, out var outPath, fixNormals: true)) continue;
-
-                                    // import collision
-                                    if (import.GenerateCollisionId.HasValue)
-                                    {
-                                        var colFile = Path.Combine(assetDestFolder, $"{className}_col.fbx");
-                                        BlenderHelper.PrepareMeshFileForCollider(meshFileName, colFile, $"col_{import.GenerateCollisionId.Value:x}");
-
-                                        if (File.Exists(colFile))
+                                        // parse tex idx from name
+                                        var parts = name.Split('.');
+                                        var idx = "0000";
+                                        var mipmap = "0";
+                                        var postfix = "";
+                                        if (parts.Length == 1)
                                         {
-                                            lock (lockObject)
+                                            idx = parts[0];
+                                        }
+                                        else if (parts.Length == 2)
+                                        {
+                                            idx = parts[1];
+                                        }
+                                        else if (parts.Length == 3)
+                                        {
+                                            idx = parts[1];
+                                            mipmap = parts[2];
+                                        }
+
+                                        // only copy highest quality mipmap
+                                        if (mipmap == "1" || mipmap == "2") continue;
+
+                                        // gs stash
+                                        if (mipmap == "3")
+                                        {
+                                            postfix = ".gs";
+                                        }
+
+                                        var texIdx = int.TryParse(idx, out var tidx) ? tidx : -1;
+                                        if (import.GetTexName != null)
+                                        {
+                                            idx = import.GetTexName(Path.GetFileName(assetFile)) ?? idx;
+                                        }
+                                        else
+                                        {
+                                            idx = int.Parse(idx).ToString();
+                                        }
+
+                                        // copy texture
+                                        var texName = $"{idx}{postfix}{ext}";
+                                        var matName = $"{idx}.mat";
+                                        if (import.PrependModelNameToTextures)
+                                        {
+                                            texName = $"{className}-{idx}{postfix}{ext}";
+                                            matName = $"{className}-{idx}.mat";
+                                        }
+
+                                        var texOutPath = Path.Combine(textureDestFolder, texName);
+                                        var matOutPath = Path.Combine(materialDestFolder, matName);
+                                        var texAssetPath = UnityHelper.GetProjectRelativePath(texOutPath);
+                                        var matAssetPath = UnityHelper.GetProjectRelativePath(matOutPath);
+
+                                        // copy if not exists or overwrite existing
+                                        if (!overwrite && File.Exists(texOutPath)) continue;
+                                        File.Copy(assetFile, texOutPath, true);
+
+                                        lock (lockObject)
+                                        {
+                                            texturesToConfigureImporterSettings.Add((import, texAssetPath, texIdx));
+                                            materialsToConfigureImporterSettings.Add(matAssetPath);
+                                        }
+                                        break;
+                                    }
+                                case ".bin":
+                                    {
+                                        // copy asset bin
+                                        if (name != "shrub" && name != "tie" && name != "moby") break;
+                                        var coreOutPath = Path.Combine(assetDestFolder, $"core.bin");
+
+                                        // copy if not exists or overwrite existing
+                                        if (!overwrite && File.Exists(coreOutPath)) continue;
+                                        File.Copy(assetFile, coreOutPath, true);
+
+                                        // convert to collada
+                                        var meshFileName = assetFile;
+                                        switch (name)
+                                        {
+                                            case "shrub":
+                                                meshFileName = assetFile + ".glb";
+                                                WrenchHelper.ExportShrub(assetFile, meshFileName, texCount, import.RacVersion);
+                                                break;
+                                            case "tie":
+                                                meshFileName = assetFile + ".dae";
+                                                WrenchHelper.ExportTie(assetFile, meshFileName, import.RacVersion);
+                                                importedColladaFiles.Add((import, meshFileName));
+                                                break;
+                                            case "moby":
+
+                                                // read team tex count
+                                                // if moby has team textures then save copy of raw textures
+                                                // since repacking won't produce the correct palettes
+                                                var teamTexCnt = File.ReadAllBytes(assetFile)[0xb];
+                                                if (teamTexCnt > 0)
+                                                {
+                                                    var dir = Path.GetDirectoryName(assetFile);
+                                                    var outTeamTexFile = Path.Combine(assetDestFolder, "tex.bin");
+                                                    PackerHelper.PackAssetTextures(dir, outTeamTexFile);
+                                                }
+
+                                                meshFileName = assetFile + ".dae";
+                                                WrenchHelper.ExportMoby(assetFile, meshFileName, import.RacVersion);
+                                                break;
+                                        }
+
+                                        // import mesh
+                                        if (!BlenderHelper.ImportMesh(meshFileName, assetDestFolder, className, overwrite, out var outPath, fixNormals: true)) continue;
+
+                                        // import collision
+                                        if (import.GenerateCollisionId.HasValue)
+                                        {
+                                            var colFile = Path.Combine(assetDestFolder, $"{className}_col.fbx");
+                                            BlenderHelper.PrepareMeshFileForCollider(meshFileName, colFile, $"col_{import.GenerateCollisionId.Value:x}");
+
+                                            if (File.Exists(colFile))
                                             {
-                                                modelsToConfigureImporterSettings.Add((import, "Collider", colFile));
-                                                modelPrependedToTextureNames.Add(import.PrependModelNameToTextures);
+                                                lock (lockObject)
+                                                {
+                                                    modelsToConfigureImporterSettings.Add((import, "Collider", colFile));
+                                                    modelPrependedToTextureNames.Add(import.PrependModelNameToTextures);
+                                                }
                                             }
                                         }
-                                    }
 
-                                    lock (lockObject)
+                                        lock (lockObject)
+                                        {
+                                            modelsToConfigureImporterSettings.Add((import, import.AssetType, outPath));
+                                            modelPrependedToTextureNames.Add(import.PrependModelNameToTextures);
+                                        }
+                                        break;
+                                    }
+                                case ".glb":
                                     {
-                                        modelsToConfigureImporterSettings.Add((import, import.AssetType, outPath));
-                                        modelPrependedToTextureNames.Add(import.PrependModelNameToTextures);
+                                        // copy asset bin
+                                        if (name != "mesh" || import.Name != "sky") break;
+                                        var outPath = Path.Combine(assetDestFolder, $"sky.glb");
+
+                                        // copy if not exists or overwrite existing
+                                        if (!overwrite && File.Exists(outPath)) continue;
+                                        //File.Copy(assetFile, outPath, true);
+
+                                        // import mesh
+                                        if (!BlenderHelper.ImportMeshAsBlend(assetFile, assetDestFolder, className, overwrite, out outPath)) continue;
+
+                                        lock (lockObject)
+                                        {
+                                            modelsToConfigureImporterSettings.Add((import, import.AssetType, outPath));
+                                            modelPrependedToTextureNames.Add(import.PrependModelNameToTextures);
+                                        }
+                                        break;
                                     }
-                                    break;
-                                }
-                            case ".glb":
-                                {
-                                    // copy asset bin
-                                    if (name != "mesh" || import.Name != "sky") break;
-                                    var outPath = Path.Combine(assetDestFolder, $"sky.glb");
-
-                                    // copy if not exists or overwrite existing
-                                    if (!overwrite && File.Exists(outPath)) continue;
-                                    //File.Copy(assetFile, outPath, true);
-
-                                    // import mesh
-                                    if (!BlenderHelper.ImportMeshAsBlend(assetFile, assetDestFolder, className, overwrite, out outPath)) continue;
-
-                                    lock (lockObject)
-                                    {
-                                        modelsToConfigureImporterSettings.Add((import, import.AssetType, outPath));
-                                        modelPrependedToTextureNames.Add(import.PrependModelNameToTextures);
-                                    }
-                                    break;
-                                }
+                            }
                         }
-                    }
 
-                    // import billboard
-                    var billboardPath = Path.Combine(import.AssetFolder, "billboard");
-                    if (Directory.Exists(billboardPath))
-                    {
-                        var files = Directory.EnumerateFiles(billboardPath, "*.png");
-                        foreach (var file in files)
+                        // import billboard
+                        var billboardPath = Path.Combine(import.AssetFolder, "billboard");
+                        if (Directory.Exists(billboardPath))
                         {
-                            var name = Path.GetFileNameWithoutExtension(file);
-
-                            // parse tex idx from name
-                            var parts = name.Split('.');
-                            var idx = parts[1];
-                            var mipmap = parts[2];
-
-                            // only copy highest quality mipmap
-                            if (mipmap != "0") continue;
-
-                            var texIdx = int.Parse(idx);
-                            var texPath = Path.Combine(textureDestFolder, $"billboard-{className}-{texIdx}.png");
-                            File.Copy(file, texPath, true);
-
-                            lock (lockObject)
+                            var files = Directory.EnumerateFiles(billboardPath, "*.png");
+                            foreach (var file in files)
                             {
-                                texturesToConfigureImporterSettings.Add((import, UnityHelper.GetProjectRelativePath(texPath), texIdx));
-                                materialsToConfigureImporterSettings.Add(null);
+                                var name = Path.GetFileNameWithoutExtension(file);
+
+                                // parse tex idx from name
+                                var parts = name.Split('.');
+                                var idx = parts[1];
+                                var mipmap = parts[2];
+
+                                // only copy highest quality mipmap
+                                if (mipmap != "0") continue;
+
+                                var texIdx = int.Parse(idx);
+                                var texPath = Path.Combine(textureDestFolder, $"billboard-{className}-{texIdx}.png");
+                                File.Copy(file, texPath, true);
+
+                                lock (lockObject)
+                                {
+                                    texturesToConfigureImporterSettings.Add((import, UnityHelper.GetProjectRelativePath(texPath), texIdx));
+                                    materialsToConfigureImporterSettings.Add(null);
+                                }
                             }
                         }
                     }
-                }
-                catch (Exception ex)
+                    catch (Exception ex)
+                    {
+                        // log
+                        Dispatcher.RunOnMainThread(() => Debug.LogException(ex));
+                    }
+
+                    lock (lockObject) { ++i; }
+                })).ToArray();
+
+                // import each action in parallel
+                // wrap in Task.Run so that it's non blocking
+                Task.Run(() => Parallel.Invoke(importActions.ToArray()));
+
+                // wait for imports to finish
+                while (i < imports.Count)
                 {
-                    // log
-                    Dispatcher.RunOnMainThread(() => Debug.LogException(ex));
+                    if (!cancel && EditorUtility.DisplayCancelableProgressBar($"Importing", $"({i}/{imports.Count})", i / (float)imports.Count))
+                        cancel = true;
+
+                    Thread.Sleep(100);
                 }
-
-                lock (lockObject) { ++i; }
-            })).ToArray();
-
-            // import each action in parallel
-            // wrap in Task.Run so that it's non blocking
-            Task.Run(() => Parallel.Invoke(importActions.ToArray()));
-
-            // wait for imports to finish
-            while (i < imports.Count)
-            {
-                if (!cancel && EditorUtility.DisplayCancelableProgressBar($"Importing", $"({i}/{imports.Count})", i / (float)imports.Count))
-                    cancel = true;
-
-                Thread.Sleep(100);
             }
-
-            AssetDatabase.StopAssetEditing();
-            AssetDatabase.Refresh();
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.Refresh();
+            }
 
             // configure texture importers
             try

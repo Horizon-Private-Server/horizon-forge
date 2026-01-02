@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 [ExecuteInEditMode, SelectionBase, AddComponentMenu("")]
@@ -17,11 +18,15 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
 
     [HideInInspector, SerializeField] private Vector3[] _octants;
     [HideInInspector, SerializeField] private int _occlusionId;
+    [HideInInspector, SerializeField] private SerializableGuid _uid;
 
     [SerializeField] private List<TfragManipulator> _manipulators;
     private MaterialPropertyBlock _mpb;
     private Renderer[] _renderers;
+    private OcclusionDatabase _occlusionDb;
+    private bool _sceneIsClosing;
 
+    public System.Guid Uid => _uid.Guid;
     public Vector3[] Octants { get => _octants; set => _octants = value; }
     public int OcclusionId { get => _occlusionId; set => _occlusionId = value; }
     public OcclusionDataType OcclusionType => OcclusionDataType.Tfrag;
@@ -29,8 +34,25 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
     public GameObject GameObject => this ? this.gameObject : null;
     public bool IsHidden => SceneVisibilityManager.instance.IsHidden(this.gameObject);
 
-    private void Start()
+    private void Awake()
     {
+        // ensure uid is unique
+        if (Uid == Guid.Empty || IOcclusionData.AllOcclusionDatas.Any(x => x.Uid == Uid && x != (this as IOcclusionData)))
+        {
+            _uid = SerializableGuid.NewGuid();
+            EditorUtility.SetDirty(this);
+        }
+    }
+
+    private void OnEnable()
+    {
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        if (mapConfig)
+            _occlusionDb = mapConfig.GetOcclusionDatabase();
+
+        EditorSceneManager.sceneClosing += OnSceneClosing;
+        EditorApplication.quitting += OnQuitting;
+
         IOcclusionData.AllOcclusionDatas.Remove(this);
         IOcclusionData.AllOcclusionDatas.Add(this);
         IOcclusionData.ForceUniqueOcclusionId(this);
@@ -39,10 +61,21 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
         UpdateAsset();
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
+        EditorSceneManager.sceneClosing -= OnSceneClosing;
+        EditorApplication.quitting -= OnQuitting;
+
         IOcclusionData.AllOcclusionDatas.Remove(this);
         AssetUpdater.UnregisterAsset(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (EditorSceneManager.loadedRootSceneCount == 1 && !_sceneIsClosing && _occlusionDb)
+        {
+            _occlusionDb.Remove(this);
+        }
     }
 
     private void OnDrawGizmosSelected()
@@ -51,16 +84,29 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
         if (!RenderOctants) return;
         if (Selection.activeGameObject != this.gameObject) return;
 
-        if (Octants != null)
+        if (_occlusionDb)
         {
-            Gizmos.matrix = Matrix4x4.identity;
-            Gizmos.color = Color.blue;
-            foreach (var octant in Octants)
+            var data = _occlusionDb.Get(this);
+            if (data != null)
             {
-                Gizmos.DrawWireCube(octant + Vector3.one * 2f, Vector3.one * 0.5f);
+                Gizmos.matrix = Matrix4x4.identity;
+                Gizmos.color = Color.blue;
+                foreach (var octant in data.Octants)
+                {
+                    Gizmos.DrawWireCube(octant + Vector3.one * 2f, Vector3.one * 0.5f);
+                }
             }
         }
+    }
 
+    void OnSceneClosing(UnityEngine.SceneManagement.Scene scene, bool removingScene)
+    {
+        _sceneIsClosing = true;
+    }
+
+    void OnQuitting()
+    {
+        _sceneIsClosing = true;
     }
 
     public void OnPreBake(Color32 uidColor)

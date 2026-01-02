@@ -497,45 +497,45 @@ public static class TfragHelper
         
 
         GenerateTfrag_1x2(nVertices, nNormals, nColors, nUVs, nQuads, quadTextures, textureClamps, out def, out data);
-        return;
+        //return;
 
-        data = Convert.FromBase64String(GENERATE_TFRAG_DATA_1X2);
-        var header = new TfragHeader()
-        {
-            lod_2_ofs = 0,
-            shared_ofs = 0x40,
-            lod_1_ofs = 0x1C0,
-            lod_0_ofs = 0x200,
-            tex_ofs = 0x70,
-            rgba_ofs = 0x260,
-            common_size = 0x18,
-            lod_2_size = 0x1C,
-            lod_1_size = 0x1E,
-            lod_0_size = 0x06,
-            lod_2_rgba_cnt = 0x08,
-            lod_1_rgba_cnt = 0x08,
-            lod_0_rgba_cnt = 0x08,
-            base_only = true,
-            tex_cnt = 1,
-            rgba_size = 2,
-            rgba_verts_loc = 0x14,
-            occl_index_stash = 0,
-            msphere_cnt = 1,
-            flags = 1,
-            msphere_ofs = 0x2C0,
-            light_ofs = 0x280,
-            light_vert_start_off = 0x188,
-            dir_lights_one = -1,
-            dir_lights_upd = 0,
-            point_lights = 0xFFFF,
-            cube_ofs = 0x2E0,
-            occl_index = 0,
-            vert_cnt = 4,
-            tri_cnt = 2,
-            mip_dist = short.MinValue
-        };
+        //data = Convert.FromBase64String(GENERATE_TFRAG_DATA_1X2);
+        //var header = new TfragHeader()
+        //{
+        //    lod_2_ofs = 0,
+        //    shared_ofs = 0x40,
+        //    lod_1_ofs = 0x1C0,
+        //    lod_0_ofs = 0x200,
+        //    tex_ofs = 0x70,
+        //    rgba_ofs = 0x260,
+        //    common_size = 0x18,
+        //    lod_2_size = 0x1C,
+        //    lod_1_size = 0x1E,
+        //    lod_0_size = 0x06,
+        //    lod_2_rgba_cnt = 0x08,
+        //    lod_1_rgba_cnt = 0x08,
+        //    lod_0_rgba_cnt = 0x08,
+        //    base_only = true,
+        //    tex_cnt = 1,
+        //    rgba_size = 2,
+        //    rgba_verts_loc = 0x14,
+        //    occl_index_stash = 0,
+        //    msphere_cnt = 1,
+        //    flags = 1,
+        //    msphere_ofs = 0x2C0,
+        //    light_ofs = 0x280,
+        //    light_vert_start_off = 0x188,
+        //    dir_lights_one = -1,
+        //    dir_lights_upd = 0,
+        //    point_lights = 0xFFFF,
+        //    cube_ofs = 0x2E0,
+        //    occl_index = 0,
+        //    vert_cnt = 4,
+        //    tri_cnt = 2,
+        //    mip_dist = short.MinValue
+        //};
 
-        GenerateTfrag(1, 4, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
+        //GenerateTfrag(1, 4, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
     }
 
     private static void GenerateTfrag(int expectedQuadCount,

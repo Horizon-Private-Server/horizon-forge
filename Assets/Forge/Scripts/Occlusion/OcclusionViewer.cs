@@ -54,13 +54,16 @@ public class OcclusionViewer : MonoBehaviour
 
     void FadeNotVisible_Ties(Vector3 octant)
     {
-        var datas = FindObjectsOfType<Tie>();
-        if (datas != null)
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
+        var occlusionDatas = FindObjectsOfType<Tie>();
+        if (occlusionDatas != null)
         {
-            foreach (var data in datas)
+            foreach (var occlusionData in occlusionDatas)
             {
-                var inOctant = data.Octants.Contains(octant);
-                var mrs = data.GetRenderers();
+                var data = occlusionDb.Get(occlusionData);
+                var inOctant = data?.Octants?.Contains(octant) == true;
+                var mrs = occlusionData.GetRenderers();
                 if (mrs != null)
                 {
                     foreach (var mr in mrs)
@@ -79,13 +82,16 @@ public class OcclusionViewer : MonoBehaviour
 
     void FadeNotVisible_Tfrags(Vector3 octant)
     {
-        var datas = FindObjectsOfType<TfragChunk>();
-        if (datas != null)
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
+        var occlusionDatas = FindObjectsOfType<TfragChunk>();
+        if (occlusionDatas != null)
         {
-            foreach (var data in datas)
+            foreach (var occlusionData in occlusionDatas)
             {
-                var inOctant = data.Octants.Contains(octant);
-                var mrs = data.GetComponents<MeshRenderer>();
+                var data = occlusionDb.Get(occlusionData);
+                var inOctant = data?.Octants?.Contains(octant) == true;
+                var mrs = occlusionData.GetComponents<MeshRenderer>();
                 if (mrs != null)
                 {
                     foreach (var mr in mrs)

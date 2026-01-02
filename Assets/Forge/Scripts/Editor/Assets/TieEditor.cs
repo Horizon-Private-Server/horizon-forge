@@ -77,7 +77,17 @@ public class TieEditor : Editor
     public override void OnInspectorGUI()
     {
         var updateAsset = false;
-        var octantCount = targets.Sum(x => (x as Tie)?.Octants?.Length ?? 0);
+        var octantCount = 0;
+
+        // init db
+        var occlusionDb = m_MapConfig.GetOcclusionDatabase();
+        foreach (var target in targets)
+        {
+            var data = occlusionDb.GetOrCreate(target as Tie);
+            if (data is null) continue;
+
+            octantCount += data.Octants?.Length ?? 0;
+        }
 
         if (HasOneTarget)
         {
@@ -198,32 +208,21 @@ public class TieEditor : Editor
         if (GUILayout.Button($"Set To All Octants"))
         {
             var octants = UnityHelper.GetAllOctants();
-
-            Undo.RecordObjects(targets, "Set To All Octants");
-            foreach (var obj in targets)
-            {
-                if (obj is Tie tie)
-                {
-                    tie.Octants = octants.ToArray();
-                }
-            }
+            occlusionDb.SetOctants(targets.Select(x => x as Tie), octants.ToArray(), recordUndo: true);
             Undo.FlushUndoRecordObjects();
         }
 
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Copy Octants"))
         {
-            OcclusionBaker.ClipboardOcclusionData = (target as Tie)?.Octants?.ToArray() ?? new Vector3[0];
+            var data = occlusionDb.GetOrCreate(target as Tie);
+            OcclusionBaker.ClipboardOcclusionData = data?.Octants?.ToArray() ?? new Vector3[0];
         }
         EditorGUI.BeginDisabledGroup(OcclusionBaker.ClipboardOcclusionData == null);
         if (GUILayout.Button("Paste Octants"))
         {
             var data = OcclusionBaker.ClipboardOcclusionData;
-            Undo.RecordObjects(targets, "Paste Octants" + (OcclusionBaker.ClipboardOcclusionData != null ? $" ({OcclusionBaker.ClipboardOcclusionData.Length})" : ""));
-            foreach (Tie tie in targets)
-            {
-                tie.Octants = data.ToArray();
-            }
+            occlusionDb.SetOctants(targets.Select(x => x as Tie), data, recordUndo: true);
             Undo.FlushUndoRecordObjects();
         }
         EditorGUI.EndDisabledGroup();
@@ -232,14 +231,7 @@ public class TieEditor : Editor
         // clear octants
         if (GUILayout.Button($"Clear Octants"))
         {
-            Undo.RecordObjects(targets, "Clear Octants");
-            foreach (var obj in targets)
-            {
-                if (obj is Tie tie)
-                {
-                    tie.Octants = new Vector3[0];
-                }
-            }
+            occlusionDb.SetOctants(targets.Select(x => x as Tie), new Vector3[0], recordUndo: true);
             Undo.FlushUndoRecordObjects();
         }
 

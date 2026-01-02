@@ -142,22 +142,6 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IS
             if (ContainsKey(key))
             {
                 return base[key];
-
-                var duplicateKeysWithCount = dictionaryList.GroupBy(item => item.Key)
-                                                           .Where(group => group.Count() > 1)
-                                                           .Select(group => new { Key = group.Key, Count = group.Count() });
-
-                foreach (var duplicatedKey in duplicateKeysWithCount)
-                {
-                    Debug.LogError($"Key '{duplicatedKey.Key}' is duplicated {duplicatedKey.Count} times in the dictionary.");
-                }
-
-                int idx = dictionaryList.FindIndex(x => Comparer.Equals(x.Key, key));
-                if (idx < 0)
-                {
-
-                }
-                return dictionaryList.First(x => Comparer.Equals(x.Key, key)).Value;
             }
             else
             {
