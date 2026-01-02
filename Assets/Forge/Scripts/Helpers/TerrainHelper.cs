@@ -11,7 +11,7 @@ public static class TerrainHelper
 {
     public static Vector4 OFFSET_SCALE = new Vector4(-0.5f, -0.5f, 1, 1);
     static readonly RectInt? DEBUG_RENDER_SUBMESH = null; // new RectInt(9, 13, 4, 4);
-    const bool DEBUG_RENDER_SPLAT_POINT_FILTER = false;
+    static bool DEBUG_RENDER_SPLAT_POINT_FILTER = false;
     const int QUANTIZATION_RESOLUTION = 1;
     const int QUANTIZATION_BUFFER = 1;
     const int QUANTIZATION_RESOLUTION_WITH_BUFFER = QUANTIZATION_RESOLUTION + (QUANTIZATION_BUFFER * 2);

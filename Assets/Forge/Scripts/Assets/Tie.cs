@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -26,6 +27,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
 
     [HideInInspector, SerializeField] private Vector3[] _octants;
     [HideInInspector, SerializeField] private int _occlusionId;
+    [HideInInspector, SerializeField] private SerializableGuid _uid;
 
     public Matrix4x4 Reflection = Matrix4x4.identity;
 
@@ -35,6 +37,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
     public ColliderIdOverride[] InstancedColliderIdOverrides;
     [Tooltip("When set, instanced collider will use the corresponding model. Model must have correct collision materials configured.")] public GameObject InstancedColliderOverride;
 
+    public System.Guid Uid => _uid.Guid;
     public Vector3[] Octants { get => _octants; set => _octants = value; }
     public int OcclusionId { get => _occlusionId; set => _occlusionId = value; }
     public OcclusionDataType OcclusionType => OcclusionDataType.Tie;
@@ -55,9 +58,28 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
 
     private RenderHandle renderHandle = null;
     private CollisionRenderHandle collisionRenderHandle = new CollisionRenderHandle(null);
+    private OcclusionDatabase _occlusionDb;
+    private bool _sceneIsClosing;
+
+    private void Awake()
+    {
+        // ensure uid is unique
+        if (Uid == Guid.Empty || IOcclusionData.AllOcclusionDatas.Any(x => x.Uid == Uid && x != (this as IOcclusionData)))
+        {
+            _uid = SerializableGuid.NewGuid();
+            EditorUtility.SetDirty(this);
+        }
+    }
 
     private void OnEnable()
     {
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        if (mapConfig)
+            _occlusionDb = mapConfig.GetOcclusionDatabase();
+
+        EditorSceneManager.sceneClosing += OnSceneClosing;
+        EditorApplication.quitting += OnQuitting;
+
         IOcclusionData.AllOcclusionDatas.Remove(this);
         IOcclusionData.AllOcclusionDatas.Add(this);
         IOcclusionData.ForceUniqueOcclusionId(this);
@@ -68,11 +90,22 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
 
     private void OnDisable()
     {
+        EditorSceneManager.sceneClosing -= OnSceneClosing;
+        EditorApplication.quitting -= OnQuitting;
+
         AssetUpdater.UnregisterAsset(this);
         IOcclusionData.AllOcclusionDatas.Remove(this);
 
         renderHandle?.DestroyAsset();
         collisionRenderHandle?.DestroyAsset();
+    }
+
+    private void OnDestroy()
+    {
+        if (EditorSceneManager.loadedRootSceneCount == 1 && !_sceneIsClosing && _occlusionDb)
+        {
+            _occlusionDb.Remove(this);
+        }
     }
 
     private void OnDrawGizmosSelected()
@@ -83,15 +116,29 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
         // draw render handle gizmos
         renderHandle?.DrawGizmos();
 
-        if (Octants != null)
+        if (_occlusionDb)
         {
-            Gizmos.matrix = Matrix4x4.identity;
-            Gizmos.color = Color.blue;
-            foreach (var octant in Octants)
+            var data = _occlusionDb.Get(this);
+            if (data != null)
             {
-                Gizmos.DrawWireCube(octant + Vector3.one * 2f, Vector3.one * 0.5f);
+                Gizmos.matrix = Matrix4x4.identity;
+                Gizmos.color = Color.blue;
+                foreach (var octant in data.Octants)
+                {
+                    Gizmos.DrawWireCube(octant + Vector3.one * 2f, Vector3.one * 0.5f);
+                }
             }
         }
+    }
+
+    void OnSceneClosing(UnityEngine.SceneManagement.Scene scene, bool removingScene)
+    {
+        _sceneIsClosing = true;
+    }
+
+    void OnQuitting()
+    {
+        _sceneIsClosing = true;
     }
 
     public void UpdateAsset()

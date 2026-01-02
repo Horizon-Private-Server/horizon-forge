@@ -12,7 +12,7 @@ public class InstancedMeshColliderEditor : Editor
     private SerializedProperty m_RecalculateNormalsFactorProperty;
     private SerializedProperty m_RenderProperty;
 
-    private static InstancedMeshCollider _clipboardCollider = null;
+    //private static InstancedMeshCollider _clipboardCollider = null;
 
     private bool HasOneTarget => targets == null || targets.Length == 1;
 

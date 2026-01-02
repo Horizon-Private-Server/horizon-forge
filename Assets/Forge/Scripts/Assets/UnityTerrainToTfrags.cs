@@ -48,6 +48,8 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
         var universalShader = Shader.Find("Horizon Forge/Universal");
         var chunks = GetChunkInstances();
         var chunkCount = 0;
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
 
         ValidateOrThrow();
 
@@ -192,7 +194,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                     chunkMeshFilter = go.AddComponent<MeshFilter>();
                     chunkMeshRenderer = go.AddComponent<MeshRenderer>();
                     chunk = go.AddComponent<TfragChunk>();
-                    chunk.Octants = allOctants.ToArray();
+                    occlusionDb.SetOctants(chunk, allOctants.ToArray());
                 }
                 else
                 {

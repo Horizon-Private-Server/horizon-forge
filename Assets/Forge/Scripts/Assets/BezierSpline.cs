@@ -617,7 +617,7 @@ public class BezierSpline : Spline
 
     #region Gizmos
 
-    private void OnDrawGizmos()
+    protected override void OnDrawGizmos()
     {
         if (!IsSplineSelected()) return;
 

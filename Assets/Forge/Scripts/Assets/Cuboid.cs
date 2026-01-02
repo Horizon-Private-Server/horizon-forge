@@ -45,10 +45,10 @@ public class Cuboid : RenderSelectionBase
 {
     const int CUBOID_VERSION = 1;
 
-    [Obsolete, SerializeField, HideInInspector]
-    private CuboidType Type;
-    [Obsolete, SerializeField, HideInInspector]
-    private CuboidSubType Subtype;
+    //[Obsolete, SerializeField, HideInInspector]
+    //private CuboidType Type;
+    //[Obsolete, SerializeField, HideInInspector]
+    //private CuboidSubType Subtype;
 
     [SerializeField] public CuboidMaskType CuboidType;
     [SerializeField, HideInInspector] private int _version = 0;
@@ -331,30 +331,30 @@ public class Cuboid : RenderSelectionBase
         {
             case 1: // CONVERT CUBOIDTYPE + CUBOIDSUBTYPE TO CUBOIDMASKTYPE
                 {
-                    if (Type == global::CuboidType.Player)
-                    {
-                        CuboidType |= CuboidMaskType.Player;
+                    //if (Type == global::CuboidType.Player)
+                    //{
+                    //    CuboidType |= CuboidMaskType.Player;
 
-                        switch (Subtype)
-                        {
-                            case CuboidSubType.BlueFlagSpawn: CuboidType |= CuboidMaskType.BlueFlagSpawn; break;
-                            case CuboidSubType.RedFlagSpawn: CuboidType |= CuboidMaskType.RedFlagSpawn; break;
-                            case CuboidSubType.GreenFlagSpawn: CuboidType |= CuboidMaskType.GreenFlagSpawn; break;
-                            case CuboidSubType.OrangeFlagSpawn: CuboidType |= CuboidMaskType.OrangeFlagSpawn; break;
-                        }
-                    }
-                    else if (Type == global::CuboidType.HillSquare)
-                    {
-                        CuboidType |= CuboidMaskType.HillSquare;
-                    }
-                    else if (Type == global::CuboidType.HillCircle)
-                    {
-                        CuboidType |= CuboidMaskType.HillCircle;
-                    }
-                    else if (Type == global::CuboidType.Camera)
-                    {
-                        CuboidType |= CuboidMaskType.Camera;
-                    }
+                    //    switch (Subtype)
+                    //    {
+                    //        case CuboidSubType.BlueFlagSpawn: CuboidType |= CuboidMaskType.BlueFlagSpawn; break;
+                    //        case CuboidSubType.RedFlagSpawn: CuboidType |= CuboidMaskType.RedFlagSpawn; break;
+                    //        case CuboidSubType.GreenFlagSpawn: CuboidType |= CuboidMaskType.GreenFlagSpawn; break;
+                    //        case CuboidSubType.OrangeFlagSpawn: CuboidType |= CuboidMaskType.OrangeFlagSpawn; break;
+                    //    }
+                    //}
+                    //else if (Type == global::CuboidType.HillSquare)
+                    //{
+                    //    CuboidType |= CuboidMaskType.HillSquare;
+                    //}
+                    //else if (Type == global::CuboidType.HillCircle)
+                    //{
+                    //    CuboidType |= CuboidMaskType.HillCircle;
+                    //}
+                    //else if (Type == global::CuboidType.Camera)
+                    //{
+                    //    CuboidType |= CuboidMaskType.Camera;
+                    //}
                     break;
                 }
         }

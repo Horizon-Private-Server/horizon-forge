@@ -22,7 +22,7 @@ public class DockerManagerEditor : Editor
         GUILayout.Label(manager.GetStatus()?.ToString() ?? "null");
         if (GUILayout.Button("Start"))
         {
-            manager.Run();
+            _ = manager.Run();
         }
 
 

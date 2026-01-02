@@ -98,23 +98,41 @@ Moby* poolSpawn(int oclass, int pvarSize)
     poolSetMoby(group, poolIdx, moby);
 
 #if DEBUG_POOL
-    DPRINTF("POOL OCLASS:%d SPAWN NEW MOBY %d %08X\n", oclass, poolIdx, (u32)moby);
+    DPRINTF("POOL OCLASS:%d SPAWN NEW MOBY %d %08X (pvar:0x%x)\n", oclass, poolIdx, (u32)moby, pvarSize);
 #endif
 
   } else {
 
 #if DEBUG_POOL
-    DPRINTF("POOL OCLASS:%d REUSE MOBY %d %08X\n", oclass, poolIdx, (u32)moby);
+    DPRINTF("POOL OCLASS:%d REUSE MOBY %d %08X (pvar:0x%x)\n", oclass, poolIdx, (u32)moby, pvarSize);
 #endif
 
-    void* pvar = moby->PVar;
-    int deathCount = moby->Xp;
-    ((void (*)(Moby*, int, int))0x004f7330)(moby, oclass, 1); // init moby instance
-    moby->Xp = (deathCount + 1) % 128; // indicate pool moby respawned
-    if (pvar) {
-      memset(pvar, 0, pvarSize);
-      moby->PVar = pvar;
+    if (moby->ModeBits & MOBY_MODE_BIT_DISABLED) {
+
+      void* pvar = moby->PVar;
+      int deathCount = moby->Xp;
+      ((void (*)(Moby*, int, int))0x004f7330)(moby, oclass, 1); // init moby instance
+      moby->Xp = (deathCount + 1) % 128; // indicate pool moby respawned
+      if (pvar) {
+        memset(pvar, 0, pvarSize);
+        moby->PVar = pvar;
+      }
+    } else {
+
+      moby->Xp = (moby->Xp + 1) % 128; // indicate pool moby respawned
+      if (moby->PVar) {
+        memset(moby->PVar, 0, pvarSize);
+      }
     }
+
+    // void* pvar = moby->PVar;
+    // int deathCount = moby->Xp;
+    // ((void (*)(Moby*, int, int))0x004f7330)(moby, oclass, 1); // init moby instance
+    // moby->Xp = (deathCount + 1) % 128; // indicate pool moby respawned
+    // if (pvar) {
+    //   memset(pvar, 0, pvarSize);
+    //   moby->PVar = pvar;
+    // }
   }
 
   moby->Pad = 0x80 | poolIdx;

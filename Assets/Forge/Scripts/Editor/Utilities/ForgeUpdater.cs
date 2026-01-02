@@ -54,7 +54,7 @@ public static class ForgeUpdater
                     JObject data = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(content);
                     if (data != null)
                     {
-                        string newestReleaseTag = (string?)data["tag_name"];
+                        string newestReleaseTag = (string)data["tag_name"];
                         if (newestReleaseTag != null && newestReleaseTag != Constants.ForgeVersion)
                         {
                             if (EditorUtility.DisplayDialog("Forge Updater", $"There is a new update available. Would you like to update to {newestReleaseTag}?", "Update", "Cancel"))

@@ -14,6 +14,7 @@ public interface IOcclusionData
         Refresh();
     }
 
+    public System.Guid Uid { get; }
     public Vector3[] Octants { get; set; }
     public int OcclusionId { get; set; }
     public OcclusionDataType OcclusionType { get; }

@@ -680,6 +680,8 @@ public static class ForgeBuilder
         var tfragOcclusionBinFile = Path.Combine(occlusionFolder, "tfrag.bin");
         var materials = new MaterialCollection();
         var chunks = HierarchicalSorting.Sort(GameObject.FindObjectsOfType<TfragChunk>());
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
 
         if (RebuildLevelProgress(ctx, $"Rebuilding Tfrags", 0.5f))
             return;
@@ -798,6 +800,9 @@ public static class ForgeBuilder
         // build tfrag occlusion
         if (chunks.Any())
         {
+            // if occlusion isn't already in db, add in bulk
+            occlusionDb.BulkCreate(chunks);
+
             using (var fs = File.Create(tfragOcclusionBinFile))
             {
                 using (var writer = new BinaryWriter(fs))
@@ -805,9 +810,10 @@ public static class ForgeBuilder
                     var i = 0;
                     foreach (var chunk in chunks)
                     {
+                        var data = occlusionDb.GetOrCreate(chunk);
                         var size = chunk.HeaderBytes[0x3D];
 
-                        PackerHelper.WriteOcclusionBlock(writer, i, size, chunk.Octants);
+                        PackerHelper.WriteOcclusionBlock(writer, i, size, data?.Octants ?? new Vector3[0]);
                         ++i;
                     }
                 }
@@ -1236,6 +1242,8 @@ public static class ForgeBuilder
         var tieInstancesFolder = Path.Combine(binFolder, FolderNames.GetWorldInstanceTiesFolder(ctx.RacVersion));
         var occlusionFolder = Path.Combine(binFolder, FolderNames.GetWorldInstanceOcclusionFolder(ctx.RacVersion));
         var tieOcclusionBinFile = Path.Combine(occlusionFolder, "tie.bin");
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
 
         // build list of ties in scene
         var ties = HierarchicalSorting.Sort(GameObject.FindObjectsOfType<Tie>(includeInactive: false) ?? new Tie[0]).OrderBy(x => x.OClass).ToArray();
@@ -1309,6 +1317,9 @@ public static class ForgeBuilder
         // build tie occlusion
         if (ties.Any())
         {
+            // if occlusion isn't already in db, add in bulk
+            occlusionDb.BulkCreate(ties);
+
             var allOctants = UnityHelper.GetAllOctants();
             using (var fs = File.Create(tieOcclusionBinFile))
             {
@@ -1317,7 +1328,8 @@ public static class ForgeBuilder
                     i = 0;
                     foreach (var tie in ties)
                     {
-                        PackerHelper.WriteOcclusionBlock(writer, i, tie.OcclusionId, tie.Octants ?? new Vector3[0]);
+                        var data = occlusionDb.GetOrCreate(tie);
+                        PackerHelper.WriteOcclusionBlock(writer, i, tie.OcclusionId, data?.Octants ?? new Vector3[0]);
                         ++i;
                     }
                 }

@@ -314,6 +314,8 @@ public class TfragSpline : BaseAssetGenerator
         var segmentCount = m_BuiltPath.Count;
         var sliceSegmentCount = GetVerticesPerSlice();
         var chunks = HierarchicalSorting.Sort(parentGo.GetComponentsInChildren<TfragChunk>(true));
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
 
         List<Vector3> allOctants = null;
         var vertexPerRow = segmentCount;
@@ -346,7 +348,7 @@ public class TfragSpline : BaseAssetGenerator
                 chunkMeshFilter = go.AddComponent<MeshFilter>();
                 chunkMeshRenderer = go.AddComponent<MeshRenderer>();
                 chunk = go.AddComponent<TfragChunk>();
-                chunk.Octants = allOctants.ToArray();
+                occlusionDb.SetOctants(chunk, allOctants.ToArray());
             }
             else
             {

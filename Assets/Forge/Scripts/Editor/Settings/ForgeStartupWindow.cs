@@ -140,6 +140,11 @@ public class ForgeStartupWindow : EditorWindow
         CreatePadding(scrollregion, 50);
     }
 
+    private void OnDisable()
+    {
+        Save();
+    }
+
     private ForgeSettings GetOrCreateForgeSettings()
     {
         if (forgeSettings) return forgeSettings;
@@ -157,6 +162,12 @@ public class ForgeStartupWindow : EditorWindow
 
     private void SaveAndClose()
     {
+        Save();
+        Close();
+    }
+
+    private void Save()
+    {
         var assetPath = AssetDatabase.GetAssetPath(forgeSettings);
         if (string.IsNullOrEmpty(assetPath))
         {
@@ -164,10 +175,9 @@ public class ForgeStartupWindow : EditorWindow
         }
         else
         {
+            EditorUtility.SetDirty(forgeSettings);
             AssetDatabase.SaveAssetIfDirty(forgeSettings);
         }
-
-        this.Close();
     }
 
     private void ValidateISOs()

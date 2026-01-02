@@ -22,7 +22,7 @@ public class ForgeSettingsEditor : Editor
         blenderExt = new string[] { "Exe", "exe" };
         blenderTitle = "Blender executable path (optional)";
 #endif
-        CreateBrowseFileGUI(blenderTitle, forgeSettings.PathToBlender, blenderExt);
+        forgeSettings.PathToBlender = CreateBrowseFileGUI(blenderTitle, forgeSettings.PathToBlender, blenderExt);
 
         GUILayout.Label("Clean ISO Paths");
         EditorGUI.BeginDisabledGroup(true);
@@ -113,10 +113,15 @@ public class ForgeSettingsEditor : Editor
         if (EditorGUI.EndChangeCheck())
         {
             EditorUtility.SetDirty(forgeSettings);
-            //AssetDatabase.SaveAssetIfDirty(forgeSettings);
         }
 
         //base.OnInspectorGUI();
+    }
+
+    private void OnDisable()
+    {
+        var forgeSettings = target as ForgeSettings;
+        AssetDatabase.SaveAssetIfDirty(forgeSettings);
     }
 
     string CreateSaveFileGUI(string title, string path)

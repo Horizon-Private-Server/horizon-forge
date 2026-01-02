@@ -1789,9 +1789,12 @@ public class LevelImporterWindow : EditorWindow
         {
             foreach (var tex in texturesToImport)
                 UnityHelper.ImportTexture(tex);
-        } catch { }
-        AssetDatabase.StopAssetEditing();
-        AssetDatabase.Refresh();
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+            AssetDatabase.Refresh();
+        }
 
         // run post import callbacks
         foreach (var callback in postAssetImportCallbacks)
@@ -1913,6 +1916,9 @@ public class LevelImporterWindow : EditorWindow
         var worldInstanceOcclusionFolder = Path.Combine(mapBinFolder, FolderNames.GetWorldInstanceOcclusionFolder(racVersion));
         var tieWorldInstanceDirs = Directory.EnumerateDirectories(worldInstanceTiesFolder).OrderBy(x => int.Parse(Path.GetFileName(x).Split('_')[0])).ToList();
         var tieOcclusionFile = Path.Combine(worldInstanceOcclusionFolder, "tie.bin");
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
+        var ties = new List<Tie>();
 
         var tieRootGo = new GameObject("Ties");
         tieRootGo.transform.SetParent(rootGo.transform, true);
@@ -1934,13 +1940,18 @@ public class LevelImporterWindow : EditorWindow
             {
                 var tie = ImportTieInstance(tieDir, tieRootGo, tieClass, racVersion);
                 if (tie)
+                {
+                    ties.Add(tie);
                     instancesByOcclId[tie.OcclusionId] = tie;
+                }
             }
         }
 
         // read occlusion
         if (File.Exists(tieOcclusionFile))
         {
+            occlusionDb.BulkCreate(ties);
+
             var tieOcclusion = File.ReadAllBytes(tieOcclusionFile);
             using (var ms = new MemoryStream(tieOcclusion))
             {
@@ -1950,7 +1961,7 @@ public class LevelImporterWindow : EditorWindow
                     {
                         var octants = PackerHelper.ReadOcclusionBlock(occlusionReader, out var instanceIdx, out var occlusionId).ToArray();
                         if (instancesByOcclId.TryGetValue(occlusionId, out var tie))
-                            tie.Octants = octants;
+                            occlusionDb.SetOctants(tie, octants);
                         else
                             Debug.LogWarning($"Occlusion block with no matching tie!! instance:{instanceIdx} id:{occlusionId} octants:{octants.Length}");
                     }
@@ -2522,29 +2533,72 @@ public class LevelImporterWindow : EditorWindow
 
         // import textures
         var texFiles = Directory.GetFiles(terrainBinFolder, "*.0.png");
-        foreach (var texFile in texFiles)
+        try
         {
-            var texFileName = Path.GetFileNameWithoutExtension(texFile);
-            var texIdx = int.Parse(texFileName.Split('.')[1]);
+            AssetDatabase.StartAssetEditing();
+            foreach (var texFile in texFiles)
+            {
+                var texFileName = Path.GetFileNameWithoutExtension(texFile);
+                var texIdx = int.Parse(texFileName.Split('.')[1]);
 
-            var wrap = wrappings?.GetValueOrDefault(texIdx);
 
-            // import texture
-            var outTexFile = Path.Combine(terrainTexturesMapResourcesFolder, $"tfrags-{texIdx}.png");
-            File.Copy(texFile, outTexFile, true);
-            UnityHelper.ImportTexture(outTexFile, wrapu: wrap?.Item1, wrapv: wrap?.Item2);
+                // import texture
+                var outTexFile = Path.Combine(terrainTexturesMapResourcesFolder, $"tfrags-{texIdx}.png");
+                File.Copy(texFile, outTexFile, true);
+                AssetDatabase.ImportAsset(UnityHelper.GetProjectRelativePath(outTexFile));
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
 
-            // create material
-            var outMatFile = Path.Combine(terrainMaterialsMapResourcesFolder, $"tfrags-{texIdx}.mat");
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(outMatFile);
-            bool matAlreadyExists = mat;
+        // configure textures
+        try
+        {
+            AssetDatabase.StartAssetEditing();
+            foreach (var texFile in texFiles)
+            {
+                var texFileName = Path.GetFileNameWithoutExtension(texFile);
+                var texIdx = int.Parse(texFileName.Split('.')[1]);
+                var outTexFile = Path.Combine(terrainTexturesMapResourcesFolder, $"tfrags-{texIdx}.png");
 
-            if (!mat) mat = new Material(shader);
-            mat.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(outTexFile));
-            EditorUtility.SetDirty(mat);
+                // configure texture
+                var wrap = wrappings?.GetValueOrDefault(texIdx);
+                UnityHelper.ImportTexture(outTexFile, wrapu: wrap?.Item1, wrapv: wrap?.Item2);
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
 
-            if (matAlreadyExists) AssetDatabase.SaveAssetIfDirty(mat);
-            else AssetDatabase.CreateAsset(mat, outMatFile);
+        // import materials
+        try
+        {
+            AssetDatabase.StartAssetEditing();
+            foreach (var texFile in texFiles)
+            {
+                var texFileName = Path.GetFileNameWithoutExtension(texFile);
+                var texIdx = int.Parse(texFileName.Split('.')[1]);
+                var outTexFile = Path.Combine(terrainTexturesMapResourcesFolder, $"tfrags-{texIdx}.png");
+
+                // create material
+                var outMatFile = Path.Combine(terrainMaterialsMapResourcesFolder, $"tfrags-{texIdx}.mat");
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(outMatFile);
+                bool matAlreadyExists = mat;
+
+                if (!mat) mat = new Material(shader);
+                mat.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(UnityHelper.GetProjectRelativePath(outTexFile)));
+                EditorUtility.SetDirty(mat);
+
+                if (matAlreadyExists) AssetDatabase.SaveAssetIfDirty(mat);
+                else AssetDatabase.CreateAsset(mat, outMatFile);
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
         }
 
         BlenderHelper.ImportMesh(terrainOutColladaFile, terrainMapResourcesFolder, "tfrags", overwrite: true, out var outMeshFile, fixNormals: false);
@@ -2588,6 +2642,9 @@ public class LevelImporterWindow : EditorWindow
         var terrainBinFile = Path.Combine(Environment.CurrentDirectory, mapBinFolder, FolderNames.BinaryTerrainBinFile);
         var worldInstanceOcclusionFolder = Path.Combine(mapBinFolder, FolderNames.GetWorldInstanceOcclusionFolder(racVersion));
         var tfragOcclusionFile = Path.Combine(worldInstanceOcclusionFolder, "tfrag.bin");
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        var occlusionDb = mapConfig.GetOcclusionDatabase();
+        var chunks = new List<TfragChunk>();
 
         if (!File.Exists(terrainBinFile))
             return;
@@ -2612,6 +2669,7 @@ public class LevelImporterWindow : EditorWindow
                     }
 
                     var tfragChunk = chunkTransform.gameObject.AddComponent<TfragChunk>();
+                    chunks.Add(tfragChunk);
 
                     // read chunk def
                     fs.Position = packetStart + (i * 0x40);
@@ -2647,6 +2705,8 @@ public class LevelImporterWindow : EditorWindow
         // read occlusion
         if (File.Exists(tfragOcclusionFile))
         {
+            occlusionDb.BulkCreate(chunks);
+
             var tfragOcclusion = File.ReadAllBytes(tfragOcclusionFile);
             using (var ms = new MemoryStream(tfragOcclusion))
             {
@@ -2656,7 +2716,7 @@ public class LevelImporterWindow : EditorWindow
                     {
                         var octants = PackerHelper.ReadOcclusionBlock(occlusionReader, out var instanceIdx, out var occlusionId).ToArray();
                         if (instancesById.TryGetValue(instanceIdx, out var chunk))
-                            chunk.Octants = octants;
+                            occlusionDb.SetOctants(chunk, octants);
                         else
                             Debug.LogWarning($"Occlusion block with no matching tfrag!! instance:{instanceIdx} id:{occlusionId} octants:{octants.Length}");
                     }

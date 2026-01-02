@@ -24,7 +24,9 @@ public static class OcclusionBaker
         var renderResolution = 1024; // (int)Mathf.Pow(2, (int)bakeSettings.Resolution + 5);
         //var clipPixelCount = (int)Math.Max(bakeSettings.ClipPixelCount, bakeSettings.ClipPercent * renderResolution * renderResolution);
         var octants = UnityHelper.GetAllOctants(useCache: false);
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var graph = GameObject.FindObjectOfType<OcclusionGraph>();
+        var db = mapConfig.GetOcclusionDatabase();
 
         var shader = Shader.Find("Shader Graphs/OcclusionBakeRender");
 
@@ -232,9 +234,9 @@ public static class OcclusionBaker
             foreach (var occlusionData in occlusionDatas)
             {
                 if (newOcclusionOctantsById.TryGetValue(occlusionData.UniqueOcclusionId, out var newOctants))
-                    occlusionData.Octants = newOctants.Select(x => x.Key).ToArray();
+                    db.SetOctants(occlusionData, newOctants.Select(x => x.Key).ToArray());
                 else
-                    occlusionData.Octants = new Vector3[0];
+                    db.SetOctants(occlusionData, new Vector3[0]);
             }
 
             foreach (var occlusionData in allOcclusionDatas)
