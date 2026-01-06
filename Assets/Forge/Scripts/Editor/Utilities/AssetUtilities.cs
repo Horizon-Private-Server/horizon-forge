@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -146,6 +147,42 @@ public static class AssetUtilities
                 }
             }
             Undo.FlushUndoRecordObjects();
+        }
+    }
+
+    [MenuItem("Forge/Utilities/Delete Unused Occlusion Data")]
+    public static void DeleteUnusedOcclusionData()
+    {
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+        if (!mapConfig)
+        {
+            EditorUtility.DisplayDialog("Missing scene", "Please open a map scene first.", "Okay");
+            return;
+        }
+
+        var db = mapConfig.GetOcclusionDatabase();
+        if (!db) return;
+
+        try
+        {
+            AssetDatabase.StartAssetEditing();
+
+            var occlusionFolder = Path.Combine(FolderNames.GetMapFolder(EditorSceneManager.GetActiveScene().name), FolderNames.OcclusionFolder);
+            var files = Directory.GetFiles(occlusionFolder, "*.asset");
+            foreach (var file in files)
+            {
+                var metaFile = file + ".meta";
+                var key = Path.GetFileNameWithoutExtension(file);
+                if (!db.Occlusion.ContainsKey(key))
+                {
+                    File.Delete(file);
+                    if (File.Exists(metaFile)) File.Delete(metaFile);
+                }
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
         }
     }
 
