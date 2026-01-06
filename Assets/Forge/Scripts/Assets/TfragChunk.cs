@@ -26,7 +26,7 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
     private OcclusionDatabase _occlusionDb;
     private bool _sceneIsClosing;
 
-    public System.Guid Uid => _uid.Guid;
+    public System.Guid Uid => _uid.Guid == System.Guid.Empty ? (_uid = SerializableGuid.NewGuid()).Guid : _uid.Guid;
     public Vector3[] Octants { get => _octants; set => _octants = value; }
     public int OcclusionId { get => _occlusionId; set => _occlusionId = value; }
     public OcclusionDataType OcclusionType => OcclusionDataType.Tfrag;

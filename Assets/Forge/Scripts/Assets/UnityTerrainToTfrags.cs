@@ -47,6 +47,7 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
         var triOfs = new int[] { 0, 1, 2, 4 };
         var universalShader = Shader.Find("Horizon Forge/Universal");
         var chunks = GetChunkInstances();
+        var createdChunks = new List<TfragChunk>();
         var chunkCount = 0;
         var mapConfig = FindObjectOfType<MapConfig>();
         var occlusionDb = mapConfig.GetOcclusionDatabase();
@@ -190,11 +191,11 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
 
                     var go = new GameObject(i.ToString());
                     go.transform.SetParent(this.transform, false);
-                    Hide(go, m_RenderGenerated);
                     chunkMeshFilter = go.AddComponent<MeshFilter>();
                     chunkMeshRenderer = go.AddComponent<MeshRenderer>();
                     chunk = go.AddComponent<TfragChunk>();
-                    occlusionDb.SetOctants(chunk, allOctants.ToArray());
+                    createdChunks.Add(chunk);
+                    //occlusionDb.SetOctants(chunk, allOctants.ToArray());
                 }
                 else
                 {
@@ -208,6 +209,14 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
                 chunk.gameObject.layer = LayerMask.NameToLayer("TFRAG");
                 chunkMeshFilter.sharedMesh = newMesh;
                 chunkMeshRenderer.sharedMaterials = texs.Select(x => materials[x]).ToArray();
+                Hide(chunk.gameObject, m_RenderGenerated);
+            }
+
+            // set newly created chunks to always visible
+            if (createdChunks.Any())
+            {
+                occlusionDb.BulkCreate(createdChunks);
+                occlusionDb.SetOctants(createdChunks, allOctants.ToArray());
             }
 
             // update hash
@@ -223,8 +232,9 @@ public class UnityTerrainToTfrags : BaseAssetGenerator
         }
 
         // remove excess
-        for (int i = chunkCount; i < chunks.Length; ++i)
-            GameObject.DestroyImmediate(chunks[i].gameObject);
+        foreach (var chunk in chunks)
+            if (chunk && (!int.TryParse(chunk.gameObject.name, out var chunkIdx) || chunkIdx >= chunkCount))
+                GameObject.DestroyImmediate(chunk.gameObject);
     }
 
     #endregion

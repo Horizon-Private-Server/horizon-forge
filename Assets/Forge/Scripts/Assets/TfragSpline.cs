@@ -314,6 +314,7 @@ public class TfragSpline : BaseAssetGenerator
         var segmentCount = m_BuiltPath.Count;
         var sliceSegmentCount = GetVerticesPerSlice();
         var chunks = HierarchicalSorting.Sort(parentGo.GetComponentsInChildren<TfragChunk>(true));
+        var createdChunks = new List<TfragChunk>();
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         var occlusionDb = mapConfig.GetOcclusionDatabase();
 
@@ -348,7 +349,8 @@ public class TfragSpline : BaseAssetGenerator
                 chunkMeshFilter = go.AddComponent<MeshFilter>();
                 chunkMeshRenderer = go.AddComponent<MeshRenderer>();
                 chunk = go.AddComponent<TfragChunk>();
-                occlusionDb.SetOctants(chunk, allOctants.ToArray());
+                createdChunks.Add(chunk);
+                //occlusionDb.SetOctants(chunk, allOctants.ToArray());
             }
             else
             {
@@ -462,6 +464,13 @@ public class TfragSpline : BaseAssetGenerator
             chunkMeshFilter.sharedMesh = newMesh;
             chunkMeshRenderer.sharedMaterials = texs.Select(x => materials[x]).ToArray();
             ++computedChunkCount;
+        }
+
+        // set newly created chunks to always visible
+        if (createdChunks.Any())
+        {
+            occlusionDb.BulkCreate(createdChunks);
+            occlusionDb.SetOctants(createdChunks, allOctants.ToArray());
         }
 
         // remove excess

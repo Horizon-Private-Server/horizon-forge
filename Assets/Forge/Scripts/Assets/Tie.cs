@@ -37,7 +37,7 @@ public class Tie : RenderSelectionBase, IOcclusionData, IAsset, IInstancedCollid
     public ColliderIdOverride[] InstancedColliderIdOverrides;
     [Tooltip("When set, instanced collider will use the corresponding model. Model must have correct collision materials configured.")] public GameObject InstancedColliderOverride;
 
-    public System.Guid Uid => _uid.Guid;
+    public System.Guid Uid => _uid.Guid == System.Guid.Empty ? (_uid = SerializableGuid.NewGuid()).Guid : _uid.Guid;
     public Vector3[] Octants { get => _octants; set => _octants = value; }
     public int OcclusionId { get => _occlusionId; set => _occlusionId = value; }
     public OcclusionDataType OcclusionType => OcclusionDataType.Tie;
