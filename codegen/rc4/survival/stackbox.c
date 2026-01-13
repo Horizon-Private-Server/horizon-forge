@@ -312,12 +312,12 @@ void sboxUpdate(Moby* moby)
     if (moby->State != STACK_BOX_STATE_ACTIVE) {
       if (pvars->BaseMoby) pvars->BaseMoby->ModeBits = MOBY_MODE_BIT_HIDE_BACKFACES | MOBY_MODE_BIT_HAS_GLOW;
       mobySetState(moby, STACK_BOX_STATE_ACTIVE, -1);
-      if (gameAmIHost()) sboxActivate(moby, STACK_BOX_STATE_ACTIVE, rand(STACKABLE_ITEM_COUNT), gameGetTime());
+      if (gameAmIHost()) sboxActivate(moby, STACK_BOX_STATE_ACTIVE, sboxGetRandomItem(moby), gameGetTime());
     }
   } else {
     if (moby->State != STACK_BOX_STATE_DISABLED) {
       mobySetState(moby, STACK_BOX_STATE_DISABLED, -1);
-      if (gameAmIHost()) sboxActivate(moby, STACK_BOX_STATE_DISABLED, rand(STACKABLE_ITEM_COUNT), gameGetTime());
+      if (gameAmIHost()) sboxActivate(moby, STACK_BOX_STATE_DISABLED, sboxGetRandomItem(moby), gameGetTime());
     }
   }
 #endif
