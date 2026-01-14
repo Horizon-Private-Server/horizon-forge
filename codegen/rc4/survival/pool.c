@@ -81,6 +81,60 @@ void poolSetMoby(PoolGroup_t* group, int idx, Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void poolInitMoby(Moby* moby)
+{
+  // reset
+  moby->ModeBits = 0;
+  moby->CollDamage = -1;
+  moby->Group = -1;
+  moby->LSeq = -1;
+  moby->UpdateId = 0;
+  moby->SoundTrigger = 0;
+  moby->SoundChannel = -1;
+  moby->GridMinX = 0x7f;
+  moby->GridMinY = 0x7f;
+  moby->GridMaxX = 0x80;
+  moby->GridMaxY = 0x80;
+  moby->OcclIndex = 0x7f80;
+  matrix_unit(moby->M0_03);
+  ((void (*)(Moby*))0x004f99d8)(moby); // SetMobyLightDefault()
+
+  // init
+  if (moby->PClass) {
+    moby->Scale = *(float*)(moby->PClass + 0x24);
+    moby->CollData = *(void**)(moby->PClass + 0x10);
+    moby->CollActive = 0;
+    moby->GlowRGBA = *(u32*)(moby->PClass + 0x40);
+    moby->ModeBits2 = *(u8*)(moby->PClass + 0x47);
+
+    void* animSeq = *(void**)(moby->PClass + 0x48);
+    if (animSeq) {
+      moby->AnimSeq = animSeq;
+      moby->AnimSpeed = 1;
+      moby->AnimSeqId = 0;
+      moby->SoundTrigger = *(char*)(animSeq + 0x12);
+      moby->SoundDesired = *(char*)(animSeq + 0x11);
+      if (*(u8*)(animSeq + 0x10) >= 2) {
+        moby->ModeBits &= ~MOBY_MODE_BIT_NO_UPDATE;
+      }
+      if (*(u8*)(moby->PClass + 0xc) == 1 && *(u8*)(animSeq + 0x10) < 2) {
+        moby->AnimSpeed = 0;
+        if (*(char*)(animSeq + 0x11) < 0) {
+          moby->ModeBits |= MOBY_MODE_BIT_UNK_40;
+        }
+      }
+    }
+  } else {
+    moby->ModeBits |= MOBY_MODE_BIT_UNK_40 | MOBY_MODE_BIT_NO_POST_UPDATE | MOBY_MODE_BIT_DISABLED;
+  }
+
+  if (moby->GlowRGBA) moby->ModeBits |= MOBY_MODE_BIT_HAS_GLOW;
+  if (moby->JointCnt == 0) moby->ModeBits |= MOBY_MODE_BIT_UNK_40;
+  if (moby->Shadow) moby->ModeBits |= MOBY_MODE_BIT_DRAW_SHADOW;
+  if (moby->PUpdate == 0) moby->ModeBits |= MOBY_MODE_BIT_NO_UPDATE;
+}
+
+//--------------------------------------------------------------------------
 Moby* poolSpawn(int oclass, int pvarSize)
 {
   PoolGroup_t* group = poolGetGroup(oclass);
@@ -119,6 +173,7 @@ Moby* poolSpawn(int oclass, int pvarSize)
       }
     } else {
 
+      poolInitMoby(moby);
       moby->Xp = (moby->Xp + 1) % 128; // indicate pool moby respawned
       if (moby->PVar) {
         memset(moby->PVar, 0, pvarSize);
