@@ -17,6 +17,7 @@ public class PathGraphNode : MonoBehaviour
     private PathGraph _graph;
     private GUIStyle _weightStyle;
     private GUIStyle _edgeStyle;
+    private Texture2D _requiredEdgeIcon;
 
     private void Start()
     {
@@ -155,6 +156,10 @@ public class PathGraphNode : MonoBehaviour
             _edgeStyle.alignment = TextAnchor.MiddleCenter;
         }
 
+        if (!_requiredEdgeIcon)
+        {
+            _requiredEdgeIcon = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Forge/Gizmos/Required Edge.png");
+        }
 
         var graph = GetGraph();
         if (!graph)
@@ -217,9 +222,23 @@ public class PathGraphNode : MonoBehaviour
                 Gizmos.DrawSphere(start + (end - start) * edge.JumpPadAt + offset, 0.25f);
             }
 
-            if (edge.Required)
+            if (edge.Required && _requiredEdgeIcon)
             {
-                Gizmos.DrawIcon((start + (end - start) * edge.RequiredUntil + offset), "Required Edge.png", true);
+                Vector3 pos = start + (end - start) * edge.RequiredUntil + offset;
+                Vector3 guiPos = HandleUtility.WorldToGUIPoint(pos);
+
+                float size = 32f;
+                Rect rect = new Rect(
+                    guiPos.x - size / 2f,
+                    guiPos.y - size / 2f,
+                    size,
+                    size
+                );
+
+                Handles.BeginGUI();
+                GUI.DrawTexture(rect, _requiredEdgeIcon);
+                Handles.EndGUI();
+                //Gizmos.DrawIcon((start + (end - start) * edge.RequiredUntil + offset), "Required Edge.png", true);
             }
         }
     }
