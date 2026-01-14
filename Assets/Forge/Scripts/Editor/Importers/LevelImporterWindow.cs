@@ -1796,6 +1796,19 @@ public class LevelImporterWindow : EditorWindow
             AssetDatabase.Refresh();
         }
 
+        // postprocess imported textures in bulk
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (var tex in texturesToImport)
+                UnityHelper.PostImportTexture(tex);
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+            AssetDatabase.Refresh();
+        }
+
         // run post import callbacks
         foreach (var callback in postAssetImportCallbacks)
             callback();
@@ -2565,7 +2578,7 @@ public class LevelImporterWindow : EditorWindow
 
                 // configure texture
                 var wrap = wrappings?.GetValueOrDefault(texIdx);
-                UnityHelper.ImportTexture(outTexFile, wrapu: wrap?.Item1, wrapv: wrap?.Item2);
+                UnityHelper.PostImportTexture(outTexFile, wrapu: wrap?.Item1, wrapv: wrap?.Item2);
             }
         }
         finally
