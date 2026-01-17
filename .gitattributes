@@ -1,0 +1,51 @@
+# Code related
+*.c         text eol=lf
+*.cs        text eol=lf
+*.h         text eol=lf
+*.py        text eol=lf
+*.s         text eol=lf
+
+# Unity / project text formats
+*.asmdef    text eol=lf
+*.mat       text eol=lf
+*.meta      text eol=lf
+*.prefab    text eol=lf
+
+# Specific text .asset files locations
+Assets/Forge/Prefabs/*/*.asset      text eol=lf
+Assets/Forge/Textures/*.asset          text eol=lf
+ProjectSettings/*.asset                text eol=lf
+
+# Shaders / graphics text
+*.compute       text eol=lf
+*.hlsl          text eol=lf
+*.shader        text eol=lf
+*.shadergraph   text eol=lf
+*.shadersubgraph text eol=lf
+
+# UI Toolkit files
+*.uss       text eol=lf
+*.uxml      text eol=lf
+
+# Config/docs text
+*.config    text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+
+# Makefiles
+Makefile     text eol=lf
+Makefile.*   text eol=lf
+*.make         text eol=lf
+*.mk         text eol=lf
+
+# Documentation
+.gitattributes text eol=lf
+.gitignore  text eol=lf
+.vsconfig   text eol=lf
+LICENSE     text eol=lf
+linkfile    text eol=lf
+
+# Binary assets
+*.fbx       -text
+*.png       -text
