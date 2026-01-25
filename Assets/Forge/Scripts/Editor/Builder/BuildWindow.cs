@@ -146,8 +146,9 @@ public class BuildWindow : EditorWindow
 
     void CreateGUI_Build(VisualElement root)
     {
-        flagsGames = flagsGames ?? new EnumFlagsField("Game(s)", ForgeBuildTargets.DL_NTSC | ForgeBuildTargets.UYA_NTSC | ForgeBuildTargets.RAC3_PAL);
-        flagsGames.RegisterValueChangedCallback((_) => ValidateControls());
+        var defaultGameFlags = SessionState.GetInt(nameof(flagsGames), (int)(ForgeBuildTargets.DL_NTSC | ForgeBuildTargets.UYA_NTSC | ForgeBuildTargets.RAC3_PAL));
+        flagsGames = flagsGames ?? new EnumFlagsField("Game(s)", (ForgeBuildTargets)defaultGameFlags);
+        flagsGames.RegisterValueChangedCallback((e) => { SessionState.SetInt(nameof(flagsGames), (int)(ForgeBuildTargets)e.newValue); ValidateControls(); });
         root.Add(flagsGames);
 
         CreateGUI_Toggle(ref togglePatch, "Patch ISO(s)", true);
