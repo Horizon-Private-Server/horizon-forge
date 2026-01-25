@@ -72,10 +72,11 @@ public class TfragChunk : MonoBehaviour, IOcclusionData, IAsset
 
     private void OnDestroy()
     {
-        if (EditorSceneManager.loadedRootSceneCount == 1 && !_sceneIsClosing && _occlusionDb)
-        {
-            _occlusionDb.Remove(this);
-        }
+        // removed because the OcclusionDatabase will manage removal/undo/redo reconciliation manually
+        //if (EditorSceneManager.loadedRootSceneCount == 1 && !_sceneIsClosing && _occlusionDb)
+        //{
+        //    _occlusionDb.Remove(this);
+        //}
     }
 
     private void OnDrawGizmosSelected()
