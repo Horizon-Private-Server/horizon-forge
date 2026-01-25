@@ -348,12 +348,12 @@ public static class TfragHelper
     static readonly Vector3[] CUBE_AXES = new Vector3[]
     {
         new Vector3(1, 1, 1),
-        new Vector3(1, 1, -1),
         new Vector3(1, -1, 1),
-        new Vector3(1, -1, -1),
         new Vector3(-1, 1, 1),
-        new Vector3(-1, 1, -1),
         new Vector3(-1, -1, 1),
+        new Vector3(1, 1, -1),
+        new Vector3(1, -1, -1),
+        new Vector3(-1, 1, -1),
         new Vector3(-1, -1, -1),
     };
 
@@ -675,12 +675,10 @@ public static class TfragHelper
             for (int i = 0; i < header.msphere_cnt; ++i)
             {
                 var quadBSphere = GetBoundingSphere(orderedQuads[i].Select(x => orderedVertices[x].position).ToList());
-                //var quadCenter = orderedQuads[i].Select(x => orderedVertices[x].position).Average();
-                //var quadRadius = orderedQuads[i].Max(x => Vector3.Distance(orderedVertices[x].position, quadCenter)) * 0f;
 
                 dataMs.Position = header.msphere_ofs + (0x10 * i);
                 WriteVector3_1024(dataWriter, quadBSphere.center);
-                //dataWriter.Write((ushort)(quadRadius * 1024f));
+                dataWriter.Write((ushort)Math.Clamp(Math.Round(quadBSphere.radius * 1024f), ushort.MinValue, ushort.MaxValue));
             }
 
             // update tristrips
