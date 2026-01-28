@@ -40,6 +40,8 @@
 #include "upgrade.h"
 #include "drop.h"
 #include "pool.h"
+#include "ammosupply.h"
+#include "ammodrop.h"
 
 #if SOULCOLLECTOR
 #include "soulcollector.h"
@@ -70,7 +72,10 @@ void blessingsTick(void);
 void stackableOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId);
 
 void frameTick(void);
+int createMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 void mapOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId);
+int mapConsiderMobSpawnPoint(struct MobSpawnParams* mobSpawnParams, VECTOR position, float yaw, Player* targetPlayer);
+int mapGetSpawnPoints(int** outSpawnPointIndices);
 int mapCanSpawnMobs(void);
 
 char LocalPlayerStrBuffer[GAME_MAX_LOCALS][64];
@@ -102,8 +107,11 @@ struct SurvivalMapConfig MapConfig __attribute__((section(".config"))) = {
 	.State = NULL,
   .BakedConfig = &bakedConfig,
   .OnFrameTickFunc = &frameTick,
+  .OnMobCreateFunc = &createMob,
   .OnMobKilledFunc = &mapOnMobKilled,
   .CanSpawnMobsFunc = &mapCanSpawnMobs,
+  .GetSpawnPointsFunc = &mapGetSpawnPoints,
+  .ConsiderMobSpawnPointFunc = &mapConsiderMobSpawnPoint
 };
 
 //--------------------------------------------------------------------------
@@ -134,6 +142,13 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, int killedByWeaponId)
 
 #if SOULCOLLECTOR
   soulcollectorOnSoul(moby->Position, killedByPlayerId);
+#endif
+
+#ifdef AMMO_DROP_PROBABILITY
+  Player* player = playerGetAll()[killedByPlayerId];
+  if (playerIsValid(player) && player->IsLocal && randRange(0, 1) < AMMO_DROP_PROBABILITY) {
+    ammodropCreateAt(moby);
+  }
 #endif
 }
 
@@ -564,14 +579,12 @@ void survivalInit(void)
     return;
 
   MapConfig.Magic = MAP_CONFIG_MAGIC;
-  MapConfig.ConsiderMobSpawnPointFunc = mapConsiderMobSpawnPoint;
-  MapConfig.GetSpawnPointsFunc = mapGetSpawnPoints;
-  MapConfig.OnMobCreateFunc = &createMob;
 
   mapApplyFixes();
   poolInit();
   mboxInit();
   mobInit();
+  ammosupplyInit();
   configInit();
   upgradeInit();
   dropInit();
@@ -589,6 +602,9 @@ void survivalInit(void)
 #endif
 #if RANDOMIZE_WEAPONS_AT_START
   randomizeWeaponPickups();
+#endif
+#ifdef AMMO_DROP_PROBABILITY
+  ammodropInit();
 #endif
 
   // disable jump pad effect

@@ -335,26 +335,24 @@ int executionerGetPreferredAction(Moby* moby, int * delayTicks)
 	// get next target
 	Moby * target = executionerGetNextTarget(moby);
 	if (target) {
-		vector_copy(t, target->Position);
-		vector_subtract(t, t, moby->Position);
-		float distSqr = vector_sqrmag(t);
-		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
-    float rangedAttackRadiusSqr = powf(MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance, 2);
+    float dist = mobGetDistanceToTarget(moby, target);
+		float attackRadius = pvars->MobVars.Config.AttackRadius;
+    float rangedAttackRadius = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
     int preferredRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_RANGED;
     int canRanged = mobGetBehavior(moby) == EXECUTIONER_BEHAVIOR_NORMAL || preferredRanged;
 
     if (1) {
-      if (distSqr <= attackRadiusSqr) {
+      if (dist <= attackRadius) {
         // near target, swing
-        if (executionerCanAttack(pvars) && distSqr > (EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS*EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS)) {
+        if (executionerCanAttack(pvars) && dist > (EXECUTIONER_TOO_CLOSE_TO_TARGET_RADIUS)) {
           if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
           return EXECUTIONER_ACTION_ATTACK;
         }
         return EXECUTIONER_ACTION_WALK;
-      } else if (!preferredRanged && distSqr <= (attackRadiusSqr*4) && rand(101)) {
+      } else if (!preferredRanged && dist <= (attackRadius*2) && rand(101)) {
         // chase most of the time, sometimes defer to ranged attack
         return EXECUTIONER_ACTION_WALK;
-      } else if (canRanged && distSqr <= rangedAttackRadiusSqr && mobCanSeeMoby(moby, target)) {
+      } else if (canRanged && dist <= rangedAttackRadius && mobCanSeeMoby(moby, target)) {
         // away from target
         // check if facing
         // and fire

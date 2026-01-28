@@ -23,6 +23,7 @@
 #include "mob.h"
 #include "utils.h"
 #include "gate.h"
+#include "dummy.h"
 #include "maputils.h"
 #include "shared.h"
 #include "pathfind.h"
@@ -76,7 +77,21 @@ VECTOR MoveNextPos;
 VECTOR MoveTargetLineOfSightHit;
 #endif
 
+Moby* mobOtherTargets[MOB_MAX_OTHER_TARGETS];
+Moby* mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
 int mobMoveCheckCollideWithOtherMobsRotatingIndex = 0;
+
+//--------------------------------------------------------------------------
+void mobRegisterTarget(Moby* moby)
+{
+  int i;
+  for (i = 0; i < MOB_MAX_OTHER_TARGETS; ++i) {
+    if (!mobOtherTargets2[i]) {
+      mobOtherTargets2[i] = moby;
+      return;
+    }
+  }
+}
 
 //--------------------------------------------------------------------------
 int mobAmIOwner(Moby* moby)
@@ -116,6 +131,19 @@ float mobGetScaleMultiplier(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+GuberEvent* mobCreateEvent(Moby* moby, u32 eventType)
+{
+  GuberEvent * event = NULL;
+
+  // create guber object
+  Guber* guber = guberGetObjectByMoby(moby);
+  if (guber)
+    event = guberEventCreateEvent(guber, eventType, 0, 0);
+
+  return event;
+}
+
+//--------------------------------------------------------------------------
 void mobSpawnCorn(Moby* moby, int bangle)
 {
 #if MOB_CORN
@@ -149,6 +177,32 @@ void mobResetSoundTrigger(Moby* moby)
 {
   moby->SoundTrigger = 0;
   moby->SoundDesired = -1;
+}
+
+//--------------------------------------------------------------------------
+float mobGetTargetRadius(Moby* target)
+{
+	if (!target) return 0;
+
+  Player* player = guberMobyGetPlayerDamager(target);
+  if (player) return player->Coll.radius;
+
+  return target->BSphere[3] / 1024.0;
+}
+
+//--------------------------------------------------------------------------
+float mobGetDistanceToTarget(Moby* moby, Moby* target)
+{
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  VECTOR t;
+
+	if (!target) return 0;
+
+  vector_copy(t, target->Position);
+  vector_subtract(t, t, moby->Position);
+  float dist = vector_length(t) - mobGetTargetRadius(target);
+  
+  return maxf(0, dist);
 }
 
 //--------------------------------------------------------------------------
@@ -223,6 +277,50 @@ float mobGetCurrentMoveSpeed(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void mobReactToExplosionAt(Moby* damager, VECTOR position, float damage, float radius, int bKnockback)
+{
+  if (!MapConfig.State) return;
+
+  int i;
+  VECTOR delta;
+  struct MobDamageEventArgs args;
+  float sqrRadius = radius * radius;
+  Player** players = playerGetAll();
+  u32 uid = 0;
+  if (damager) uid = guberGetUID(damager);
+
+  memset(&args, 0, sizeof(args));
+  for (i = 0; i < MAX_MOBS_ALIVE; ++i) {
+    Moby* m = MapConfig.State->AllMobsSorted[i];
+    if (m) {
+      
+      vector_subtract(delta, m->Position, position);
+      if (vector_sqrmag(delta) <= sqrRadius) {
+        
+        float dist = vector_length(delta);
+        float angle = atan2f(delta[1] / dist, delta[0] / dist);
+        
+        // create event
+        GuberEvent * guberEvent = mobCreateEvent(m, MOB_EVENT_DAMAGE);
+        if (guberEvent) {
+          args.SourceUID = uid;
+          args.SourceOClass = 0;
+          args.DamageQuarters = damage*4;
+          args.DamageFlags = 0;
+          if (bKnockback) {
+            args.Knockback.Angle = (short)(angle * 1000);
+            args.Knockback.Ticks = 10;
+            args.Knockback.Power = 6;
+            args.Knockback.Force = 1;
+          }
+          guberEventWrite(guberEvent, &args, sizeof(struct MobDamageEventArgs));
+        }
+      }
+    }
+  }
+}
+
+//--------------------------------------------------------------------------
 void mobReactToThorns(Moby* moby, float damage, int byPlayerId)
 {
   if (byPlayerId < 0) return;
@@ -281,21 +379,30 @@ int mobMobyProcessHitFlags(Moby* moby, Moby* hitMoby, float damage, int reactToT
 }
 
 //--------------------------------------------------------------------------
-int mobDoDamageTryHit(Moby* moby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float sqrHitRadius, int damageFlags, float amount)
+int mobDoDamageTryHit(Moby* moby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float hitRadius, int damageFlags, float amount)
 {
   VECTOR mobToHitMoby, mobToJoint, jointToHitMoby;
   VECTOR hitMobyCenter = {0,0,1,0};
   MATRIX playerJointMtx;
   Player* player = guberMobyGetPlayerDamager(hitMoby);
+  struct TargetVars* targetVars = mobyGetTargetVars(hitMoby);
 	MobyColDamageIn in;
-  float hitMobyCollRadiusSqr = 0;
+  float hitMobyCollRadius = 0;
+  float hitHeight = 0.25;
 
   if (player && player->PlayerMoby) {
     mobyGetJointMatrix(player->PlayerMoby, 10, playerJointMtx);
     vector_copy(hitMobyCenter, &playerJointMtx[12]);
     hitMobyCenter[2] = clamp(jointPosition[2], playerJointMtx[14] - player->Coll.bot, playerJointMtx[14] + player->Coll.top);
-    hitMobyCollRadiusSqr = player->Coll.radiusSqd;
+    hitMobyCollRadius = player->Coll.radius;
   } else {
+    hitMobyCollRadius = hitMoby->BSphere[3] / 1024.0;
+    if (targetVars) {
+      vector_scale(hitMobyCenter, hitMoby->M2_03, targetVars->targetHeight);
+      hitHeight = 1 + maxf(targetVars->targetHeight, hitHeight);
+      //hitMobyCollRadius = (u8)targetVars->targetRadiusIn8ths / 8.0;
+    }
+
     vector_add(hitMobyCenter, hitMobyCenter, hitMoby->Position);
   }
 
@@ -308,11 +415,11 @@ int mobDoDamageTryHit(Moby* moby, Moby* hitMoby, VECTOR jointPosition, int isAoE
     return 0;
 
   // clamp within arbitrary vertical limit
-  if (!isAoE && fabsf(jointToHitMoby[2]) > 0.25)
+  if (!isAoE && fabsf(jointToHitMoby[2]) > hitHeight)
     return 0;
 
   // ignore if past attack radius
-  if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_sqrmag(jointToHitMoby) > (hitMobyCollRadiusSqr + sqrHitRadius))
+  if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_length(jointToHitMoby) > (hitMobyCollRadius + hitRadius))
     return 0;
 
   vector_write(in.Momentum, 0);
@@ -338,7 +445,8 @@ int mobDoSweepDamage(Moby* moby, VECTOR from, VECTOR to, float step, float radiu
   int result = 0;
   float t = 0;
   float sqrRadius = radius * radius;
-  float firstPassSqrRadius = powf(5 + radius, 2);
+  float firstPassRadius = 5 + radius;
+  float firstPassSqrRadius = powf(firstPassRadius, 2);
 
   // get total distance to travel
   vector_subtract(delta, to, from);
@@ -351,6 +459,20 @@ int mobDoSweepDamage(Moby* moby, VECTOR from, VECTOR to, float step, float radiu
     // if no friendly fire just check hit on players
     // otherwise check all mobys
     if (!friendlyFire) {
+      for (i = 0; i < MOB_MAX_OTHER_TARGETS; ++i) {
+        Moby* otherTarget = mobOtherTargets[i];
+        if (!otherTarget) break;
+
+        float otherTargetRadius = otherTarget->BSphere[3] / 1024.0;
+        vector_subtract(delta, otherTarget->Position, p);
+        if ((vector_length(delta)-otherTargetRadius) > firstPassRadius)
+          continue;
+
+        if (mobDoDamageTryHit(moby, otherTarget, p, isAoE, radius, damageFlags, amount)) {
+          result |= mobMobyProcessHitFlags(moby, otherTarget, amount, reactToThorns);
+        }
+      }
+
       for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
         Player* player = players[i];
         if (!player || !player->SkinMoby || playerIsDead(player))
@@ -360,7 +482,7 @@ int mobDoSweepDamage(Moby* moby, VECTOR from, VECTOR to, float step, float radiu
         if (vector_sqrmag(delta) > firstPassSqrRadius)
           continue;
 
-        if (mobDoDamageTryHit(moby, player->PlayerMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+        if (mobDoDamageTryHit(moby, player->PlayerMoby, p, isAoE, radius, damageFlags, amount)) {
           result |= mobMobyProcessHitFlags(moby, player->PlayerMoby, amount, reactToThorns);
         }
       }
@@ -368,7 +490,7 @@ int mobDoSweepDamage(Moby* moby, VECTOR from, VECTOR to, float step, float radiu
       Moby** hitMobies = CollMobysSphere_Fix_GetHitMobies();
       Moby* hitMoby;
       while ((hitMoby = *hitMobies++)) {
-        if (mobDoDamageTryHit(moby, hitMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+        if (mobDoDamageTryHit(moby, hitMoby, p, isAoE, radius, damageFlags, amount)) {
           result |= mobMobyProcessHitFlags(moby, hitMoby, amount, reactToThorns);
         }
       }
@@ -388,6 +510,7 @@ int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int fri
   int i;
   int result = 0;
   float sqrRadius = radius * radius;
+  float firstPassRadius = 5 + radius;
   float firstPassSqrRadius = powf(5 + radius, 2);
 
   // get position of right spike joint
@@ -397,6 +520,20 @@ int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int fri
   // if no friendly fire just check hit on players
   // otherwise check all mobys
   if (!friendlyFire) {
+    for (i = 0; i < MOB_MAX_OTHER_TARGETS; ++i) {
+      Moby* otherTarget = mobOtherTargets[i];
+      if (!otherTarget) break;
+
+      float otherTargetRadius = otherTarget->BSphere[3] / 1024.0;
+      vector_subtract(delta, otherTarget->Position, p);
+      if ((vector_length(delta)-otherTargetRadius) > firstPassRadius)
+        continue;
+
+      if (mobDoDamageTryHit(moby, otherTarget, p, isAoE, radius, damageFlags, amount)) {
+        result |= mobMobyProcessHitFlags(moby, otherTarget, amount, reactToThorns);
+      }
+    }
+    
     for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
       Player* player = players[i];
       if (!player || !playerIsConnected(player) || playerIsDead(player))
@@ -406,7 +543,7 @@ int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int fri
       if (vector_sqrmag(delta) > firstPassSqrRadius)
         continue;
 
-      if (mobDoDamageTryHit(moby, player->PlayerMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+      if (mobDoDamageTryHit(moby, player->PlayerMoby, p, isAoE, radius, damageFlags, amount)) {
         result |= mobMobyProcessHitFlags(moby, player->PlayerMoby, amount, reactToThorns);
       }
     }
@@ -414,7 +551,7 @@ int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int fri
     Moby** hitMobies = CollMobysSphere_Fix_GetHitMobies();
     Moby* hitMoby;
     while ((hitMoby = *hitMobies++)) {
-      if (mobDoDamageTryHit(moby, hitMoby, p, isAoE, sqrRadius, damageFlags, amount)) {
+      if (mobDoDamageTryHit(moby, hitMoby, p, isAoE, radius, damageFlags, amount)) {
         result |= mobMobyProcessHitFlags(moby, hitMoby, amount, reactToThorns);
       }
     }
@@ -622,7 +759,9 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
     if (pvars->MobVars.MoveVars.WallSlope > (60 * MATH_DEG2RAD)) {
       //vector_projectonhorizontal(hitToEx, hitToEx);
       //vector_subtract(outputPos, to, hitToEx);
+#if DEBUG_MOVE
       DPRINTF("movecheck hit steep slope %f\n", pvars->MobVars.MoveVars.WallSlope * MATH_RAD2DEG);
+#endif
       //return 2;
     }
 
@@ -954,7 +1093,7 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
 
   Moby* target = pvars->MobVars.Target;
   if (target) {
-    targetRadius = (target->BSphere[3] / 1024) * 0.5;
+    targetRadius = (target->BSphere[3] / 1024) * 1;
   }
 
   // target velocity from rotation
@@ -1045,45 +1184,69 @@ Moby* mobGetNextTarget(Moby* moby, float keepCurrentTargetFactor)
 	int i;
 	VECTOR delta;
 	Moby * currentTarget = pvars->MobVars.Target;
-	Player * closestPlayer = NULL;
-	float closestPlayerDist = 100000;
+	Moby * bestTargetMoby = NULL;
+	float closestTargetDist = 100000;
+  int targetAny = (pvars->MobVars.TargetingRule & MOB_TARGET_MASK_TARGET) == MOB_TARGET_BIT_ANY;
+  int targetOther = (pvars->MobVars.TargetingRule & MOB_TARGET_MASK_TARGET) == MOB_TARGET_BIT_OTHER || targetAny;
+  int targetPlayer = (pvars->MobVars.TargetingRule & MOB_TARGET_MASK_TARGET) == MOB_TARGET_BIT_PLAYER || targetAny;
+  
+  // check nearest other targets
+  if (targetOther) {
+    for (i = 0; i < MOB_MAX_OTHER_TARGETS; ++i) {
+      Moby* otherTarget = mobOtherTargets[i];
+      if (!otherTarget) break;
+      if (otherTarget->OClass != DUMMY_OCLASS) break;
 
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player* p = players[i];
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
+      struct DummyPVar* otherPVars = (struct DummyPVar*)otherTarget->PVar;
+      if ((!currentTarget || currentTarget == otherTarget) && otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_ALWAYS) {
+        return otherTarget;
+      }
 
-			if (dist < 300) {
-        Moby* pTargetMoby = playerGetTargetMoby(p);
-
-        // don't target players that are in jump pad state
-        // unless we're already targeting them
-        if (p->PlayerState == PLAYER_STATE_MOON_JUMP && pTargetMoby != currentTarget)
-          continue;
-
-				// favor existing target
-				if (pTargetMoby == currentTarget)
-					dist *= (1.0 / keepCurrentTargetFactor);
-				
-				// pick closest target
-				if (dist < closestPlayerDist) {
-
-          // confirm we can walk to target
-          if (pathHasRouteToTarget(moby, pTargetMoby)) {
-            closestPlayer = p;
-            closestPlayerDist = dist;
-          }
-				}
-			}
-		}
-	}
-
-	if (closestPlayer) {
-    return playerGetTargetMoby(closestPlayer);
+      vector_subtract(delta, otherTarget->Position, moby->Position);
+      float dist = vector_length(delta);
+      float maxDist = otherPVars->Config.MobTargetDistance*otherPVars->Config.MobTargetDistance;
+      if (otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_IN_RANGE && dist < maxDist) {
+        bestTargetMoby = otherTarget;
+        closestTargetDist = dist;
+      }
+    }
   }
 
-	return NULL;
+  // check nearest players
+  if (targetPlayer) {
+    for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+      Player* p = players[i];
+      if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
+        vector_subtract(delta, p->PlayerPosition, moby->Position);
+        float dist = vector_length(delta);
+
+        if (dist < 300) {
+          Moby* pTargetMoby = playerGetTargetMoby(p);
+
+          // don't target players that are in jump pad state
+          // unless we're already targeting them
+          if (p->PlayerState == PLAYER_STATE_MOON_JUMP && pTargetMoby != currentTarget)
+            continue;
+
+          // favor existing target
+          if (pTargetMoby == currentTarget)
+            dist *= (1.0 / keepCurrentTargetFactor);
+          
+          // pick closest target
+          if (dist < closestTargetDist) {
+
+            // confirm we can walk to target
+            if (pathHasRouteToTarget(moby, pTargetMoby)) {
+              bestTargetMoby = pTargetMoby;
+              closestTargetDist = dist;
+            }
+          }
+        }
+      }
+    }
+  }
+
+	return bestTargetMoby;
 }
 
 //--------------------------------------------------------------------------
@@ -1324,4 +1487,8 @@ void mobTick(void)
     mobMoveCheckCollideWithOtherMobsRotatingIndex = (mobMoveCheckCollideWithOtherMobsRotatingIndex + 1) % MapConfig.State->MobStats.TotalAlive;
   else
     mobMoveCheckCollideWithOtherMobsRotatingIndex = (mobMoveCheckCollideWithOtherMobsRotatingIndex + 1) % MAX_MOBS_ALIVE;
+
+  // flip targets
+  memcpy(mobOtherTargets, mobOtherTargets2, sizeof(mobOtherTargets));
+  memset(mobOtherTargets2, 0, sizeof(mobOtherTargets2));
 }

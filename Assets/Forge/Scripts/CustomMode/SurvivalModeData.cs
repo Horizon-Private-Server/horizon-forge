@@ -34,6 +34,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [Min(0), Tooltip("Lower values will increase weapon pickup respawn frequency.")] public float WeaponPickupCooldownFactor = 1;
     public bool HidePrestigeMachineEvery25Rounds = true;
     public bool RandomizeWeaponPickupsAtStart = true;
+    [Range(0f, 1f)] public float AmmoDropProbability = 0;
 
     [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 10.")]
     public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
@@ -149,8 +150,10 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gambits.o");
 
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/upgrade.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/drop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammosupply.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pool.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/demonbell.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bankbox.o");
@@ -180,6 +183,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.LDFlags.Add("-DSURVIVAL");
         state.LDFlags.Add("-DGAMBITS");
         state.LDFlags.Add($"-DMAP_BASE_COMPLEXITY={MapBaseComplexity}");
+        state.LDFlags.Add($"-DAMMO_DROP_PROBABILITY={AmmoDropProbability}");
         var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");

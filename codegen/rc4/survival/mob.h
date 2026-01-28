@@ -16,6 +16,8 @@
 #include "leviathan.h"
 #include "game.h"
 
+#define MOB_MAX_OTHER_TARGETS       (32)
+
 enum MobAttributeType
 {
   MOB_ATTRIBUTE_NONE = 0,
@@ -59,6 +61,35 @@ enum MobSpawnFlags {
 // 
 enum MobUnreliableMsgId {
   MOB_UNRELIABLE_MSG_ID_STATE_UPDATE
+};
+
+// 
+enum MobTargetingRules
+{
+  MOB_TARGET_BIT_NEAREST = 0x00,
+  MOB_TARGET_BIT_STRONGEST = 0x01,
+  MOB_TARGET_BIT_WEAKEST = 0x02,
+  MOB_TARGET_BIT_ANY = 0x00,
+  MOB_TARGET_BIT_PLAYER = 0x10,
+  MOB_TARGET_BIT_OTHER = 0x20,
+
+  MOB_TARGET_MASK_STRATEGY = 0x0f,
+  MOB_TARGET_MASK_TARGET = 0xf0,
+
+  // ANY
+  MOB_TARGET_NEAREST_ANY = (MOB_TARGET_BIT_ANY | MOB_TARGET_BIT_NEAREST),
+  MOB_TARGET_STRONGEST_ANY = (MOB_TARGET_BIT_ANY | MOB_TARGET_BIT_STRONGEST),
+  MOB_TARGET_WEAKEST_ANY = (MOB_TARGET_BIT_ANY | MOB_TARGET_BIT_WEAKEST),
+
+  // PLAYER
+  MOB_TARGET_NEAREST_PLAYER = (MOB_TARGET_BIT_PLAYER | MOB_TARGET_BIT_NEAREST),
+  MOB_TARGET_STRONGEST_PLAYER = (MOB_TARGET_BIT_PLAYER | MOB_TARGET_BIT_STRONGEST),
+  MOB_TARGET_WEAKEST_PLAYER = (MOB_TARGET_BIT_PLAYER | MOB_TARGET_BIT_WEAKEST),
+
+  // OTHER
+  MOB_TARGET_NEAREST_OTHER = (MOB_TARGET_BIT_OTHER | MOB_TARGET_BIT_NEAREST),
+  MOB_TARGET_STRONGEST_OTHER = (MOB_TARGET_BIT_OTHER | MOB_TARGET_BIT_STRONGEST),
+  MOB_TARGET_WEAKEST_OTHER = (MOB_TARGET_BIT_OTHER | MOB_TARGET_BIT_WEAKEST),
 };
 
 struct MobDamageEventArgs;
@@ -250,6 +281,7 @@ struct MobVars {
   char DynamicRandom;
   char BlipType;
   char NoTargetCounter;
+  char TargetingRule;
 };
 
 // warning: multiple differing types with the same name, only one recovered
@@ -384,8 +416,10 @@ struct MobUnreliableMsgStateUpdateArgs
   struct MobStateUpdateEventArgs StateUpdate;
 };
 
+float mobGetTargetRadius(Moby* target);
+float mobGetDistanceToTarget(Moby* moby, Moby* target);
 int mobOnUnreliableMsgRemote(void* connection, void* data);
-void mobReactToExplosionAt(int byPlayerId, VECTOR position, float damage, float radius);
+void mobReactToExplosionAt(Moby* damager, VECTOR position, float damage, float radius, int bKnockback);
 void mobNuke(int killedByPlayerId);
 int mobHandleEvent(Moby* moby, GuberEvent* event);
 int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);

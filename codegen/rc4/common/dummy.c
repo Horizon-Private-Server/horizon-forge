@@ -36,6 +36,10 @@
 #include "dummy.h"
 #include "common.h"
 
+#if SURVIVAL || RAIDS
+#include "mob.h"
+#endif
+
 #if DEBUG
 #define DLOG(moby, format, ...) if (((struct DummyPVar*)moby->PVar)->Config.Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
 #else
@@ -103,6 +107,10 @@ void dummyOnStateChanged(Moby* moby)
           // explode
           if (pvars->Config.OnDeathType >= DUMMY_ON_DEATH_EXPLODE && difficultyConfig->ExplosionRadius > 0) {
             spawnExplosionDamage(targetMoby->Position, difficultyConfig->ExplosionRadius, 0x80004080, moby, difficultyConfig->ExplosionDamage, 0x00081801);
+            DPRINTF("damage %f\n", difficultyConfig->ExplosionDamage);
+#if SURVIVAL
+            mobReactToExplosionAt(moby, targetMoby->Position, difficultyConfig->ExplosionDamage, difficultyConfig->ExplosionRadius, 0);
+#endif
           }
 
           // blow corn
@@ -225,7 +233,7 @@ void dummyUpdate(Moby* moby)
   }
 
   // register target if friendly and targetable
-#if RAIDS
+#if RAIDS || SURVIVAL
   if (!pvars->Config.IsOnEnemyTeam && pvars->Config.MobTargetType != DUMMY_MOB_AGGRO_IGNORE) {
     mobRegisterTarget(moby);
   }

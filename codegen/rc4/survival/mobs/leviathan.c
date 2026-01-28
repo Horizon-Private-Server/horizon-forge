@@ -458,11 +458,11 @@ enum LeviathanAction leviathanGetPreferredAttack(Moby* moby)
 
   vector_scale(dt, moby->M0_03, 1 * 2);
   vector_add(inFrontPos, moby->Position, dt);
-  vector_subtract(dt, inFrontPos, pvars->MobVars.Target->Position);
-  float sqrDist = vector_sqrmag(dt);
-  if (sqrDist < 1) {
+  vector_subtract(dt, inFrontPos, target->Position);
+  float dist = vector_length(dt) - mobGetTargetRadius(target);
+  if (dist < 1) {
     return LEVIATHAN_ACTION_ATTACK_STAB;
-  } else if (sqrDist < attackRadiusSqr) {
+  } else if (dist < pvars->MobVars.Config.AttackRadius) {
     return LEVIATHAN_ACTION_ATTACK_SWING;
   }
 
