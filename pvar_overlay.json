@@ -5602,7 +5602,7 @@
     ]
   },
   {
-    "Name": "Raids Health Proxy",
+    "Name": "Health Proxy",
     "RCVersion": 4,
     "MobyOClass": 16397,
     "Length": 348,
@@ -5656,7 +5656,7 @@
         "Name": "Show Damage Popups",
         "DataType": "Bool",
         "DataSize": 1,
-        "Offset": 99
+        "Offset": 98
       },
       {
         "Name": "Target Moby",
@@ -5667,7 +5667,7 @@
         "Name": "Targetable",
         "DataType": "Bool",
         "DataSize": 1,
-        "Offset": 98,
+        "Offset": 97,
         "DisplayIf": [
           { "Field": "Team", "Op": "==", "Value": "1" }
         ]
@@ -5676,21 +5676,13 @@
         "Name": "Targeting Height",
         "DataType": "Float",
         "Offset": 88,
-        "Default": 1,
-        "DisplayIf": [
-          { "Field": "Team", "Op": "==", "Value": "1" },
-          { "Field": "Targetable", "Op": "==", "Value": "True" }
-        ]
+        "Default": 1
       },
       {
         "Name": "Targeting Radius",
         "DataType": "Float",
         "Offset": 92,
-        "Default": 1,
-        "DisplayIf": [
-          { "Field": "Team", "Op": "==", "Value": "1" },
-          { "Field": "Targetable", "Op": "==", "Value": "True" }
-        ]
+        "Default": 1
       },
       {
         "Name": "Healthbar",
@@ -5721,7 +5713,7 @@
         "Name": "Mob Aggro Type",
         "DataType": "Enum",
         "DataSize": 1,
-        "Offset": 97,
+        "Offset": 99,
         "Options": {
           "Ignore": 0,
           "When In Range": 1,
@@ -5758,11 +5750,11 @@
         "Offset": 120
       },
       {
-        "Name": "Values",
+        "Name": "Stats",
         "DataType": "Struct",
         "Offset": 124,
         "DataSize": 12,
-        "Count": 5,
+        "Count": 1,
         "Labels": [
           "1 Star",
           "2 Stars",
@@ -6035,6 +6027,142 @@
         "Name": "On Drop (Controller)",
         "DataType": "MobyRef",
         "Offset": 92
+      }
+    ]
+  },
+  {
+    "Name": "Ammo Supply",
+    "RCVersion": 4,
+    "MobyOClass": 511,
+    "Length": 64,
+    "Overlay": [
+      {
+        "Name": "Dual Vipers Cost",
+        "DataType": "Integer",
+        "Offset": 0,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 20
+      },
+      {
+        "Name": "Dual Raptors Cost",
+        "DataType": "Integer",
+        "Offset": 32,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 100
+      },
+      {
+        "Name": "Magma Cannon Cost",
+        "DataType": "Integer",
+        "Offset": 4,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 50
+      },
+      {
+        "Name": "Vulcan Cannon Cost",
+        "DataType": "Integer",
+        "Offset": 36,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 200
+      },
+      {
+        "Name": "Arbiter Cost",
+        "DataType": "Integer",
+        "Offset": 8,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 100
+      },
+      {
+        "Name": "Silencer Cost",
+        "DataType": "Integer",
+        "Offset": 40,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 250
+      },
+      {
+        "Name": "Fusion Rifle Cost",
+        "DataType": "Integer",
+        "Offset": 12,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 100
+      },
+      {
+        "Name": "Anti-Matter Rifle Cost",
+        "DataType": "Integer",
+        "Offset": 44,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 250
+      },
+      {
+        "Name": "Hunter Mine Launcher Cost",
+        "DataType": "Integer",
+        "Offset": 16,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 100
+      },
+      {
+        "Name": "Stalker Mine Launcher Cost",
+        "DataType": "Integer",
+        "Offset": 48,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 250
+      },
+      {
+        "Name": "B6 Obliterator Cost",
+        "DataType": "Integer",
+        "Offset": 20,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 100
+      },
+      {
+        "Name": "B11 Vaporizer Cost",
+        "DataType": "Integer",
+        "Offset": 52,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 250
+      },
+      {
+        "Name": "Scorpion Flail Cost",
+        "DataType": "Integer",
+        "Offset": 24,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 50
+      },
+      {
+        "Name": "Leviathan Flail Cost",
+        "DataType": "Integer",
+        "Offset": 56,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 200
+      },
+      {
+        "Name": "Holoshield Cost",
+        "DataType": "Integer",
+        "Offset": 28,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 50
+      },
+      {
+        "Name": "Omnishield Cost",
+        "DataType": "Integer",
+        "Offset": 60,
+        "Min": 0,
+        "Max": 100000000,
+        "Default": 200
       }
     ]
   }

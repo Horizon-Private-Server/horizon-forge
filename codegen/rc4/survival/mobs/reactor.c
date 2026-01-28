@@ -549,17 +549,16 @@ int reactorGetPreferredAction(Moby* moby, int * delayTicks)
       return REACTOR_ACTION_WALK;
     }
 
-		vector_subtract(t, target->Position, moby->Position);
-		float distSqr = vector_sqrmag(t);
-		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+    float dist = mobGetDistanceToTarget(moby, target);
+		float attackRadius = pvars->MobVars.Config.AttackRadius;
 
     // if we're on top of the target then step away
-    if (distSqr < (REACTOR_BASE_COLL_RADIUS*REACTOR_BASE_COLL_RADIUS)) {
+    if (dist < (REACTOR_BASE_COLL_RADIUS)) {
       return REACTOR_ACTION_WALK;
     }
 
     // near then swing
-		if (distSqr <= attackRadiusSqr && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SWING)) {
+		if (dist <= attackRadius && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SWING)) {
       if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
       return REACTOR_ACTION_ATTACK_SWING;
 		}
@@ -575,13 +574,13 @@ int reactorGetPreferredAction(Moby* moby, int * delayTicks)
       }
 
       // near but not for swing then charge
-      if (distSqr <= (REACTOR_MAX_DIST_FOR_CHARGE*REACTOR_MAX_DIST_FOR_CHARGE) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_CHARGE)) {
+      if (dist <= (REACTOR_MAX_DIST_FOR_CHARGE) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_CHARGE)) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
         return REACTOR_ACTION_ATTACK_CHARGE;
       }
 
       // far but in sight, shoot with trail
-      if (distSqr <= (REACTOR_SHOT_WITH_TRAIL_MAX_DIST*REACTOR_SHOT_WITH_TRAIL_MAX_DIST) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL)) {
+      if (dist <= (REACTOR_SHOT_WITH_TRAIL_MAX_DIST) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL)) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
         return REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL;
       }

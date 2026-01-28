@@ -348,12 +348,10 @@ int swarmerGetPreferredAction(Moby* moby, int * delayTicks)
 	// get next target
 	Moby * target = swarmerGetNextTarget(moby);
 	if (target) {
-		vector_copy(t, target->Position);
-		vector_subtract(t, t, moby->Position);
-		float distSqr = vector_sqrmag(t);
-		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+    float dist = mobGetDistanceToTarget(moby, target);
+		float attackRadius = pvars->MobVars.Config.AttackRadius;
 
-		if (distSqr <= attackRadiusSqr) {
+		if (dist <= attackRadius) {
 			if (swarmerCanAttack(pvars)) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
 				return pvars->MobVars.Config.MobAttribute != MOB_ATTRIBUTE_EXPLODE ? SWARMER_ACTION_ATTACK : SWARMER_ACTION_TIME_BOMB;

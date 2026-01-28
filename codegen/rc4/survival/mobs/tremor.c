@@ -322,12 +322,10 @@ int tremorGetPreferredAction(Moby* moby, int * delayTicks)
 	// get next target
 	Moby * target = tremorGetNextTarget(moby);
 	if (target) {
-		vector_copy(t, target->Position);
-		vector_subtract(t, t, moby->Position);
-		float distSqr = vector_sqrmag(t);
-		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+    float dist = mobGetDistanceToTarget(moby, target);
+		float attackRadius = pvars->MobVars.Config.AttackRadius;
 
-		if (distSqr <= attackRadiusSqr) {
+		if (dist <= attackRadius) {
 			if (tremorCanAttack(pvars)) {
         if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
 				return TREMOR_ACTION_ATTACK;
