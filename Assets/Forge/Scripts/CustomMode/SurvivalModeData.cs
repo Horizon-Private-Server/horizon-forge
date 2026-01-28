@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 6;
+    public static readonly int SURVIVAL_VERSION = 7;
     public const int DEMONBELL_OCLASS = 0x2479;
     public const int BANK_OCLASS = 0x1F7;
     public const int STACKBOX_OCLASS = 0x2083;
