@@ -130,9 +130,7 @@
 #define WEAPON_MENU_COOLDOWN_TICKS						(60)
 #define VENDOR_MAX_WEAPON_LEVEL								(9)
 
-#define PRESTIGE_MACHINE_MAX_DIST							(5)
-#define PRESTIGE_MACHINE_BASE_COST            (100000)
-#define PRESTIGE_MACHINE_COST_PER_LEVEL       (100000)
+#define PRESTIGE_MACHINE_MAX_DIST			  (5)
 #define WEAPON_PRESTIGE_MAX                   (5)
 
 #define PLAYER_UPGRADE_DAMAGE_FACTOR          (0.08)
@@ -311,6 +309,8 @@ typedef struct SurvivalBakedConfig
   SurvivalBakedSpawnpoint_t BakedSpawnPoints[BAKED_SPAWNPOINT_COUNT];
   int StackboxBaseCost;
   int StackboxCostPerPerk;
+  char WeaponPrestigeMax;
+  int PrestigeCostPerLevel[WEAPON_PRESTIGE_MAX];
 } SurvivalBakedConfig_t;
 
 struct SurvivalPlayerState
