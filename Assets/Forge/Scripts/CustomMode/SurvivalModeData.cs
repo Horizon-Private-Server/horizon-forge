@@ -78,6 +78,10 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.DreadToken, Probability = 0.3f, ProbabilityLucky = 0f },
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1, ProbabilityLucky = 0f },
     };
+	
+	[Header("Prestige")]
+	[Range(1, 5)] public int WeaponPrestigeMax = 5;
+	public List<int> PrestigeCostPerLevel = new List<int>() {100000, 300000, 500000, 700000, 1000000};
 
     [HideInInspector] public bool DebugEnabled;
     [HideInInspector] public bool DebugPath;
@@ -101,6 +105,21 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             if (gambit.Name != null && gambit.Name.Length > 32) gambit.Name = gambit.Name.Substring(0, 32);
             if (gambit.Description != null && gambit.Description.Length > 128) gambit.Description = gambit.Description.Substring(0, 128);
         }
+		
+		WeaponPrestigeMax = Mathf.Clamp(WeaponPrestigeMax, 1, 5);
+        while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) {
+			int boltValue;
+			switch (PrestigeCostPerLevel.Count)
+			{
+				case 0: boltValue = 100000; break;
+				case 1: boltValue = 300000; break;
+				case 2: boltValue = 500000; break;
+				case 3: boltValue = 700000; break;
+				default: boltValue = 1000000; break;
+			}
+			PrestigeCostPerLevel.Add(boltValue);
+		}
+        while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
     }
 
     public override void Write(BinaryWriter writer)
@@ -366,6 +385,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine($"\t.BoltRankMultiplier = {BoltRankMultiplier.ToInvariantCulture()},");
         sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
         sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
+		
+		sb.AppendLine($"\t.WeaponPrestigeMax = {WeaponPrestigeMax},");
+		sb.AppendLine("\t.PrestigeCostPerLevel = {");
+		foreach(var cost in PrestigeCostPerLevel)
+			sb.AppendLine($"\t\t{cost},");
+		sb.AppendLine("\t},");
+		
         sb.AppendLine("\t.BakedSpawnPoints = {");
         foreach (var item in upgradeSpawns)
             sb.AppendLine(SurvivalBakedSpawnPointItem.GetDef(item.transform, SurvivalBakedSpawnpointType.Upgrade));
