@@ -83,6 +83,14 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 	[Range(1, 5)] public int WeaponPrestigeMax = 5;
 	public List<int> PrestigeCostPerLevel = new List<int>() {100000, 300000, 500000, 700000, 1000000};
 
+    [Header("Wall Upgrades")]
+    public List<UpgradeEntry> Upgrades = new List<UpgradeEntry>() {
+        new UpgradeEntry() { Type = UpgradeId.Health, Max = 2000 },
+        new UpgradeEntry() { Type = UpgradeId.Damage, Max = 2000 },
+        new UpgradeEntry() { Type = UpgradeId.Crit, Max = 100 },
+        new UpgradeEntry() { Type = UpgradeId.Speed, Max = 40 },
+    };
+
     [HideInInspector] public bool DebugEnabled;
     [HideInInspector] public bool DebugPath;
     [HideInInspector] public bool DebugMove;
@@ -120,6 +128,17 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 			PrestigeCostPerLevel.Add(boltValue);
 		}
         while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
+
+        foreach (var u in Upgrades)
+        {
+            int maxAllowed;
+            switch (u.Type)
+            {
+                case UpgradeId.Crit: maxAllowed = 100; break;
+                default: maxAllowed = 5000; break;
+            }
+            u.Max = Mathf.Clamp(u.Max, 1, maxAllowed);
+        }
     }
 
     public override void Write(BinaryWriter writer)
@@ -354,6 +373,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         sb.AppendLine("#include <libdl/utils.h>");
         sb.AppendLine("#include \"game.h\"");
+        sb.AppendLine("#include \"upgrade.h\"");
         sb.AppendLine("#include \"mob.h\"");
         sb.AppendLine();
 
@@ -367,7 +387,15 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine();
 
-        // special rounds config
+        // wall upgrades config
+        sb.AppendLine("//--------------------------------------------------------------------------");
+        sb.AppendLine("struct UpgradeDef upgradeDefs[] = {");
+        foreach (var param in Upgrades)
+            sb.AppendLine($"\t{param.GetDef()}");
+        sb.AppendLine("};");
+        sb.AppendLine();
+		
+		// special rounds config
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("struct SurvivalSpecialRoundParam specialRoundParams[] = {");
         foreach (var param in SpecialRounds.Where(x => !x.Disabled))
@@ -449,6 +477,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("\tMapConfig.DefaultSpawnParamsCount = COUNT_OF(defaultSpawnParams);");
         sb.AppendLine("\tMapConfig.SpecialRoundParams = specialRoundParams;");
         sb.AppendLine("\tMapConfig.SpecialRoundParamsCount = COUNT_OF(specialRoundParams);");
+		sb.AppendLine("\tMapConfig.UpgradeDefs = upgradeDefs;");
+        sb.AppendLine("\tMapConfig.UpgradeDefCount = COUNT_OF(upgradeDefs);");
         sb.AppendLine($"\tMapConfig.WeaponPickupCooldownFactor = {WeaponPickupCooldownFactor.ToInvariantCulture()};");
         sb.AppendLine("}");
         sb.AppendLine();
@@ -1530,6 +1560,14 @@ public enum SurvivalStackableItemId
     ExplodingEnemies = 9, // stack +X damage per explosion
 };
 
+public enum UpgradeId
+{
+	Health = 0,
+	Speed = 1,
+	Damage = 2,
+ 	Crit = 6
+};
+
 public enum SurvivalMobStatIds
 {
     None = 0,
@@ -1556,6 +1594,28 @@ public enum SurvivalMobSpawnType
     OnPlayer = 4,
     NearHealthbox = 8,
 };
+
+[System.Serializable]
+public class UpgradeEntry
+{
+    public UpgradeId Type;
+
+    [Range(1, 5000)]
+    public int Max = 1;
+
+    public string GetDef() {
+        string name;
+        switch (Type)
+        {
+            case UpgradeId.Health: name = "UPGRADE_HEALTH"; break;
+            case UpgradeId.Speed: name = "UPGRADE_SPEED"; break;
+            case UpgradeId.Damage: name = "UPGRADE_DAMAGE"; break;
+            case UpgradeId.Crit: name = "UPGRADE_CRIT"; break;
+            default: throw new ArgumentOutOfRangeException(nameof(Type), Type, "Unknown upgrade type");
+        }
+        return $"{{ {name}, {Max} }},";
+    }
+}
 
 [Serializable]
 public class SurvivalGambit

@@ -16,14 +16,12 @@
 #define PLAYER_UPGRADE_COOLDOWN_TICKS					(15)
 
 enum UpgradeType {
-	UPGRADE_HEALTH,
-	UPGRADE_SPEED,
-	UPGRADE_DAMAGE,
-	UPGRADE_MEDIC,
-	UPGRADE_VENDOR,
-  UPGRADE_PICKUPS,
-  UPGRADE_CRIT,
-	UPGRADE_COUNT
+	UPGRADE_HEALTH = 0,
+	UPGRADE_SPEED = 1,
+	UPGRADE_DAMAGE = 2,
+	// add new upgrades by filling in these slots first
+ 	UPGRADE_CRIT = 6, // Keep crit as ID 6 for DZO
+	UPGRADE_COUNT = 7
 };
 
 enum UpgradeEventType {
@@ -34,8 +32,8 @@ enum UpgradeEventType {
 
 struct UpgradePVar {
 	enum UpgradeType Type;
-  int Uses;
-  int TexId;
+	int Uses;
+	int TexId;
 	struct PartInstance* Particles[4];
 };
 
@@ -53,8 +51,6 @@ struct UpgradePickupEventArgs
 {
 	int PickedUpByPlayerId;
 };
-
-int UpgradeMax[UPGRADE_COUNT];
 
 void upgradeTick(void);
 void upgradeInit(void);

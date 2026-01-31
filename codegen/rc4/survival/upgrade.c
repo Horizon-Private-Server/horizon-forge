@@ -21,10 +21,7 @@ char UpgradeTexIds[] = {
 	[UPGRADE_HEALTH] 94,
 	[UPGRADE_SPEED] 52,
 	[UPGRADE_DAMAGE] 9,
-	[UPGRADE_MEDIC] 13,
-	[UPGRADE_VENDOR] 46,
-	[UPGRADE_PICKUPS] 2,
-  [UPGRADE_CRIT] 7,
+	[UPGRADE_CRIT] 7,
 };
 
 //--------------------------------------------------------------------------
@@ -114,14 +111,14 @@ void upgradePostDraw(Moby* moby)
 
 	// determine color
 	u32 color = 0x00FFFFFF;
-  float opacity = lerpf(0, 1, clamp(pvars->Uses / 5.0, 0, 1));
-  color |= (u8)(0x70 * opacity) << 24;
+  	float opacity = lerpf(0, 1, clamp(pvars->Uses / 5.0, 0, 1));
+  	color |= (u8)(0x70 * opacity) << 24;
 
 	// set draw args
 	matrix_unit(m2);
 
 	// init
-  gfxResetQuad(&quad);
+ 	gfxResetQuad(&quad);
 
 	// color of each corner?
 	vector_copy(quad.VertexPositions[0], pTL);
@@ -225,16 +222,16 @@ int upgradeHandleEvent_Spawn(Moby* moby, GuberEvent* event)
 	//moby->PrimaryColor = MobPrimaryColors[(int)args.MobType];
 	moby->CollData = NULL;
 	moby->DrawDist = 0;
-  moby->ModeBits = 0;
-  moby->AnimSeq = NULL;
-  moby->AnimSeqId = moby->LSeq = 0;
+  	moby->ModeBits = 0;
+ 	moby->AnimSeq = NULL;
+  	moby->AnimSeqId = moby->LSeq = 0;
 	//moby->PClass = NULL;
 
 	// update pvars
 	struct UpgradePVar* pvars = (struct UpgradePVar*)moby->PVar;
 	pvars->Type = args.Type;
-  pvars->Uses = UPGRADE_MAX_USES;
-  pvars->TexId = UpgradeTexIds[args.Type];
+ 	pvars->Uses = UPGRADE_MAX_USES;
+  	pvars->TexId = UpgradeTexIds[args.Type];
 	memset(pvars->Particles, 0, sizeof(pvars->Particles));
 
 	// set team
@@ -243,8 +240,8 @@ int upgradeHandleEvent_Spawn(Moby* moby, GuberEvent* event)
 		((GuberMoby*)guber)->TeamNum = 10;
 	
 	// set reference in state
-  if (MapConfig.State)
-	  MapConfig.State->UpgradeMobies[args.Type] = moby;
+  	if (MapConfig.State)
+		MapConfig.State->UpgradeMobies[args.Type] = moby;
 
 	// 
 	mobySetState(moby, 0, -1);
@@ -315,21 +312,6 @@ int upgradeHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 			case UPGRADE_DAMAGE:
 			{
 				uiShowPopup(targetPlayer->LocalPlayerIndex, "Damage Upgraded!");
-				break;
-			}
-			case UPGRADE_MEDIC:
-			{
-				uiShowPopup(targetPlayer->LocalPlayerIndex, "Revive Discount!");
-				break;
-			}
-			case UPGRADE_VENDOR:
-			{
-				uiShowPopup(targetPlayer->LocalPlayerIndex, "Vendor Discount!");
-				break;
-			}
-			case UPGRADE_PICKUPS:
-			{
-				uiShowPopup(targetPlayer->LocalPlayerIndex, "Powerup Duration Increased!");
 				break;
 			}
 			case UPGRADE_CRIT:
