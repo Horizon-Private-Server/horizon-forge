@@ -84,11 +84,11 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 	public List<int> PrestigeCostPerLevel = new List<int>() {100000, 300000, 500000, 700000, 1000000};
 
     [Header("Wall Upgrades")]
-    public List<UpgradeEntry> Upgrades = new List<UpgradeEntry>() {
-        new UpgradeEntry() { Type = UpgradeId.Health, Max = 2000 },
-        new UpgradeEntry() { Type = UpgradeId.Damage, Max = 2000 },
-        new UpgradeEntry() { Type = UpgradeId.Crit, Max = 100 },
-        new UpgradeEntry() { Type = UpgradeId.Speed, Max = 40 },
+    public List<SurvivalUpgradeEntry> Upgrades = new List<SurvivalUpgradeEntry>() {
+        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Health, Max = 2000 },
+        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Damage, Max = 2000 },
+        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Crit, Max = 100 },
+        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Speed, Max = 40 },
     };
 
     [HideInInspector] public bool DebugEnabled;
@@ -134,7 +134,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             int maxAllowed;
             switch (u.Type)
             {
-                case UpgradeId.Crit: maxAllowed = 100; break;
+                case SurvivalUpgradeId.Crit: maxAllowed = 100; break;
                 default: maxAllowed = 5000; break;
             }
             u.Max = Mathf.Clamp(u.Max, 1, maxAllowed);
@@ -1560,7 +1560,7 @@ public enum SurvivalStackableItemId
     ExplodingEnemies = 9, // stack +X damage per explosion
 };
 
-public enum UpgradeId
+public enum SurvivalUpgradeId
 {
 	Health = 0,
 	Speed = 1,
@@ -1596,9 +1596,9 @@ public enum SurvivalMobSpawnType
 };
 
 [System.Serializable]
-public class UpgradeEntry
+public class SurvivalUpgradeEntry
 {
-    public UpgradeId Type;
+    public SurvivalUpgradeId Type;
 
     [Range(1, 5000)]
     public int Max = 1;
@@ -1607,10 +1607,10 @@ public class UpgradeEntry
         string name;
         switch (Type)
         {
-            case UpgradeId.Health: name = "UPGRADE_HEALTH"; break;
-            case UpgradeId.Speed: name = "UPGRADE_SPEED"; break;
-            case UpgradeId.Damage: name = "UPGRADE_DAMAGE"; break;
-            case UpgradeId.Crit: name = "UPGRADE_CRIT"; break;
+            case SurvivalUpgradeId.Health: name = "UPGRADE_HEALTH"; break;
+            case SurvivalUpgradeId.Speed: name = "UPGRADE_SPEED"; break;
+            case SurvivalUpgradeId.Damage: name = "UPGRADE_DAMAGE"; break;
+            case SurvivalUpgradeId.Crit: name = "UPGRADE_CRIT"; break;
             default: throw new ArgumentOutOfRangeException(nameof(Type), Type, "Unknown upgrade type");
         }
         return $"{{ {name}, {Max} }},";
