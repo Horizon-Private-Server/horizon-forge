@@ -262,9 +262,6 @@ void mboxActivateQuad(void)
 
     // increase duration by player pickup cooldown upgrade
     short duration = ITEM_QUAD_DURATION_TPS;
-    if (MapConfig.State) {
-      duration += MapConfig.State->PlayerStates[player->PlayerId].State.Upgrades[UPGRADE_PICKUPS] * TPS * 1.00 * 2;
-    }
 
     player->timers.damageMuliplierTimer = duration;
     player->DamageMultiplier = 4;
@@ -283,9 +280,6 @@ void mboxActivateShield(void)
 
     // increase duration by player pickup cooldown upgrade
     short duration = ITEM_SHIELD_DURATION_TPS;
-    if (MapConfig.State) {
-      duration += MapConfig.State->PlayerStates[player->PlayerId].State.Upgrades[UPGRADE_PICKUPS] * TPS * 1.25 * 2;
-    }
 
     player->timers.armorLevelTimer = duration;
     player->ArmorLevel = 3;
