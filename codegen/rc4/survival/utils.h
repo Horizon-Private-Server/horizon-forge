@@ -12,12 +12,13 @@
 extern struct SurvivalMapConfig MapConfig;
 extern struct SurvivalBakedConfig bakedConfig;
 
-void playPaidSound(Player* player);
-int tryPlayerInteract(Moby* moby, Player* player, char* message, char* lowerMessage, int boltCost, int tokenCost, int actionCooldown, float sqrDistance, int btns);
+void playPaidSound(Player *player);
+int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMessage, int boltCost, int tokenCost, int actionCooldown, float sqrDistance, int btns);
 
-int mobyIsMob(Moby* moby);
+int mobyIsMob(Moby *moby);
 int playerHasBlessing(int playerId, int blessing);
 int playerGetStackableCount(int playerId, int stackable);
+void playerTeleportToSpawn(Player *player, float dealtDamagePercentOfMaxHealth);
 int localPlayerHasInput(void);
 
 int bakedSpawnGetFirst(int bakedSpawnType, VECTOR outPos, VECTOR outRot);

@@ -1439,8 +1439,8 @@ int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, 
 	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + extraDataSize, &guberEvent, NULL);
 	if (guberEvent)
 	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
+    if (MapConfig.Functions.ModePopulateSpawnArgsFunc) {
+      MapConfig.Functions.ModePopulateSpawnArgsFunc(&args, config, spawnParamsIdx, spawnFromUID == -1, spawnFlags);
     }
 
 		u8 random = (u8)rand(100);
@@ -1477,7 +1477,7 @@ int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, 
 //--------------------------------------------------------------------------
 void mobInit(void)
 {
-  MapConfig.OnMobSpawnedFunc = &mobOnSpawned;
+  MapConfig.Functions.OnMobSpawnedFunc = &mobOnSpawned;
 }
 
 //--------------------------------------------------------------------------

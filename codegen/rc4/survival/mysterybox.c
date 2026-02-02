@@ -856,8 +856,8 @@ int mboxHandleEvent_GivePlayer(Moby* moby, GuberEvent* event)
         }
         case MYSTERY_BOX_ITEM_UPGRADE_WEAPON:
         {
-          if (MapConfig.UpgradePlayerWeaponFunc) {
-            MapConfig.UpgradePlayerWeaponFunc(playerId, random, 0);
+          if (MapConfig.Functions.ModeUpgradePlayerWeaponFunc) {
+            MapConfig.Functions.ModeUpgradePlayerWeaponFunc(playerId, random, 0);
           }
           break;
         }

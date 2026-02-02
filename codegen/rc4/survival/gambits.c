@@ -217,7 +217,7 @@ void gambitsSetup(void)
   gambitsSetupInitialBoltsTokens(gambit->InitialBolts, gambit->InitialTokens);
   if (gambit->CustomInit) gambit->CustomInit();
 
-  MapConfig.CreateMobDropFunc = &gambitsDropCreate;
+  MapConfig.Functions.CreateMobDropFunc = &gambitsDropCreate;
   GambitsState.FinishedSetup = 1;
 }
 

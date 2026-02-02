@@ -16,6 +16,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public const int BANK_OCLASS = 0x1F7;
     public const int STACKBOX_OCLASS = 0x2083;
     public const int SURVIVAL_MAX_SPAWNED_MOBS = 50;
+    static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 300000, 500000, 700000, 1000000 };
+    static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -81,10 +83,14 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 	
 	[Header("Prestige")]
 	[Range(1, 5)] public int WeaponPrestigeMax = 5;
-	public List<int> PrestigeCostPerLevel = new List<int>() {100000, 300000, 500000, 700000, 1000000};
+    public List<uint> PrestigeCostPerLevel = new List<uint>(DEFAULT_PRESTIGE_COSTS);
+
+    [Header("Vendor")]
+    public List<uint> VendorCostPerLevel = new List<uint>(DEFAULT_VENDOR_COSTS);
 
     [Header("Wall Upgrades")]
-    public List<SurvivalUpgradeEntry> Upgrades = new List<SurvivalUpgradeEntry>() {
+    public List<SurvivalUpgradeEntry> Upgrades = new List<SurvivalUpgradeEntry>()
+    {
         new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Health, Max = 2000 },
         new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Damage, Max = 2000 },
         new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Crit, Max = 100 },
@@ -115,18 +121,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
 		
 		WeaponPrestigeMax = Mathf.Clamp(WeaponPrestigeMax, 1, 5);
-        while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) {
-			int boltValue;
-			switch (PrestigeCostPerLevel.Count)
-			{
-				case 0: boltValue = 100000; break;
-				case 1: boltValue = 300000; break;
-				case 2: boltValue = 500000; break;
-				case 3: boltValue = 700000; break;
-				default: boltValue = 1000000; break;
-			}
-			PrestigeCostPerLevel.Add(boltValue);
-		}
+        while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) PrestigeCostPerLevel.Add(DEFAULT_PRESTIGE_COSTS[PrestigeCostPerLevel.Count]);
         while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
 
         foreach (var u in Upgrades)
@@ -186,6 +181,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/survival.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gambits.o");
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
@@ -372,6 +368,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         var upgradeSpawns = HierarchicalSorting.Sort(FindObjectsOfType<SurvivalUpgradeSpawn>(false));
 
         sb.AppendLine("#include <libdl/utils.h>");
+        sb.AppendLine("#include \"config.h\"");
         sb.AppendLine("#include \"game.h\"");
         sb.AppendLine("#include \"upgrade.h\"");
         sb.AppendLine("#include \"mob.h\"");
@@ -409,16 +406,20 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine($"\t.Difficulty = {Difficulty.ToInvariantCulture()},");
         sb.AppendLine($"\t.BoltMultiplier = {BoltMultiplier.ToInvariantCulture()},");
         sb.AppendLine($"\t.XpMultiplier = {XpMultiplier.ToInvariantCulture()},");
-        sb.AppendLine($"\t.SpawnDistanceFactor = {SpawnDistanceFactor.ToInvariantCulture()},");
+        sb.AppendLine($"\t.SpawnDistanceMultiplier = {SpawnDistanceFactor.ToInvariantCulture()},");
+        sb.AppendLine($"\t.WeaponPickupCooldownMultiplier = {WeaponPickupCooldownFactor.ToInvariantCulture()},");
         sb.AppendLine($"\t.BoltRankMultiplier = {BoltRankMultiplier.ToInvariantCulture()},");
         sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
         sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
-		
-		sb.AppendLine($"\t.WeaponPrestigeMax = {WeaponPrestigeMax},");
+        sb.AppendLine($"\t.WeaponPrestigeMax = {WeaponPrestigeMax},");
 		sb.AppendLine("\t.PrestigeCostPerLevel = {");
 		foreach(var cost in PrestigeCostPerLevel)
 			sb.AppendLine($"\t\t{cost},");
-		sb.AppendLine("\t},");
+        sb.AppendLine("\t},");
+        sb.AppendLine("\t.VendorCost = {");
+        foreach (var cost in VendorCostPerLevel)
+            sb.AppendLine($"\t\t{cost},");
+        sb.AppendLine("\t},");
 		
         sb.AppendLine("\t.BakedSpawnPoints = {");
         foreach (var item in upgradeSpawns)
@@ -479,7 +480,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("\tMapConfig.SpecialRoundParamsCount = COUNT_OF(specialRoundParams);");
 		sb.AppendLine("\tMapConfig.UpgradeDefs = upgradeDefs;");
         sb.AppendLine("\tMapConfig.UpgradeDefCount = COUNT_OF(upgradeDefs);");
-        sb.AppendLine($"\tMapConfig.WeaponPickupCooldownFactor = {WeaponPickupCooldownFactor.ToInvariantCulture()};");
         sb.AppendLine("}");
         sb.AppendLine();
 
@@ -1562,10 +1562,10 @@ public enum SurvivalStackableItemId
 
 public enum SurvivalUpgradeId
 {
-	Health = 0,
-	Speed = 1,
-	Damage = 2,
- 	Crit = 6
+	Health,
+	Speed,
+	Damage,
+ 	Crit
 };
 
 public enum SurvivalMobStatIds
