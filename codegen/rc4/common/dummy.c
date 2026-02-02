@@ -283,8 +283,17 @@ void dummyUpdate(Moby* moby)
       }
 
       // bubble
-      //if (pvars->Config.DamageBubbles && MapConfig.PushDamageBubbleFunc)
-      //  MapConfig.PushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, 0);
+#if SURVIVAL
+      // if friendly, show as green damage
+      // otherwise use crit/noncrit team colors
+      int team = TEAM_GREEN;
+      if (pvars->Config.IsOnEnemyTeam)
+        team = (damageFlags & 0x20000000) ? TEAM_RED : TEAM_YELLOW;
+
+      // push bubble
+      if (pvars->Config.DamageBubbles && MapConfig.Functions.ModePushBubbleFunc)
+        MapConfig.Functions.ModePushBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
+#endif
 
       pvars->State.TicksSinceLastDamage = 0;
     }

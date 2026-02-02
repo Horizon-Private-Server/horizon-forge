@@ -192,8 +192,8 @@ u32 decTimerU32(u32* timeValue)
 void pushSnack(int localPlayerIdx, char* string, int ticksAlive)
 {
 #if SURVIVAL
-  if (MapConfig.PushSnackFunc)
-    MapConfig.PushSnackFunc(string, ticksAlive, localPlayerIdx);
+  if (MapConfig.Functions.ModePushSnackFunc)
+    MapConfig.Functions.ModePushSnackFunc(string, ticksAlive, localPlayerIdx);
   else
     uiShowPopup(localPlayerIdx, string);
 #else

@@ -325,8 +325,8 @@ int dropHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 					if (!playerIsDead(p) && p->Health > 0) {
 						playerSetHealth(p, p->MaxHealth);
 					}
-					else if (MapConfig.ModeRevivePlayerFunc && MapConfig.State && MapConfig.State->PlayerStates[i].ReviveCooldownTicks) {
-			      MapConfig.ModeRevivePlayerFunc(p, args.PickedUpByPlayerId);
+					else if (MapConfig.Functions.ModeRevivePlayerFunc && MapConfig.State && MapConfig.State->PlayerStates[i].ReviveCooldownTicks) {
+			      MapConfig.Functions.ModeRevivePlayerFunc(p, args.PickedUpByPlayerId);
 					}
 
 					if (p->IsLocal)
@@ -340,7 +340,7 @@ int dropHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 			DPRINTF("giving double bolts to all players\n");
 			uiShowPopup(0, "Double bolts!");
 			uiShowPopup(1, "Double bolts!");
-			if (MapConfig.ModeSetDoublePointsFunc) MapConfig.ModeSetDoublePointsFunc(1);
+			if (MapConfig.Functions.ModeSetDoublePointsFunc) MapConfig.Functions.ModeSetDoublePointsFunc(1);
 			break;
 		}
 		case DROP_DOUBLE_XP:
@@ -348,7 +348,7 @@ int dropHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 			DPRINTF("giving double xp to all players\n");
 			uiShowPopup(0, "Double XP!");
 			uiShowPopup(1, "Double XP!");
-			if (MapConfig.ModeSetDoubleXPFunc) MapConfig.ModeSetDoubleXPFunc(1);
+			if (MapConfig.Functions.ModeSetDoubleXPFunc) MapConfig.Functions.ModeSetDoubleXPFunc(1);
 			break;
 		}
 		case DROP_FREEZE:
@@ -356,7 +356,7 @@ int dropHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 			DPRINTF("freezing all mobs\n");
 			uiShowPopup(0, "Freeze activated!");
 			uiShowPopup(1, "Freeze activated!");
-			if (MapConfig.ModeSetFreezeMobsFunc) MapConfig.ModeSetFreezeMobsFunc(1);
+			if (MapConfig.Functions.ModeSetFreezeMobsFunc) MapConfig.Functions.ModeSetFreezeMobsFunc(1);
 			break;
 		}
 		case DROP_NUKE:
@@ -364,7 +364,7 @@ int dropHandleEvent_Pickup(Moby* moby, GuberEvent* event)
 			DPRINTF("killing all mobs\n");
 			uiShowPopup(0, "Nuke activated!");
 			uiShowPopup(1, "Nuke activated!");
-			if (MapConfig.ModeMobNukeFunc) MapConfig.ModeMobNukeFunc(args.PickedUpByPlayerId);
+			if (MapConfig.Functions.ModeMobNukeFunc) MapConfig.Functions.ModeMobNukeFunc(args.PickedUpByPlayerId);
 			break;
 		}
 	}
@@ -474,8 +474,7 @@ void dropInit(void)
   }
   mobyDestroy(temp);
 
-  MapConfig.CreateMobDropFunc = &dropCreate;
-  MapConfig.OnMobDropEventFunc = &dropHandleEvent;
+  MapConfig.Functions.CreateMobDropFunc = &dropCreate;
 }
 
 //--------------------------------------------------------------------------

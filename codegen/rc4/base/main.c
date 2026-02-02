@@ -49,7 +49,14 @@ struct Guber* mapGetGuber(Moby* moby)
 ##GETGUBERCASES##
     default:
     {
-      #if RAIDS || SURVIVAL
+      #if SURVIVAL
+        if (MapConfig.Functions.ModeOnGetGuberFunc) {
+          struct Guber* guber = MapConfig.Functions.ModeOnGetGuberFunc(moby);
+          if (guber) return guber;
+        }
+      #endif
+    
+      #if RAIDS
         if (MapConfig.OnGetGuberFunc) {
           struct Guber* guber = MapConfig.OnGetGuberFunc(moby);
           if (guber) return guber;
@@ -84,7 +91,14 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
   ##HANDLEEVENTCASES##
       default:
 			{
-        #if RAIDS || SURVIVAL
+        #if SURVIVAL
+          if (MapConfig.Functions.ModeOnGuberEventFunc) {
+            MapConfig.Functions.ModeOnGuberEventFunc(moby, event);
+            return;
+          }
+        #endif
+      
+        #if RAIDS
           if (MapConfig.OnGuberEventFunc) {
             MapConfig.OnGuberEventFunc(moby, event);
             return;

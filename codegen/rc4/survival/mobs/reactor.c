@@ -449,9 +449,9 @@ int reactorOnRespawn(Moby* moby)
 
   // don't let mode destroy and respawn
   // manually teleport reactor to random spawn point
-  if (MapConfig.SpawnGetRandomPointFunc) {
+  if (MapConfig.Functions.ModeSpawnGetRandomPointFunc) {
     VECTOR p;
-    MapConfig.SpawnGetRandomPointFunc(p, &MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx]);
+    MapConfig.Functions.ModeSpawnGetRandomPointFunc(p, &MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx]);
     vector_copy(moby->Position, p);
     vector_copy(pvars->MobVars.MoveVars.NextPosition, p);
     vector_copy(pvars->MobVars.MoveVars.LastPosition, p);
@@ -1404,10 +1404,10 @@ void reactorSpawnMinion(Moby* moby, float radius)
   }
   
   // spawn
-  if (MapConfig.ModeCreateMobFunc)
-    MapConfig.ModeCreateMobFunc(reactorMinionSpawnParamIdx, position, moby->Rotation[2], -1, 0, &spawnParams->Config);
+  if (MapConfig.Functions.ModeCreateMobFunc)
+    MapConfig.Functions.ModeCreateMobFunc(reactorMinionSpawnParamIdx, position, moby->Rotation[2], -1, 0, &spawnParams->Config);
   else
-    MapConfig.OnMobCreateFunc(reactorMinionSpawnParamIdx, position, moby->Rotation[2], -1, 0, &spawnParams->Config);
+    MapConfig.Functions.OnMobCreateFunc(reactorMinionSpawnParamIdx, position, moby->Rotation[2], -1, 0, &spawnParams->Config);
 }
 
 //--------------------------------------------------------------------------
