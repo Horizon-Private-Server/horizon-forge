@@ -18,6 +18,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public const int SURVIVAL_MAX_SPAWNED_MOBS = 50;
     static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 300000, 500000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
+    static readonly string[] DEFAULT_ALPHA_MODS = { "SPEED", "AMMO", "IMPACT", "AREA", "JACKPOT", "XP" };
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -68,17 +69,17 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [Header("Mystery Box")]
     public List<SurvivalMysteryboxItem> MysteryboxItems = new List<SurvivalMysteryboxItem>()
     {
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Quad, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Shield, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.InvisibilityCloak, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.RandomizeWeaponPickups, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.HealthTornado, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.ReviveTotem, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.InfiniteAmmo, Probability = 0.05f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.UpgradeWeapon, Probability = 0.09f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.VoxTeddyBear, Probability = 0.1f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.DreadToken, Probability = 0.3f, ProbabilityLucky = 0f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1, ProbabilityLucky = 0f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Quad, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Shield, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.InvisibilityCloak, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.RandomizeWeaponPickups, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.HealthTornado, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.ReviveTotem, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.InfiniteAmmo, Probability = 0.05f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.UpgradeWeapon, Probability = 0.09f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.VoxTeddyBear, Probability = 0.1f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.DreadToken, Probability = 0.3f },
+        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1 },
     };
 	
 	[Header("Prestige")]
@@ -243,10 +244,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"pathfind.h\"");
 
         // 
+        state.Declarations.Add("void interopInit(void);");
         state.Declarations.Add("void survivalInit(void);");
         state.Declarations.Add("void survivalTick(void);");
 
         // 
+        state.InitBody.Insert(0, "interopInit();");
         state.InitBody.Add($"survivalInit();");
         state.MainBody.Add($"survivalTick();");
 
@@ -456,12 +459,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("const int MysteryBoxItemProbabilitiesCount = COUNT_OF(MysteryBoxItemProbabilities);");
         sb.AppendLine();
 
-        // mysterybox lucky tems
+        // alphamods
         sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine("struct MysteryBoxItemWeight MysteryBoxItemProbabilitiesLucky[] = {");
-        sb.AppendLine(GetMysteryBoxDefs(MysteryboxItems.Select(x => (x.Item, x.ProbabilityLucky))));
+        sb.AppendLine("const char AlphaModsEnabled[] = {");
+        sb.AppendLine(string.Join("\n", DEFAULT_ALPHA_MODS.Select(x => $"\tALPHA_MOD_{x},")));
         sb.AppendLine("};");
-        sb.AppendLine("const int MysteryBoxItemProbabilitiesLuckyCount = COUNT_OF(MysteryBoxItemProbabilitiesLucky);");
+        sb.AppendLine("const int AlphaModsEnabledCount = COUNT_OF(AlphaModsEnabled);");
         sb.AppendLine();
 
         // misc
@@ -1695,7 +1698,6 @@ public class SurvivalMysteryboxItem
 {
     public SurvivalMysteryboxItemId Item;
     [Range(0f, 1f)] public float Probability;
-    [Range(0f, 1f)] public float ProbabilityLucky;
 }
 
 [Serializable]

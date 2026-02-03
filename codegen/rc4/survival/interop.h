@@ -39,6 +39,7 @@ typedef int (*MapCanSpawnMobs_func)(void);
 typedef int (*MapGetSpawnPoints_func)(int **outSpawnPointIndices);
 typedef int (*MapConsiderMobSpawnPoint_func)(struct MobSpawnParams *mobSpawnParams, VECTOR position, float yaw, Player *targetPlayer);
 typedef int (*MapOnPlayerGetRes_func)(Player *player, VECTOR outPos, VECTOR outRot, int firstRes);
+typedef int (*MapOnPlayerRevived_func)(Player *player, Player *revivedByPlayer);
 typedef int (*MapCreateUpgradePickup_func)(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType);
 typedef void (*MapPickupUpgradePickup_func)(Moby *moby, int pickedUpByPlayerId);
 typedef int (*MapCreateMobDrop_func)(VECTOR position, enum DropType dropType, int destroyAtTime, int team);
@@ -55,6 +56,10 @@ typedef u32 (*MapGetPrestigePlayerWeaponCost_func)(Player *player, int gadgetId,
 typedef int (*MapCanUpgradePlayerWeapon_func)(Player *player, int gadgetId, int levelNum);
 typedef u32 (*MapGetUpgradePlayerWeaponCost_func)(Player *player, int gadgetId, int levelNum);
 typedef u32 (*MapGetXpForNextToken_func)(Player *player, int token);
+typedef float (*MapGetCurrentDifficulty_func)(void);
+typedef int (*MapGetDropTypeOnMobKilled_func)(Player *killedByPlayer, Moby *mob, int gadgetId);
+typedef int (*MapGetRoundTransitionTime_func)(int round);
+typedef int (*MapGetRandomAlphamodForPlayer_func)(Player *player, int gadgetIdOrEmpty);
 
 struct SurvivalInteropTable
 {
@@ -81,6 +86,7 @@ struct SurvivalInteropTable
 	MapGetSpawnPoints_func GetSpawnPointsFunc;
 	MapConsiderMobSpawnPoint_func ConsiderMobSpawnPointFunc;
 	MapOnPlayerGetRes_func OnPlayerGetResFunc;
+	MapOnPlayerRevived_func OnPlayerRevivedFunc;
 	MapCreateUpgradePickup_func CreateUpgradePickupFunc;
 	MapPickupUpgradePickup_func PickupUpgradeFunc;
 	MapCreateMobDrop_func CreateMobDropFunc;
@@ -97,23 +103,10 @@ struct SurvivalInteropTable
 	MapCanUpgradePlayerWeapon_func CanUpgradePlayerWeaponFunc;
 	MapGetUpgradePlayerWeaponCost_func GetUpgradePlayerWeaponCostFunc;
 	MapGetXpForNextToken_func GetXpForNextTokenFunc;
+	MapGetCurrentDifficulty_func GetCurrentDifficultyFunc;
+	MapGetDropTypeOnMobKilled_func GetDropTypeOnMobKilledFunc;
+	MapGetRoundTransitionTime_func GetRoundTransitionTimeFunc;
+	MapGetRandomAlphamodForPlayer_func GetRandomAlphamodForPlayerFunc;
 };
-
-void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId);
-int mapCanSpawnMobs(void);
-int mapGetSpawnPoints(int **outSpawnPointIndices);
-int mapConsiderMobSpawnPoint(struct MobSpawnParams *mobSpawnParams, VECTOR position, float yaw, Player *targetPlayer);
-float mapGetDifficultyMultiplier(void);
-float mapGetBoltMultiplier(void);
-float mapGetXpMultiplier(void);
-int mapGetBoltRankMultiplier(void);
-float mapGetSpawnDistanceMultiplier(void);
-float mapGetWeaponPickupCooldownMultiplier(void);
-struct SurvivalBakedSpawnpoint *mapGetBakedSpawnPoints(int *count);
-int mapCanPrestigePlayerWeapon(Player *player, int gadgetId, int prestigeNum, char **outMsg);
-u32 mapGetPrestigePlayerWeaponCost(Player *player, int gadgetId, int prestigeNum);
-int mapCanUpgradePlayerWeapon(Player *player, int gadgetId, int levelNum);
-u32 mapGetUpgradePlayerWeaponCost(Player *player, int gadgetId, int levelNum);
-u32 mapGetXpForNextToken(Player *player, int token);
 
 #endif // SURVIVAL_INTEROP_H

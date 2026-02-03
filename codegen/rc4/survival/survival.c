@@ -73,7 +73,6 @@ void blessingsTick(void);
 void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId);
 
 void frameTick(void);
-int createMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);
 
 char LocalPlayerStrBuffer[GAME_MAX_LOCALS][64];
 
@@ -101,23 +100,6 @@ struct SurvivalMapConfig MapConfig __attribute__((section(".config"))) = {
 		.Magic = MAP_CONFIG_MAGIC,
 		.State = NULL,
 		.Functions.OnFrameTickFunc = &frameTick,
-		.Functions.OnMobCreateFunc = &createMob,
-		.Functions.OnMobKilledFunc = &mapOnMobKilled,
-		.Functions.CanSpawnMobsFunc = &mapCanSpawnMobs,
-		.Functions.GetSpawnPointsFunc = &mapGetSpawnPoints,
-		.Functions.ConsiderMobSpawnPointFunc = &mapConsiderMobSpawnPoint,
-		.Functions.GetDifficultyMultiplierFunc = &mapGetDifficultyMultiplier,
-		.Functions.GetBoltMultiplierFunc = &mapGetBoltMultiplier,
-		.Functions.GetXpMultiplierFunc = &mapGetXpMultiplier,
-		.Functions.GetBoltRankMultiplierFunc = &mapGetBoltRankMultiplier,
-		.Functions.GetSpawnDistanceMultiplierFunc = &mapGetSpawnDistanceMultiplier,
-		.Functions.GetWeaponPickupCooldownMultiplierFunc = &mapGetWeaponPickupCooldownMultiplier,
-		.Functions.GetBakedSpawnPointsFunc = &mapGetBakedSpawnPoints,
-		.Functions.CanPrestigePlayerWeaponFunc = &mapCanPrestigePlayerWeapon,
-		.Functions.GetPrestigePlayerWeaponCostFunc = &mapGetPrestigePlayerWeaponCost,
-		.Functions.CanUpgradePlayerWeaponFunc = &mapCanUpgradePlayerWeapon,
-		.Functions.GetUpgradePlayerWeaponCostFunc = &mapGetUpgradePlayerWeaponCost,
-		.Functions.GetXpForNextTokenFunc = &mapGetXpForNextToken,
 };
 
 //--------------------------------------------------------------------------
@@ -212,22 +194,6 @@ void mobForceIntoMapBounds(Moby *moby)
 int mapPathCanBeSkippedForTarget(Moby *moby)
 {
 	return 1;
-}
-
-//--------------------------------------------------------------------------
-int createMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
-{
-	if (spawnParamsIdx < 0 || spawnParamsIdx >= MapConfig.DefaultSpawnParamsCount)
-	{
-		DPRINTF("unhandled create spawnParamsIdx %d\\n", spawnParamsIdx);
-		return 0;
-	}
-
-	// struct MobSpawnParams* spawnParams = &MapConfig.DefaultSpawnParams[spawnParamsIdx];
-	// if (spawnParams->MobCreate)
-	//   return spawnParams->MobCreate(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
-
-	return mobCreate(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
 }
 
 //--------------------------------------------------------------------------
@@ -406,6 +372,10 @@ void setWeaponPickupRespawnTime(void)
 	Moby *moby = mobyListGetStart();
 	Moby *mEnd = mobyListGetEnd();
 
+	float mult = 1;
+	if (MapConfig.Functions.GetWeaponPickupCooldownMultiplierFunc)
+		mult = MapConfig.Functions.GetWeaponPickupCooldownMultiplierFunc();
+
 	while (moby < mEnd)
 	{
 		if (moby->OClass == MOBY_ID_WEAPON_PICKUP && moby->PVar)
@@ -425,7 +395,7 @@ void setWeaponPickupRespawnTime(void)
 				int weaponBaseRespawnTime = 30;
 
 				// otherwise set cooldown by configuration
-				int ms = (weaponBaseRespawnTime - respawnTimeOffset) * mapGetWeaponPickupCooldownMultiplier() * TIME_SECOND;
+				int ms = (weaponBaseRespawnTime - respawnTimeOffset) * mult * TIME_SECOND;
 				POKE_U32((u32)moby->PVar + 0x0C, ms);
 			}
 		}
@@ -566,7 +536,7 @@ void survivalDebugInfiniteHealth(void)
 		if (!playerIsValid(player))
 			continue;
 
-		player->Health = 125;
+		player->Health = player->MaxHealth = maxf(player->MaxHealth, 10000);
 	}
 }
 
