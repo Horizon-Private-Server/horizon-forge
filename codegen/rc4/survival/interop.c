@@ -11,6 +11,18 @@ const char *SURVIVAL_PRESTIGE_WEAPON_NEED_V10_MESSAGE = "Your weapon is not powe
 const char *SURVIVAL_PRESTIGE_WEAPON_MAXED_MESSAGE = "Your weapon is too powerful";
 
 //--------------------------------------------------------------------------
+int mapOnMobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config)
+{
+	if (spawnParamsIdx < 0 || spawnParamsIdx >= MapConfig.DefaultSpawnParamsCount)
+	{
+		DPRINTF("unhandled create spawnParamsIdx %d\\n", spawnParamsIdx);
+		return 0;
+	}
+
+	return mobCreate(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
+}
+
+//--------------------------------------------------------------------------
 void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 {
 #if STACKABLES
@@ -186,4 +198,75 @@ u32 mapGetXpForNextToken(Player *player, int token)
 		return (u32)(250 * powf(1.05, SURVIVAL_XP_CURVE_FLATTEN_AFTER_N_TOKENS));
 
 	return (u32)(250 * powf(1.05, token));
+}
+
+//--------------------------------------------------------------------------
+float mapGetCurrentDifficulty(void)
+{
+	if (!MapConfig.State)
+		return 0;
+
+	float difficultyBySpawnedMobs = MapConfig.State->MobStats.TotalSpawned / 100;
+	float difficultyBump = 0.6 + powf(1.5, MapConfig.State->RoundNumber / 25) * 0.4;
+	float difficulty = difficultyBySpawnedMobs * difficultyBump * MapConfig.State->Difficulty;
+	return difficulty;
+}
+
+//--------------------------------------------------------------------------
+int mapGetDropTypeOnMobKilled(Player *killedByPlayer, Moby *mob, int gadgetId)
+{
+	float randomValue = randRange(0.0, 1.0);
+	float probability = MOB_HAS_DROP_PROBABILITY;
+
+	// return negative to not spawn
+	if (randomValue >= probability)
+		return -1;
+
+	// return random drop type
+	return randRangeInt(0, DROP_COUNT - 1);
+}
+
+//--------------------------------------------------------------------------
+int mapGetRoundTransitionTime(int round)
+{
+	// return negative value for unlimited round time
+	// return 0 for no round time
+
+	// by default give infinite post round every 25 rounds
+	if ((round % 25) == 0)
+		return -1;
+
+	return ROUND_TRANSITION_DELAY_MS;
+}
+
+//--------------------------------------------------------------------------
+int mapGetRandomAlphamodForPlayer(Player *player, int gadgetIdOrEmpty)
+{
+	return AlphaModsEnabled[rand(AlphaModsEnabledCount)];
+}
+
+//--------------------------------------------------------------------------
+void interopInit(void)
+{
+	MapConfig.Functions.OnMobCreateFunc = &mapOnMobCreate;
+	MapConfig.Functions.OnMobKilledFunc = &mapOnMobKilled;
+	MapConfig.Functions.CanSpawnMobsFunc = &mapCanSpawnMobs;
+	MapConfig.Functions.GetSpawnPointsFunc = &mapGetSpawnPoints;
+	MapConfig.Functions.ConsiderMobSpawnPointFunc = &mapConsiderMobSpawnPoint;
+	MapConfig.Functions.GetDifficultyMultiplierFunc = &mapGetDifficultyMultiplier;
+	MapConfig.Functions.GetBoltMultiplierFunc = &mapGetBoltMultiplier;
+	MapConfig.Functions.GetXpMultiplierFunc = &mapGetXpMultiplier;
+	MapConfig.Functions.GetBoltRankMultiplierFunc = &mapGetBoltRankMultiplier;
+	MapConfig.Functions.GetSpawnDistanceMultiplierFunc = &mapGetSpawnDistanceMultiplier;
+	MapConfig.Functions.GetWeaponPickupCooldownMultiplierFunc = &mapGetWeaponPickupCooldownMultiplier;
+	MapConfig.Functions.GetBakedSpawnPointsFunc = &mapGetBakedSpawnPoints;
+	MapConfig.Functions.CanPrestigePlayerWeaponFunc = &mapCanPrestigePlayerWeapon;
+	MapConfig.Functions.GetPrestigePlayerWeaponCostFunc = &mapGetPrestigePlayerWeaponCost;
+	MapConfig.Functions.CanUpgradePlayerWeaponFunc = &mapCanUpgradePlayerWeapon;
+	MapConfig.Functions.GetUpgradePlayerWeaponCostFunc = &mapGetUpgradePlayerWeaponCost;
+	MapConfig.Functions.GetXpForNextTokenFunc = &mapGetXpForNextToken;
+	MapConfig.Functions.GetCurrentDifficultyFunc = &mapGetCurrentDifficulty;
+	MapConfig.Functions.GetDropTypeOnMobKilledFunc = &mapGetDropTypeOnMobKilled;
+	MapConfig.Functions.GetRoundTransitionTimeFunc = &mapGetRoundTransitionTime;
+	MapConfig.Functions.GetRandomAlphamodForPlayerFunc = &mapGetRandomAlphamodForPlayer;
 }

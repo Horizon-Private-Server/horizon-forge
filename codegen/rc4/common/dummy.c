@@ -290,9 +290,13 @@ void dummyUpdate(Moby* moby)
       if (pvars->Config.IsOnEnemyTeam)
         team = (damageFlags & 0x20000000) ? TEAM_RED : TEAM_YELLOW;
 
+      VECTOR pos = {0,0,1,0};
+      vector_scale(pos, pos, pvars->TargetVars.targetHeight);
+      vector_add(pos, pos, moby->Position);
+
       // push bubble
       if (pvars->Config.DamageBubbles && MapConfig.Functions.ModePushBubbleFunc)
-        MapConfig.Functions.ModePushBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
+        MapConfig.Functions.ModePushBubbleFunc(pos, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
 #endif
 
       pvars->State.TicksSinceLastDamage = 0;

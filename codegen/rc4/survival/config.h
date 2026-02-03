@@ -1,9 +1,9 @@
 #ifndef SURVIVAL_CONFIG_H
 #define SURVIVAL_CONFIG_H
 
-#define BAKED_SPAWNPOINT_COUNT							  (32)
-#define WEAPON_PRESTIGE_MAX                   (5)
-#define VENDOR_MAX_WEAPON_LEVEL								(9)
+#define BAKED_SPAWNPOINT_COUNT (32)
+#define WEAPON_PRESTIGE_MAX (5)
+#define VENDOR_MAX_WEAPON_LEVEL (9)
 
 #include <tamtypes.h>
 #include <libdl/moby.h>
@@ -46,6 +46,8 @@ typedef struct SurvivalBakedConfig
 extern int mobAllowedCuboidIdx;
 extern int mobSpawnPointsAreaIdx;
 extern SurvivalBakedConfig_t bakedConfig;
+extern const char AlphaModsEnabled[];
+extern const int AlphaModsEnabledCount;
 
 void configInit(void);
 

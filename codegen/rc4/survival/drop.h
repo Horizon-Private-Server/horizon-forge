@@ -9,10 +9,11 @@
 #include <libdl/player.h>
 #include <libdl/sound.h>
 
-#define DROP_MOBY_OCLASS				(0x1F4)
-#define DROP_PICKUP_RADIUS			(3)
+#define DROP_MOBY_OCLASS (0x1F4)
+#define DROP_PICKUP_RADIUS (3)
 
-enum DropType {
+enum DropType
+{
 	DROP_NUKE,
 	DROP_AMMO,
 	DROP_DOUBLE_POINTS,
@@ -22,13 +23,15 @@ enum DropType {
 	DROP_COUNT
 };
 
-enum DropEventType {
+enum DropEventType
+{
 	DROP_EVENT_SPAWN,
 	DROP_EVENT_DESTROY,
 	DROP_EVENT_PICKUP
 };
 
-struct PartInstance {	
+struct PartInstance
+{
 	char IClass;
 	char Type;
 	char Tex;
@@ -42,14 +45,16 @@ struct PartInstance {
 	int Update[8];
 };
 
-struct DropPVar {
+struct DropPVar
+{
 	enum DropType Type;
 	int DestroyAtTime;
 	int Team;
-  char HitGround;
+	char HitGround;
 	char Owner;
 	char Destroyed;
-	struct PartInstance* Particles[4];
+	int TexId;
+	struct PartInstance *Particles[4];
 };
 
 struct DropSpawnEventArgs
@@ -62,7 +67,6 @@ struct DropSpawnEventArgs
 
 struct DropDestroyedEventArgs
 {
-	
 };
 
 struct DropPickupEventArgs
@@ -70,11 +74,10 @@ struct DropPickupEventArgs
 	int PickedUpByPlayerId;
 };
 
-
 void dropTick(void);
 void dropInit(void);
 int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int team);
-struct GuberMoby* dropGetGuber(Moby* moby);
-int dropHandleEvent(Moby* moby, GuberEvent* event);
+struct GuberMoby *dropGetGuber(Moby *moby);
+int dropHandleEvent(Moby *moby, GuberEvent *event);
 
 #endif // SURVIVAL_DROP_H

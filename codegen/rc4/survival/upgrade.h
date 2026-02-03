@@ -9,32 +9,34 @@
 #include <libdl/player.h>
 #include <libdl/sound.h>
 
-#define UPGRADE_MOBY_OCLASS				(0x01F9)
-#define UPGRADE_PICKUP_RADIUS			(4)
-#define UPGRADE_TOKEN_COST				(1)
-#define UPGRADE_MAX_USES  				(15)
-#define PLAYER_UPGRADE_COOLDOWN_TICKS					(15)
+#define UPGRADE_MOBY_OCLASS (0x01F9)
+#define UPGRADE_PICKUP_RADIUS (4)
+#define UPGRADE_TOKEN_COST (1)
+#define UPGRADE_MAX_USES (15)
+#define PLAYER_UPGRADE_COOLDOWN_TICKS (15)
 
-enum UpgradeType {
-	UPGRADE_HEALTH = 0,
-	UPGRADE_SPEED = 1,
-	UPGRADE_DAMAGE = 2,
-	// add new upgrades by filling in these slots first
- 	UPGRADE_CRIT = 6, // Keep crit as ID 6 for DZO
-	UPGRADE_COUNT = 7
+enum UpgradeType
+{
+	UPGRADE_HEALTH,
+	UPGRADE_SPEED,
+	UPGRADE_DAMAGE,
+	UPGRADE_CRIT,
+	UPGRADE_COUNT
 };
 
-enum UpgradeEventType {
+enum UpgradeEventType
+{
 	UPGRADE_EVENT_SPAWN,
 	UPGRADE_EVENT_DESTROY,
 	UPGRADE_EVENT_PICKUP
 };
 
-struct UpgradePVar {
+struct UpgradePVar
+{
 	enum UpgradeType Type;
 	int Uses;
 	int TexId;
-	struct PartInstance* Particles[4];
+	struct PartInstance *Particles[4];
 };
 
 struct UpgradeSpawnEventArgs
@@ -44,7 +46,6 @@ struct UpgradeSpawnEventArgs
 
 struct UpgradeDestroyedEventArgs
 {
-	
 };
 
 struct UpgradePickupEventArgs
@@ -54,9 +55,9 @@ struct UpgradePickupEventArgs
 
 void upgradeTick(void);
 void upgradeInit(void);
-struct GuberMoby* upgradeGetGuber(Moby* moby);
-int upgradeHandleEvent(Moby* moby, GuberEvent* event);
+struct GuberMoby *upgradeGetGuber(Moby *moby);
+int upgradeHandleEvent(Moby *moby, GuberEvent *event);
 int upgradeCreate(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType);
-void upgradePickup(Moby* moby, int pickedUpByPlayerId);
+void upgradePickup(Moby *moby, int pickedUpByPlayerId);
 
 #endif // SURVIVAL_UPGRADE_H
