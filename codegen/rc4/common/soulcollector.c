@@ -319,7 +319,7 @@ void soulcollectorFrameUpdate(void)
           if (spawnPointIsPointInside(sp, player->PlayerPosition, NULL)) {
             char buf[64];
             snprintf(buf, sizeof(buf), "Souls Captured \x0E%d\x08/%d", pvars->Value, pvars->Target);
-            gfxHelperDrawText(SCREEN_WIDTH / 2, SCREEN_HEIGHT, 0, -15, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMCENTER, COMMON_DZO_DRAW_NORMAL);
+            gfxHelperDrawText(SCREEN_WIDTH / 2, SCREEN_HEIGHT, 0, -10, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMCENTER, COMMON_DZO_DRAW_NORMAL);
           }
         }
       }

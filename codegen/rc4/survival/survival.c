@@ -68,6 +68,7 @@ void stackableTick(void);
 #if BLESSINGS
 void blessingsInit(void);
 void blessingsTick(void);
+void blessingsFrameTick(void);
 #endif
 
 void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId);
@@ -471,6 +472,9 @@ void frameTick(void)
 	soulcollectorFrameUpdate();
 #endif
 
+#if BLESSINGS
+	blessingsFrameTick();
+#endif
 	// char buf[32];
 	// snprintf(buf, sizeof(buf), "%d", mobyGetNumSpawnableMobys());
 	// gfxHelperDrawText(5, SCREEN_HEIGHT - 5, 0, 0, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMLEFT, COMMON_DZO_DRAW_NORMAL);

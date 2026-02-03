@@ -615,26 +615,26 @@ MonoBehaviour:
     m_Unknown: 1
   SurvivalBlessingSprites:
   - m_Texture: {fileID: 2800000, guid: d2dfbd4ca38335c408506b16435e7b51, type: 3}
-    m_Bank: 0
+    m_Bank: 1
     m_Uid: 30109
     m_Unknown: 1
   - m_Texture: {fileID: 2800000, guid: 6e2f188ecc2542540b6537d089870787, type: 3}
-    m_Bank: 0
+    m_Bank: 1
     m_Uid: 30110
     m_Unknown: 1
   - m_Texture: {fileID: 2800000, guid: 65edc4c34e1a47c49a3a5241cab4c895, type: 3}
-    m_Bank: 0
+    m_Bank: 1
     m_Uid: 30111
     m_Unknown: 1
   - m_Texture: {fileID: 2800000, guid: 06d0db80253fad9448245ab0b9c97276, type: 3}
-    m_Bank: 0
+    m_Bank: 1
     m_Uid: 30113
     m_Unknown: 1
   - m_Texture: {fileID: 2800000, guid: 63af52276edd11e47a88840e69c95929, type: 3}
-    m_Bank: 0
+    m_Bank: 1
     m_Uid: 30114
     m_Unknown: 1
   - m_Texture: {fileID: 2800000, guid: 16869751f044a9d489399db81bcb299e, type: 3}
-    m_Bank: 0
+    m_Bank: 1
     m_Uid: 30115
     m_Unknown: 1

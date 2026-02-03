@@ -107,6 +107,11 @@ struct SurvivalInteropTable
 	MapGetDropTypeOnMobKilled_func GetDropTypeOnMobKilledFunc;
 	MapGetRoundTransitionTime_func GetRoundTransitionTimeFunc;
 	MapGetRandomAlphamodForPlayer_func GetRandomAlphamodForPlayerFunc;
+
+	// creates extra empty function slots
+	// so that when adding new ones, old maps at least have a nullptr
+	// instead of garbage pointing to a random, invalid piece of memory
+	void *PlaceholderForFutureUseFuncs[16];
 };
 
 #endif // SURVIVAL_INTEROP_H

@@ -29,6 +29,10 @@
 #include "pathfind.h"
 #include "messageid.h"
 
+#if BLESSINGS
+#include "blessings.h"
+#endif
+
 void mobForceIntoMapBounds(Moby *moby);
 
 #if GATE
@@ -319,50 +323,6 @@ void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float r
 }
 
 //--------------------------------------------------------------------------
-void mobReactToThorns(Moby *moby, float damage, int byPlayerId)
-{
-	if (byPlayerId < 0)
-		return;
-	if (!mobAmIOwner(moby))
-		return;
-
-	int i;
-	VECTOR delta;
-	struct MobDamageEventArgs args;
-	Player **players = playerGetAll();
-	Player *player = players[byPlayerId];
-	Guber *guber = guberGetObjectByMoby(moby);
-
-	if (!guber)
-		return;
-	if (!player || !player->SkinMoby)
-		return;
-
-	// take percentage of damage dealt
-	damage *= ITEM_BLESSING_THORN_DAMAGE_FACTOR;
-
-	// get angle
-	vector_subtract(delta, moby->Position, player->PlayerPosition);
-	float dist = vector_length(delta);
-	float angle = atan2f(delta[1] / dist, delta[0] / dist);
-
-	// create event
-	GuberEvent *guberEvent = guberEventCreateEvent(guber, MOB_EVENT_DAMAGE, 0, 0);
-	if (guberEvent)
-	{
-		args.SourceUID = player->Guber.Id.UID;
-		args.SourceOClass = 0;
-		args.DamageQuarters = damage * 4;
-		args.DamageFlags = 0;
-		args.Knockback.Angle = (short)(angle * 1000);
-		args.Knockback.Ticks = 5;
-		args.Knockback.Power = rand(4);
-		args.Knockback.Force = args.Knockback.Power > 0;
-		guberEventWrite(guberEvent, &args, sizeof(struct MobDamageEventArgs));
-	}
-}
-
-//--------------------------------------------------------------------------
 int mobMobyProcessHitFlags(Moby *moby, Moby *hitMoby, float damage, int reactToThorns)
 {
 	int result = 0;
@@ -376,12 +336,14 @@ int mobMobyProcessHitFlags(Moby *moby, Moby *hitMoby, float damage, int reactToT
 	if (mobyIsMob(hitMoby))
 		result |= MOB_DO_DAMAGE_HIT_FLAG_HIT_MOB;
 
-	if (player && player->timers.postHitInvinc == 0 && playerHasBlessing(player->PlayerId, BLESSING_ITEM_THORNS))
+#if BLESSINGS
+	if (player && player->timers.postHitInvinc == 0 && blessingsPlayerHasBlessing(player->PlayerId, BLESSING_ITEM_THORNS))
 	{
 		result |= MOB_DO_DAMAGE_HIT_FLAG_HIT_PLAYER_THORNS;
 		if (reactToThorns)
-			mobReactToThorns(moby, damage, player->PlayerId);
+			blessingsMobReactToThorns(moby, damage, player->PlayerId);
 	}
+#endif
 
 	return result;
 }
