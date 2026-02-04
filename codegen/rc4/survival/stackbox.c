@@ -89,21 +89,15 @@ u32 STACKABLE_ITEM_COLORS[] = {
   [STACKABLE_ITEM_EXPLODING_ENEMIES] 0x80FFFFFF,
 };
 
-int STACKABLE_ITEM_MAX[] = {
-  [STACKABLE_ITEM_EXTRA_JUMP] 0,
-  [STACKABLE_ITEM_EXTRA_SHOT] 0,
-  [STACKABLE_ITEM_HOVERBOOTS] 0,
-  [STACKABLE_ITEM_LOW_HEALTH_DMG_BUF] 0,
-  [STACKABLE_ITEM_ALPHA_MOD_AMMO] 0,
-  [STACKABLE_ITEM_ALPHA_MOD_SPEED] 10,
-  [STACKABLE_ITEM_ALPHA_MOD_AREA] 5,
-  [STACKABLE_ITEM_ALPHA_MOD_IMPACT] 5,
-  [STACKABLE_ITEM_VAMPIRE] 0,
-  [STACKABLE_ITEM_EXPLODING_ENEMIES] 0
-};
-
 extern int StackboxItems[];
+extern short StackboxItemsMax[];
 extern const int StackboxItemsCount;
+
+//--------------------------------------------------------------------------
+int getStackboxItemMax(enum StackableItemId item)
+{
+  return StackboxItemsMax[(int)item];
+}
 
 //--------------------------------------------------------------------------
 int sboxCanBuy(int playerId, enum StackableItemId item)
@@ -111,14 +105,14 @@ int sboxCanBuy(int playerId, enum StackableItemId item)
   if (!MapConfig.State) return 0;
 
   int count = playerGetStackableCount(playerId, (int)item);
-  return STACKABLE_ITEM_MAX[(int)item] <= 0 || count < STACKABLE_ITEM_MAX[(int)item];
+  int max = getStackboxItemMax(item);
+  return max <= 0 || count < max;
 }
 
 //--------------------------------------------------------------------------
 int sboxGetStackableCost(int playerId, enum StackableItemId item)
 {
   if (!MapConfig.State) return 0;
-
 
   return bakedConfig.StackboxBaseCost + playerGetStackableCount(playerId, (int)item) * bakedConfig.StackboxCostPerPerk;
 }
@@ -615,27 +609,28 @@ void sboxFrameTick(void)
 
     if (gameIsStartMenuOpen(i) && !playerData->IsInWeaponsMenu) {
       int j;
-      for (j = 0; j < STACKABLE_ITEM_COUNT; ++j) {
+      for (j = 0; j < StackboxItemsCount; ++j) {
+        int stackableId = StackboxItems[j];
         float x = 400;
         float y = 54 + (j * 32);
 
         transformToSplitscreenPixelCoordinates(i, &x, &y);
 
         // draw count
-        int count = playerGetStackableCount(p->PlayerId, j);
+        int count = playerGetStackableCount(p->PlayerId, stackableId);
         snprintf(buffer, 32, "%d", count);
         gfxScreenSpaceText(x+2, y+8+2, 1, 1, 0x40000000, buffer, -1, 0);
         x = gfxScreenSpaceText(x,   y+8,   1, 1, 0x80C0C0C0, buffer, -1, 0);
         
         // draw icon
         gfxSetupGifPaging(0);
-        u64 texId = gfxGetFrameTex(STACKABLE_ITEM_TEX_IDS[j]);
+        u64 texId = gfxGetFrameTex(STACKABLE_ITEM_TEX_IDS[stackableId]);
         gfxDrawSprite(x+2,   y+8,   16, 16, 0, 0, 32, 32, 0x80C0C0C0, texId);
         x += 16 + 4;
         gfxDoGifPaging();
 
         // draw factor
-        switch (j)
+        switch (stackableId)
         {
           case STACKABLE_ITEM_ALPHA_MOD_AMMO:
           case STACKABLE_ITEM_ALPHA_MOD_SPEED:
