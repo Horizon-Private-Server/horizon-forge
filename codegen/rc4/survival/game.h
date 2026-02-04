@@ -195,6 +195,7 @@ enum GameNetMessage
 	CUSTOM_MSG_WITHDRAWN_BANK_BOX,
 	CUSTOM_MSG_SET_ROUND_50_TIME,
 	CUSTOM_MSG_TELEPORT_BIG_AL,
+	CUSTOM_MSG_PLAYER_CAST_VOTE,
 };
 
 enum MobStatId
@@ -295,6 +296,15 @@ struct SurvivalMobStats
 	u8 NumAlive[MAX_MOB_SPAWN_PARAMS];
 };
 
+struct SurvivalVote
+{
+	char Votes[GAME_MAX_PLAYERS];
+	char IsActive;
+	char Result;
+	short NumVotes;
+	short NumVotesRequired;
+};
+
 struct SurvivalState
 {
 	int RoundNumber;
@@ -336,6 +346,7 @@ struct SurvivalState
 	int Round50Time;
 	Moby *BossMoby;
 	Moby **AllMobsSorted;
+	struct SurvivalVote VoteForNextRound;
 };
 
 struct UpgradeDef
