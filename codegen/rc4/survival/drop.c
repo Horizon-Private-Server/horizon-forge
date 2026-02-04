@@ -459,15 +459,19 @@ int dropHandleEvent(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int team)
+void dropOnCreated(VECTOR position, enum DropType dropType, int destroyAtTime, int team)
 {
-	if (!MapConfig.State || MapConfig.State->DropCooldownTicks > 0)
-		return 0;
-
-	struct DropSpawnEventArgs args;
+	if (!MapConfig.State)
+		return;
 
 	// set cooldown
 	MapConfig.State->DropCooldownTicks = randRangeInt(DROP_COOLDOWN_TICKS_MIN, DROP_COOLDOWN_TICKS_MAX);
+}
+
+//--------------------------------------------------------------------------
+int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int team)
+{
+	struct DropSpawnEventArgs args;
 
 	// create guber object
 	GuberEvent *guberEvent = 0;
@@ -489,6 +493,7 @@ int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int t
 		DPRINTF("failed to guberevent drop\n");
 	}
 
+	dropOnCreated(position, dropType, destroyAtTime, team);
 	return guberEvent != NULL;
 }
 

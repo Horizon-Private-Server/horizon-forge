@@ -1,6 +1,7 @@
 #include <libdl/area.h>
 #include <libdl/spawnpoint.h>
 #include <libdl/stdio.h>
+#include <libdl/random.h>
 #include "mob.h"
 #include "config.h"
 #include "interop.h"
@@ -217,6 +218,10 @@ int mapGetDropTypeOnMobKilled(Player *killedByPlayer, Moby *mob, int gadgetId)
 {
 	float randomValue = randRange(0.0, 1.0);
 	float probability = MOB_HAS_DROP_PROBABILITY;
+
+	// wait for drop cooldown
+	if (MapConfig.State && MapConfig.State->DropCooldownTicks > 0)
+		return -1;
 
 	// return negative to not spawn
 	if (randomValue >= probability)
