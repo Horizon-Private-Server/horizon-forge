@@ -37,15 +37,24 @@ public class OcclusionDatabase : ScriptableObject
 
     public OcclusionData Get(IOcclusionData occlusion)
     {
-        return Occlusion.GetValueOrDefault(occlusion.Uid.ToString());
+        var key = occlusion.Uid.ToString();
+        var data = Occlusion.GetValueOrDefault(key);
+        if (data) return data;
+
+        data = TryRead(key);
+        if (data)
+        {
+            Occlusion.Add(key, data);
+            return data;
+        }
+
+        return null;
     }
 
     public OcclusionData GetOrCreate(IOcclusionData occlusion)
     {
+        var key = occlusion.Uid.ToString();
         var data = Get(occlusion);
-        if (data) return data;
-
-        data = TryRead(occlusion.Uid.ToString());
         if (data) return data;
 
         return Create(occlusion);
