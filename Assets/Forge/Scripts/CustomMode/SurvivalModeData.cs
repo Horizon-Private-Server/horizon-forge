@@ -19,6 +19,18 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 300000, 500000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
     static readonly string[] DEFAULT_ALPHA_MODS = { "SPEED", "AMMO", "IMPACT", "AREA", "JACKPOT", "XP" };
+	static readonly SurvivalStackableEntry[] DEFAULT_STACKABLE_ENTRIES = { 
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.LowHealthDamageBuff, Max = 0 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExtraJump, Max = 0 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExtraShot, Max = 0 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.Hoverboots, Max = 0 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModSpeed, Max = 10 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModImpact, Max = 5 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModArea, Max = 5 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModAmmo, Max = 0 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.Vampire, Max = 0 },
+		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExplodingEnemies, Max = 0 }
+	};
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -61,7 +73,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public bool EnableStackables;
     public int StackableBaseCost = 250000;
     public int StackableIncrementCost = 250000;
-    public List<SurvivalStackableItemId> Stackables = new List<SurvivalStackableItemId>();
+    public List<SurvivalStackableEntry> Stackables = new List<SurvivalStackableEntry>(DEFAULT_STACKABLE_ENTRIES);
 
     [Header("Blessings"), HideInInspector]
     public bool EnableBlessings;
@@ -125,15 +137,28 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) PrestigeCostPerLevel.Add(DEFAULT_PRESTIGE_COSTS[PrestigeCostPerLevel.Count]);
         while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
 
-        foreach (var u in Upgrades)
+        foreach (var upgrade in Upgrades)
         {
             int maxAllowed;
-            switch (u.Type)
+            switch (upgrade.Type)
             {
                 case SurvivalUpgradeId.Crit: maxAllowed = 100; break;
                 default: maxAllowed = 5000; break;
             }
-            u.Max = Mathf.Clamp(u.Max, 1, maxAllowed);
+            upgrade.Max = Mathf.Clamp(upgrade.Max, 1, maxAllowed);
+        }
+		
+		foreach (var stackable in Stackables)
+        {
+            switch (stackable.Type)
+            {
+                case SurvivalStackableItemId.AlphaModSpeed: 
+					stackable.Max = Mathf.Clamp(stackable.Max, 1, 10); break;
+				case SurvivalStackableItemId.AlphaModArea: 
+					stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
+				case SurvivalStackableItemId.AlphaModImpact: 
+					stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
+            }
         }
     }
 
@@ -460,11 +485,18 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("int StackboxItems[] = {");
         foreach (var item in Stackables)
-            sb.AppendLine($"\t{(int)item},");
+            sb.AppendLine($"\t{(int)item.Type},");
         sb.AppendLine("};");
         sb.AppendLine("const int StackboxItemsCount = COUNT_OF(StackboxItems);");
         sb.AppendLine();
 
+        sb.AppendLine("//--------------------------------------------------------------------------");
+        sb.AppendLine("short StackboxItemsMax[] = {");
+        foreach (var item in Stackables)
+            sb.AppendLine($"\t[{(int)item.Type}] {item.Max},");
+        sb.AppendLine("};");
+        sb.AppendLine();
+		
         // mysterybox items
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("struct MysteryBoxItemWeight MysteryBoxItemProbabilities[] = {");
@@ -642,7 +674,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         // enable stackables
         survivalData.EnableStackables = true;
-        survivalData.Stackables = ((SurvivalStackableItemId[])Enum.GetValues(typeof(SurvivalStackableItemId))).ToList();
 
         // create default mobs
         survivalData.Mobs = new List<SurvivalMobSpawnParam>()
@@ -1510,7 +1541,6 @@ public enum SurvivalMobAttributes
     Acid,
     Ghost,
     Explode,
-    Russian_doll,
     Ranged_attack,
     Boss
 }
@@ -1613,14 +1643,24 @@ public enum SurvivalMobSpawnType
 };
 
 [System.Serializable]
+public class SurvivalStackableEntry
+{
+    public SurvivalStackableItemId Type;
+
+    [Min(0)]
+    public int Max;
+}
+
+[System.Serializable]
 public class SurvivalUpgradeEntry
 {
     public SurvivalUpgradeId Type;
 
     [Range(1, 5000)]
-    public int Max = 1;
+    public int Max;
 
-    public string GetDef() {
+    public string GetDef() 
+    {
         string name;
         switch (Type)
         {

@@ -10,8 +10,6 @@
 
 #define STACK_BOX_OCLASS                         (0x2083)
 #define STACK_BOX_MAX_DIST                       (4)
-#define STACK_BOX_BASE_COST                      (500000)
-#define STACK_BOX_ADD_COST                       (250000)
 #define STACK_BOX_REROLL_COST                    (50000)
 #define PLAYER_STACK_BOX_COOLDOWN_TICKS          (5)
 
@@ -21,7 +19,7 @@ enum StackBoxState {
 };
 
 enum StackBoxEventType {
-	STACK_BOX_EVENT_SPAWN,
+  STACK_BOX_EVENT_SPAWN,
   STACK_BOX_EVENT_ACTIVATE,
   STACK_BOX_EVENT_GIVE_PLAYER,
   STACK_BOX_EVENT_PLAYER_BUY,
