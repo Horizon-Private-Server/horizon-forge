@@ -75,9 +75,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public int StackableIncrementCost = 250000;
     public List<SurvivalStackableEntry> Stackables = new List<SurvivalStackableEntry>(DEFAULT_STACKABLE_ENTRIES);
 
-    [Header("Blessings"), HideInInspector]
-    public bool EnableBlessings;
-
     [Header("Mystery Box")]
     public List<SurvivalMysteryboxItem> MysteryboxItems = new List<SurvivalMysteryboxItem>()
     {
@@ -231,12 +228,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             state.HandleGuberEventCase.Add("case STACK_BOX_OCLASS: sboxHandleEvent(moby, event); break;");
         }
 
-        if (EnableBlessings)
-        {
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blessings.o");
-            state.LDFlags.Add("-DBLESSINGS");
-        }
-
         if (HidePrestigeMachineEvery25Rounds) state.LDFlags.Add("-DSHOW_PRESTIGE_EVERY_25");
         if (RandomizeWeaponPickupsAtStart) state.LDFlags.Add("-DRANDOMIZE_WEAPONS_AT_START");
         state.LDFlags.Add("-DGATE");
@@ -340,21 +331,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         spriteContainer.RacVersion = state.RacVersion;
         spriteContainer.Sprites = mobConfig.SurvivalMysteryBoxSprites.ToList();
         if (EnableStackables) spriteContainer.Sprites.AddRange(mobConfig.SurvivalStackableSprites);
-        if (EnableBlessings)
-        {
-            foreach (var spriteDef in mobConfig.SurvivalBlessingSprites)
-            {
-                spriteContainer.Sprites.Add(new SpriteDef()
-                {
-                    m_Bank = spriteDef.m_Bank,
-                    m_Texture = spriteDef.m_Texture,
-                    m_Tint = spriteDef.m_Tint,
-                    m_Uid = spriteDef.m_Uid,
-                    m_Unknown = spriteDef.m_Unknown,
-                    m_TextureSizeOverride = TextureSize._32
-                });
-            }
-        }
 
         // add mob sprites
         foreach (var mob in this.Mobs.Where(x => !x.Disabled))
@@ -370,7 +346,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
                 {
                     m_Bank = SpriteDef.SpriteDefBank.Bank1,
                     m_Texture = variant.SpriteTexture,
-                    m_TextureSizeOverride = TextureSize._64,
+                    m_TextureSizeOverride = SpriteDef.SpriteTextureSize._64,
                     m_Tint = variant.SpriteTextureTint,
                     m_Uid = (ushort)(30200 + spriteContainer.Sprites.Count),
                     m_Unknown = 1
@@ -384,7 +360,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
                 {
                     m_Bank = SpriteDef.SpriteDefBank.Bank1,
                     m_Texture = variant.BossTexture,
-                    m_TextureSizeOverride = TextureSize._64,
+                    m_TextureSizeOverride = SpriteDef.SpriteTextureSize._64,
                     m_Tint = variant.BossTextureTint,
                     m_Uid = (ushort)(30200 + spriteContainer.Sprites.Count),
                     m_Unknown = 1

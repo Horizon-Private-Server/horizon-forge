@@ -29,10 +29,6 @@
 #include "pathfind.h"
 #include "messageid.h"
 
-#if BLESSINGS
-#include "blessings.h"
-#endif
-
 void mobForceIntoMapBounds(Moby *moby);
 
 #if GATE
@@ -335,15 +331,6 @@ int mobMobyProcessHitFlags(Moby *moby, Moby *hitMoby, float damage, int reactToT
 		result |= MOB_DO_DAMAGE_HIT_FLAG_HIT_TARGET;
 	if (mobyIsMob(hitMoby))
 		result |= MOB_DO_DAMAGE_HIT_FLAG_HIT_MOB;
-
-#if BLESSINGS
-	if (player && player->timers.postHitInvinc == 0 && blessingsPlayerHasBlessing(player->PlayerId, BLESSING_ITEM_THORNS))
-	{
-		result |= MOB_DO_DAMAGE_HIT_FLAG_HIT_PLAYER_THORNS;
-		if (reactToThorns)
-			blessingsMobReactToThorns(moby, damage, player->PlayerId);
-	}
-#endif
 
 	return result;
 }
