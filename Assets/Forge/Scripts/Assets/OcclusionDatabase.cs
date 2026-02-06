@@ -12,27 +12,6 @@ public class OcclusionDatabase : ScriptableObject
 {
     public OcclusionDictionary Occlusion = new OcclusionDictionary();
 
-    private void OnEnable()
-    {
-        Undo.undoRedoPerformed -= UndoRedoPerformed;
-        Undo.undoRedoPerformed += UndoRedoPerformed;
-        EditorSceneManager.sceneSaving -= OnSceneSaving;
-        EditorSceneManager.sceneSaving += OnSceneSaving;
-        ReconcileScene();
-    }
-
-    void UndoRedoPerformed()
-    {
-        ReconcileScene();
-    }
-
-    void OnSceneSaving(Scene scene, string path)
-    {
-        if (scene != EditorSceneManager.GetActiveScene()) return;
-
-        ReconcileScene();
-    }
-
     #region Accessors
 
     public OcclusionData Get(IOcclusionData occlusion)
@@ -142,48 +121,6 @@ public class OcclusionDatabase : ScriptableObject
         return removed;
     }
 
-    public void ReconcileScene()
-    {
-        var occlusions = IOcclusionData.AllOcclusionDatas;
-        var sceneOcclusionUids = occlusions.Select(x => x.Uid.ToString()).ToHashSet();
-        var existingKeys = Occlusion.Keys.ToArray();
-        var pendingRemoval = new List<string>();
-        var pendingAddition = new Dictionary<string, OcclusionData>();
-
-        // remove occlusion records not in scene
-        foreach (var existingKey in existingKeys)
-        {
-            if (!sceneOcclusionUids.Contains(existingKey))
-            {
-                pendingRemoval.Add(existingKey);
-            }
-        }
-
-        // add occlusion records that exist in scene but not in reference dictionary
-        // we don't want to create new occlusion, only add if an existing OcclusionData ScriptableObject exists
-        // the use-case is that when deleting a TfragChunk/Tie, removing its record in the dictionary, and then undoing, we should link back to the original occlusion data.
-        foreach (var sceneOcclusionUid in sceneOcclusionUids)
-        {
-            if (Occlusion.ContainsKey(sceneOcclusionUid)) continue;
-
-            // occlusion isn't in data
-            // try and read the existing file
-            var existingOcclusionData = TryRead(sceneOcclusionUid);
-            if (!existingOcclusionData) continue;
-
-            // add
-            pendingAddition[sceneOcclusionUid] = existingOcclusionData;
-        }
-
-        if (pendingRemoval.Count == 0 && pendingAddition.Count == 0) return;
-
-        foreach (var keyToRemove in pendingRemoval)
-            Occlusion.Remove(keyToRemove);
-        foreach (var occToAdd in pendingAddition)
-            Occlusion.Add(occToAdd.Key, occToAdd.Value);
-        EditorUtility.SetDirty(this);
-    }
-
     public bool SetOctants(IOcclusionData occlusion, Vector3[] octants, bool recordUndo = false)
     {
         var data = GetOrCreate(occlusion);
@@ -223,8 +160,7 @@ public class OcclusionDatabase : ScriptableObject
     }
 }
 
-[Serializable]
-public class OcclusionDictionary : SerializableDictionary<string, OcclusionData>
+public class OcclusionDictionary : Dictionary<string, OcclusionData>
 {
 
 }
