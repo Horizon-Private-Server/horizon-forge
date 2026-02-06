@@ -23,10 +23,21 @@ public class SpriteDef
         Bank2
     };
 
+    public enum SpriteTextureSize
+    {
+        No_override,
+        _32,
+        _64,
+        _128,
+        _256,
+        _512,
+        _1024
+    };
+
     public Texture2D m_Texture;
     public SpriteDefBank m_Bank = SpriteDefBank.Bank1;
     public ushort m_Uid;
     public ushort m_Unknown = 1;
-    public TextureSize? m_TextureSizeOverride;
+    public SpriteTextureSize m_TextureSizeOverride;
     public Color? m_Tint;
 }

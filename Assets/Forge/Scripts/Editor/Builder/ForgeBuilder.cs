@@ -1880,8 +1880,8 @@ public static class ForgeBuilder
             foreach (var spriteDef in spriteDefs.Where(x => x.m_Bank == bank))
             {
                 int? maxTexSize = 64;
-                if (spriteDef.m_TextureSizeOverride.HasValue)
-                    maxTexSize = (int)Mathf.Pow(2, 5 + (int)spriteDef.m_TextureSizeOverride.Value);
+                if (spriteDef.m_TextureSizeOverride > SpriteDef.SpriteTextureSize.No_override)
+                    maxTexSize = (int)Mathf.Pow(2, 4 + (int)spriteDef.m_TextureSizeOverride);
 
                 UnityHelper.SaveTexture(spriteDef.m_Texture ? spriteDef.m_Texture : UnityHelper.DefaultTexture, Path.Combine(dstFolder, $"{texIdx:D4}.png"), forcePowerOfTwo: true, tint: spriteDef.m_Tint ?? Color.white, maxTexSize: maxTexSize);
                 ++texIdx;
