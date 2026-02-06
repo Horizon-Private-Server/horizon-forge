@@ -155,28 +155,38 @@ void mobForceIntoMapBounds(Moby *moby)
 	int i;
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 
-	// if no cuboid defined, restrict mobs to moby grid range
-	if (mobAllowedCuboidIdx < 0)
+	// restrict mobs to moby grid range
+	// mobys outside these bounds will crash the game
+	// run first before mob allowed cuboid
 	{
-		VECTOR min = {0, 0, 0, 0};
-		VECTOR max = {1024, 1024, 1024, 0};
+		VECTOR min = {1, 1, 1, 0};
+		VECTOR max = {1023, 1023, 1023, 0};
+		int respawn = 0;
 		for (i = 0; i < 3; ++i)
 		{
 			if (moby->Position[i] < min[i])
 			{
 				moby->Position[i] = min[i];
-				pvars->MobVars.Respawn = 1;
-				break;
+				respawn = 1;
 			}
 			else if (moby->Position[i] > max[i])
 			{
 				moby->Position[i] = max[i];
-				pvars->MobVars.Respawn = 1;
-				break;
+				respawn = 1;
 			}
 		}
-		return;
+
+		// if hit bounds of moby grid, respawn and exit
+		if (respawn)
+		{
+			pvars->MobVars.Respawn = respawn;
+			return;
+		}
 	}
+
+	// restrict to allowed area cuboid
+	if (mobAllowedCuboidIdx < 0)
+		return;
 
 	SpawnPoint *cuboid = spawnPointGet(mobAllowedCuboidIdx);
 	VECTOR rel;
