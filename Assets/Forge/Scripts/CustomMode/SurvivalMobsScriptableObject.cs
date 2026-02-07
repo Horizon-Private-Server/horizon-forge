@@ -22,7 +22,6 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public List<SurvivalWeaponStats> WeaponStats = new List<SurvivalWeaponStats>();
     public List<SpriteDef> SurvivalMysteryBoxSprites = new List<SpriteDef>();
     public List<SpriteDef> SurvivalStackableSprites = new List<SpriteDef>();
-    public List<SpriteDef> SurvivalBlessingSprites = new List<SpriteDef>();
     
     [Serializable]
     public class SurvivalMobsConfig
