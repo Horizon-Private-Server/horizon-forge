@@ -152,9 +152,12 @@ int mapCanPrestigePlayerWeapon(Player *player, int gadgetId, int prestigeNum, ch
 }
 
 //--------------------------------------------------------------------------
-u32 mapGetPrestigePlayerWeaponCost(Player *player, int gadgetId, int levelNum)
+u32 mapGetPrestigePlayerWeaponCost(Player *player, int gadgetId, int prestigeNum)
 {
-	return bakedConfig.PrestigeCostPerLevel[levelNum];
+	if (prestigeNum <= 0)
+		return 0;
+
+	return bakedConfig.PrestigeCostPerLevel[prestigeNum - 1];
 }
 
 //--------------------------------------------------------------------------

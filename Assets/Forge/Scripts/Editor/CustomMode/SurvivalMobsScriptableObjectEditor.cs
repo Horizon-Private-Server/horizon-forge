@@ -15,7 +15,6 @@ public class SurvivalMobsScriptableObjectEditor : Editor
     private SerializedProperty m_WeaponStatsProperty;
     private SerializedProperty m_SurvivalMysteryBoxSprites;
     private SerializedProperty m_SurvivalStackableSprites;
-    private SerializedProperty m_SurvivalBlessingSprites;
 
     private void OnEnable()
     {
@@ -24,7 +23,6 @@ public class SurvivalMobsScriptableObjectEditor : Editor
         m_WeaponStatsProperty = serializedObject.FindProperty("WeaponStats");
         m_SurvivalMysteryBoxSprites = serializedObject.FindProperty("SurvivalMysteryBoxSprites");
         m_SurvivalStackableSprites = serializedObject.FindProperty("SurvivalStackableSprites");
-        m_SurvivalBlessingSprites = serializedObject.FindProperty("SurvivalBlessingSprites");
     }
 
 
@@ -66,7 +64,6 @@ public class SurvivalMobsScriptableObjectEditor : Editor
         EditorGUILayout.PropertyField(m_WeaponStatsProperty);
         EditorGUILayout.PropertyField(m_SurvivalMysteryBoxSprites);
         EditorGUILayout.PropertyField(m_SurvivalStackableSprites);
-        EditorGUILayout.PropertyField(m_SurvivalBlessingSprites);
         serializedObject.ApplyModifiedProperties();
     }
 

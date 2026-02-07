@@ -16,7 +16,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public const int BANK_OCLASS = 0x1F7;
     public const int STACKBOX_OCLASS = 0x2083;
     public const int SURVIVAL_MAX_SPAWNED_MOBS = 50;
-    static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 300000, 500000, 700000, 1000000 };
+    static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 200000, 400000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
     static readonly string[] DEFAULT_ALPHA_MODS = { "SPEED", "AMMO", "IMPACT", "AREA", "JACKPOT", "XP" };
 	static readonly SurvivalStackableEntry[] DEFAULT_STACKABLE_ENTRIES = { 
@@ -101,8 +101,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [Header("Wall Upgrades")]
     public List<SurvivalUpgradeEntry> Upgrades = new List<SurvivalUpgradeEntry>()
     {
-        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Health, Max = 2000 },
-        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Damage, Max = 2000 },
+        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Health, Max = 1000 },
+        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Damage, Max = 1000 },
         new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Crit, Max = 100 },
         new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Speed, Max = 40 },
     };
