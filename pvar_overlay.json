@@ -6165,5 +6165,63 @@
         "Default": 200
       }
     ]
+  },
+  {
+    "Name": "Survival Store",
+    "RCVersion": 4,
+    "MobyOClass": 16640,
+    "Length": 64,
+    "Overlay": [
+      {
+        "Name": "Bound Moby",
+        "DataType": "MobyRef",
+        "Offset": 0
+      },
+      {
+        "Name": "Store Index",
+        "DataType": "Integer",
+        "Offset": 4
+      },
+      {
+        "Name": "Disable During Round",
+        "DataType": "Bool",
+        "Offset": 8,
+        "Default": true
+      },
+      {
+        "Name": "Appear On Radar",
+        "DataType": "Bool",
+        "Offset": 9,
+        "Default": true
+      },
+      {
+        "Name": "Blip Type",
+        "DataType": "Enum",
+        "OptionsLookupKey": "BlipTypes",
+        "Offset": 10,
+        "DataSize": 1,
+        "Default": 5
+      },
+      {
+        "Name": "Blip Color",
+        "DataType": "Enum",
+        "OptionsLookupKey": "Teams",
+        "Offset": 11,
+        "DataSize": 1,
+        "Default": 3
+      },
+      {
+        "Name": "Interact Type",
+        "DataType": "Enum",
+        "Offset": 12,
+        "DataSize": 1,
+        "Default": 0,
+        "Options": {
+          "Near": 0,
+          "Look At": 1,
+          "Stand On": 2
+        }
+      }
+    ]
   }
 ]

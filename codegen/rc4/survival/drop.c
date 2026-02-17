@@ -14,25 +14,100 @@
 #include "utils.h"
 #include "game.h"
 
+const char *DROP_CANNOT_PICKUP_MESSAGE = "Property of %s";
+
 int dropCount = 0;
 int dropThisFrame = 0;
+char dropLocalStrBuf[GAME_MAX_LOCALS][64];
 
 GuberEvent *dropCreateEvent(Moby *moby, u32 eventType);
 
-char DropTexIds[] = {
-		[DROP_AMMO] 90,
-		[DROP_HEALTH] 94,
-		[DROP_NUKE] 19,
-		[DROP_FREEZE] 43,
-		[DROP_DOUBLE_POINTS] 3,
-		[DROP_DOUBLE_XP] 41,
-};
+//--------------------------------------------------------------------------
+int dropGetItem(int itemIdx, SurvivalItemDef_t *item)
+{
+	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+		return 0;
+
+	memcpy(item, &MapConfig.ItemDefs[itemIdx], sizeof(SurvivalItemDef_t));
+	return 1;
+}
+
+//--------------------------------------------------------------------------
+int dropGetItems(int forPlayerId, int *itemIdxs, int count)
+{
+	if (!itemIdxs)
+		return 0;
+
+	// build list items with mysterybox chance
+	int outIdx = 0;
+	int i;
+	SurvivalItemDef_t itemDef;
+	Player *player = playerGetAll()[forPlayerId];
+	for (i = 0; i < MapConfig.ItemDefCount; ++i)
+	{
+		if (outIdx >= count)
+			break;
+
+		dropGetItem(i, &itemDef);
+		float itemWeight = itemGetDropChanceWeight(i, &itemDef, forPlayerId);
+		int canAcquire = itemCanAcquire(player, i);
+		if (itemWeight > 0 && canAcquire)
+		{
+			itemIdxs[outIdx] = i;
+			outIdx++;
+		}
+	}
+
+	return outIdx;
+}
+
+//--------------------------------------------------------------------------
+int dropGetRandomItem(Moby *mobMoby, int forPlayerId, int gadgetId)
+{
+	int i;
+	SurvivalItemDef_t itemDef;
+	int itemIdxs[MAX_ITEM_COUNT];
+	int count = dropGetItems(forPlayerId, &itemIdxs, MAX_ITEM_COUNT);
+	if (count <= 0)
+		return -1;
+
+	// get sum
+	float sumWeight = 0;
+	for (i = 0; i < count; ++i)
+	{
+		int itemIdx = itemIdxs[i];
+		dropGetItem(itemIdxs[i], &itemDef);
+		float itemWeight = itemGetDropChanceWeight(itemIdx, &itemDef, forPlayerId);
+
+		sumWeight += itemWeight;
+	}
+
+	// generate random value within range of weights
+	// grab the first item where r > last
+	float r = randRange(0, sumWeight);
+	for (i = 0; i < (count - 1); ++i)
+	{
+		int itemIdx = itemIdxs[i];
+		dropGetItem(itemIdx, &itemDef);
+		float itemWeight = itemGetDropChanceWeight(itemIdx, &itemDef, forPlayerId);
+		if (r < itemWeight)
+		{
+			DPRINTF("drop hit %d (%s) %f<%f\n", itemIdxs[i], itemDef.Name, r, itemWeight);
+			break;
+		}
+
+		r -= itemWeight;
+	}
+
+	return itemIdxs[i];
+}
 
 //--------------------------------------------------------------------------
 int dropAmIOwner(Moby *moby)
 {
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
-	return gameGetMyClientId() == pvars->Owner;
+	Player *player = playerGetAll()[pvars->OwnerPlayerId];
+	return playerIsValid(player) && player->IsLocal;
 }
 
 //--------------------------------------------------------------------------
@@ -74,7 +149,7 @@ void dropPostDraw(Moby *moby)
 		return;
 
 	// determine color
-	u32 color = 0x70FFFFFF;
+	u32 color = pvars->TexColor;
 
 	// fade as we approach destruction
 	int timeUntilDestruction = (pvars->DestroyAtTime - gameGetTime()) / TIME_SECOND;
@@ -106,7 +181,7 @@ void dropPostDraw(Moby *moby)
 	quad.VertexUVs[2] = (struct UV){0, 1};
 	quad.VertexUVs[3] = (struct UV){1, 1};
 	quad.Clamp = 0x0000000100000001;
-	quad.Tex0 = gfxGetFrameTex(DropTexIds[pvars->Type]);
+	quad.Tex0 = gfxGetFrameTex(pvars->TexId);
 	quad.Tex1 = 0xFF9000000260;
 	quad.Alpha = 0x8000000044;
 
@@ -144,13 +219,19 @@ void dropUpdate(Moby *moby)
 	int i;
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
 	Player **players = playerGetAll();
+	GameSettings *gs = gameGetSettings();
 	if (!pvars)
 		return;
 
+	Player *ownerPlayer = players[pvars->OwnerPlayerId];
 	int isOwner = dropAmIOwner(moby);
 
 	// register draw event
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&dropPostDraw, moby);
+
+	// add radar blip (star)
+	if (playerIsValid(ownerPlayer))
+		addRadarBlip(moby, 31, 17, ownerPlayer->Team);
 
 	// fall to ground
 	if (!pvars->HitGround)
@@ -186,19 +267,24 @@ void dropUpdate(Moby *moby)
 		}
 	}
 
-	if (!isOwner)
-		return;
-
 	// handle pickup
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
 		Player *player = players[i];
-		if (player && !playerIsDead(player))
+		if (player && !playerIsDead(player) && player->IsLocal)
 		{
 			vector_subtract(t, player->PlayerPosition, moby->Position);
 			if (vector_sqrmag(t) < (DROP_PICKUP_RADIUS * DROP_PICKUP_RADIUS))
 			{
-				dropPickup(moby, i);
+				if (isOwner)
+				{
+					dropPickup(moby, i);
+				}
+				else
+				{
+					snprintf(dropLocalStrBuf[player->LocalPlayerIndex], sizeof(dropLocalStrBuf[player->LocalPlayerIndex]), DROP_CANNOT_PICKUP_MESSAGE, gs->PlayerNames[pvars->OwnerPlayerId]);
+					uiShowPopup(player->LocalPlayerIndex, dropLocalStrBuf[player->LocalPlayerIndex]);
+				}
 				break;
 			}
 		}
@@ -249,13 +335,17 @@ int dropHandleEvent_Spawn(Moby *moby, GuberEvent *event)
 	moby->DrawDist = 0;
 	// moby->PClass = NULL;
 
+	SurvivalItemDef_t itemDef;
+	int hasItem = dropGetItem(args.ItemIdx, &itemDef);
+
 	// update pvars
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
-	pvars->Type = args.Type;
-	pvars->TexId = DropTexIds[pvars->Type];
+	pvars->ItemIdx = args.ItemIdx;
+	pvars->TexId = itemDef.TexId;
+	pvars->TexColor = itemDef.TexColor;
 	pvars->Team = args.Team;
 	pvars->DestroyAtTime = args.DestroyAtTime;
-	pvars->Owner = args.Owner;
+	pvars->OwnerPlayerId = args.OwnerPlayerId;
 	pvars->Destroyed = 0;
 	memset(pvars->Particles, 0, sizeof(pvars->Particles));
 
@@ -269,7 +359,7 @@ int dropHandleEvent_Spawn(Moby *moby, GuberEvent *event)
 
 	//
 	mobySetState(moby, 0, -1);
-	DPRINTF("drop spawned at %08X type:%d team:%d destroyAt:%d\n", (u32)moby, pvars->Type, pvars->Team, pvars->DestroyAtTime);
+	DPRINTF("drop spawned at %08X item:%d team:%d destroyAt:%d\n", (u32)moby, pvars->ItemIdx, pvars->Team, pvars->DestroyAtTime);
 	return 0;
 }
 
@@ -311,90 +401,9 @@ int dropHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 	// read event
 	guberEventRead(event, &args, sizeof(struct DropPickupEventArgs));
 
-	// handle effect
-	switch (pvars->Type)
-	{
-	case DROP_AMMO:
-	{
-		DPRINTF("giving ammo to all players\n");
-		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
-		{
-			Player *p = players[i];
-			if (p && p->SkinMoby)
-			{
-				for (j = 0; j <= 8; ++j)
-				{
-					int gadgetId = weaponSlotToId(j);
-					if (p->GadgetBox->Gadgets[gadgetId].Level >= 0)
-						p->GadgetBox->Gadgets[gadgetId].Ammo = playerGetWeaponMaxAmmo(p->GadgetBox, gadgetId);
-				}
-
-				if (p->IsLocal)
-					uiShowPopup(p->LocalPlayerIndex, "You got ammo!");
-			}
-		}
-		break;
-	}
-	case DROP_HEALTH:
-	{
-		DPRINTF("giving health to all players\n");
-		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
-		{
-			Player *p = players[i];
-			if (p && p->SkinMoby)
-			{
-				if (!playerIsDead(p) && p->Health > 0)
-				{
-					playerSetHealth(p, p->MaxHealth);
-				}
-				else if (MapConfig.Functions.ModeRevivePlayerFunc && MapConfig.State && MapConfig.State->PlayerStates[i].ReviveCooldownTicks)
-				{
-					MapConfig.Functions.ModeRevivePlayerFunc(p, args.PickedUpByPlayerId);
-				}
-
-				if (p->IsLocal)
-					uiShowPopup(p->LocalPlayerIndex, "You got health!");
-			}
-		}
-		break;
-	}
-	case DROP_DOUBLE_POINTS:
-	{
-		DPRINTF("giving double bolts to all players\n");
-		uiShowPopup(0, "Double bolts!");
-		uiShowPopup(1, "Double bolts!");
-		if (MapConfig.Functions.ModeSetDoublePointsFunc)
-			MapConfig.Functions.ModeSetDoublePointsFunc(1);
-		break;
-	}
-	case DROP_DOUBLE_XP:
-	{
-		DPRINTF("giving double xp to all players\n");
-		uiShowPopup(0, "Double XP!");
-		uiShowPopup(1, "Double XP!");
-		if (MapConfig.Functions.ModeSetDoubleXPFunc)
-			MapConfig.Functions.ModeSetDoubleXPFunc(1);
-		break;
-	}
-	case DROP_FREEZE:
-	{
-		DPRINTF("freezing all mobs\n");
-		uiShowPopup(0, "Freeze activated!");
-		uiShowPopup(1, "Freeze activated!");
-		if (MapConfig.Functions.ModeSetFreezeMobsFunc)
-			MapConfig.Functions.ModeSetFreezeMobsFunc(1);
-		break;
-	}
-	case DROP_NUKE:
-	{
-		DPRINTF("killing all mobs\n");
-		uiShowPopup(0, "Nuke activated!");
-		uiShowPopup(1, "Nuke activated!");
-		if (MapConfig.Functions.ModeMobNukeFunc)
-			MapConfig.Functions.ModeMobNukeFunc(args.PickedUpByPlayerId);
-		break;
-	}
-	}
+	// acquire item
+	if (dropAmIOwner(moby))
+		itemBeginAcquire(args.PickedUpByPlayerId, pvars->ItemIdx);
 
 	// destroy particles
 	for (i = 0; i < 4; ++i)
@@ -432,12 +441,6 @@ int dropHandleEvent(Moby *moby, GuberEvent *event)
 	if (isInGame() && !mobyIsDestroyed(moby) && moby->OClass == DROP_MOBY_OCLASS && pvars)
 	{
 		u32 dropEvent = event->NetEvent.EventID;
-		int isFromHost = gameIsHost(event->NetEvent.OriginClientIdx);
-		if (!isFromHost)
-		{
-			DPRINTF("ignoring drop event %d from %d (not owner, %d)\n", dropEvent, event->NetEvent.OriginClientIdx, pvars->Owner);
-			return 0;
-		}
 
 		switch (dropEvent)
 		{
@@ -459,17 +462,28 @@ int dropHandleEvent(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-void dropOnCreated(VECTOR position, enum DropType dropType, int destroyAtTime, int team)
+void dropOnCreated(VECTOR position, int itemIdx, int destroyAtTime, int team)
 {
 	if (!MapConfig.State)
 		return;
 
+	int min = DROP_COOLDOWN_TICKS_MIN;
+	int max = DROP_COOLDOWN_TICKS_MAX;
+
+#ifdef MOB_DROP_COOLDOWN_MIN
+	min = MOB_DROP_COOLDOWN_MIN;
+#endif
+
+#ifdef MOB_DROP_COOLDOWN_MAX
+	max = MOB_DROP_COOLDOWN_MAX;
+#endif
+
 	// set cooldown
-	MapConfig.State->DropCooldownTicks = randRangeInt(DROP_COOLDOWN_TICKS_MIN, DROP_COOLDOWN_TICKS_MAX);
+	MapConfig.State->DropCooldownTicks = randRangeInt(min, max);
 }
 
 //--------------------------------------------------------------------------
-int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int team)
+int dropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team)
 {
 	struct DropSpawnEventArgs args;
 
@@ -478,9 +492,8 @@ int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int t
 	guberMobyCreateSpawned(DROP_MOBY_OCLASS, sizeof(struct DropPVar), &guberEvent, NULL);
 	if (guberEvent)
 	{
-		// owner is always host
-		args.Owner = gameGetHostId();
-		args.Type = dropType;
+		args.OwnerPlayerId = playerGetFromSlot(0)->PlayerId;
+		args.ItemIdx = itemIdx;
 		args.DestroyAtTime = destroyAtTime;
 		args.Team = team;
 
@@ -493,7 +506,7 @@ int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int t
 		DPRINTF("failed to guberevent drop\n");
 	}
 
-	dropOnCreated(position, dropType, destroyAtTime, team);
+	dropOnCreated(position, itemIdx, destroyAtTime, team);
 	return guberEvent != NULL;
 }
 

@@ -39,6 +39,8 @@
 #include "interop.h"
 #include "pathfind.h"
 #include "maputils.h"
+#include "store.h"
+#include "item.h"
 #include "upgrade.h"
 #include "drop.h"
 #include "pool.h"
@@ -60,14 +62,11 @@ void mobInit(void);
 void mobTick(void);
 void pathTick(void);
 
-#if STACKABLES
-void stackableInit(void);
-void stackableTick(void);
-#endif
-
 void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId);
-
 void frameTick(void);
+
+extern struct StoreDef DefaultStores[];
+extern const int DefaultStoresCount;
 
 char LocalPlayerStrBuffer[GAME_MAX_LOCALS][64];
 
@@ -116,6 +115,35 @@ int mapSpawnMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID
 		return MapConfig.Functions.ModeCreateMobFunc(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
 	else
 		return MapConfig.Functions.OnMobCreateFunc(spawnParamsIdx, position, yaw, spawnFromUID, spawnFlags, config);
+}
+
+//--------------------------------------------------------------------------
+void mapConsiderSpawnDrop(Moby *moby, int killedByPlayerId, int killedByWeaponId)
+{
+	if (!MapConfig.State)
+		return;
+
+	// have drop funcs
+	if (!MapConfig.Functions.GetDropItemOnMobKilledFunc || !MapConfig.Functions.CreateMobDropFunc)
+		return;
+
+	int roundIsSpecial = MapConfig.State->RoundIsSpecial;
+	int disableDrops = MapConfig.SpecialRoundParams[MapConfig.State->RoundSpecialIdx].DisableDrops;
+	if (!roundIsSpecial || !disableDrops)
+	{
+		if (killedByPlayerId >= 0 && gameAmIHost())
+		{
+			Player *killedByPlayer = playerGetAll()[(int)killedByPlayerId];
+			if (playerIsValid(killedByPlayer))
+			{
+				int itemIdx = MapConfig.Functions.GetDropItemOnMobKilledFunc(killedByPlayer, moby, killedByWeaponId);
+				if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+				{
+					MapConfig.Functions.CreateMobDropFunc(moby->Position, itemIdx, gameGetTime() + DROP_DURATION, killedByPlayer->Team);
+				}
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -217,107 +245,6 @@ void addBlip(Moby *moby, int type, int team, int life)
 		blip->Life = life;
 		blip->Type = type;
 		blip->Team = team;
-	}
-}
-
-//--------------------------------------------------------------------------
-void randomizeWeaponPickups(void)
-{
-	int i, j;
-	GameOptions *gameOptions = gameGetOptions();
-	char wepCounts[9];
-	char wepEnabled[17];
-	int pickupCount = 0;
-	int pickupOptionCount = 0;
-	memset(wepEnabled, 0, sizeof(wepEnabled));
-	memset(wepCounts, 0, sizeof(wepCounts));
-
-	if (gameOptions->WeaponFlags.DualVipers)
-	{
-		wepEnabled[2] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.MagmaCannon)
-	{
-		wepEnabled[3] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.Arbiter)
-	{
-		wepEnabled[4] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.FusionRifle)
-	{
-		wepEnabled[5] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.MineLauncher)
-	{
-		wepEnabled[6] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.B6)
-	{
-		wepEnabled[7] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.Holoshield)
-	{
-		wepEnabled[16] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.Flail)
-	{
-		wepEnabled[12] = 1;
-		pickupOptionCount++;
-	}
-	if (gameOptions->WeaponFlags.Chargeboots && gameOptions->GameFlags.MultiplayerGameFlags.SpawnWithChargeboots == 0)
-	{
-		wepEnabled[13] = 1;
-		pickupOptionCount++;
-	}
-
-	if (pickupOptionCount > 0)
-	{
-		Moby *moby = mobyListGetStart();
-		Moby *mEnd = mobyListGetEnd();
-
-		while (moby < mEnd)
-		{
-			if (moby->OClass == MOBY_ID_WEAPON_PICKUP && moby->PVar)
-			{
-
-				int target = pickupCount / pickupOptionCount;
-				int gadgetId = 1;
-				if (target < 3)
-				{
-					do
-					{
-						j = rand(pickupOptionCount);
-					} while (wepCounts[j] != target);
-
-					++wepCounts[j];
-
-					i = -1;
-					do
-					{
-						++i;
-						if (wepEnabled[i])
-							--j;
-					} while (j >= 0);
-
-					gadgetId = i;
-				}
-
-				// set pickup
-				((void (*)(Moby *, int))0x0043A370)(moby, gadgetId);
-
-				++pickupCount;
-			}
-
-			++moby;
-		}
 	}
 }
 
@@ -466,10 +393,28 @@ void playerOnPushedIntoWall(Player *player)
 }
 
 //--------------------------------------------------------------------------
+float mapGetWeaponXpProgressFromGadgetBox(GadgetBox *gbox, int gadgetId)
+{
+	int slot = weaponIdToSlot(gadgetId);
+	if (slot <= 0)
+		return 0;
+
+	// get percent as weapon level
+	// store percent in experience
+	int level = gbox->Gadgets[gadgetId].Level;
+	float perc = clamp(level / (float)VENDOR_MAX_WEAPON_LEVEL, 0, 1);
+	gbox->Gadgets[gadgetId].Experience = (int)(perc * 100000);
+	return perc;
+}
+
+//--------------------------------------------------------------------------
 void frameTick(void)
 {
+	itemDraw();
+	storeFrameTick();
+
 #if STACKABLES
-	sboxFrameTick();
+	// sboxFrameTick();
 #endif
 
 #if SOULCOLLECTOR
@@ -488,6 +433,8 @@ void survivalDebugManualSpawn(void)
 	if (MapConfig.DefaultSpawnParamsCount <= 0)
 		return; // no mobs
 	if (!localPlayerHasInput())
+		return;
+	if (!gameAmIHost())
 		return;
 
 	Player *localPlayer = playerGetFromSlot(0);
@@ -648,7 +595,9 @@ void survivalDebugStartRound(int roundNumber)
 	{
 		state->PlayerStates[j].State.Bolts = powf(1.225, roundNumber) * 10000;
 		state->PlayerStates[j].State.CurrentTokens = roundNumber * 5;
-		state->PlayerStates[j].State.Upgrades[UPGRADE_HEALTH] = roundNumber;
+#if ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE
+		state->PlayerStates[j].State.ItemCounts[ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE] = roundNumber;
+#endif
 	}
 
 	// iterate each round
@@ -663,11 +612,25 @@ void survivalDebugStartRound(int roundNumber)
 }
 
 //--------------------------------------------------------------------------
+struct StoreDef *mapGetStore(Moby *moby, int localPlayerIndex, int storeIdx)
+{
+	if (storeIdx < 0 || storeIdx >= DefaultStoresCount)
+		return NULL;
+
+	return &DefaultStores[storeIdx];
+}
+
+//--------------------------------------------------------------------------
 void survivalInit(void)
 {
 	static int initialized = 0;
 	if (initialized)
 		return;
+
+	// setup required functions
+	struct StoreVTable defaultStoreVTable = {
+			.GetStoreFunc = &mapGetStore,
+	};
 
 	MapConfig.Magic = MAP_CONFIG_MAGIC;
 
@@ -681,9 +644,10 @@ void survivalInit(void)
 	dropInit();
 	bboxInit();
 	demonbellInit();
+	itemInit();
+	storeInit(&defaultStoreVTable);
 #if STACKABLES
-	sboxInit();
-	stackableInit();
+	// stackableInit();
 #endif
 #if GAMBITS
 	gambitsInit();
@@ -694,6 +658,10 @@ void survivalInit(void)
 #ifdef AMMO_DROP_PROBABILITY
 	ammodropInit();
 #endif
+
+	// hook HudAmmo XP bar
+	POKE_U32(0x00552CD8, 0x10000013);
+	HOOK_JAL(0x00552D28, &mapGetWeaponXpProgressFromGadgetBox);
 
 	// disable jump pad effect
 	POKE_U32(0x0042608C, 0);
@@ -743,8 +711,9 @@ int survivalTick(void)
 	upgradeTick();
 	dropTick();
 	demonbellTick();
+	itemTick();
 #if STACKABLES
-	stackableTick();
+	// stackableTick();
 #endif
 #if GAMBITS
 	gambitsTick();

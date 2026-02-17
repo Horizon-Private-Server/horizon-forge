@@ -16,8 +16,9 @@ struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobSpawnParams;
 struct SurvivalBakedSpawnpoint;
+struct MobDamageEventArgs;
 
-typedef void (*ModeUpgradePlayerWeapon_func)(int playerId, int weaponId, int giveAlphaMod);
+typedef void (*ModeUpgradePlayerWeapon_func)(int playerId, int weaponId);
 typedef void (*ModePushSnack_func)(char *string, int ticksAlive, int localPlayerIdx);
 typedef void (*ModePushBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int team);
 typedef void (*ModePopulateSpawnArgs_func)(struct MobSpawnEventArgs *output, struct MobConfig *config, int spawnParamsIdx, int isBaseConfig, int spawnFlags);
@@ -28,6 +29,9 @@ typedef void (*ModeSetDoublePoints_func)(int isActive);
 typedef void (*ModeSetDoubleXP_func)(int isActive);
 typedef void (*ModeSetFreezeMobs_func)(int isActive);
 typedef void (*ModeRevivePlayer_func)(Player *player, int fromPlayerId);
+typedef void (*ModeSendPlayerStats_func)(int playerId);
+typedef void (*ModeSendOnPlayerItemAcquired_func)(int playerId, int itemId);
+typedef void (*ModeSendOnPlayerItemConsumed_func)(int playerId, int itemId);
 
 typedef struct GuberMoby *(*ModeGetGuber_func)(Moby *moby);
 typedef int (*ModeHandleGuberEvent_func)(Moby *moby, GuberEvent *event);
@@ -40,9 +44,9 @@ typedef int (*MapGetSpawnPoints_func)(int **outSpawnPointIndices);
 typedef int (*MapConsiderMobSpawnPoint_func)(struct MobSpawnParams *mobSpawnParams, VECTOR position, float yaw, Player *targetPlayer);
 typedef int (*MapOnPlayerGetRes_func)(Player *player, VECTOR outPos, VECTOR outRot, int firstRes);
 typedef int (*MapOnPlayerRevived_func)(Player *player, Player *revivedByPlayer);
-typedef int (*MapCreateUpgradePickup_func)(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType);
+typedef int (*MapCreateUpgradePickup_func)(VECTOR position, VECTOR rotation, int itemIdx);
 typedef void (*MapPickupUpgradePickup_func)(Moby *moby, int pickedUpByPlayerId);
-typedef int (*MapCreateMobDrop_func)(VECTOR position, enum DropType dropType, int destroyAtTime, int team);
+typedef int (*MapCreateMobDrop_func)(VECTOR position, int itemIdx, int destroyAtTime, int team);
 typedef void (*MapFrameTick_func)(void);
 typedef float (*MapGetDifficultyMultiplier_func)(void);
 typedef float (*MapGetBoltMultiplier_func)(void);
@@ -57,9 +61,16 @@ typedef int (*MapCanUpgradePlayerWeapon_func)(Player *player, int gadgetId, int 
 typedef u32 (*MapGetUpgradePlayerWeaponCost_func)(Player *player, int gadgetId, int levelNum);
 typedef u32 (*MapGetXpForNextToken_func)(Player *player, int token);
 typedef float (*MapGetCurrentDifficulty_func)(void);
-typedef int (*MapGetDropTypeOnMobKilled_func)(Player *killedByPlayer, Moby *mob, int gadgetId);
+typedef int (*MapGetDropItemOnMobKilled_func)(Player *killedByPlayer, Moby *mob, int gadgetId);
 typedef int (*MapGetRoundTransitionTime_func)(int round);
 typedef int (*MapGetRandomAlphamodForPlayer_func)(Player *player, int gadgetIdOrEmpty);
+typedef int (*MapGetPlayerItemCount_func)(Player *player, int itemId);
+typedef void (*MapOnPlayerItemAcquired_func)(Player *player, int itemId);
+typedef void (*MapOnPlayerItemConsumed_func)(Player *player, int itemId);
+typedef void (*MapOnPlayerUpdate_func)(Player *player);
+typedef void (*MapOnPlayerDied_func)(Player *player);
+typedef void (*MapOnPlayerGetVendorReward_func)(Player *player, int gadgetId, int levelNum);
+typedef int (*MapOnBeforeDamageMob_func)(Player *player, Moby *sourceMoby, Moby *mobMoby, struct MobDamageEventArgs *args);
 
 struct SurvivalInteropTable
 {
@@ -77,6 +88,9 @@ struct SurvivalInteropTable
 	ModeRevivePlayer_func ModeRevivePlayerFunc;
 	ModeGetGuber_func ModeOnGetGuberFunc;
 	ModeHandleGuberEvent_func ModeOnGuberEventFunc;
+	ModeSendPlayerStats_func ModeSendPlayerStatsFunc;
+	ModeSendOnPlayerItemAcquired_func ModeSendOnPlayerItemAcquiredFunc;
+	ModeSendOnPlayerItemConsumed_func ModeSendOnPlayerItemConsumedFunc;
 
 	// map
 	MapOnMobCreate_func OnMobCreateFunc;
@@ -104,9 +118,16 @@ struct SurvivalInteropTable
 	MapGetUpgradePlayerWeaponCost_func GetUpgradePlayerWeaponCostFunc;
 	MapGetXpForNextToken_func GetXpForNextTokenFunc;
 	MapGetCurrentDifficulty_func GetCurrentDifficultyFunc;
-	MapGetDropTypeOnMobKilled_func GetDropTypeOnMobKilledFunc;
+	MapGetDropItemOnMobKilled_func GetDropItemOnMobKilledFunc;
 	MapGetRoundTransitionTime_func GetRoundTransitionTimeFunc;
 	MapGetRandomAlphamodForPlayer_func GetRandomAlphamodForPlayerFunc;
+	MapGetPlayerItemCount_func GetPlayerItemCountFunc;
+	MapOnPlayerItemAcquired_func GetOnPlayerItemAcquiredFunc;
+	MapOnPlayerItemConsumed_func GetOnPlayerItemConsumedFunc;
+	MapOnPlayerUpdate_func OnPlayerUpdateFunc;
+	MapOnPlayerDied_func OnPlayerDiedFunc;
+	MapOnPlayerGetVendorReward_func OnPlayerGetVendorRewardFunc;
+	MapOnBeforeDamageMob_func OnBeforeDamageMobFunc;
 
 	// creates extra empty function slots
 	// so that when adding new ones, old maps at least have a nullptr

@@ -22,6 +22,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public List<SurvivalWeaponStats> WeaponStats = new List<SurvivalWeaponStats>();
     public List<SpriteDef> SurvivalMysteryBoxSprites = new List<SpriteDef>();
     public List<SpriteDef> SurvivalStackableSprites = new List<SpriteDef>();
+    public List<SurvivalDefaultItem> SurvivalDefaultItems = new List<SurvivalDefaultItem>();
     
     [Serializable]
     public class SurvivalMobsConfig
@@ -115,6 +116,13 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public int BaseAmmo = 16;
         public int AmmoModAmount = 5;
         public List<Vector4> Damages = new List<Vector4>();
+    }
+
+    [System.Serializable]
+    public class SurvivalDefaultItem
+    {
+        [ReadOnly] public SurvivalDefaultItems Item;
+        public SurvivalItemEntry Def = new SurvivalItemEntry();
     }
 
     public static SurvivalMobsScriptableObject Load()

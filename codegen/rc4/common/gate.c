@@ -226,7 +226,7 @@ void gateHandleInteract(Moby* moby)
       if (gateCanInteract(moby, lp->PlayerPosition)) {
 #if SURVIVAL
         snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
-        if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE)) {
+        if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE, 1)) {
           gatePayToken(moby, lp->PlayerId);
           break;
         }

@@ -6,7 +6,8 @@ OUT_BUILD_DIR = $(CURDIR)/../../build/dl
 OUT_CODE_DIR = $(CURDIR)/../code
 OUT_MAPNAME = ##MAPNAME##
 EE_INCS := -I$(CURDIR)/include
-EE_LDFLAGS := ##EELDFLAGS## -fno-builtin -nostdlib -nostartfiles -L.
+EE_LDFLAGS := ##EELDFLAGS##
+EE_LDFLAGS += -fno-builtin -nostdlib -nostartfiles -L.
 
 # set to DEBUG or RELEASE
 BUILD_CONFIG := ##EEBUILD##

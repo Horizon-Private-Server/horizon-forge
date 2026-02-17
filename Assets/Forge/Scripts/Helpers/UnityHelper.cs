@@ -1565,6 +1565,375 @@ public static class UnityHelper
 
     #endregion
 
+    #region Inspector Helpers
+
+
+    public static Rect PropertyField(Rect position, SerializedProperty property, string field)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUI.GetPropertyHeight(prop, includeChildren: true);
+        position.height = height;
+        EditorGUI.PropertyField(position, prop, includeChildren: true);
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect PopupField(Rect position, SerializedProperty property, string field, string[] options)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        var rect = EditorGUI.PrefixLabel(position, new GUIContent(prop.displayName, prop.tooltip));
+        prop.intValue = EditorGUI.Popup(rect, prop.intValue, options);
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect PopupField(Rect position, SerializedProperty property, string field, string[] options, int[] mapping)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        var rect = EditorGUI.PrefixLabel(position, new GUIContent(prop.displayName, prop.tooltip));
+        var value = Array.IndexOf(mapping, prop.intValue);
+        value = EditorGUI.Popup(rect, value, options);
+        prop.intValue = mapping[value];
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect ColorOverride(Rect position, SerializedProperty property, string field, Color defaultValue)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw color only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.ColorField(valueRect, GUIContent.none, defaultValue, true, false, false);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect EnumOverride<T>(Rect position, SerializedProperty property, string field, T defaultValue) where T : Enum
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.EnumPopup(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.FloatField(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect BoolOverride(Rect position, SerializedProperty property, string field, bool defaultValue)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.Toggle(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect Int32Override(Rect position, SerializedProperty property, string field, int defaultValue)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.IntField(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect UInt32Override(Rect position, SerializedProperty property, string field, uint defaultValue)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.LongField(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    public static Rect DoubleOverride(Rect position, SerializedProperty property, string field, double defaultValue)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        // Draw float only if there's a value
+        if (hasValueProp.boolValue)
+        {
+            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        }
+        else
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUI.DoubleField(valueRect, defaultValue);
+            EditorGUI.EndDisabledGroup();
+        }
+
+        position.y += height;
+        return position;
+    }
+
+    #endregion
+
     public static void OnAfterCreateGameObject(GameObject go)
     {
         // place under selected object
