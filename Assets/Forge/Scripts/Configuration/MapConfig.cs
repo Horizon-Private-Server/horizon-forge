@@ -400,6 +400,18 @@ public class MapConfig : MonoBehaviour
         return spriteDefs.ToArray();
     }
 
+    public int FindSpriteIdxFromSpriteDef(SpriteDef spriteDef)
+    {
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var spriteDefs = mapConfig.GetSpriteDefs(RCVER.DL);
+
+        // not guaranteed to be equal by ref
+        // search by texture or by uid (if valid)
+        var idx = Array.FindIndex(spriteDefs, x => x.m_Texture == spriteDef.m_Texture || (spriteDef.m_Uid > 0 && x.m_Uid == spriteDef.m_Uid));
+
+        return idx;
+    }
+
     #endregion
 
     #region Versioning

@@ -15,6 +15,7 @@ public class SurvivalMobsScriptableObjectEditor : Editor
     private SerializedProperty m_WeaponStatsProperty;
     private SerializedProperty m_SurvivalMysteryBoxSprites;
     private SerializedProperty m_SurvivalStackableSprites;
+    private SerializedProperty m_SurvivalDefaultItems;
 
     private void OnEnable()
     {
@@ -23,6 +24,7 @@ public class SurvivalMobsScriptableObjectEditor : Editor
         m_WeaponStatsProperty = serializedObject.FindProperty("WeaponStats");
         m_SurvivalMysteryBoxSprites = serializedObject.FindProperty("SurvivalMysteryBoxSprites");
         m_SurvivalStackableSprites = serializedObject.FindProperty("SurvivalStackableSprites");
+        m_SurvivalDefaultItems = serializedObject.FindProperty("SurvivalDefaultItems");
     }
 
 
@@ -58,12 +60,43 @@ public class SurvivalMobsScriptableObjectEditor : Editor
             }
             EditorGUI.indentLevel--;
         }
-        
+
+        // default items
+        m_SurvivalDefaultItems.isExpanded = EditorGUILayout.Toggle("Survival Default Items", m_SurvivalDefaultItems.isExpanded);
+        if (m_SurvivalDefaultItems.isExpanded)
+        {
+            EditorGUI.indentLevel++;
+            var defaultItems = ((SurvivalDefaultItems[])Enum.GetValues(typeof(SurvivalDefaultItems))).OrderBy(x => x.ToString()).ToArray();
+            foreach (SurvivalDefaultItems defaultItem in defaultItems)
+            {
+                var idx = manager.SurvivalDefaultItems.FindIndex(x => x.Item == defaultItem);
+                if (idx < 0)
+                {
+                    manager.SurvivalDefaultItems.Add(new SurvivalMobsScriptableObject.SurvivalDefaultItem()
+                    {
+                        Item = defaultItem,
+                        Def = new SurvivalItemEntry()
+                        {
+                            Name = defaultItem.ToString(),
+                        }
+                    });
+
+                    EditorUtility.SetDirty(target);
+                    idx = manager.SurvivalDefaultItems.Count - 1;
+                }
+
+                EditorGUILayout.PropertyField(m_SurvivalDefaultItems.GetArrayElementAtIndex(idx), new GUIContent(defaultItem.ToString()));
+            }
+            EditorGUI.indentLevel--;
+        }
+
         //EditorGUILayout.PropertyField(m_MobsProperty);
         EditorGUILayout.PropertyField(m_PatchesProperty);
         EditorGUILayout.PropertyField(m_WeaponStatsProperty);
         EditorGUILayout.PropertyField(m_SurvivalMysteryBoxSprites);
         EditorGUILayout.PropertyField(m_SurvivalStackableSprites);
+        //EditorGUILayout.PropertyField(m_SurvivalDefaultItems);
+
         serializedObject.ApplyModifiedProperties();
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,15 +12,16 @@ using UnityEngine.SceneManagement;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 7;
+    public static readonly int SURVIVAL_VERSION = 8;
     public const int DEMONBELL_OCLASS = 0x2479;
     public const int BANK_OCLASS = 0x1F7;
-    public const int STACKBOX_OCLASS = 0x2083;
+    public const int STORE_OCLASS = 0x4100;
     public const int SURVIVAL_MAX_SPAWNED_MOBS = 50;
     static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 200000, 400000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
     static readonly string[] DEFAULT_ALPHA_MODS = { "SPEED", "AMMO", "IMPACT", "AREA", "JACKPOT", "XP" };
-	static readonly SurvivalStackableEntry[] DEFAULT_STACKABLE_ENTRIES = { 
+    [Obsolete]
+    static readonly SurvivalStackableEntry[] DEFAULT_STACKABLE_ENTRIES = { 
 		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.LowHealthDamageBuff, Max = 0 },
 		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExtraJump, Max = 0 },
 		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExtraShot, Max = 0 },
@@ -37,7 +39,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public int CodeGenOrder => 99999999;
 
     public bool Enabled = true;
-    [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards (shellshock) will appear.")] public int MapBaseComplexity = 5000;
+    [Tooltip("How much of the render budget to allocate for the map.\n\nThe larger the number, the more mob billboards will appear.")] public int MapBaseComplexity = 5000;
     public PathGraph MobPathGraph;
 
     [Header("Config")]
@@ -49,7 +51,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [Min(0), Tooltip("Lower values will increase weapon pickup respawn frequency.")] public float WeaponPickupCooldownFactor = 1;
     public bool HidePrestigeMachineEvery25Rounds = true;
     public bool RandomizeWeaponPickupsAtStart = true;
+
+    [Header("Drops")]
     [Range(0f, 1f)] public float AmmoDropProbability = 0;
+    [Range(0f, 1f)] public float MobDropProbability = 0.01f;
+    public float MobDropCooldownSecondsMin = 10;
+    public float MobDropCooldownSecondsMax = 60;
 
     [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 10.")]
     public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
@@ -70,12 +77,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public List<SurvivalGambit> Gambits = new List<SurvivalGambit>();
 
     [Header("Stackables")]
-    public bool EnableStackables;
-    public int StackableBaseCost = 250000;
-    public int StackableIncrementCost = 250000;
-    public List<SurvivalStackableEntry> Stackables = new List<SurvivalStackableEntry>(DEFAULT_STACKABLE_ENTRIES);
+    [Obsolete] public bool EnableStackables;
+    [Obsolete] public int StackableBaseCost = 250000;
+    [Obsolete] public int StackableIncrementCost = 250000;
+    [Obsolete] public List<SurvivalStackableEntry> Stackables = new List<SurvivalStackableEntry>(DEFAULT_STACKABLE_ENTRIES);
 
     [Header("Mystery Box")]
+    [Obsolete]
     public List<SurvivalMysteryboxItem> MysteryboxItems = new List<SurvivalMysteryboxItem>()
     {
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Quad, Probability = 0.05f },
@@ -90,8 +98,121 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.DreadToken, Probability = 0.3f },
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1 },
     };
-	
-	[Header("Prestige")]
+
+    [Header("Items")]
+    public List<SurvivalTemplateItemEntry> Items = new List<SurvivalTemplateItemEntry>()
+    {
+        // put self revive first so it appears on the hud first -- easier for players to know if they have one
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.HoldAutoSelfRevive),
+
+        // default wall pickups
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerSpeedUpgrade),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerHealthUpgrade),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerDamageUpgrade),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerCritUpgrade),
+
+        // default mysterybox items
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalQuad),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalShield),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalInfiniteAmmo),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.HoldManualInvisibilityCloak),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.HoldManualHealthTornado),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateRandomizeWeaponPickups),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateUpgradeWeapon),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateVoxMysterybox),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateDreadToken),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodSpeed),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodArea),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodImpact),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodAmmo),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodJackpot),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodXp),
+
+        // default store items
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveLowHealthDamageBuff),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveExtraJump),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveExtraShot),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveHoverboots),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModSpeed),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModImpact),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModArea),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModAmmo),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveVampire),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveExplodingEnemies),
+
+        // default drops
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalAmmo),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalNuke),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalDoublePoints),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalDoubleXp),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalFreeze),
+        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalHealth),
+    };
+
+    public List<SurvivalItemEntry> CustomItems = new List<SurvivalItemEntry>()
+    {
+
+    };
+
+    [Header("Store")]
+    public List<SurvivalStore> Stores = new List<SurvivalStore>()
+    {
+        new SurvivalStore()
+        {
+            Name = "Store",
+            Disabled = false,
+            Pages = new List<SurvivalStorePage>()
+            {
+                new SurvivalStorePage()
+                {
+                    Name = "Items",
+                    TexId = 63, // envelope
+                    Disabled = true,
+                    ItemNames = new List<string>()
+                    {
+                        "Self Revive",
+                        "Invisibility Cloak",
+                        "Health Tornado"
+                    }
+                },
+                new SurvivalStorePage()
+                {
+                    Name = "Perks",
+                    TexId = 9, // fist
+                    ItemNames = new List<string>()
+                    {
+                        "Berserker Perk",
+                        "Extra Jump Perk",
+                        "Double Shot Perk",
+                        "Hoverboots Perk",
+                        "Speed Mod Perk",
+                        "Impact Mod Perk",
+                        "Area Mod Perk",
+                        "Ammo Mod Perk",
+                        "Vampire Perk",
+                        "Will o' the Wisp Perk"
+                    }
+                },
+                new SurvivalStorePage()
+                {
+                    Name = "Alpha Mods",
+                    TexId = 38, // ammo mod
+                    Disabled = true,
+                    ItemNames = new List<string>()
+                    {
+                        "Speed Mod",
+                        "Area Mod",
+                        "Impact Mod",
+                        "Ammo Mod",
+                        "Jackpot Mod",
+                        "Xp Mod"
+                    }
+                }
+            }
+        }
+    };
+
+    [Header("Prestige")]
 	[Range(1, 5)] public int WeaponPrestigeMax = 5;
     public List<uint> PrestigeCostPerLevel = new List<uint>(DEFAULT_PRESTIGE_COSTS);
 
@@ -99,6 +220,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public List<uint> VendorCostPerLevel = new List<uint>(DEFAULT_VENDOR_COSTS);
 
     [Header("Wall Upgrades")]
+    [Obsolete]
     public List<SurvivalUpgradeEntry> Upgrades = new List<SurvivalUpgradeEntry>()
     {
         new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Health, Max = 1000 },
@@ -117,10 +239,14 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [HideInInspector] public bool DebugMoonjump;
     [HideInInspector] public int DebugStartRound;
 
+    [NonSerialized] SurvivalMobsScriptableObject _mobConfig;
+
     public List<SurvivalMobSpawnParam> GetEnabledMobs() => Mobs.Where(x => !x.Disabled).OrderBy(x => x.Probability).ThenBy(x => Mobs.IndexOf(x)).ToList();
 
     private void OnValidate()
     {
+        if (!_mobConfig) _mobConfig = SurvivalMobsScriptableObject.Load();
+
         while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
         while (SpecialRounds != null && SpecialRounds.Count > 16) SpecialRounds.RemoveAt(16);
 
@@ -156,6 +282,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 				case SurvivalStackableItemId.AlphaModImpact: 
 					stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
             }
+        }
+
+        foreach (var item in Items)
+        {
+            var name = _mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.Item)?.Def?.Name;
+            item.Name = name ?? ObjectNames.NicifyVariableName(item.Item.ToString());
         }
     }
 
@@ -203,9 +335,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/survival.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/survival_items.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gambits.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/store.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/item.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/upgrade.o");
@@ -218,28 +354,37 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/utils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
-
-        if (EnableStackables)
-        {
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/stackables.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/stackbox.o");
-            state.LDFlags.Add("-DSTACKABLES");
-            state.GetGuberCase.Add("case STACK_BOX_OCLASS: return sboxGetGuber(moby);");
-            state.HandleGuberEventCase.Add("case STACK_BOX_OCLASS: sboxHandleEvent(moby, event); break;");
-        }
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/stackables.o");
 
         if (HidePrestigeMachineEvery25Rounds) state.LDFlags.Add("-DSHOW_PRESTIGE_EVERY_25");
         if (RandomizeWeaponPickupsAtStart) state.LDFlags.Add("-DRANDOMIZE_WEAPONS_AT_START");
         state.LDFlags.Add("-DGATE");
         state.LDFlags.Add("-DSURVIVAL");
         state.LDFlags.Add("-DGAMBITS");
+        state.LDFlags.Add("-DSTACKABLES");
         state.LDFlags.Add($"-DMAP_BASE_COMPLEXITY={MapBaseComplexity}");
         state.LDFlags.Add($"-DAMMO_DROP_PROBABILITY={AmmoDropProbability}");
+        state.LDFlags.Add($"-DMOB_DROP_PROBABILITY={MobDropProbability}"); 
+        state.LDFlags.Add($"-DMOB_DROP_COOLDOWN_MIN={(int)(MobDropCooldownSecondsMin * 60)}");
+        state.LDFlags.Add($"-DMOB_DROP_COOLDOWN_MAX={(int)(MobDropCooldownSecondsMax * 60)}");
         var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
         foreach (var mob in enabledMobs)
             state.LDFlags.Add($"-DMOB_SPAWN_PARAM_{mob.Name.ToUpper().Trim().Replace(" ", "_")}={enabledMobs.IndexOf(mob)}");
+
+        // define items
+        var itemIdx = 0;
+        foreach (var item in Items)
+        {
+            state.LDFlags.Add($"-D{item.DefineName}={itemIdx}");
+            itemIdx++;
+        }
+        foreach (var item in CustomItems)
+        {
+            state.LDFlags.Add($"-D{item.DefineName}={itemIdx}");
+            itemIdx++;
+        }
 
         if (state.Debug)
         {
@@ -258,6 +403,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"mob.h\"");
         state.Includes.Add("#include \"shared.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
+        state.Includes.Add("#include \"store.h\"");
 
         // 
         state.Declarations.Add("void interopInit(void);");
@@ -274,12 +420,14 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.GetGuberCase.Add("case UPGRADE_MOBY_OCLASS: return upgradeGetGuber(moby);");
         state.GetGuberCase.Add("case DROP_MOBY_OCLASS: return dropGetGuber(moby);");
         state.GetGuberCase.Add("case DEMONBELL_MOBY_OCLASS: return demonbellGetGuber(moby);");
+        state.GetGuberCase.Add("case STORE_MOBY_OCLASS: return storeGetGuber(moby);");
 
         // handle events
         state.HandleGuberEventCase.Add("case MYSTERY_BOX_OCLASS: mboxHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case UPGRADE_MOBY_OCLASS: upgradeHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case DROP_MOBY_OCLASS: dropHandleEvent(moby, event); break;");
         state.HandleGuberEventCase.Add("case DEMONBELL_MOBY_OCLASS: demonbellHandleEvent(moby, event); break;");
+        state.HandleGuberEventCase.Add("case STORE_MOBY_OCLASS: storeHandleEvent(moby, event); break;");
 
         // 
         state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
@@ -306,7 +454,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(0x01F4); // drop
         state.MobyOClasses.Add(0x01F9); // upgrade
         state.MobyOClasses.Add(0x01F8); // trailshot
-        if (EnableStackables) state.MobyOClasses.Add(8348); // stackbox base
 
         // add mob oclasses
         var mobConfig = SurvivalMobsScriptableObject.Load();
@@ -329,8 +476,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         spriteContainer.transform.SetParent(this.transform, false);
         spriteContainer.gameObject.hideFlags = HideFlags.HideAndDontSave;
         spriteContainer.RacVersion = state.RacVersion;
-        spriteContainer.Sprites = mobConfig.SurvivalMysteryBoxSprites.ToList();
-        if (EnableStackables) spriteContainer.Sprites.AddRange(mobConfig.SurvivalStackableSprites);
+        spriteContainer.Sprites = GetItemSpriteDefs();
+        //spriteContainer.Sprites = mobConfig.SurvivalMysteryBoxSprites.ToList();
+        //if (EnableStackables) spriteContainer.Sprites.AddRange(mobConfig.SurvivalStackableSprites);
 
         // add mob sprites
         foreach (var mob in this.Mobs.Where(x => !x.Disabled))
@@ -389,8 +537,19 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("#include \"config.h\"");
         sb.AppendLine("#include \"game.h\"");
         sb.AppendLine("#include \"upgrade.h\"");
+        sb.AppendLine("#include \"item.h\"");
+        sb.AppendLine("#include \"store.h\"");
         sb.AppendLine("#include \"mob.h\"");
         sb.AppendLine();
+
+        // forward declarations
+        sb.AppendLine("// forward declarations");
+        foreach (var item in Items)
+            sb.Append(item.GetForwardDeclarations());
+        foreach (var customItem in CustomItems)
+            sb.Append(customItem.GetForwardDeclarations());
+        sb.AppendLine();
+
 
         sb.AppendLine("extern struct SurvivalMapConfig MapConfig;");
         sb.AppendLine();
@@ -403,12 +562,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine();
 
         // wall upgrades config
-        sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine("struct UpgradeDef upgradeDefs[] = {");
-        foreach (var param in Upgrades)
-            sb.AppendLine($"\t{param.GetDef()}");
-        sb.AppendLine("};");
-        sb.AppendLine();
+        //sb.AppendLine("//--------------------------------------------------------------------------");
+        //sb.AppendLine("struct UpgradeDef upgradeDefs[] = {");
+        //foreach (var param in Upgrades)
+        //    sb.AppendLine($"\t{param.GetDef()}");
+        //sb.AppendLine("};");
+        //sb.AppendLine();
 		
 		// special rounds config
         sb.AppendLine("//--------------------------------------------------------------------------");
@@ -427,8 +586,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine($"\t.SpawnDistanceMultiplier = {SpawnDistanceFactor.ToInvariantCulture()},");
         sb.AppendLine($"\t.WeaponPickupCooldownMultiplier = {WeaponPickupCooldownFactor.ToInvariantCulture()},");
         sb.AppendLine($"\t.BoltRankMultiplier = {BoltRankMultiplier.ToInvariantCulture()},");
-        sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
-        sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
+        //sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
+        //sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
         sb.AppendLine($"\t.WeaponPrestigeMax = {WeaponPrestigeMax},");
 		sb.AppendLine("\t.PrestigeCostPerLevel = {");
 		foreach(var cost in PrestigeCostPerLevel)
@@ -458,28 +617,28 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine();
 
         // stackbox items
-        sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine("int StackboxItems[] = {");
-        foreach (var item in Stackables)
-            sb.AppendLine($"\t{(int)item.Type},");
-        sb.AppendLine("};");
-        sb.AppendLine("const int StackboxItemsCount = COUNT_OF(StackboxItems);");
-        sb.AppendLine();
+        //sb.AppendLine("//--------------------------------------------------------------------------");
+        //sb.AppendLine("int StackboxItems[] = {");
+        //foreach (var item in Stackables)
+        //    sb.AppendLine($"\t{(int)item.Type},");
+        //sb.AppendLine("};");
+        //sb.AppendLine("const int StackboxItemsCount = COUNT_OF(StackboxItems);");
+        //sb.AppendLine();
 
-        sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine("short StackboxItemsMax[] = {");
-        foreach (var item in Stackables)
-            sb.AppendLine($"\t[{(int)item.Type}] {item.Max},");
-        sb.AppendLine("};");
-        sb.AppendLine();
+        //sb.AppendLine("//--------------------------------------------------------------------------");
+        //sb.AppendLine("short StackboxItemsMax[] = {");
+        //foreach (var item in Stackables)
+        //    sb.AppendLine($"\t[{(int)item.Type}] {item.Max},");
+        //sb.AppendLine("};");
+        //sb.AppendLine();
 		
         // mysterybox items
-        sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine("struct MysteryBoxItemWeight MysteryBoxItemProbabilities[] = {");
-        sb.AppendLine(GetMysteryBoxDefs(MysteryboxItems.Select(x => (x.Item, x.Probability))));
-        sb.AppendLine("};");
-        sb.AppendLine("const int MysteryBoxItemProbabilitiesCount = COUNT_OF(MysteryBoxItemProbabilities);");
-        sb.AppendLine();
+        //sb.AppendLine("//--------------------------------------------------------------------------");
+        //sb.AppendLine("struct MysteryBoxItemWeight MysteryBoxItemProbabilities[] = {");
+        //sb.AppendLine(GetMysteryBoxDefs(MysteryboxItems.Select(x => (x.Item, x.Probability))));
+        //sb.AppendLine("};");
+        //sb.AppendLine("const int MysteryBoxItemProbabilitiesCount = COUNT_OF(MysteryBoxItemProbabilities);");
+        //sb.AppendLine();
 
         // alphamods
         sb.AppendLine("//--------------------------------------------------------------------------");
@@ -487,6 +646,29 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine(string.Join("\n", DEFAULT_ALPHA_MODS.Select(x => $"\tALPHA_MOD_{x},")));
         sb.AppendLine("};");
         sb.AppendLine("const int AlphaModsEnabledCount = COUNT_OF(AlphaModsEnabled);");
+        sb.AppendLine();
+
+        // item defs
+        sb.AppendLine("//--------------------------------------------------------------------------");
+        sb.AppendLine("SurvivalItemDef_t itemDefs[] = {");
+        sb.AppendLine(GetItemDefs(Items, CustomItems));
+        sb.AppendLine("};");
+        sb.AppendLine();
+
+        // default store pages
+        sb.AppendLine("//--------------------------------------------------------------------------");
+        sb.AppendLine("struct StorePageDef DefaultStorePages[] = {");
+        sb.AppendLine(GetStorePageDefs(Stores));
+        sb.AppendLine("};");
+        sb.AppendLine("const int DefaultStorePagesCount = COUNT_OF(DefaultStorePages);");
+        sb.AppendLine();
+
+        // default stores
+        sb.AppendLine("//--------------------------------------------------------------------------");
+        sb.AppendLine("struct StoreDef DefaultStores[] = {");
+        sb.AppendLine(GetStoreDefs(Stores));
+        sb.AppendLine("};");
+        sb.AppendLine("const int DefaultStoresCount = COUNT_OF(DefaultStores);");
         sb.AppendLine();
 
         // misc
@@ -503,8 +685,10 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("\tMapConfig.DefaultSpawnParamsCount = COUNT_OF(defaultSpawnParams);");
         sb.AppendLine("\tMapConfig.SpecialRoundParams = specialRoundParams;");
         sb.AppendLine("\tMapConfig.SpecialRoundParamsCount = COUNT_OF(specialRoundParams);");
-		sb.AppendLine("\tMapConfig.UpgradeDefs = upgradeDefs;");
-        sb.AppendLine("\tMapConfig.UpgradeDefCount = COUNT_OF(upgradeDefs);");
+		//sb.AppendLine("\tMapConfig.UpgradeDefs = upgradeDefs;");
+        //sb.AppendLine("\tMapConfig.UpgradeDefCount = COUNT_OF(upgradeDefs);");
+        sb.AppendLine("\tMapConfig.ItemDefs = itemDefs;");
+        sb.AppendLine("\tMapConfig.ItemDefCount = COUNT_OF(itemDefs);");
         sb.AppendLine("}");
         sb.AppendLine();
 
@@ -523,6 +707,150 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         
         return sb.ToString();
+    }
+
+    List<SpriteDef> GetItemSpriteDefs()
+    {
+        var sprites = new List<SpriteDef>();
+        if (!_mobConfig) _mobConfig = SurvivalMobsScriptableObject.Load();
+
+        foreach (var item in Items)
+        {
+            var templateItemDef = _mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.Item);
+            if (templateItemDef is null) continue;
+            if (!templateItemDef.Def.SpriteDefOverride.m_Texture) continue;
+            if (sprites.Any(s => s.m_Texture == templateItemDef.Def.SpriteDefOverride.m_Texture)) continue;
+
+            sprites.Add(templateItemDef.Def.SpriteDefOverride);
+        }
+
+        foreach (var customItem in CustomItems)
+        {
+            if (!customItem.SpriteDefOverride.m_Texture) continue;
+            if (sprites.Any(s => s.m_Texture == customItem.SpriteDefOverride.m_Texture)) continue;
+
+            sprites.Add(customItem.SpriteDefOverride);
+        }
+
+        return sprites;
+    }
+
+    string GetItemDefs(List<SurvivalTemplateItemEntry> items, List<SurvivalItemEntry> customItems)
+    {
+        var sb = new StringBuilder();
+
+        // add default items first
+        foreach (var item in items)
+        {
+            sb.AppendLine(item.GetDef());
+        }
+
+        // next add custom items
+        foreach (var customItem in customItems)
+        {
+            sb.AppendLine(customItem.GetDef());
+        }
+
+        return sb.ToString();
+    }
+
+    string GetStorePageDefs(List<SurvivalStore> stores)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var store in stores.Where(x => !x.Disabled))
+        {
+            foreach (var page in store.Pages.Where(x => !x.Disabled))
+            {
+                sb.Append(page.GetDef(Items, CustomItems));
+            }
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    string GetStoreDefs(List<SurvivalStore> stores)
+    {
+        var sb = new StringBuilder();
+
+        var pageIdx = 0;
+        foreach (var store in stores.Where(x => !x.Disabled))
+        {
+            sb.Append(store.GetDef(pageIdx));
+
+            pageIdx += store.Pages.Count(x => !x.Disabled);
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    public float GetMysteryboxSumWeights()
+    {
+        var sum = 0f;
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+
+        // default items
+        foreach (var defaultItem in Items)
+        {
+            var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItem.Item);
+            if (def == null) continue;
+
+            sum += defaultItem.MysteryboxChanceWeight.GetValue(def.Def.MysteryboxChanceWeight);
+        }
+
+        // custom items
+        foreach (var customItem in CustomItems)
+        {
+            sum += customItem.MysteryboxChanceWeight;
+        }
+
+        return sum;
+    }
+
+    public float GetDropsSumWeights()
+    {
+        var sum = 0f;
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+
+        // default items
+        foreach (var defaultItem in Items)
+        {
+            var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItem.Item);
+            if (def == null) continue;
+
+            sum += defaultItem.DropChanceWeight.GetValue(def.Def.DropChanceWeight);
+        }
+
+        // custom items
+        foreach (var customItem in CustomItems)
+        {
+            sum += customItem.DropChanceWeight;
+        }
+
+        return sum;
+    }
+
+    public float GetVendorWeaponUpgradeSumWeights()
+    {
+        var sum = 0f;
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+
+        // default items
+        foreach (var defaultItem in Items)
+        {
+            var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItem.Item);
+            if (def == null) continue;
+
+            sum += defaultItem.VendorRewardChanceWeight.GetValue(def.Def.VendorRewardChanceWeight);
+        }
+
+        // custom items
+        foreach (var customItem in CustomItems)
+        {
+            sum += customItem.VendorRewardChanceWeight;
+        }
+
+        return sum;
     }
 
     string GetMysteryBoxDefs(IEnumerable<(SurvivalMysteryboxItemId Item, float Probability)> items)
@@ -582,7 +910,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             {
                 case DEMONBELL_OCLASS: expectedPvarSize = 20; break;
                 case BANK_OCLASS: expectedPvarSize = 16; break;
-                case STACKBOX_OCLASS: expectedPvarSize = 16; break;
+                //case STACKBOX_OCLASS: expectedPvarSize = 16; break;
             }
 
             if (expectedPvarSize.HasValue)
@@ -813,14 +1141,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             SurvivalSetupAddMoby(mysteryBoxGo.transform, 9781, "Mysterybox", position + forward * 3f);
             SurvivalSetupAddMoby(mysteryBoxGo.transform, 9781, "Mysterybox", position + forward * 5f);
 
-            // vendors
+            // store
             position += right * 5f;
-            var stackablesGo = new GameObject("Stackable Vendors");
-            stackablesGo.transform.SetParent(go.transform, false);
-            stackablesGo.transform.position = position;
-            SurvivalSetupAddMoby(stackablesGo.transform, 8323, "Stackbox", position + forward * 0f);
-            SurvivalSetupAddMoby(stackablesGo.transform, 8323, "Stackbox", position + forward * 5f);
-            SurvivalSetupAddMoby(stackablesGo.transform, 8323, "Stackbox", position + forward * 10f);
+            var storeGo = new GameObject("Store");
+            storeGo.transform.SetParent(go.transform, false);
+            storeGo.transform.position = position;
+            SurvivalSetupAddMoby(storeGo.transform, STORE_OCLASS, "Store", position + forward * 0f);
 
             // upgrades
             position += right * 5f;
@@ -889,6 +1215,19 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
                 }
             }
         }
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Survival/Create Store Moby", priority = 10)]
+    public static void CreateStoreMoby()
+    {
+        var go = new GameObject("Store");
+        var moby = go.AddComponent<Moby>();
+        moby.OClass = STORE_OCLASS;
+        moby.RCVersion = RCVER.DL;
+        moby.UpdateDistance = 255;
+        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Store");
+        moby.InitializePVarReferences();
+        UnityHelper.OnAfterCreateGameObject(go);
     }
 
     private static Moby SurvivalSetupAddMoby(Transform parent, int oclass, string name, Vector3 position)
@@ -1583,6 +1922,74 @@ public enum SurvivalStackableItemId
     ExplodingEnemies = 9, // stack +X damage per explosion
 };
 
+// DO NOT REASSIGN VALUES
+// WILL BREAK MAPS & CONFIG
+public enum SurvivalDefaultItems
+{
+    AlphamodSpeed = 0,
+    AlphamodAmmo = 1,
+    AlphamodImpact = 2,
+    AlphamodArea = 3,
+    AlphamodXp = 4,
+    AlphamodJackpot = 5,
+    ImmediateUpgradeWeapon = 6,
+    ImmediateDreadToken = 7,
+    ImmediateResetRandomGate = 8,
+    ImmediateRandomizeWeaponPickups = 9,
+    ImmediateVoxMysterybox = 10,
+    ImmediateGlobalInfiniteAmmo = 11,
+    ImmediateGlobalQuad = 12,
+    ImmediateGlobalShield = 13,
+    HoldAutoSelfRevive = 14,
+    HoldManualInvisibilityCloak = 15,
+    HoldManualHealthTornado = 16,
+    PassiveLowHealthDamageBuff = 17,
+    PassiveExtraJump = 18,
+    PassiveExtraShot = 19,
+    PassiveHoverboots = 20,
+    PassiveAlphaModSpeed = 21,
+    PassiveAlphaModImpact = 22,
+    PassiveAlphaModArea = 23,
+    PassiveAlphaModAmmo = 24,
+    PassiveVampire = 25,
+    PassiveExplodingEnemies = 26,
+    ImmediateGlobalNuke = 27,
+    ImmediateGlobalAmmo = 28,
+    ImmediateGlobalDoublePoints = 29,
+    ImmediateGlobalDoubleXp = 30,
+    ImmediateGlobalFreeze = 31,
+    ImmediateGlobalHealth = 32,
+    ImmediateUpgradeDualVipers = 33,
+    ImmediateUpgradeMagmaCannon = 34,
+    ImmediateUpgradeArbiter = 35,
+    ImmediateUpgradeFusionRifle = 36,
+    ImmediateUpgradeMineLauncher = 37,
+    ImmediateUpgradeB6Obliterator = 38,
+    ImmediateUpgradeHoloshield = 39,
+    ImmediateUpgradeScorpionFlail = 40,
+    ImmediatePlayerSpeedUpgrade = 41,
+    ImmediatePlayerDamageUpgrade = 42,
+    ImmediatePlayerCritUpgrade = 43,
+    ImmediatePlayerHealthUpgrade = 44,
+};
+
+public enum SurvivalItemType
+{
+    [Description("SURVIVAL_ITEM_PASSIVE"), InspectorName("Effect")] Passive,
+    [Description("SURVIVAL_ITEM_CONSUMABLE_AUTO"), InspectorName("Totem")] ConsumableAuto,
+    [Description("SURVIVAL_ITEM_CONSUMABLE_MANUAL"), InspectorName("Consumable")] ConsumableManual,
+    [Description("SURVIVAL_ITEM_CONSUMABLE_IMMEDIATE"), InspectorName("Instant")] ConsumableImmediate,
+    [Description("SURVIVAL_ITEM_CONSUMABLE_OTHER")] Other
+};
+
+public enum SurvivalItemStoreCostType
+{
+    [Description("SURVIVAL_ITEM_STORE_COST_BOLTS_LINEAR"), Tooltip("Bolt cost increases by fixed amount after each purchase.")] BoltLinear, // ie 10 => 20 => 30 => 40
+    [Description("SURVIVAL_ITEM_STORE_COST_BOLTS_EXPONENTIAL"), Tooltip("Bolt cost is multiplied by a factor after each purchase.")] BoltExponential, // ie 10 => 20 => 40 => 80
+    [Description("SURVIVAL_ITEM_STORE_COST_TOKENS_LINEAR"), Tooltip("Token cost increases by fixed amount after each purchase.")] TokenLinear, // ie 10 => 20 => 30 => 40
+    [Description("SURVIVAL_ITEM_STORE_COST_TOKENS_EXPONENTIAL"), Tooltip("Token cost is multiplied by a factor after each purchase.")] TokenExponential, // ie 10 => 20 => 40 => 80
+};
+
 public enum SurvivalUpgradeId
 {
 	Health,
@@ -1628,6 +2035,285 @@ public class SurvivalStackableEntry
 }
 
 [System.Serializable]
+public class SurvivalTemplateItemEntry
+{
+    [ReadOnly] public string Name;
+    public SurvivalDefaultItems Item;
+
+    [Header("Usage")]
+    [Tooltip("If 0 can hold an infinite amount.")] public Int32Override MaxHeldAtOnce;
+    public BoolOverride AppearOnWall;
+
+    [Header("Store")]
+    public EnumOverride<SurvivalItemStoreCostType> StoreCostType;
+    public UInt32Override StoreCost;
+    public DoubleOverride StoreCostIncrease; // + if linear, * if exponential
+
+    [Header("Mysterybox")]
+    public FloatOverride MysteryboxChanceWeight;
+    public BoolOverride MysteryboxForceAcquire;
+
+    [Header("Drops")]
+    public FloatOverride DropChanceWeight;
+
+    [Header("Weapon Vendor")]
+    [Tooltip("Chance to acquire item on weapon upgrade at vendor.")] public FloatOverride VendorRewardChanceWeight;
+
+    public string DefineName => $"ITEM_{ObjectNames.NicifyVariableName(Item.ToString()).ToCDefine()}";
+
+    public SurvivalTemplateItemEntry() { }
+
+    public SurvivalTemplateItemEntry(SurvivalDefaultItems item)
+    {
+        Item = item;
+    }
+
+    public string GetDef()
+    {
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+
+        StringBuilder sb = new StringBuilder();
+
+        var defaultItem = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == this.Item);
+        if (defaultItem == null)
+            throw new NotImplementedException($"DefaultItem \"{Item}\" not defined in global survival config.");
+
+        var storeCostType = StoreCostType.GetValue(defaultItem.Def.StoreCostType);
+
+        // try and find tex id
+        var texId = defaultItem.Def.TexId;
+        if (defaultItem.Def.SpriteDefOverride.m_Texture)
+        {
+            var foundIdx = mapConfig.FindSpriteIdxFromSpriteDef(defaultItem.Def.SpriteDefOverride);
+            if (foundIdx >= 0)
+                texId = foundIdx;
+        }
+
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.Name = \"{defaultItem.Def.Name.Replace("\"", "").MaxLength(31)}\",");
+        sb.AppendLine($"\t\t.Description = \"{defaultItem.Def.Description.Replace("\"", "").MaxLength(63)}\",");
+        sb.AppendLine($"\t\t.TexId = {texId},");
+        sb.AppendLine($"\t\t.TexColor = 0x{RCHelper.GetAbgrHex(defaultItem.Def.TexColor, overrideAlpha: 0.5f):X8},");
+        sb.AppendLine($"\t\t.Type = {defaultItem.Def.Type.GetDescription()},");
+        sb.AppendLine($"\t\t.MaxHeldAtOnce = {MaxHeldAtOnce.GetValue(defaultItem.Def.MaxHeldAtOnce)},");
+        sb.AppendLine($"\t\t.AppearOnWall = {(AppearOnWall.GetValue(defaultItem.Def.AppearOnWall) ? 1 : 0)},");
+        sb.AppendLine($"\t\t.MysteryboxChanceWeight = {MysteryboxChanceWeight.GetValue(defaultItem.Def.MysteryboxChanceWeight).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.MysteryboxForceAcquire = {(MysteryboxForceAcquire.GetValue(defaultItem.Def.MysteryboxForceAcquire) ? 1 : 0)},");
+        sb.AppendLine($"\t\t.DropChanceWeight = {DropChanceWeight.GetValue(defaultItem.Def.DropChanceWeight).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.VendorRewardChanceWeight = {VendorRewardChanceWeight.GetValue(defaultItem.Def.VendorRewardChanceWeight).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.StoreCostType = {storeCostType.GetDescription()},");
+        sb.AppendLine($"\t\t.StoreCost = {StoreCost.GetValue(defaultItem.Def.StoreCost)},");
+        if (storeCostType == SurvivalItemStoreCostType.BoltLinear || storeCostType == SurvivalItemStoreCostType.TokenLinear)
+            sb.AppendLine($"\t\t.StoreCostIncrease.Linear = {(uint)Math.Clamp(StoreCostIncrease.GetValue(defaultItem.Def.StoreCostIncrease), 0, uint.MaxValue)},");
+        else if (storeCostType == SurvivalItemStoreCostType.BoltExponential || storeCostType == SurvivalItemStoreCostType.TokenExponential)
+            sb.AppendLine($"\t\t.StoreCostIncrease.Exponential = {StoreCostIncrease.GetValue(defaultItem.Def.StoreCostIncrease).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.VTable = {{"); 
+        sb.AppendLine($"\t\t\t.InitFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomInitFunctionName) ? "NULL" : defaultItem.Def.CustomInitFunctionName)},");
+        sb.AppendLine($"\t\t\t.TickUpdateFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomTickUpdateFunctionName) ? "NULL" : defaultItem.Def.CustomTickUpdateFunctionName)},");
+        sb.AppendLine($"\t\t\t.DrawUpdateFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomDrawUpdateFunctionName) ? "NULL" : defaultItem.Def.CustomDrawUpdateFunctionName)},");
+        sb.AppendLine($"\t\t\t.OnAcquiredFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomOnAcquiredFunctionName) ? "NULL" : defaultItem.Def.CustomOnAcquiredFunctionName)},");
+        sb.AppendLine($"\t\t\t.OnConsumedFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomOnConsumedFunctionName) ? "NULL" : defaultItem.Def.CustomOnConsumedFunctionName)},");
+        sb.AppendLine($"\t\t\t.HasRoomForMoreFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomHasRoomForMoreFunctionName) ? "NULL" : defaultItem.Def.CustomHasRoomForMoreFunctionName)},");
+        sb.AppendLine($"\t\t\t.CanBuyInStoreFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomCanBuyInStoreFunctionName) ? "NULL" : defaultItem.Def.CustomCanBuyInStoreFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetStoreCostFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetStoreCostFunctionName) ? "NULL" : defaultItem.Def.CustomGetStoreCostFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetMysteryboxChanceFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetMysteryboxChanceFunctionName) ? "NULL" : defaultItem.Def.CustomGetMysteryboxChanceFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetDropChanceFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetDropChanceFunctionName) ? "NULL" : defaultItem.Def.CustomGetDropChanceFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetVendorRewardChanceFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetVendorRewardChanceFunctionName) ? "NULL" : defaultItem.Def.CustomGetVendorRewardChanceFunctionName)},");
+        sb.AppendLine($"\t\t}}");
+        sb.AppendLine("\t},");
+
+        return sb.ToString().TrimEnd();
+    }
+
+    public string GetForwardDeclarations()
+    {
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+
+        var defaultItem = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == this.Item);
+        if (defaultItem == null)
+            throw new NotImplementedException($"DefaultItem \"{Item}\" not defined in global survival config.");
+
+        return defaultItem.Def.GetForwardDeclarations();
+    }
+}
+
+[System.Serializable]
+public class SurvivalItemEntry
+{
+    public string Name;
+    public string Description;
+
+    [Header("Usage")]
+    public SurvivalItemType Type = SurvivalItemType.Passive;
+    [Tooltip("If 0 can hold an infinite amount.")] public int MaxHeldAtOnce = 0;
+    public bool AppearOnWall;
+
+    [Header("Sprite")]
+    [Tooltip("Use existing sprite from game")] public int TexId;
+    [ColorUsage(showAlpha: false)] public Color TexColor = Color.white;
+    [Tooltip("Inject custom sprite")] public SpriteDef SpriteDefOverride;
+
+    [Header("Store")]
+    public SurvivalItemStoreCostType StoreCostType = SurvivalItemStoreCostType.BoltLinear;
+    public uint StoreCost;
+    public double StoreCostIncrease; // + if linear, * if exponential
+
+    [Header("Mysterybox")]
+    public float MysteryboxChanceWeight;
+    [Tooltip("If true the player will be forced to acquire the item")] public bool MysteryboxForceAcquire;
+
+    [Header("Drops")]
+    public float DropChanceWeight;
+
+    [Header("Weapon Vendor")]
+    [Tooltip("Chance to acquire item on weapon upgrade at vendor.")] public float VendorRewardChanceWeight;
+
+    // function overrides
+    [Header("Function Overrides")]
+    public string CustomInitFunctionName;
+    public string CustomTickUpdateFunctionName;
+    public string CustomDrawUpdateFunctionName;
+    public string CustomOnAcquiredFunctionName;
+    public string CustomOnConsumedFunctionName;
+    public string CustomHasRoomForMoreFunctionName;
+    public string CustomCanBuyInStoreFunctionName;
+    public string CustomGetStoreCostFunctionName;
+    public string CustomGetMysteryboxChanceFunctionName;
+    public string CustomGetDropChanceFunctionName;
+    public string CustomGetVendorRewardChanceFunctionName;
+
+    public string DefineName => $"ITEM_{Name.ToCDefine()}";
+
+    public string GetDef()
+    {
+        var mapConfig = GameObject.FindObjectOfType<MapConfig>();
+
+        StringBuilder sb = new StringBuilder();
+
+        // try and find tex id
+        var texId = TexId;
+        if (SpriteDefOverride.m_Texture)
+        {
+            var foundIdx = mapConfig.FindSpriteIdxFromSpriteDef(SpriteDefOverride);
+            if (foundIdx >= 0)
+                texId = foundIdx;
+        }
+
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.Name = \"{Name.Replace("\"", "").MaxLength(31)}\",");
+        sb.AppendLine($"\t\t.Description = \"{Description.Replace("\"", "").MaxLength(63)}\",");
+        sb.AppendLine($"\t\t.TexId = {texId},");
+        sb.AppendLine($"\t\t.TexColor = 0x{RCHelper.GetAbgrHex(TexColor, overrideAlpha: 0.5f):X8},");
+        sb.AppendLine($"\t\t.Type = {Type.GetDescription()},");
+        sb.AppendLine($"\t\t.MaxHeldAtOnce = {MaxHeldAtOnce},");
+        sb.AppendLine($"\t\t.AppearOnWall = {(AppearOnWall ? 1 : 0)},");
+        sb.AppendLine($"\t\t.MysteryboxChanceWeight = {MysteryboxChanceWeight.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.MysteryboxForceAcquire = {(MysteryboxForceAcquire ? 1 : 0)},");
+        sb.AppendLine($"\t\t.DropChanceWeight = {DropChanceWeight.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.VendorRewardChanceWeight = {VendorRewardChanceWeight.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.StoreCostType = {StoreCostType.GetDescription()},");
+        sb.AppendLine($"\t\t.StoreCost = {StoreCost},");
+        if (StoreCostType == SurvivalItemStoreCostType.BoltLinear || StoreCostType == SurvivalItemStoreCostType.TokenLinear)
+            sb.AppendLine($"\t\t.StoreCostIncrease.Linear = {(uint)Math.Clamp(StoreCostIncrease, 0, uint.MaxValue)},");
+        else if (StoreCostType == SurvivalItemStoreCostType.BoltExponential || StoreCostType == SurvivalItemStoreCostType.TokenExponential)
+            sb.AppendLine($"\t\t.StoreCostIncrease.Exponential = {StoreCostIncrease.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.VTable = {{"); 
+        sb.AppendLine($"\t\t\t.InitFunc = {(string.IsNullOrEmpty(CustomInitFunctionName) ? "NULL" : CustomInitFunctionName)},");
+        sb.AppendLine($"\t\t\t.TickUpdateFunc = {(string.IsNullOrEmpty(CustomTickUpdateFunctionName) ? "NULL" : CustomTickUpdateFunctionName)},");
+        sb.AppendLine($"\t\t\t.DrawUpdateFunc = {(string.IsNullOrEmpty(CustomDrawUpdateFunctionName) ? "NULL" : CustomDrawUpdateFunctionName)},");
+        sb.AppendLine($"\t\t\t.OnAcquiredFunc = {(string.IsNullOrEmpty(CustomOnAcquiredFunctionName) ? "NULL" : CustomOnAcquiredFunctionName)},");
+        sb.AppendLine($"\t\t\t.OnConsumedFunc = {(string.IsNullOrEmpty(CustomOnConsumedFunctionName) ? "NULL" : CustomOnConsumedFunctionName)},");
+        sb.AppendLine($"\t\t\t.HasRoomForMoreFunc = {(string.IsNullOrEmpty(CustomHasRoomForMoreFunctionName) ? "NULL" : CustomHasRoomForMoreFunctionName)},");
+        sb.AppendLine($"\t\t\t.CanBuyInStoreFunc = {(string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName) ? "NULL" : CustomCanBuyInStoreFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetStoreCostFunc = {(string.IsNullOrEmpty(CustomGetStoreCostFunctionName) ? "NULL" : CustomGetStoreCostFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetMysteryboxChanceFunc = {(string.IsNullOrEmpty(CustomGetMysteryboxChanceFunctionName) ? "NULL" : CustomGetMysteryboxChanceFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetDropChanceFunc = {(string.IsNullOrEmpty(CustomGetDropChanceFunctionName) ? "NULL" : CustomGetDropChanceFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetVendorRewardChanceFunc = {(string.IsNullOrEmpty(CustomGetVendorRewardChanceFunctionName) ? "NULL" : CustomGetVendorRewardChanceFunctionName)},");
+        sb.AppendLine($"\t\t}}");
+        sb.AppendLine("\t},");
+
+        return sb.ToString().TrimEnd();
+    }
+
+    public string GetForwardDeclarations()
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (!string.IsNullOrEmpty(CustomInitFunctionName)) sb.AppendLine($"void {CustomInitFunctionName}(int defIdx, struct SurvivalItemDef *def);");
+        if (!string.IsNullOrEmpty(CustomTickUpdateFunctionName)) sb.AppendLine($"void {CustomTickUpdateFunctionName}(int defIdx, struct SurvivalItemDef *def);");
+        if (!string.IsNullOrEmpty(CustomDrawUpdateFunctionName)) sb.AppendLine($"void {CustomDrawUpdateFunctionName}(int defIdx, struct SurvivalItemDef *def);");
+        if (!string.IsNullOrEmpty(CustomOnAcquiredFunctionName)) sb.AppendLine($"void {CustomOnAcquiredFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+        if (!string.IsNullOrEmpty(CustomOnConsumedFunctionName)) sb.AppendLine($"void {CustomOnConsumedFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+        if (!string.IsNullOrEmpty(CustomHasRoomForMoreFunctionName)) sb.AppendLine($"void {CustomHasRoomForMoreFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+        if (!string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName)) sb.AppendLine($"void {CustomCanBuyInStoreFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
+        if (!string.IsNullOrEmpty(CustomGetStoreCostFunctionName)) sb.AppendLine($"void {CustomGetStoreCostFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
+        if (!string.IsNullOrEmpty(CustomGetMysteryboxChanceFunctionName)) sb.AppendLine($"void {CustomGetMysteryboxChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+
+        return sb.ToString();
+    }
+}
+
+[System.Serializable]
+public class SurvivalStore
+{
+    public string Name;
+    public bool Disabled;
+    public List<SurvivalStorePage> Pages = new List<SurvivalStorePage>();
+
+    public string GetDef(int pageIdx)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.Name = \"{Name.MaxLength(31).Escape()}\",");
+        sb.AppendLine($"\t\t.PagesCount = {Pages.Count(x => !x.Disabled)},");
+        sb.AppendLine($"\t\t.Pages = &DefaultStorePages[{pageIdx}]");
+        sb.AppendLine("\t},");
+
+        return sb.ToString();
+    }
+}
+
+[System.Serializable]
+public class SurvivalStorePage
+{
+    public string Name;
+    public int TexId;
+    public bool Disabled;
+    public List<string> ItemNames = new List<string>();
+
+    public string GetDef(List<SurvivalTemplateItemEntry> items, List<SurvivalItemEntry> customItems)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("\t{");
+        sb.AppendLine($"\t\t.Name = \"{Name.MaxLength(31).Escape()}\",");
+        sb.AppendLine($"\t\t.TexId = {TexId},");
+        sb.AppendLine($"\t\t.ItemsCount = {ItemNames.Count},");
+        sb.AppendLine($"\t\t.Items = {{");
+        foreach (var itemName in ItemNames)
+        {
+            var templateItemDef = items.FirstOrDefault(x => x.Name == itemName);
+            if (templateItemDef != null)
+            {
+                sb.AppendLine($"\t\t\t{templateItemDef.DefineName},");
+                continue;
+            }
+
+            var customItem = customItems.FirstOrDefault(x => x.Name == itemName);
+            if (customItem == null) throw new InvalidOperationException($"StorePage {Name} cannot find item with name {itemName}");
+
+            sb.AppendLine($"\t\t\t{customItem.DefineName},");
+        }
+        sb.AppendLine($"\t\t}}");
+        sb.AppendLine("\t},");
+
+        return sb.ToString();
+    }
+}
+
+[System.Serializable]
 public class SurvivalUpgradeEntry
 {
     public SurvivalUpgradeId Type;
@@ -1664,6 +2350,7 @@ public class SurvivalGambit
     public bool DisableBank;
     public bool DisablePrestigeMachine;
     public bool DisableStackables;
+    [Obsolete] public bool DisableStores;
     public bool InstantRespawnMysteryBox;
     public float DifficultyMultiplier = 1;
     public float XpMultiplier = 1;
@@ -1715,7 +2402,7 @@ public class SurvivalGambit
         sb.AppendLine($"\t\t.DisableVendor = {(DisableVendor ? 1 : 0)},");
         sb.AppendLine($"\t\t.DisableBank = {(DisableBank ? 1 : 0)},");
         sb.AppendLine($"\t\t.DisablePrestigeMachine = {(DisablePrestigeMachine ? 1 : 0)},");
-        sb.AppendLine($"\t\t.DisableStackables = {(DisableStackables ? 1 : 0)},");
+        sb.AppendLine($"\t\t.DisableStores = {(DisableStores ? 1 : 0)},");
         sb.AppendLine($"\t\t.InstantRespawnMysteryBox = {(InstantRespawnMysteryBox ? 1 : 0)},");
         sb.AppendLine("\t},");
 
@@ -1779,7 +2466,7 @@ public class SurvivalMobSpawnParam
     public int Variant;
     public int Behavior;
     public SurvivalMobAttributes Attributes;
-    public SurvivalEnumOverride<DLBlipTypes> BlipType;
+    public EnumOverride<DLBlipTypes> BlipType;
 
     [Header("Spawn Parameters")]
     public bool SpecialRoundOnly = false;
@@ -1794,29 +2481,29 @@ public class SurvivalMobSpawnParam
     [Header("Mob Parameters")]
     [Min(0)] public float SizeMultiplier = 1;
     [Min(0), Tooltip("Increase or decrease turn speed.")] public float TurnSpeedMultiplier = 1;
-    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public SurvivalFloatOverride RangedAttackDistance;
-    public SurvivalFloatOverride Xp;
-    public SurvivalFloatOverride Bolts;
+    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public FloatOverride RangedAttackDistance;
+    public FloatOverride Xp;
+    public FloatOverride Bolts;
 
     [Header("Damage")]
-    public SurvivalFloatOverride Damage;
-    public SurvivalFloatOverride DamageMax;
-    public SurvivalFloatOverride DamageScale;
+    public FloatOverride Damage;
+    public FloatOverride DamageMax;
+    public FloatOverride DamageScale;
 
     [Header("Speed")]
-    public SurvivalFloatOverride Speed;
-    public SurvivalFloatOverride SpeedMax;
-    public SurvivalFloatOverride SpeedScale;
+    public FloatOverride Speed;
+    public FloatOverride SpeedMax;
+    public FloatOverride SpeedScale;
 
     [Header("Health")]
-    public SurvivalFloatOverride Health;
-    public SurvivalFloatOverride HealthMax;
-    public SurvivalFloatOverride HealthScale;
+    public FloatOverride Health;
+    public FloatOverride HealthMax;
+    public FloatOverride HealthScale;
 
     [Header("Colors")]
-    public SurvivalColorOverride BaseColor;
-    public SurvivalColorOverride GlowColor;
-    public SurvivalColorOverride SpriteColor;
+    public ColorNoAlphaOverride BaseColor;
+    public ColorNoAlphaOverride GlowColor;
+    public ColorNoAlphaOverride SpriteColor;
 
     public string GetDef(SpriteDef[] spriteDefs, float? probabilityOverride = null)
     {
@@ -1883,27 +2570,6 @@ public class SurvivalMobSpawnParam
         return sb.ToString();
     }
 
-}
-
-[Serializable]
-public struct SurvivalFloatOverride
-{
-    public bool HasOverride;
-    public float OverrideValue;
-}
-
-[Serializable]
-public struct SurvivalColorOverride
-{
-    public bool HasOverride;
-    [ColorUsage(false)] public Color OverrideValue;
-}
-
-[Serializable]
-public struct SurvivalEnumOverride<T>
-{
-    public bool HasOverride;
-    public T OverrideValue;
 }
 
 [Serializable]

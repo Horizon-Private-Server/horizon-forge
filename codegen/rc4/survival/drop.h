@@ -12,17 +12,6 @@
 #define DROP_MOBY_OCLASS (0x1F4)
 #define DROP_PICKUP_RADIUS (3)
 
-enum DropType
-{
-	DROP_NUKE,
-	DROP_AMMO,
-	DROP_DOUBLE_POINTS,
-	DROP_DOUBLE_XP,
-	DROP_FREEZE,
-	DROP_HEALTH,
-	DROP_COUNT
-};
-
 enum DropEventType
 {
 	DROP_EVENT_SPAWN,
@@ -47,22 +36,23 @@ struct PartInstance
 
 struct DropPVar
 {
-	enum DropType Type;
+	int ItemIdx;
 	int DestroyAtTime;
 	int Team;
 	char HitGround;
-	char Owner;
+	char OwnerPlayerId;
 	char Destroyed;
 	int TexId;
+	u32 TexColor;
 	struct PartInstance *Particles[4];
 };
 
 struct DropSpawnEventArgs
 {
-	enum DropType Type;
+	int ItemIdx;
 	int DestroyAtTime;
 	int Team;
-	char Owner;
+	char OwnerPlayerId;
 };
 
 struct DropDestroyedEventArgs
@@ -74,9 +64,10 @@ struct DropPickupEventArgs
 	int PickedUpByPlayerId;
 };
 
+int dropGetRandomItem(Moby *mobMoby, int forPlayerId, int gadgetId);
 void dropTick(void);
 void dropInit(void);
-int dropCreate(VECTOR position, enum DropType dropType, int destroyAtTime, int team);
+int dropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team);
 struct GuberMoby *dropGetGuber(Moby *moby);
 int dropHandleEvent(Moby *moby, GuberEvent *event);
 

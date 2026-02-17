@@ -36,8 +36,6 @@ typedef struct SurvivalBakedConfig
 	float WeaponPickupCooldownMultiplier;
 	int BoltRankMultiplier;
 	SurvivalBakedSpawnpoint_t BakedSpawnPoints[BAKED_SPAWNPOINT_COUNT];
-	int StackboxBaseCost;
-	int StackboxCostPerPerk;
 	char WeaponPrestigeMax;
 	int PrestigeCostPerLevel[WEAPON_PRESTIGE_MAX];
 	u32 VendorCost[VENDOR_MAX_WEAPON_LEVEL];

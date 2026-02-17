@@ -13,6 +13,7 @@
 #include <libdl/pad.h>
 #include <libdl/time.h>
 #include <libdl/net.h>
+#include <libdl/radar.h>
 #include "messageid.h"
 #include <libdl/game.h>
 #include <libdl/string.h>
@@ -31,9 +32,9 @@
 #include <libdl/utils.h>
 #include "game.h"
 #include "mob.h"
+#include "maputils.h"
 #include "gate.h"
 
-extern char LocalPlayerStrBuffer[2][64];
 extern struct SurvivalMapConfig MapConfig;
 
 /*
@@ -62,11 +63,11 @@ void playPaidSound(Player *player)
 }
 
 //--------------------------------------------------------------------------
-int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMessage, int boltCost, int tokenCost, int actionCooldown, float sqrDistance, int btns)
+int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMessage, int boltCost, int tokenCost, int actionCooldown, float sqrDistance, int btns, int hold)
 {
 	static int shown[GAME_MAX_LOCALS] = {0, 0};
 	VECTOR delta;
-	if (!player || !player->PlayerMoby || !player->IsLocal || !isInGame())
+	if (!player || !player->PlayerMoby || !player->IsLocal || !isInGame() || playerIsDead(player))
 		return 0;
 
 	struct SurvivalPlayer *playerData = NULL;
@@ -88,7 +89,10 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 		shown[localPlayerIndex] = gameGetTime();
 
 		// handle pad input
-		if (padGetAnyButtonDown(localPlayerIndex, btns) > 0 && (!playerData || (playerData->State.Bolts >= boltCost && playerData->State.CurrentTokens >= tokenCost)))
+		int btnDown = padGetAnyButton(localPlayerIndex, btns) > 0;
+		int btnDownThisFrame = padGetAnyButtonDown(localPlayerIndex, btns) > 0;
+		int btnCheck = hold ? btnDown : btnDownThisFrame;
+		if (btnCheck && (!playerData || (playerData->State.Bolts >= boltCost && playerData->State.CurrentTokens >= tokenCost)))
 		{
 			if (playerData)
 			{
@@ -135,12 +139,24 @@ int mobyIsMob(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int playerGetStackableCount(int playerId, int stackable)
+int playerGetItemCount(Player *player, int itemId)
 {
-	if (!MapConfig.State)
+	if (!MapConfig.Functions.GetPlayerItemCountFunc)
 		return 0;
 
-	return MapConfig.State->PlayerStates[playerId].State.ItemStackable[stackable];
+	return MapConfig.Functions.GetPlayerItemCountFunc(player, itemId);
+}
+
+//--------------------------------------------------------------------------
+void playerGiveAlphaMod(Player *player, int alphamod)
+{
+	if (!playerIsValid(player))
+		return;
+
+	if (MapConfig.State)
+		MapConfig.State->PlayerStates[player->PlayerId].State.AlphaMods[alphamod] += 1;
+	if (player->GadgetBox)
+		player->GadgetBox->ModBasic[alphamod - 1]++;
 }
 
 //--------------------------------------------------------------------------
@@ -337,5 +353,164 @@ void mapEnforceSingleWeaponRestriction(int weaponId)
 	for (i = 0; i < GAME_MAX_LOCALS; ++i)
 	{
 		mapLocalPlayerEnforceSingleWeaponRestriction(i, weaponId, 1);
+	}
+}
+
+//--------------------------------------------------------------------------
+void spawnHealthBomb(Player *fromPlayer, VECTOR position, float radius, float healPercent)
+{
+	int i;
+	VECTOR dt;
+	Player **players = playerGetAll();
+
+	// heal / revive
+	if (fromPlayer)
+	{
+		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+		{
+			Player *player = players[i];
+			if (!playerIsValid(player))
+				continue;
+
+			vector_subtract(dt, player->PlayerPosition, position);
+			if (vector_sqrmag(dt) < (radius * radius))
+			{
+				if (playerIsDead(player) && player->IsLocal)
+				{
+					if (MapConfig.Functions.ModeRevivePlayerFunc)
+						MapConfig.Functions.ModeRevivePlayerFunc(player, fromPlayer->PlayerId);
+				}
+				else
+				{
+					playerSetHealth(player, clamp(player->Health + (player->MaxHealth * healPercent), 0, player->MaxHealth));
+				}
+			}
+		}
+	}
+
+	// explode
+	u32 color = 0x80800000;
+	Moby *expMoby = mobySpawnExplosion(vector_read(position), 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, color, color, color, color, color, color, color, color, color, 0, 0, 0, 0, 2, 0, 0, 0);
+	if (expMoby)
+		mobyPlaySoundByClass(0, 0, expMoby, MOBY_ID_ARBITER_ROCKET0);
+
+	if (fromPlayer && fromPlayer->IsLocal && fromPlayer->PlayerMoby)
+		mobReactToExplosionAt(fromPlayer->PlayerMoby, position, 1, 8, 1);
+}
+
+//--------------------------------------------------------------------------
+void randomizeWeaponPickups(void)
+{
+	int i, j;
+	GameOptions *gameOptions = gameGetOptions();
+	char wepCounts[9];
+	char wepEnabled[17];
+	int pickupCount = 0;
+	int pickupOptionCount = 0;
+	memset(wepEnabled, 0, sizeof(wepEnabled));
+	memset(wepCounts, 0, sizeof(wepCounts));
+
+	if (gameOptions->WeaponFlags.DualVipers)
+	{
+		wepEnabled[2] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.MagmaCannon)
+	{
+		wepEnabled[3] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.Arbiter)
+	{
+		wepEnabled[4] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.FusionRifle)
+	{
+		wepEnabled[5] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.MineLauncher)
+	{
+		wepEnabled[6] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.B6)
+	{
+		wepEnabled[7] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.Holoshield)
+	{
+		wepEnabled[16] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.Flail)
+	{
+		wepEnabled[12] = 1;
+		pickupOptionCount++;
+	}
+	if (gameOptions->WeaponFlags.Chargeboots && gameOptions->GameFlags.MultiplayerGameFlags.SpawnWithChargeboots == 0)
+	{
+		wepEnabled[13] = 1;
+		pickupOptionCount++;
+	}
+
+	if (pickupOptionCount > 0)
+	{
+		Moby *moby = mobyListGetStart();
+		Moby *mEnd = mobyListGetEnd();
+
+		while (moby < mEnd)
+		{
+			if (moby->OClass == MOBY_ID_WEAPON_PICKUP && moby->PVar)
+			{
+
+				int target = pickupCount / pickupOptionCount;
+				int gadgetId = 1;
+				if (target < 3)
+				{
+					do
+					{
+						j = rand(pickupOptionCount);
+					} while (wepCounts[j] != target);
+
+					++wepCounts[j];
+
+					i = -1;
+					do
+					{
+						++i;
+						if (wepEnabled[i])
+							--j;
+					} while (j >= 0);
+
+					gadgetId = i;
+				}
+
+				// set pickup
+				((void (*)(Moby *, int))0x0043A370)(moby, gadgetId);
+
+				++pickupCount;
+			}
+
+			++moby;
+		}
+	}
+}
+
+//--------------------------------------------------------------------------
+void addRadarBlip(Moby *moby, int life, int type, int team)
+{
+	// draw on radar
+	int blipIdx = radarGetBlipIndex(moby);
+	if (blipIdx >= 0)
+	{
+		RadarBlip *blip = radarGetBlips() + blipIdx;
+		blip->X = moby->Position[0];
+		blip->Y = moby->Position[1];
+		blip->Life = life;
+		blip->Type = type;
+		blip->Team = team;
 	}
 }

@@ -15,15 +15,6 @@
 #define UPGRADE_MAX_USES (15)
 #define PLAYER_UPGRADE_COOLDOWN_TICKS (15)
 
-enum UpgradeType
-{
-	UPGRADE_HEALTH,
-	UPGRADE_SPEED,
-	UPGRADE_DAMAGE,
-	UPGRADE_CRIT,
-	UPGRADE_COUNT
-};
-
 enum UpgradeEventType
 {
 	UPGRADE_EVENT_SPAWN,
@@ -33,15 +24,18 @@ enum UpgradeEventType
 
 struct UpgradePVar
 {
-	enum UpgradeType Type;
+	int ItemIdx;
 	int Uses;
 	int TexId;
+	u32 TexColor;
+	int MaxUses;
+	float Opacity;
 	struct PartInstance *Particles[4];
 };
 
 struct UpgradeSpawnEventArgs
 {
-	enum UpgradeType Type;
+	int ItemIdx;
 };
 
 struct UpgradeDestroyedEventArgs
@@ -57,7 +51,7 @@ void upgradeTick(void);
 void upgradeInit(void);
 struct GuberMoby *upgradeGetGuber(Moby *moby);
 int upgradeHandleEvent(Moby *moby, GuberEvent *event);
-int upgradeCreate(VECTOR position, VECTOR rotation, enum UpgradeType upgradeType);
+int upgradeCreate(VECTOR position, VECTOR rotation, int itemIdx);
 void upgradePickup(Moby *moby, int pickedUpByPlayerId);
 
 #endif // SURVIVAL_UPGRADE_H

@@ -2,8 +2,11 @@
 #include <libdl/spawnpoint.h>
 #include <libdl/stdio.h>
 #include <libdl/random.h>
+#include <libdl/player.h>
 #include "mob.h"
 #include "config.h"
+#include "stackables.h"
+#include "survival_items.h"
 #include "interop.h"
 #include "utils.h"
 #include "maputils.h"
@@ -41,6 +44,18 @@ void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 		ammodropCreateAt(moby);
 	}
 #endif
+
+	// spawn mob drop
+	if (MapConfig.Functions.GetDropItemOnMobKilledFunc && killedByPlayerId >= 0)
+	{
+		Player *player = playerGetAll()[killedByPlayerId];
+		if (playerIsValid(player) && player->IsLocal)
+		{
+			int dropItem = MapConfig.Functions.GetDropItemOnMobKilledFunc(player, moby, killedByWeaponId);
+			if (dropItem >= 0)
+				MapConfig.Functions.CreateMobDropFunc(moby->Position, dropItem, gameGetTime() + DROP_DURATION, player->Team);
+		}
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -217,10 +232,13 @@ float mapGetCurrentDifficulty(void)
 }
 
 //--------------------------------------------------------------------------
-int mapGetDropTypeOnMobKilled(Player *killedByPlayer, Moby *mob, int gadgetId)
+int mapGetDropItemOnMobKilled(Player *killedByPlayer, Moby *mob, int gadgetId)
 {
+#ifdef MOB_DROP_PROBABILITY
 	float randomValue = randRange(0.0, 1.0);
-	float probability = MOB_HAS_DROP_PROBABILITY;
+	float probability = MOB_DROP_PROBABILITY;
+	if (probability <= 0)
+		return -1;
 
 	// wait for drop cooldown
 	if (MapConfig.State && MapConfig.State->DropCooldownTicks > 0)
@@ -231,7 +249,11 @@ int mapGetDropTypeOnMobKilled(Player *killedByPlayer, Moby *mob, int gadgetId)
 		return -1;
 
 	// return random drop type
-	return randRangeInt(0, DROP_COUNT - 1);
+	return dropGetRandomItem(mob, killedByPlayer->PlayerId, gadgetId);
+#else
+	// no drops defined
+	return -1;
+#endif
 }
 
 //--------------------------------------------------------------------------
@@ -251,6 +273,118 @@ int mapGetRoundTransitionTime(int round)
 int mapGetRandomAlphamodForPlayer(Player *player, int gadgetIdOrEmpty)
 {
 	return AlphaModsEnabled[rand(AlphaModsEnabledCount)];
+}
+
+//--------------------------------------------------------------------------
+int mapGetPlayerItemCount(Player *player, int itemId)
+{
+	if (!MapConfig.State)
+		return 0;
+
+	if (!playerIsValid(player))
+		return 0;
+
+	if (itemId < 0 || itemId >= MapConfig.ItemDefCount)
+		return 0;
+
+	return MapConfig.State->PlayerStates[player->PlayerId].State.ItemCounts[itemId];
+}
+
+//--------------------------------------------------------------------------
+void mapOnPlayerUpdate(Player *player)
+{
+	// pass to stackables
+	stackablesProcessPlayer(player);
+
+	// pass to items
+#if ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE
+	mapOnItemApply_PlayerHealth(ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE], player);
+#endif
+#if ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE
+	mapOnItemApply_PlayerSpeed(ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE], player);
+#endif
+}
+
+//--------------------------------------------------------------------------
+void mapOnPlayerDied(Player *player)
+{
+}
+
+//--------------------------------------------------------------------------
+void mapOnPlayerGetVendorReward(Player *player, int gadgetId, int levelNum)
+{
+	if (!playerIsValid(player) || !player->IsLocal)
+		return;
+
+	int i;
+	int itemIdxs[MAX_ITEM_COUNT];
+	int count = 0;
+	float sumWeight = 0;
+
+	// collect all possible items
+	for (i = 0; i < MapConfig.ItemDefCount; ++i)
+	{
+		SurvivalItemDef_t *itemDef = &MapConfig.ItemDefs[i];
+		float itemWeight = itemGetVendorRewardChanceWeight(i, itemDef, player->PlayerId);
+		int canAcquire = itemCanAcquire(player, i);
+		if (itemWeight <= 0 || !canAcquire)
+			continue;
+
+		sumWeight += itemWeight;
+		itemIdxs[count] = i;
+		++count;
+	}
+
+	// none found
+	if (!count)
+		return;
+
+	// generate random value within range of weights
+	// grab the first item where r > last
+	float r = randRange(0, sumWeight);
+	for (i = 0; i < (count - 1); ++i)
+	{
+		int itemIdx = itemIdxs[i];
+		SurvivalItemDef_t *itemDef = &MapConfig.ItemDefs[itemIdx];
+		float itemWeight = itemGetVendorRewardChanceWeight(i, itemDef, player->PlayerId);
+
+		// found item
+		if (r < itemWeight)
+			break;
+
+		r -= itemWeight;
+	}
+
+	// reward
+	int selectedRewardItemIdx = itemIdxs[i];
+	itemBeginAcquire(player->PlayerId, selectedRewardItemIdx);
+	itemShowAcquired(player->LocalPlayerIndex, selectedRewardItemIdx, "Got");
+}
+
+//--------------------------------------------------------------------------
+int mapOnBeforeDamageMob(Player *player, Moby *sourceMoby, Moby *mobMoby, struct MobDamageEventArgs *args)
+{
+	float damage = args->DamageQuarters / 4.0;
+
+	// no changes
+	if (!player)
+		return 1;
+
+	// pass to stackables
+	stackablesOnBeforeDamage(player, &damage);
+
+	// update damage
+	args->DamageQuarters = (u32)(damage * 4);
+
+	// pass to items
+#if ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE
+	mapOnItemApply_PlayerCrit(ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE], player, sourceMoby, mobMoby, args);
+#endif
+#if ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE
+	mapOnItemApply_PlayerDamage(ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE], player, sourceMoby, mobMoby, args);
+#endif
+
+	return 1;
 }
 
 //--------------------------------------------------------------------------
@@ -274,7 +408,14 @@ void interopInit(void)
 	MapConfig.Functions.GetUpgradePlayerWeaponCostFunc = &mapGetUpgradePlayerWeaponCost;
 	MapConfig.Functions.GetXpForNextTokenFunc = &mapGetXpForNextToken;
 	MapConfig.Functions.GetCurrentDifficultyFunc = &mapGetCurrentDifficulty;
-	MapConfig.Functions.GetDropTypeOnMobKilledFunc = &mapGetDropTypeOnMobKilled;
+	MapConfig.Functions.GetDropItemOnMobKilledFunc = &mapGetDropItemOnMobKilled;
 	MapConfig.Functions.GetRoundTransitionTimeFunc = &mapGetRoundTransitionTime;
 	MapConfig.Functions.GetRandomAlphamodForPlayerFunc = &mapGetRandomAlphamodForPlayer;
+	MapConfig.Functions.GetPlayerItemCountFunc = &mapGetPlayerItemCount;
+	MapConfig.Functions.GetOnPlayerItemAcquiredFunc = &itemOnAcquireTriggered;
+	MapConfig.Functions.GetOnPlayerItemConsumedFunc = &itemOnConsumeTriggered;
+	MapConfig.Functions.OnPlayerUpdateFunc = &mapOnPlayerUpdate;
+	MapConfig.Functions.OnPlayerDiedFunc = &mapOnPlayerDied;
+	MapConfig.Functions.OnPlayerGetVendorRewardFunc = &mapOnPlayerGetVendorReward;
+	MapConfig.Functions.OnBeforeDamageMobFunc = &mapOnBeforeDamageMob;
 }

@@ -576,65 +576,1537 @@ MonoBehaviour:
     m_Bank: 1
     m_Uid: 30054
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: dd3a606f722464a40bee94ab0c789fcc, type: 3}
     m_Bank: 1
     m_Uid: 30055
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: e50888e2927c8334a915fbf3baebd6e9, type: 3}
     m_Bank: 1
     m_Uid: 30138
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: bbce572f2fe00f641b3d094eb05706dd, type: 3}
     m_Bank: 1
     m_Uid: 30044
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: 0ce955766ecf4db41babcde865d6ff67, type: 3}
     m_Bank: 1
     m_Uid: 30094
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   SurvivalStackableSprites:
   - m_Texture: {fileID: 2800000, guid: 578e99fdb20b170419435d9f18c1e081, type: 3}
     m_Bank: 1
     m_Uid: 30110
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: a70f3f8c4c676f74cb516c0ff22258ca, type: 3}
     m_Bank: 1
     m_Uid: 30109
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: f13cebac928e86a4f9d2911f13277e8d, type: 3}
     m_Bank: 1
     m_Uid: 30112
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: ac1463fbada8c9142afd73aef0c66bd5, type: 3}
     m_Bank: 1
     m_Uid: 30020
     m_Unknown: 1
+    m_TextureSizeOverride: 0
   - m_Texture: {fileID: 2800000, guid: aea5710ef99fa894a9f09adb39892684, type: 3}
     m_Bank: 1
     m_Uid: 30111
     m_Unknown: 1
-  SurvivalBlessingSprites:
-  - m_Texture: {fileID: 2800000, guid: d2dfbd4ca38335c408506b16435e7b51, type: 3}
-    m_Bank: 1
-    m_Uid: 30109
-    m_Unknown: 1
-  - m_Texture: {fileID: 2800000, guid: 6e2f188ecc2542540b6537d089870787, type: 3}
-    m_Bank: 1
-    m_Uid: 30110
-    m_Unknown: 1
-  - m_Texture: {fileID: 2800000, guid: 65edc4c34e1a47c49a3a5241cab4c895, type: 3}
-    m_Bank: 1
-    m_Uid: 30111
-    m_Unknown: 1
-  - m_Texture: {fileID: 2800000, guid: 06d0db80253fad9448245ab0b9c97276, type: 3}
-    m_Bank: 1
-    m_Uid: 30113
-    m_Unknown: 1
-  - m_Texture: {fileID: 2800000, guid: 63af52276edd11e47a88840e69c95929, type: 3}
-    m_Bank: 1
-    m_Uid: 30114
-    m_Unknown: 1
-  - m_Texture: {fileID: 2800000, guid: 16869751f044a9d489399db81bcb299e, type: 3}
-    m_Bank: 1
-    m_Uid: 30115
-    m_Unknown: 1
+    m_TextureSizeOverride: 0
+  SurvivalDefaultItems:
+  - Item: 0
+    Def:
+      Name: Speed Mod
+      Description: +1 equippable speed mod.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 52
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 50000
+      StoreCostIncrease: 25000
+      MysteryboxChanceWeight: 0.1
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 1
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_Alphamod
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 1
+    Def:
+      Name: Ammo Mod
+      Description: +1 equippable ammo mod.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 38
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 50000
+      StoreCostIncrease: 25000
+      MysteryboxChanceWeight: 0.1
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 1
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_Alphamod
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 2
+    Def:
+      Name: Impact Mod
+      Description: +1 equippable impact mod.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 44
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 50000
+      StoreCostIncrease: 25000
+      MysteryboxChanceWeight: 0.1
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 1
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_Alphamod
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 3
+    Def:
+      Name: Area Mod
+      Description: +1 equippable area mod.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 39
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 50000
+      StoreCostIncrease: 25000
+      MysteryboxChanceWeight: 0.1
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 1
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_Alphamod
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 4
+    Def:
+      Name: Xp Mod
+      Description: +1 equippable xp mod.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 41
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 50000
+      StoreCostIncrease: 25000
+      MysteryboxChanceWeight: 0.1
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 1
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_Alphamod
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 5
+    Def:
+      Name: Jackpot Mod
+      Description: +1 equippable jackpot mod.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 46
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 50000
+      StoreCostIncrease: 25000
+      MysteryboxChanceWeight: 0.1
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 1
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_Alphamod
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 6
+    Def:
+      Name: Upgrade Equipped Weapon
+      Description: Upgrades equipped weapon by one level.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 34
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.09
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_UpgradeWeapon
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 7
+    Def:
+      Name: Dread Token
+      Description: +1 dread token.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 32
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.3
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_DreadToken
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 8
+    Def:
+      Name: Reset Random Gate
+      Description: Reactivates a random gate.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 11
+      TexColor: {r: 1, g: 1, b: 0, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 1
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_ResetRandomGate
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 9
+    Def:
+      Name: Randomize Weapon Pickups
+      Description: Shuffles weapon pickups around the map.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 13
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: dd3a606f722464a40bee94ab0c789fcc, type: 3}
+        m_Bank: 1
+        m_Uid: 30055
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 1
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_RandomizeWeaponPickups
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 10
+    Def:
+      Name: Vox
+      Description: Destroys mysterybox for round. Increases cost of rolling the box
+        for user.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 129
+      TexColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.15
+      MysteryboxForceAcquire: 1
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_MysteryboxVox
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 11
+    Def:
+      Name: Infinite Ammo
+      Description: Gives everyone infinite ammo for a limited time.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 90
+      TexColor: {r: 1, g: 1, b: 0, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: mapOnItemTick_GlobalInfiniteAmmo
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalInfiniteAmmo
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 12
+    Def:
+      Name: Quad
+      Description: Gives everyone quad for a limited time.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 53
+      TexColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: bbce572f2fe00f641b3d094eb05706dd, type: 3}
+        m_Bank: 1
+        m_Uid: 30044
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalQuad
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 13
+    Def:
+      Name: Shield
+      Description: Gives everyone shield for a limited time.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 93
+      TexColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: 0ce955766ecf4db41babcde865d6ff67, type: 3}
+        m_Bank: 1
+        m_Uid: 30094
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalShield
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 14
+    Def:
+      Name: Self Revive
+      Description: Automatically revives you on death.
+      Type: 1
+      MaxHeldAtOnce: 1
+      AppearOnWall: 0
+      TexId: 77
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 1
+      StoreCost: 500000
+      StoreCostIncrease: 2
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: mapOnItemInit_SelfRevive
+      CustomTickUpdateFunctionName: mapOnItemTick_SelfRevive
+      CustomDrawUpdateFunctionName: mapOnItemDraw_SelfRevive
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_SelfRevive
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 15
+    Def:
+      Name: Invisibility Cloak
+      Description: Consumable that hides the player from mobs.
+      Type: 2
+      MaxHeldAtOnce: 1
+      AppearOnWall: 0
+      TexId: 137
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: e50888e2927c8334a915fbf3baebd6e9, type: 3}
+        m_Bank: 1
+        m_Uid: 30138
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: mapOnItemTick_InvisibilityCloak
+      CustomDrawUpdateFunctionName: mapOnItemDraw_InvisibilityCloak
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_InvisibilityCloak
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 16
+    Def:
+      Name: Health Tornado
+      Description: Consumable that triggers healing/reviving AoE.
+      Type: 2
+      MaxHeldAtOnce: 1
+      AppearOnWall: 0
+      TexId: 12
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: 2396326ec9e92c64482adac532b4c052, type: 3}
+        m_Bank: 1
+        m_Uid: 30054
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0.05
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: mapOnItemTick_HealthTornado
+      CustomDrawUpdateFunctionName: mapOnItemDraw_HealthTornado
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_HealthTornado
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 17
+    Def:
+      Name: Berserker Perk
+      Description: Grants +75% bonus damage for amount of health missing.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 109
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: 578e99fdb20b170419435d9f18c1e081, type: 3}
+        m_Bank: 1
+        m_Uid: 30110
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 250000
+      StoreCostIncrease: 250000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 18
+    Def:
+      Name: Extra Jump Perk
+      Description: Gives +1 extra jump.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 111
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: f13cebac928e86a4f9d2911f13277e8d, type: 3}
+        m_Bank: 1
+        m_Uid: 30112
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 250000
+      StoreCostIncrease: 250000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_ExtraJump
+      CustomTickUpdateFunctionName: stackablesItemTick_ExtraJump
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 19
+    Def:
+      Name: Double Shot Perk
+      Description: Shoots +1 shot each time you fire.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 108
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: a70f3f8c4c676f74cb516c0ff22258ca, type: 3}
+        m_Bank: 1
+        m_Uid: 30109
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 250000
+      StoreCostIncrease: 250000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_ExtraShot
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 20
+    Def:
+      Name: Hoverboots Perk
+      Description: Gives hoverboots, +10% movement speed, removes chargeboots.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 60
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: ac1463fbada8c9142afd73aef0c66bd5, type: 3}
+        m_Bank: 1
+        m_Uid: 30020
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 250000
+      StoreCostIncrease: 250000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_Hoverboots
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 21
+    Def:
+      Name: Speed Mod Perk
+      Description: Gives +1 extra speed mod for all weapons.
+      Type: 0
+      MaxHeldAtOnce: 10
+      AppearOnWall: 0
+      TexId: 52
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 125000
+      StoreCostIncrease: 125000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_Alphamod
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 22
+    Def:
+      Name: Impact Mod Perk
+      Description: Gives +1 extra impact mod for all weapons.
+      Type: 0
+      MaxHeldAtOnce: 10
+      AppearOnWall: 0
+      TexId: 44
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 125000
+      StoreCostIncrease: 125000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_Alphamod
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 23
+    Def:
+      Name: Area Mod Perk
+      Description: Gives +1 extra area mod for all weapons.
+      Type: 0
+      MaxHeldAtOnce: 10
+      AppearOnWall: 0
+      TexId: 39
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 125000
+      StoreCostIncrease: 125000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_Alphamod
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 24
+    Def:
+      Name: Ammo Mod Perk
+      Description: Gives +1 extra ammo mod for all weapons.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 38
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 125000
+      StoreCostIncrease: 125000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_Alphamod
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 25
+    Def:
+      Name: Vampire Perk
+      Description: Gives +3 health after each kill, disables health pickups.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 110
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: aea5710ef99fa894a9f09adb39892684, type: 3}
+        m_Bank: 1
+        m_Uid: 30111
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 250000
+      StoreCostIncrease: 250000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: stackablesItemInit_Vampire
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 26
+    Def:
+      Name: Will o' the Wisp Perk
+      Description: Deals +10 explosive damage after each kill.
+      Type: 0
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 131
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 250000
+      StoreCostIncrease: 250000
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 27
+    Def:
+      Name: Nuke
+      Description: Instantly kill all spawned mobs.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 19
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 1
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalNuke
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 28
+    Def:
+      Name: Max Ammo
+      Description: Replenish all ammo for all players.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 90
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 1
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalAmmo
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 29
+    Def:
+      Name: Double Bolts
+      Description: Doubles bolt reward for a limited time.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 3
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 1
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalDoublePoints
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 30
+    Def:
+      Name: Double Xp
+      Description: Doubles xp reward for a limited time.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 41
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 1
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalDoubleXp
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 31
+    Def:
+      Name: Freeze Mobs
+      Description: Freezes all mobs for a period of time.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 43
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 1
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalFreeze
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 32
+    Def:
+      Name: Full Heal
+      Description: Heals and revives all players.
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 94
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 1
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_GlobalHealth
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 35
+    Def:
+      Name: Upgrade Arbiter
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 27
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 38
+    Def:
+      Name: Upgrade B6 Obliterator
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 21
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: 'mapOnItemConsumed_WeaponUpgrade '
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 33
+    Def:
+      Name: Upgrade Dual Vipers
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 24
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 36
+    Def:
+      Name: Upgrade Fusion Rifle
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 29
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 39
+    Def:
+      Name: Upgrade Holoshield
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 22
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 34
+    Def:
+      Name: Upgrade Magma Cannon
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 28
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 37
+    Def:
+      Name: Upgrade Mine Launcher
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 25
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 40
+    Def:
+      Name: Upgrade Scorpion Flail
+      Description: 
+      Type: 3
+      MaxHeldAtOnce: 0
+      AppearOnWall: 0
+      TexId: 23
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 0
+      StoreCost: 0
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_WeaponUpgrade
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: mapOnItemCanBuyInStore_WeaponUpgrade
+      CustomGetStoreCostFunctionName: mapOnItemGetStoreCost_WeaponUpgrade
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 43
+    Def:
+      Name: Critical Hit Upgrade
+      Description: +1% critical hit chance
+      Type: 0
+      MaxHeldAtOnce: 100
+      AppearOnWall: 1
+      TexId: 7
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 2
+      StoreCost: 1
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_PlayerCrit
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 42
+    Def:
+      Name: Damage Upgrade
+      Description: +8% damage
+      Type: 0
+      MaxHeldAtOnce: 1000
+      AppearOnWall: 1
+      TexId: 9
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 2
+      StoreCost: 1
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_PlayerDamage
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 44
+    Def:
+      Name: Health Upgrade
+      Description: +5 nanotech
+      Type: 0
+      MaxHeldAtOnce: 1000
+      AppearOnWall: 1
+      TexId: 94
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 0}
+        m_Bank: 0
+        m_Uid: 0
+        m_Unknown: 1
+        m_TextureSizeOverride: 0
+      StoreCostType: 2
+      StoreCost: 1
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_PlayerHealth
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 
+  - Item: 41
+    Def:
+      Name: Move Speed Upgrade
+      Description: +3% movement speed
+      Type: 0
+      MaxHeldAtOnce: 40
+      AppearOnWall: 1
+      TexId: 52
+      TexColor: {r: 1, g: 1, b: 1, a: 1}
+      SpriteDefOverride:
+        m_Texture: {fileID: 2800000, guid: 87a8ad16c18dbf14597395394809079b, type: 3}
+        m_Bank: 1
+        m_Uid: 30009
+        m_Unknown: 1
+        m_TextureSizeOverride: 1
+      StoreCostType: 2
+      StoreCost: 1
+      StoreCostIncrease: 0
+      MysteryboxChanceWeight: 0
+      MysteryboxForceAcquire: 0
+      DropChanceWeight: 0
+      VendorRewardChanceWeight: 0
+      CustomInitFunctionName: 
+      CustomTickUpdateFunctionName: 
+      CustomDrawUpdateFunctionName: 
+      CustomOnAcquiredFunctionName: 
+      CustomOnConsumedFunctionName: mapOnItemConsumed_PlayerSpeed
+      CustomHasRoomForMoreFunctionName: 
+      CustomCanBuyInStoreFunctionName: 
+      CustomGetStoreCostFunctionName: 
+      CustomGetMysteryboxChanceFunctionName: 
+      CustomGetDropChanceFunctionName: 
+      CustomGetVendorRewardChanceFunctionName: 

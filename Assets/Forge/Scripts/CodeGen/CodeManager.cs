@@ -107,7 +107,7 @@ public class CodeManager : MonoBehaviour
         var makefileOutPath = Path.Combine(outDir, "Makefile");
         var makefileContent = File.ReadAllText(makefileInPath)
             .Replace("##EEOBJS##", string.Join(" ", state.ObjectFiles))
-            .Replace("##EELDFLAGS##", string.Join(" ", state.LDFlags))
+            .Replace("##EELDFLAGS##", string.Join("", state.LDFlags.Select(x => $"{x} \\\n\t")).Trim().TrimEnd('\\') + "\n")
             .Replace("##EEBUILD##", state.Debug ? "DEBUG" : "RELEASE")
             .Replace("##MAPNAME##", mapConfig.MapFilename)
             ;

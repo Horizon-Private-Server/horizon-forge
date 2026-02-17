@@ -161,205 +161,261 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
 
             // Draw fields
             line.y += EditorGUIUtility.singleLineHeight;
-            line = PropertyField(line, property, "Name");
-            line = PropertyField(line, property, "Disabled");
-            line = PropertyField(line, property, "Mob");
-            line = PopupOverride(line, property, "Variant", mobData.Variants.Select(x => x.Name).ToArray());
-            line = PopupOverride(line, property, "Behavior", mobData.Behaviors.ToArray());
-            line = PropertyField(line, property, "Attributes");
-            line = EnumOverride(line, property, "BlipType", mobData.BlipType);
+            line = UnityHelper.PropertyField(line, property, "Name");
+            line = UnityHelper.PropertyField(line, property, "Disabled");
+            line = UnityHelper.PropertyField(line, property, "Mob");
+            line = UnityHelper.PopupField(line, property, "Variant", mobData.Variants.Select(x => x.Name).ToArray());
+            line = UnityHelper.PopupField(line, property, "Behavior", mobData.Behaviors.ToArray());
+            line = UnityHelper.PropertyField(line, property, "Attributes");
+            line = UnityHelper.EnumOverride(line, property, "BlipType", mobData.BlipType);
 
-            line = PropertyField(line, property, "SpecialRoundOnly");
-            line = PropertyField(line, property, "MinRound");
-            line = PropertyField(line, property, "MaxSpawnedAtOnce");
-            line = PropertyField(line, property, "MaxSpawnedPerRound");
-            line = PropertyField(line, property, "Probability");
-            line = PropertyField(line, property, "SpawnType");
-            line = PropertyField(line, property, "CooldownTicks");
-            line = PropertyField(line, property, "CooldownOffsetPerRoundFactor");
+            line = UnityHelper.PropertyField(line, property, "SpecialRoundOnly");
+            line = UnityHelper.PropertyField(line, property, "MinRound");
+            line = UnityHelper.PropertyField(line, property, "MaxSpawnedAtOnce");
+            line = UnityHelper.PropertyField(line, property, "MaxSpawnedPerRound");
+            line = UnityHelper.PropertyField(line, property, "Probability");
+            line = UnityHelper.PropertyField(line, property, "SpawnType");
+            line = UnityHelper.PropertyField(line, property, "CooldownTicks");
+            line = UnityHelper.PropertyField(line, property, "CooldownOffsetPerRoundFactor");
 
-            line = PropertyField(line, property, "SizeMultiplier");
-            line = PropertyField(line, property, "TurnSpeedMultiplier");
-            line = FloatOverride(line, property, "RangedAttackDistance", mobData.RangedAttackDistance);
-            line = FloatOverride(line, property, "Xp", mobData.Xp);
-            line = FloatOverride(line, property, "Bolts", mobData.Bolts);
-            line = FloatOverride(line, property, "Damage", mobData.Damage);
-            line = FloatOverride(line, property, "DamageMax", mobData.DamageMax);
-            line = FloatOverride(line, property, "DamageScale", mobData.DamageScale);
-            line = FloatOverride(line, property, "Speed", mobData.Speed);
-            line = FloatOverride(line, property, "SpeedMax", mobData.SpeedMax);
-            line = FloatOverride(line, property, "SpeedScale", mobData.SpeedScale);
-            line = FloatOverride(line, property, "Health", mobData.Health);
-            line = FloatOverride(line, property, "HealthMax", mobData.HealthMax);
-            line = FloatOverride(line, property, "HealthScale", mobData.HealthScale);
-            line = ColorOverride(line, property, "BaseColor", mobData.BaseColor);
-            line = ColorOverride(line, property, "GlowColor", mobData.GlowColor);
-            line = ColorOverride(line, property, "SpriteColor", mobData.SpriteColor);
+            line = UnityHelper.PropertyField(line, property, "SizeMultiplier");
+            line = UnityHelper.PropertyField(line, property, "TurnSpeedMultiplier");
+            line = UnityHelper.FloatOverride(line, property, "RangedAttackDistance", mobData.RangedAttackDistance);
+            line = UnityHelper.FloatOverride(line, property, "Xp", mobData.Xp);
+            line = UnityHelper.FloatOverride(line, property, "Bolts", mobData.Bolts);
+            line = UnityHelper.FloatOverride(line, property, "Damage", mobData.Damage);
+            line = UnityHelper.FloatOverride(line, property, "DamageMax", mobData.DamageMax);
+            line = UnityHelper.FloatOverride(line, property, "DamageScale", mobData.DamageScale);
+            line = UnityHelper.FloatOverride(line, property, "Speed", mobData.Speed);
+            line = UnityHelper.FloatOverride(line, property, "SpeedMax", mobData.SpeedMax);
+            line = UnityHelper.FloatOverride(line, property, "SpeedScale", mobData.SpeedScale);
+            line = UnityHelper.FloatOverride(line, property, "Health", mobData.Health);
+            line = UnityHelper.FloatOverride(line, property, "HealthMax", mobData.HealthMax);
+            line = UnityHelper.FloatOverride(line, property, "HealthScale", mobData.HealthScale);
+            line = UnityHelper.ColorOverride(line, property, "BaseColor", mobData.BaseColor);
+            line = UnityHelper.ColorOverride(line, property, "GlowColor", mobData.GlowColor);
+            line = UnityHelper.ColorOverride(line, property, "SpriteColor", mobData.SpriteColor);
 
             EditorGUI.indentLevel = indent;
         }
 
-        EditorGUI.EndFoldoutHeaderGroup();
+        //EditorGUI.EndFoldoutHeaderGroup();
         EditorGUI.EndProperty();
     }
 
-    Rect PropertyField(Rect position, SerializedProperty property, string field)
-    {
-        var prop = property.FindPropertyRelative(field);
-        var height = EditorGUI.GetPropertyHeight(prop);
-        position.height = height;
-        EditorGUI.PropertyField(position, prop);
-
-        position.y += height;
-        return position;
-    }
-
-    Rect PopupOverride(Rect position, SerializedProperty property, string field, string[] options)
-    {
-        var prop = property.FindPropertyRelative(field);
-        var height = EditorGUIUtility.singleLineHeight;
-        position.height = height;
-
-        var rect = EditorGUI.PrefixLabel(position, new GUIContent(prop.displayName));
-        prop.intValue = EditorGUI.Popup(rect, prop.intValue, options);
-
-        position.y += height;
-        return position;
-    }
-
-    Rect EnumOverride<T>(Rect position, SerializedProperty property, string field, T defaultValue) where T : Enum
-    {
-        var prop = property.FindPropertyRelative(field);
-        var height = EditorGUIUtility.singleLineHeight;
-        position.height = height;
-
-        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
-        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
-
-        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
-        var labelWidth = position.width - prefixRect.width;
-        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
-        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
-        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
-
-        // On/off toggle
-        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-        GUI.Label(labelRect, prop.displayName);
-
-        // Draw float only if there's a value
-        if (hasValueProp.boolValue)
-        {
-            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
-        }
-        else
-        {
-            EditorGUI.BeginDisabledGroup(true);
-            EditorGUI.EnumPopup(valueRect, defaultValue);
-            EditorGUI.EndDisabledGroup();
-        }
-
-        position.y += height;
-        return position;
-    }
-
-    Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue)
-    {
-        var prop = property.FindPropertyRelative(field);
-        var height = EditorGUIUtility.singleLineHeight;
-        position.height = height;
-
-        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
-        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
-
-        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
-        var labelWidth = position.width - prefixRect.width;
-        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
-        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
-        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
-
-        // On/off toggle
-        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-        GUI.Label(labelRect, prop.displayName);
-
-        // Draw float only if there's a value
-        if (hasValueProp.boolValue)
-        {
-            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
-        }
-        else
-        {
-            EditorGUI.BeginDisabledGroup(true);
-            EditorGUI.FloatField(valueRect, defaultValue);
-            EditorGUI.EndDisabledGroup();
-        }
-
-        position.y += height;
-        return position;
-    }
-
-    Rect ColorOverride(Rect position, SerializedProperty property, string field, Color defaultValue)
-    {
-        var prop = property.FindPropertyRelative(field);
-        var height = EditorGUIUtility.singleLineHeight;
-        position.height = height;
-
-        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
-        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
-
-        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
-        var labelWidth = position.width - prefixRect.width;
-        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
-        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
-        Rect valueRect = new Rect(position.x + labelWidth, position.y, position.width - labelWidth, position.height);
-
-        // On/off toggle
-        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-        GUI.Label(labelRect, prop.displayName);
-
-        // Draw color only if there's a value
-        if (hasValueProp.boolValue)
-        {
-            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
-        }
-        else
-        {
-            EditorGUI.BeginDisabledGroup(true);
-            EditorGUI.ColorField(valueRect, GUIContent.none, defaultValue, true, false, false);
-            EditorGUI.EndDisabledGroup();
-        }
-
-        position.y += height;
-        return position;
-    }
 }
 
-[CustomPropertyDrawer(typeof(SurvivalFloatOverride), true)]
-public class SurvivalFloatOverrideDrawer : PropertyDrawer
+[CustomPropertyDrawer(typeof(SurvivalTemplateItemEntry))]
+public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
+{
+    SurvivalMobsScriptableObject survivalData;
+    string[] itemOptions;
+    int[] itemOptionMapping;
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        var height = EditorGUIUtility.singleLineHeight;
+
+        if (property.isExpanded)
+            height += EditorGUIUtility.singleLineHeight * 16;
+
+        return height;
+    }
+
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        if (!survivalData) survivalData = SurvivalMobsScriptableObject.Load();
+        if (itemOptions == null) BuildItemOptions();
+        var defaultItemId = ((SurvivalDefaultItems[])Enum.GetValues(typeof(SurvivalDefaultItems)))[property.FindPropertyRelative("Item").enumValueIndex];
+        var defaultItemDef = survivalData.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItemId);
+        if (defaultItemDef == null) return;
+
+        // compute sum total mbox weights
+        var survivalMode = property.serializedObject.targetObject as SurvivalModeData;
+        var mboxSumWeights = Math.Max(survivalMode?.GetMysteryboxSumWeights() ?? 1, 0.001f);
+        var dropSumWeights = Math.Max(survivalMode?.GetDropsSumWeights() ?? 1, 0.001f);
+        var wepUpgradeSumWeights = Math.Max(survivalMode?.GetVendorWeaponUpgradeSumWeights() ?? 1, 0.001f);
+
+        var labelWithType = new GUIContent($"[{defaultItemDef.Def.Type.GetInspectorName()}] {label.text}", label.image, label.tooltip);
+        EditorGUI.BeginProperty(position, labelWithType, property);
+
+        var line = new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
+        property.isExpanded = EditorGUI.ToggleLeft(line, labelWithType, property.isExpanded);
+        if (property.isExpanded)
+        {
+            var indent = EditorGUI.indentLevel;
+            EditorGUI.indentLevel = 0;
+
+            // draw item selection
+            line.y += EditorGUIUtility.singleLineHeight;
+            line = UnityHelper.PopupField(line, property, "Item", itemOptions, itemOptionMapping);
+
+            // draw selected item description
+            EditorGUI.HelpBox(line, defaultItemDef.Def.Description, MessageType.Info);
+            line.y += EditorGUIUtility.singleLineHeight;
+
+            // draw override fields
+            line = UnityHelper.Int32Override(line, property, "MaxHeldAtOnce", defaultItemDef.Def.MaxHeldAtOnce);
+            line = UnityHelper.BoolOverride(line, property, "AppearOnWall", defaultItemDef.Def.AppearOnWall);
+            line = UnityHelper.EnumOverride(line, property, "StoreCostType", defaultItemDef.Def.StoreCostType);
+            line = UnityHelper.UInt32Override(line, property, "StoreCost", defaultItemDef.Def.StoreCost);
+            line = UnityHelper.DoubleOverride(line, property, "StoreCostIncrease", defaultItemDef.Def.StoreCostIncrease);
+            line = UnityHelper.FloatOverride(line, property, "MysteryboxChanceWeight", defaultItemDef.Def.MysteryboxChanceWeight);
+            line = UnityHelper.BoolOverride(line, property, "MysteryboxForceAcquire", defaultItemDef.Def.MysteryboxForceAcquire);
+            line = UnityHelper.FloatOverride(line, property, "DropChanceWeight", defaultItemDef.Def.DropChanceWeight);
+            line = UnityHelper.FloatOverride(line, property, "VendorRewardChanceWeight", defaultItemDef.Def.VendorRewardChanceWeight);
+            
+            // draw probabilities
+            if (survivalMode)
+            {
+                // mbox
+                var chanceProp = property.FindPropertyRelative("MysteryboxChanceWeight");
+                var chanceHasOverride = chanceProp.FindPropertyRelative("HasOverride").boolValue;
+                var chanceOverride = chanceProp.FindPropertyRelative("OverrideValue").floatValue;
+                var chance = chanceHasOverride ? chanceOverride : defaultItemDef.Def.MysteryboxChanceWeight;
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"Computed Mystery Box Probability: {(chance / mboxSumWeights):P2}", MessageType.Info);
+
+                // drop
+                chanceProp = property.FindPropertyRelative("DropChanceWeight");
+                chanceHasOverride = chanceProp.FindPropertyRelative("HasOverride").boolValue;
+                chanceOverride = chanceProp.FindPropertyRelative("OverrideValue").floatValue;
+                chance = chanceHasOverride ? chanceOverride : defaultItemDef.Def.DropChanceWeight;
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"Computed Mob Drop Probability: {(chance / dropSumWeights):P2}", MessageType.Info);
+
+                // vendor weapon upgrade
+                chanceProp = property.FindPropertyRelative("VendorRewardChanceWeight");
+                chanceHasOverride = chanceProp.FindPropertyRelative("HasOverride").boolValue;
+                chanceOverride = chanceProp.FindPropertyRelative("OverrideValue").floatValue;
+                chance = chanceHasOverride ? chanceOverride : defaultItemDef.Def.VendorRewardChanceWeight;
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"Computed Vendor Reward Probability: {(chance / wepUpgradeSumWeights):P2}", MessageType.Info);
+
+                // item idx define
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"-D{(property.boxedValue as SurvivalTemplateItemEntry)?.DefineName}=#", MessageType.Info);
+            }
+
+            EditorGUI.indentLevel = indent;
+        }
+
+        EditorGUI.EndProperty();
+    }
+
+    private void BuildItemOptions()
+    {
+        var dict = ((SurvivalDefaultItems[])Enum.GetValues(typeof(SurvivalDefaultItems)))
+            .ToDictionary(x =>
+            {
+                if (survivalData)
+                {
+                    var def = survivalData.SurvivalDefaultItems.FirstOrDefault(def => def.Item == x);
+                    if (def != null)
+                    {
+                        return $"[{def.Def.Type.GetInspectorName()}] {def.Def.Name}";
+                    }
+                }
+
+                return ObjectNames.NicifyVariableName(x.ToString());
+            }, x => (int)x);
+
+        itemOptions = dict.Keys.OrderBy(x => x).ToArray();
+        itemOptionMapping = itemOptions.Select(x => dict[x]).ToArray();
+    }
+
+}
+
+[CustomPropertyDrawer(typeof(SurvivalItemEntry))]
+public class SurvivalItemEntryDrawer : PropertyDrawer
 {
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return EditorGUIUtility.singleLineHeight;
+        var height = EditorGUI.GetPropertyHeight(property, label, includeChildren: true);
+
+        if (property.isExpanded)
+            height += EditorGUIUtility.singleLineHeight * 3;
+
+        return height;
     }
 
-    public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        SerializedProperty hasValueProp = property.FindPropertyRelative("HasOverride");
-        SerializedProperty valueProp = property.FindPropertyRelative("OverrideValue");
+        // compute sum total mbox weights
+        var survivalMode = property.serializedObject.targetObject as SurvivalModeData;
+        var mboxSumWeights = Math.Max(survivalMode?.GetMysteryboxSumWeights() ?? 1, 0.001f);
+        var dropSumWeights = Math.Max(survivalMode?.GetDropsSumWeights() ?? 1, 0.001f);
+        var wepUpgradeSumWeights = Math.Max(survivalMode?.GetVendorWeaponUpgradeSumWeights() ?? 1, 0.001f);
 
-        Rect toggleRect = new Rect(rect.x, rect.y, 20, rect.height);
-        Rect valueRect = new Rect(rect.x + 22, rect.y, rect.width - 22, rect.height);
+        var type = (SurvivalItemType)property.FindPropertyRelative("Type").enumValueIndex;
+        var labelWithType = new GUIContent($"[{type.GetInspectorName()}] {label.text}", label.image, label.tooltip);
+        EditorGUI.BeginProperty(position, labelWithType, property);
 
-        // On/off toggle
-        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-
-        // Draw float only if there's a value
-        if (hasValueProp.boolValue)
+        var line = new Rect(position.x, position.y, Math.Max(0, position.width), EditorGUIUtility.singleLineHeight);
+        property.isExpanded = EditorGUI.ToggleLeft(line, labelWithType, property.isExpanded);
+        if (property.isExpanded)
         {
-            EditorGUI.PropertyField(valueRect, valueProp, label);
+            var indent = EditorGUI.indentLevel;
+            EditorGUI.indentLevel = 0;
+
+            // Draw fields
+            line.y += EditorGUIUtility.singleLineHeight;
+            line = UnityHelper.PropertyField(line, property, "Name");
+            line = UnityHelper.PropertyField(line, property, "Description");
+
+            line = UnityHelper.PropertyField(line, property, "Type");
+            line = UnityHelper.PropertyField(line, property, "MaxHeldAtOnce");
+            line = UnityHelper.PropertyField(line, property, "AppearOnWall");
+
+            line = UnityHelper.PropertyField(line, property, "TexId");
+            line = UnityHelper.PropertyField(line, property, "TexColor");
+            line = UnityHelper.PropertyField(line, property, "SpriteDefOverride");
+
+            line = UnityHelper.PropertyField(line, property, "StoreCostType");
+            line = UnityHelper.PropertyField(line, property, "StoreCost");
+            line = UnityHelper.PropertyField(line, property, "StoreCostIncrease");
+            line = UnityHelper.PropertyField(line, property, "MysteryboxChanceWeight");
+            line = UnityHelper.PropertyField(line, property, "MysteryboxForceAcquire");
+            line = UnityHelper.PropertyField(line, property, "DropChanceWeight");
+            line = UnityHelper.PropertyField(line, property, "VendorRewardChanceWeight");
+            
+            line = UnityHelper.PropertyField(line, property, "CustomInitFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomTickUpdateFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomDrawUpdateFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomOnAcquiredFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomOnConsumedFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomHasRoomForMoreFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomCanBuyInStoreFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomGetStoreCostFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomGetMysteryboxChanceFunctionName");
+
+            // draw probabilities
+            if (survivalMode)
+            {
+                // mbox
+                var chance = property.FindPropertyRelative("MysteryboxChanceWeight").floatValue;
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"Computed Mystery Box Probability: {(chance / mboxSumWeights):P2}", MessageType.Info);
+
+                // drop
+                chance = property.FindPropertyRelative("DropChanceWeight").floatValue;
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"Computed Mob Drop Probability: {(chance / dropSumWeights):P2}", MessageType.Info);
+
+                // vendor weapon upgrade
+                chance = property.FindPropertyRelative("VendorRewardChanceWeight").floatValue;
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"Computed Vendor Reward Probability: {(chance / wepUpgradeSumWeights):P2}", MessageType.Info);
+
+                // item idx define
+                line.y += EditorGUIUtility.singleLineHeight;
+                EditorGUI.HelpBox(line, $"-D{(property.boxedValue as SurvivalItemEntry)?.DefineName}=#", MessageType.Info);
+            }
+
+            EditorGUI.indentLevel = indent;
         }
-        else
-        {
-            EditorGUI.LabelField(valueRect, label, new GUIContent(""));
-        }
+
+        EditorGUI.EndProperty();
     }
+
 }
