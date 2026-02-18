@@ -301,6 +301,7 @@ void storeDrawItemList(Moby *moby, int localPlayerIndex, Window_t *drawWindow, i
 		int disabled = canBuyResult == STORE_ITEM_CAN_BUY_ITEM_DISABLED;
 		u32 canBuyColor = colorLerp(textColor, cannotAffordColor, canBuyResult == STORE_ITEM_CAN_BUY_HAVE_TOO_MANY);
 		u32 costColor = colorLerp(canBuyResult == STORE_ITEM_CAN_BUY_GOOD ? canAffordColor : cannotAffordColor, 0, disabled ? 0.5 : 0);
+		u32 iconColor = colorLerp(itemDef.TexColor, 0, disabled ? 0.5 : 0);
 		u32 boltColor = colorLerp(textColor, 0, disabled ? 0.5 : 0);
 		u32 nameColor = colorLerp(canBuyColor, 0, disabled ? 0.5 : 0);
 
@@ -322,7 +323,7 @@ void storeDrawItemList(Moby *moby, int localPlayerIndex, Window_t *drawWindow, i
 		// draw icon
 		if (itemDef.TexId > 0)
 		{
-			windowDrawSprite(&drawWindowItem, TEXT_ALIGN_TOPLEFT, nameLeft + paddingLeft - lineHeight - 2, paddingTop, lineHeight - 2, lineHeight - 2, itemDef.TexId, boltColor, TEXT_ALIGN_TOPLEFT);
+			windowDrawSprite(&drawWindowItem, TEXT_ALIGN_TOPLEFT, nameLeft + paddingLeft - lineHeight - 2, paddingTop, lineHeight - 2, lineHeight - 2, itemDef.TexId, iconColor, TEXT_ALIGN_TOPLEFT);
 		}
 
 		// draw name

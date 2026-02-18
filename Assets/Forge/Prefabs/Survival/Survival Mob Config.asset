@@ -954,7 +954,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30055
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
@@ -1060,7 +1060,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30044
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
@@ -1095,7 +1095,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30094
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
@@ -1165,7 +1165,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30138
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 100000
       StoreCostIncrease: 0
@@ -1200,7 +1200,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30054
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 100000
       StoreCostIncrease: 0
@@ -1235,7 +1235,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30110
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 250000
       StoreCostIncrease: 250000
@@ -1270,7 +1270,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30112
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 250000
       StoreCostIncrease: 250000
@@ -1305,7 +1305,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30109
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 250000
       StoreCostIncrease: 250000
@@ -1340,7 +1340,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30020
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 250000
       StoreCostIncrease: 250000
@@ -1515,7 +1515,7 @@ MonoBehaviour:
         m_Bank: 1
         m_Uid: 30111
         m_Unknown: 1
-        m_TextureSizeOverride: 0
+        m_TextureSizeOverride: 1
       StoreCostType: 0
       StoreCost: 250000
       StoreCostIncrease: 250000
