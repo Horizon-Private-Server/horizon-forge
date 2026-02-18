@@ -47,12 +47,6 @@ public static class ForgeBuilder
         PatchLevel(EditorSceneManager.GetActiveScene());
     }
 
-    [MenuItem("Forge/Builder/Build DZO Files")]
-    public static void CommandBuildDZOFiles()
-    {
-        _ = BuildDZOFiles(EditorSceneManager.GetActiveScene());
-    }
-
     static bool RebuildLevelProgress(RebuildContext ctx, string info, float progress)
     {
         ctx.Cancel |= EditorUtility.DisplayCancelableProgressBar($"Rebuilding Level (rc{ctx.RacVersion} {ctx.Region})", info, progress);
@@ -251,6 +245,12 @@ public static class ForgeBuilder
 
                 // pass to build hook
                 IBuildHook.Run(state, BuildStateStage.BeforeBuild);
+
+                // build dzo
+                if (region == GameRegion.NTSC && racVersion == RCVER.DL)
+                {
+                    await ForgeBuilder.BuildDZOFiles(scene);
+                }
 
                 //RebuildSky(ctx, resourcesFolder, binFolder); if (cancel) return;
                 //await RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;

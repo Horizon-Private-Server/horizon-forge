@@ -35,6 +35,7 @@
 #include "messageid.h"
 #include "game.h"
 #include "mob.h"
+#include "vendor.h"
 #include "config.h"
 #include "interop.h"
 #include "pathfind.h"
@@ -133,7 +134,7 @@ void mapConsiderSpawnDrop(Moby *moby, int killedByPlayerId, int killedByWeaponId
 	{
 		if (killedByPlayerId >= 0 && gameAmIHost())
 		{
-			Player *killedByPlayer = playerGetAll()[(int)killedByPlayerId];
+			Player *killedByPlayer = playerGetFromIndex(killedByPlayerId);
 			if (playerIsValid(killedByPlayer))
 			{
 				int itemIdx = MapConfig.Functions.GetDropItemOnMobKilledFunc(killedByPlayer, moby, killedByWeaponId);
@@ -227,25 +228,6 @@ void mobForceIntoMapBounds(Moby *moby)
 int mapPathCanBeSkippedForTarget(Moby *moby)
 {
 	return 1;
-}
-
-//--------------------------------------------------------------------------
-void addBlip(Moby *moby, int type, int team, int life)
-{
-	if (!moby)
-		return;
-
-	// add blip
-	int blipId = radarGetBlipIndex(moby);
-	if (blipId >= 0)
-	{
-		RadarBlip *blip = radarGetBlips() + blipId;
-		blip->X = moby->Position[0];
-		blip->Y = moby->Position[1];
-		blip->Life = life;
-		blip->Type = type;
-		blip->Team = team;
-	}
 }
 
 //--------------------------------------------------------------------------
@@ -382,7 +364,7 @@ void playerOnPushedIntoWall(Player *player)
 	}
 
 	// push mobs away
-	mobReactToExplosionAt(player->PlayerId, player->PlayerPosition, 1, 8, 1);
+	mobReactToExplosionAt(player->PlayerId, player->PlayerPosition, 1, 8, 6);
 
 	// move player out of clipped wall
 	// using lastGoodPos doesn't always return us to before the clip
@@ -595,7 +577,7 @@ void survivalDebugStartRound(int roundNumber)
 	{
 		state->PlayerStates[j].State.Bolts = powf(1.225, roundNumber) * 10000;
 		state->PlayerStates[j].State.CurrentTokens = roundNumber * 5;
-#if ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE
+#ifdef ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE
 		state->PlayerStates[j].State.ItemCounts[ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE] = roundNumber;
 #endif
 	}
@@ -643,6 +625,7 @@ void survivalInit(void)
 	upgradeInit();
 	dropInit();
 	bboxInit();
+	vendorInit();
 	demonbellInit();
 	itemInit();
 	storeInit(&defaultStoreVTable);
@@ -730,14 +713,7 @@ int survivalTick(void)
 	//
 	if (MapConfig.State)
 	{
-		addBlip(MapConfig.State->BigAl, 14, TEAM_YELLOW, 31);
-
-		Moby *vendorMoby = MapConfig.State->Vendor;
-		while (vendorMoby && vendorMoby->OClass == MOBY_ID_WEAPON_VENDOR)
-		{
-			addBlip(vendorMoby, 4, TEAM_GREEN, 31);
-			++vendorMoby;
-		}
+		addRadarBlip(MapConfig.State->BigAl, 31, 14, TEAM_YELLOW);
 
 		// track round completions
 #if GAMBITS

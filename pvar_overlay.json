@@ -6033,6 +6033,7 @@
   {
     "Name": "Ammo Supply",
     "RCVersion": 4,
+    "CustomMode": "Survival",
     "MobyOClass": 511,
     "Length": 64,
     "Overlay": [
@@ -6169,6 +6170,7 @@
   {
     "Name": "Survival Store",
     "RCVersion": 4,
+    "CustomMode": "Survival",
     "MobyOClass": 16640,
     "Length": 64,
     "Overlay": [
@@ -6220,6 +6222,26 @@
           "Near": 0,
           "Look At": 1,
           "Stand On": 2
+        }
+      }
+    ]
+  },
+  {
+    "Name": "Survival Vendor",
+    "RCVersion": 4,
+    "CustomMode": "Survival",
+    "ShowRawEditor": true,
+    "MobyOClass": 9786,
+    "Length": 4,
+    "Overlay": [
+      {
+        "Name": "Default State",
+        "DataType": "Enum",
+        "Offset": 0,
+        "DataSize": 1,
+        "Options": {
+          "Enabled": 0,
+          "Disabled": 1
         }
       }
     ]

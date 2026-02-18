@@ -381,20 +381,50 @@ public class MapConfig : MonoBehaviour
     {
         var spriteDefs = DLSprites.ToList();
         var spriteContainers = HierarchicalSorting.Sort(Resources.FindObjectsOfTypeAll<SpriteContainer>());
+        var addAtEnd = new List<SpriteDef>();
 
         // add extra sprites
+        var nextUid = (int)spriteDefs.Max(x => x.m_Uid);
         foreach (var spriteContainer in spriteContainers.Where(x => x.isActiveAndEnabled))
         {
             if (spriteContainer.RacVersion != racVersion) continue;
 
             for (int i = 0; i < spriteContainer.Sprites.Count; ++i)
             {
-                var idx = spriteDefs.FindIndex(x => x.m_Uid == spriteContainer.Sprites[i].m_Uid);
+                var uid = spriteContainer.Sprites[i].m_Uid;
+                // if uid is 0 then user wants to insert at end with its own uid
+                if (uid == 0)
+                {
+                    addAtEnd.Add(spriteContainer.Sprites[i]);
+                    continue;
+                }
+
+                // always put uid at end
+                if (uid >= nextUid)
+                    nextUid = uid + 1;
+
+                var idx = spriteDefs.FindIndex(x => x.m_Uid == uid);
                 if (idx < 0)
                     spriteDefs.Add(spriteContainer.Sprites[i]);
                 else
                     spriteDefs[idx] = spriteContainer.Sprites[i];
             }
+        }
+
+        // add sprites with auto-assigned uid
+        // but make a copy so that the id isn't applied to the original
+        foreach (var sprite in addAtEnd)
+        {
+            spriteDefs.Add(new SpriteDef()
+            {
+                m_Uid = (ushort)nextUid,
+                m_Bank = sprite.m_Bank,
+                m_Texture = sprite.m_Texture,
+                m_TextureSizeOverride = sprite.m_TextureSizeOverride,
+                m_Tint = sprite.m_Tint,
+                m_Unknown = sprite.m_Unknown
+            });
+            nextUid++;
         }
 
         return spriteDefs.ToArray();
@@ -410,6 +440,19 @@ public class MapConfig : MonoBehaviour
         var idx = Array.FindIndex(spriteDefs, x => x.m_Texture == spriteDef.m_Texture || (spriteDef.m_Uid > 0 && x.m_Uid == spriteDef.m_Uid));
 
         return idx;
+    }
+
+    #endregion
+
+    #region Misc
+
+    public string GetCustomModeName(int racVersion)
+    {
+        switch (racVersion)
+        {
+            default: return null;
+            case RCVER.DL: return DLForceCustomMode == DLCustomModeIds.None ? null : DLForceCustomMode.ToString();
+        }
     }
 
     #endregion

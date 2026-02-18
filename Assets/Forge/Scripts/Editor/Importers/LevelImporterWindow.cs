@@ -2217,11 +2217,13 @@ public class LevelImporterWindow : EditorWindow
 
     void ImportMobyInstances(string mapBinFolder, string mapResourcesFolder, List<Action> postActions, GameObject rootGo)
     {
+        var mapConfig = FindObjectOfType<MapConfig>();
         var pvarOverlays = PvarOverlay.GetPvarOverlays(true);
         var gameplayMobysFolder = Path.Combine(mapBinFolder, FolderNames.BinaryGameplayMobyFolder);
         var mobyDirs = Directory.EnumerateDirectories(gameplayMobysFolder).ToList();
         var racVersion = ImportSourceRacVersion();
         var mobyRootGo = new GameObject("Mobys");
+        var customModeName = mapConfig ? mapConfig.GetCustomModeName(racVersion) : null;
         mobyRootGo.transform.SetParent(rootGo.transform, true);
 
         UpdateImportProgressBar(ImportStage.Importing_Mobys);
@@ -2233,7 +2235,7 @@ public class LevelImporterWindow : EditorWindow
             var mobyClassStr = folderNameParts[1];
             var mobyOClass = int.Parse(mobyClassStr);
             var mobyClass = $"{mobyOClass}";
-            var overlay = pvarOverlays?.FirstOrDefault(x => x.RCVersion == racVersion && x.MobyOClass == mobyOClass);
+            var overlay = PvarOverlay.FindPvarOverlay(pvarOverlays, racVersion, mobyClass: mobyOClass, customMode: customModeName);
             var gameObjectName = overlay?.Name ?? mobyClass;
 
             if (ImportSourceIsDL()) ImportDLMobyInstance(mobyDir, mobyRootGo, gameObjectName, postActions);

@@ -429,7 +429,7 @@ GuberEvent *mobCreateEvent(Moby *moby, u32 eventType);
 float mobGetTargetRadius(Moby *target);
 float mobGetDistanceToTarget(Moby *moby, Moby *target);
 int mobOnUnreliableMsgRemote(void *connection, void *data);
-void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float radius, int bKnockback);
+void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float radius, int knockbackTicks);
 void mobNuke(int killedByPlayerId);
 int mobHandleEvent(Moby *moby, GuberEvent *event);
 int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags, struct MobConfig *config);

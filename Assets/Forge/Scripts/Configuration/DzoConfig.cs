@@ -70,6 +70,7 @@ public class DzoMapMetadata
     public string SkymeshName;
     public SkymeshShellMetadata[] SkymeshShells;
     public string MinimapMeshName;
+    public string SpritesMeshName;
     public LightMetadata[] Lights;
     public Vector3 DefaultCameraPosition;
     public Vector3 DefaultCameraEuler;

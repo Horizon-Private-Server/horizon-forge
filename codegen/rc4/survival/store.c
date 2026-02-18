@@ -44,7 +44,6 @@ const char *ITEM_TYPE_NAMES[] =
 				[SURVIVAL_ITEM_CONSUMABLE_AUTO] "Totem",
 				[SURVIVAL_ITEM_CONSUMABLE_MANUAL] "Consumable",
 				[SURVIVAL_ITEM_CONSUMABLE_IMMEDIATE] "Instant",
-				[SURVIVAL_ITEM_CONSUMABLE_OTHER] "",
 };
 
 Moby *StoreMobys[16] = {};
@@ -196,7 +195,7 @@ enum StoreItemCanBuyResult storeCanBuyItem(Moby *moby, int localPlayerIndex, int
 	// has room for more
 	if (itemDef.VTable.HasRoomForMoreFunc && !itemDef.VTable.HasRoomForMoreFunc(itemIdx, &itemDef, playerId))
 		return STORE_ITEM_CAN_BUY_HAVE_TOO_MANY;
-	else if (itemDef.MaxHeldAtOnce > 0 && MapConfig.State->PlayerStates[playerId].State.ItemCounts[itemIdx] >= itemDef.MaxHeldAtOnce)
+	else if (itemDef.MaxHeldAtOnce > 0 && playerGetItemCount(player, itemIdx) >= itemDef.MaxHeldAtOnce)
 		return STORE_ITEM_CAN_BUY_HAVE_TOO_MANY;
 
 	// check cost
@@ -229,7 +228,9 @@ void storePlayerBuy(Moby *moby, int localPlayerIndex, int itemIdx)
 
 	// give player
 	itemBeginAcquire(playerId, itemIdx);
-	itemShowAcquired(player->LocalPlayerIndex, itemIdx, "Purchased");
+
+	// commenting out because most items already have a consumed message
+	// itemShowMessage(player->LocalPlayerIndex, itemIdx, "Purchased %s!", 60);
 }
 
 //--------------------------------------------------------------------------
@@ -294,7 +295,7 @@ void storeDrawItemList(Moby *moby, int localPlayerIndex, Window_t *drawWindow, i
 			break;
 
 		enum StoreItemCanBuyResult canBuyResult = storeCanBuyItem(moby, localPlayerIndex, itemIdx);
-		int numHeld = MapConfig.State->PlayerStates[player->PlayerId].State.ItemCounts[itemIdx];
+		int numHeld = playerGetItemCount(player, itemIdx);
 		u32 cost = storeGetItemCost(moby, localPlayerIndex, itemIdx, &itemDef);
 		int currencyTexId = itemDef.StoreCostType >= SURVIVAL_ITEM_STORE_COST_TOKENS_LINEAR ? tokenTexId : boltTexId;
 		int disabled = canBuyResult == STORE_ITEM_CAN_BUY_ITEM_DISABLED;
@@ -539,6 +540,29 @@ void storeHandleInput(Moby *moby, int localPlayerIndex)
 			uiPlaySound(UI_SOUND_ID_NAV_UP_DOWN, 0);
 		}
 	}
+	else if (padGetButtonDown(localPlayerIndex, PAD_LEFT) > 0)
+	{
+		int currRow = pvars->RowIdx[localPlayerIndex];
+		if (currRow > 0)
+		{
+			pvars->RowIdx[localPlayerIndex] = maxf(0, currRow - 5);
+			uiPlaySound(UI_SOUND_ID_NAV_UP_DOWN, 0);
+		}
+	}
+	else if (padGetButtonDown(localPlayerIndex, PAD_RIGHT) > 0)
+	{
+		int currPage = pvars->PageIdx[localPlayerIndex];
+		struct StorePageDef page;
+		if (!storeGetPage(moby, localPlayerIndex, currPage, &page))
+			return;
+
+		int currRow = pvars->RowIdx[localPlayerIndex];
+		if (currRow < (page.ItemsCount - 1))
+		{
+			pvars->RowIdx[localPlayerIndex] = minf(page.ItemsCount - 1, currRow + 5);
+			uiPlaySound(UI_SOUND_ID_NAV_UP_DOWN, 0);
+		}
+	}
 	else if (padGetButtonDown(localPlayerIndex, PAD_L1) > 0)
 	{
 		int currPage = pvars->PageIdx[localPlayerIndex];
@@ -628,7 +652,6 @@ int storeTryInteract(Moby *moby, Player *player, char *buf)
 //--------------------------------------------------------------------------
 void storeUpdate(Moby *moby)
 {
-	Player **players = playerGetAll();
 	int i;
 	char buf[64];
 	if (!moby || !moby->PVar)

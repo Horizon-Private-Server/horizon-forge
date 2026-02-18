@@ -38,7 +38,7 @@ void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 #endif
 
 #ifdef AMMO_DROP_PROBABILITY
-	Player *player = playerGetAll()[killedByPlayerId];
+	Player *player = playerGetFromIndex(killedByPlayerId);
 	if (playerIsValid(player) && player->IsLocal && randRange(0, 1) < AMMO_DROP_PROBABILITY)
 	{
 		ammodropCreateAt(moby);
@@ -48,7 +48,7 @@ void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 	// spawn mob drop
 	if (MapConfig.Functions.GetDropItemOnMobKilledFunc && killedByPlayerId >= 0)
 	{
-		Player *player = playerGetAll()[killedByPlayerId];
+		Player *player = playerGetFromIndex(killedByPlayerId);
 		if (playerIsValid(player) && player->IsLocal)
 		{
 			int dropItem = MapConfig.Functions.GetDropItemOnMobKilledFunc(player, moby, killedByWeaponId);
@@ -297,10 +297,10 @@ void mapOnPlayerUpdate(Player *player)
 	stackablesProcessPlayer(player);
 
 	// pass to items
-#if ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE
+#ifdef ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE
 	mapOnItemApply_PlayerHealth(ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_HEALTH_UPGRADE], player);
 #endif
-#if ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE
+#ifdef ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE
 	mapOnItemApply_PlayerSpeed(ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_SPEED_UPGRADE], player);
 #endif
 }
@@ -358,7 +358,7 @@ void mapOnPlayerGetVendorReward(Player *player, int gadgetId, int levelNum)
 	// reward
 	int selectedRewardItemIdx = itemIdxs[i];
 	itemBeginAcquire(player->PlayerId, selectedRewardItemIdx);
-	itemShowAcquired(player->LocalPlayerIndex, selectedRewardItemIdx, "Got");
+	itemShowMessage(player->LocalPlayerIndex, selectedRewardItemIdx, "Got %s!", 60);
 }
 
 //--------------------------------------------------------------------------
@@ -377,10 +377,10 @@ int mapOnBeforeDamageMob(Player *player, Moby *sourceMoby, Moby *mobMoby, struct
 	args->DamageQuarters = (u32)(damage * 4);
 
 	// pass to items
-#if ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE
+#ifdef ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE
 	mapOnItemApply_PlayerCrit(ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE], player, sourceMoby, mobMoby, args);
 #endif
-#if ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE
+#ifdef ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE
 	mapOnItemApply_PlayerDamage(ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE, &MapConfig.ItemDefs[ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE], player, sourceMoby, mobMoby, args);
 #endif
 

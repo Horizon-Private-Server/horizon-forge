@@ -74,7 +74,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
     public SerializableStringDictionary GetPVarValues() => PVarValues;
     public SerializableMonoBehaviourDictionary GetPVarReferences() => PVarReferences;
     public string[] GetPVarStrings() => PVarStrings;
-    public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: OClass);
+    public PvarOverlay GetPVarOverlay() => PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: OClass, customMode: FindObjectOfType<MapConfig>()?.GetCustomModeName(RCVersion));
     public void SetPVarData(byte[] pvarData) => PVars = pvarData;
     public void SetPVarValues(SerializableStringDictionary pvarValues) => PVarValues = pvarValues;
     public void SetPVarReferences(SerializableMonoBehaviourDictionary pvarRefs) => PVarReferences = pvarRefs;
@@ -171,7 +171,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         if (PVars != null && DrawPVarMobyTieGroupIdLines)
         {
             var mapConfig = FindObjectOfType<MapConfig>();
-            var pvarOverlay = PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: this.OClass);
+            var pvarOverlay = PvarOverlay.GetPvarOverlay(this.RCVersion, mobyClass: this.OClass, customMode: mapConfig.GetCustomModeName(RCVersion));
             if (pvarOverlay != null)
             {
                 var mobys = mapConfig.GetMobys(this.RCVersion);
@@ -450,7 +450,7 @@ public class Moby : RenderSelectionBase, IAsset, IPVarObject
         var mapConfig = GameObject.FindObjectOfType<MapConfig>();
         if (!mapConfig) return;
 
-        var pvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: this.OClass);
+        var pvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: this.OClass, customMode: mapConfig.GetCustomModeName(RCVersion));
         if (pvarOverlay != null)
         {
             UnityHelper.ValidatePVars(mapConfig, this);
