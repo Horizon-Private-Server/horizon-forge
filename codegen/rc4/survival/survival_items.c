@@ -1,6 +1,10 @@
 #include <libdl/ui.h>
 #include <libdl/dialog.h>
 #include <libdl/random.h>
+#include <libdl/stdio.h>
+#include <libdl/string.h>
+#include <libdl/hud.h>
+#include <libdl/player.h>
 #include "item.h"
 #include "game.h"
 #include "maputils.h"
@@ -18,6 +22,7 @@
 #define ITEM_HEALTHTORNADO_DURATION (10 * TIME_SECOND)
 #define ITEM_HEALTHTORNADO_PERIOD_TICKS (TPS * 0.25)
 #define ITEM_HEALTHTORNADO_HEAL_PERCENT (0.05)
+#define ITEM_EARTHQUAKE_COOLDOWN_TICKS_DEC (60)
 
 #define PLAYER_UPGRADE_DAMAGE_FACTOR (0.08)
 #define PLAYER_UPGRADE_SPEED_FACTOR (0.03)
@@ -30,11 +35,103 @@ int HealthTornadoActivateTicks[GAME_MAX_PLAYERS] = {};
 int InfiniteAmmoStopTime = -1;
 
 //--------------------------------------------------------------------------
+void mapOnItemTick_Earthquake(int defIdx, SurvivalItemDef_t *def)
+{
+	static int playerInAir[GAME_MAX_LOCALS] = {};
+	// static float playerPeakAir[GAME_MAX_LOCALS] = {};
+	int i;
+	for (i = 0; i < GAME_MAX_LOCALS; ++i)
+	{
+		Player *player = playerGetFromSlot(i);
+		if (!playerIsValid(player))
+			continue;
+
+		if (playerIsDead(player))
+			continue;
+
+		if (player->Ground.offAny)
+		{
+			playerInAir[i] = 1;
+			// playerPeakAir[i] = maxf(playerPeakAir[i], player->PlayerPosition[2]);
+			continue;
+		}
+
+		// activate on good landing
+		// consider only activating if the player fell a certain height
+		// float delta = playerPeakAir[i] - player->PlayerPosition[2];
+		if (playerInAir[i] && player->Ground.onGood && itemCanConsume(player, defIdx))
+			itemBeginConsume(player->PlayerId, defIdx);
+
+		playerInAir[i] = 0;
+		// playerPeakAir[i] = 0;
+	}
+}
+
+//--------------------------------------------------------------------------
+int mapOnItemGetConsumeCooldownTicks_Earthquake(int defIdx, SurvivalItemDef_t *def, int playerId)
+{
+	Player *player = playerGetFromSlot(playerId);
+	if (!playerIsValid(player))
+		return 0;
+
+	int count = playerGetItemCount(player, defIdx);
+	int baseCooldown = MapConfig.ItemDefs[defIdx].ConsumeCooldownTicks;
+	int cooldownDec = count * ITEM_EARTHQUAKE_COOLDOWN_TICKS_DEC;
+	return maxf(TPS, baseCooldown - cooldownDec);
+}
+
+//--------------------------------------------------------------------------
+void mapOnItemConsumed_Earthquake(int defIdx, SurvivalItemDef_t *def, int playerId)
+{
+	Player *player = playerGetFromSlot(playerId);
+	if (!playerIsValid(player))
+		return;
+
+	int count = playerGetItemCount(player, defIdx);
+	const float radius = 5;
+	const int knockbackMaxPower = 10;
+
+	// generate splash position
+	VECTOR pos = {0, 0, 0.1, 0};
+	u32 baseColor = hudGetTeamColor(player->Team, 2);
+	u32 color = (baseColor & 0xffffff) | 0x40000000;
+	vector_add(pos, pos, player->PlayerPosition);
+
+	// generate splash rotation along surface normal
+	VECTOR quat = {0, 0, 0, 1};
+	MATRIX m;
+	matrix_from_up_normal_twist(m, player->Ground.normal, 0);
+	quat_from_matrix(quat, m);
+
+	// spawn splash
+	mobySpawnSplash(
+			vector_read(pos),
+			vector_read(quat),
+			12,
+			color,
+			1,
+			0.5,
+			1 * radius,
+			1.00,
+			1.01,
+			1.1);
+
+	// camera shake
+	mobySpawnExplosion(vector_read(pos), 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, 0, radius, 0, 0, 0);
+
+	// knockback enemies
+	int power = count * 2;
+	mobReactToExplosionAt(player, pos, 0, radius, power > knockbackMaxPower ? knockbackMaxPower : power);
+}
+
+//--------------------------------------------------------------------------
 void mapOnItemTick_SelfRevive(int defIdx, SurvivalItemDef_t *def)
 {
 	static int init = 0;
 	if (!init && MapConfig.State)
 	{
+		init = 1;
+
 		// solo run start with self revive
 		GameSettings *gs = gameGetSettings();
 		if (gs->PlayerCount != 1)
@@ -43,7 +140,6 @@ void mapOnItemTick_SelfRevive(int defIdx, SurvivalItemDef_t *def)
 			return;
 
 		itemBeginAcquire(0, defIdx);
-		init = 1;
 	}
 
 	int i;
@@ -57,14 +153,9 @@ void mapOnItemTick_SelfRevive(int defIdx, SurvivalItemDef_t *def)
 			continue;
 
 		// self revive
-		if (playerGetItemCount(player, defIdx) > 0)
+		if (itemCanConsume(player, defIdx))
 			itemBeginConsume(player->PlayerId, defIdx);
 	}
-}
-
-//--------------------------------------------------------------------------
-void mapOnItemDraw_SelfRevive(int defIdx, SurvivalItemDef_t *def)
-{
 }
 
 //--------------------------------------------------------------------------
@@ -75,7 +166,7 @@ void mapOnItemInit_SelfRevive(int defIdx, SurvivalItemDef_t *def)
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_SelfRevive(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 
 	if (!MapConfig.Functions.ModeRevivePlayerFunc || !playerIsValid(player))
 		return;
@@ -85,13 +176,13 @@ void mapOnItemConsumed_SelfRevive(int defIdx, SurvivalItemDef_t *def, int player
 
 	// show consumed message
 	if (player->IsLocal)
-		uiShowPopup(player->LocalPlayerIndex, "Self Revive Used!");
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "%s Used!", 30);
 }
 
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_UpgradeWeapon(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player) || !player->IsLocal)
 		return;
 
@@ -109,11 +200,10 @@ void mapOnItemConsumed_RandomizeWeaponPickups(int defIdx, SurvivalItemDef_t *def
 //--------------------------------------------------------------------------
 void mapOnItemTick_HealthTornado(int defIdx, SurvivalItemDef_t *def)
 {
-	Player **players = playerGetAll();
 	int i;
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
+		Player *player = playerGetFromIndex(i);
 		if (!playerIsValid(player))
 			continue;
 
@@ -155,19 +245,18 @@ void mapOnItemConsumed_HealthTornado(int defIdx, SurvivalItemDef_t *def, int pla
 	HealthTornadoActivateTicks[playerId] = 0;
 
 	// show consumed message
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (playerIsValid(player) && player->IsLocal)
-		uiShowPopup(player->LocalPlayerIndex, "Health Tornado Activated!");
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "%s Activated!", 30);
 }
 
 //--------------------------------------------------------------------------
 void mapOnItemTick_InvisibilityCloak(int defIdx, SurvivalItemDef_t *def)
 {
-	Player **players = playerGetAll();
 	int i;
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
+		Player *player = playerGetFromIndex(i);
 		if (!playerIsValid(player))
 			continue;
 
@@ -200,9 +289,9 @@ void mapOnItemConsumed_InvisibilityCloak(int defIdx, SurvivalItemDef_t *def, int
 	InvisibilityCloakStopTime[playerId] = gameGetTime() + ITEM_INVISCLOAK_DURATION;
 
 	// show consumed message
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (playerIsValid(player) && player->IsLocal)
-		uiShowPopup(player->LocalPlayerIndex, "Invisibility Cloak Equipped!");
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "%s Equipped!", 30);
 }
 
 //--------------------------------------------------------------------------
@@ -223,10 +312,9 @@ void mapOnItemTick_GlobalInfiniteAmmo(int defIdx, SurvivalItemDef_t *def)
 
 			// give everyone max ammo
 			int i;
-			Player **players = playerGetAll();
 			for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 			{
-				Player *player = players[i];
+				Player *player = playerGetFromIndex(i);
 				if (!playerIsValid(player) || !player->GadgetBox)
 					continue;
 
@@ -256,10 +344,9 @@ void mapOnItemConsumed_GlobalInfiniteAmmo(int defIdx, SurvivalItemDef_t *def, in
 void mapOnItemConsumed_GlobalShield(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	int i;
-	Player **players = playerGetAll();
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
+		Player *player = playerGetFromIndex(i);
 		if (!playerIsValid(player))
 			continue;
 
@@ -277,10 +364,9 @@ void mapOnItemConsumed_GlobalShield(int defIdx, SurvivalItemDef_t *def, int play
 void mapOnItemConsumed_GlobalQuad(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	int i;
-	Player **players = playerGetAll();
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
+		Player *player = playerGetFromIndex(i);
 		if (!playerIsValid(player))
 			continue;
 
@@ -323,44 +409,44 @@ void mapOnItemConsumed_DreadToken(int defIdx, SurvivalItemDef_t *def, int player
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_Alphamod(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 
-#if ITEM_ALPHAMOD_SPEED
+#ifdef ITEM_ALPHAMOD_SPEED
 	if (defIdx == ITEM_ALPHAMOD_SPEED)
 	{
 		playerGiveAlphaMod(player, ALPHA_MOD_SPEED);
 	}
 #endif
 
-#if ITEM_ALPHAMOD_AREA
+#ifdef ITEM_ALPHAMOD_AREA
 	if (defIdx == ITEM_ALPHAMOD_AREA)
 	{
 		playerGiveAlphaMod(player, ALPHA_MOD_AREA);
 	}
 #endif
 
-#if ITEM_ALPHAMOD_AMMO
+#ifdef ITEM_ALPHAMOD_AMMO
 	if (defIdx == ITEM_ALPHAMOD_AMMO)
 	{
 		playerGiveAlphaMod(player, ALPHA_MOD_AMMO);
 	}
 #endif
 
-#if ITEM_ALPHAMOD_IMPACT
+#ifdef ITEM_ALPHAMOD_IMPACT
 	if (defIdx == ITEM_ALPHAMOD_IMPACT)
 	{
 		playerGiveAlphaMod(player, ALPHA_MOD_IMPACT);
 	}
 #endif
 
-#if ITEM_ALPHAMOD_JACKPOT
+#ifdef ITEM_ALPHAMOD_JACKPOT
 	if (defIdx == ITEM_ALPHAMOD_JACKPOT)
 	{
 		playerGiveAlphaMod(player, ALPHA_MOD_JACKPOT);
 	}
 #endif
 
-#if ITEM_ALPHAMOD_XP
+#ifdef ITEM_ALPHAMOD_XP
 	if (defIdx == ITEM_ALPHAMOD_XP)
 	{
 		playerGiveAlphaMod(player, ALPHA_MOD_XP);
@@ -380,18 +466,17 @@ void mapOnItemConsumed_GlobalNuke(int defIdx, SurvivalItemDef_t *def, int player
 void mapOnItemConsumed_GlobalAmmo(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	int i;
-	Player **players = playerGetAll();
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *p = players[i];
-		if (playerIsValid(p))
+		Player *player = playerGetFromIndex(i);
+		if (playerIsValid(player))
 		{
 			int j;
 			for (j = 0; j <= 8; ++j)
 			{
 				int gadgetId = weaponSlotToId(j);
-				if (p->GadgetBox->Gadgets[gadgetId].Level >= 0)
-					p->GadgetBox->Gadgets[gadgetId].Ammo = playerGetWeaponMaxAmmo(p->GadgetBox, gadgetId);
+				if (player->GadgetBox->Gadgets[gadgetId].Level >= 0)
+					player->GadgetBox->Gadgets[gadgetId].Ammo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
 			}
 		}
 	}
@@ -427,19 +512,18 @@ void mapOnItemConsumed_GlobalFreeze(int defIdx, SurvivalItemDef_t *def, int play
 void mapOnItemConsumed_GlobalHealth(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	int i;
-	Player **players = playerGetAll();
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *p = players[i];
-		if (playerIsValid(p))
+		Player *player = playerGetFromIndex(i);
+		if (playerIsValid(player))
 		{
-			if (!playerIsDead(p) && p->Health > 0)
+			if (!playerIsDead(player) && player->Health > 0)
 			{
-				playerSetHealth(p, p->MaxHealth);
+				playerSetHealth(player, player->MaxHealth);
 			}
 			else if (MapConfig.Functions.ModeRevivePlayerFunc && MapConfig.State && MapConfig.State->PlayerStates[i].ReviveCooldownTicks)
 			{
-				MapConfig.Functions.ModeRevivePlayerFunc(p, playerId);
+				MapConfig.Functions.ModeRevivePlayerFunc(player, playerId);
 			}
 		}
 	}
@@ -452,42 +536,42 @@ int mapItem_WeaponUpgrade_GetWeaponIdFromItem(int defIdx)
 {
 	int weaponId = 0;
 
-#if ITEM_IMMEDIATE_UPGRADE_DUAL_VIPERS
+#ifdef ITEM_IMMEDIATE_UPGRADE_DUAL_VIPERS
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_DUAL_VIPERS)
 		weaponId = WEAPON_ID_VIPERS;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_MAGMA_CANNON
+#ifdef ITEM_IMMEDIATE_UPGRADE_MAGMA_CANNON
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_MAGMA_CANNON)
 		weaponId = WEAPON_ID_MAGMA_CANNON;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_ARBITER
+#ifdef ITEM_IMMEDIATE_UPGRADE_ARBITER
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_ARBITER)
 		weaponId = WEAPON_ID_ARBITER;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_FUSION_RIFLE
+#ifdef ITEM_IMMEDIATE_UPGRADE_FUSION_RIFLE
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_FUSION_RIFLE)
 		weaponId = WEAPON_ID_FUSION_RIFLE;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_MINE_LAUNCHER
+#ifdef ITEM_IMMEDIATE_UPGRADE_MINE_LAUNCHER
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_MINE_LAUNCHER)
 		weaponId = WEAPON_ID_MINE_LAUNCHER;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_B6_OBLITERATOR
+#ifdef ITEM_IMMEDIATE_UPGRADE_B6_OBLITERATOR
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_B6_OBLITERATOR)
 		weaponId = WEAPON_ID_B6;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_HOLOSHIELD
+#ifdef ITEM_IMMEDIATE_UPGRADE_HOLOSHIELD
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_HOLOSHIELD)
 		weaponId = WEAPON_ID_OMNI_SHIELD;
 #endif
 
-#if ITEM_IMMEDIATE_UPGRADE_SCORPION_FLAIL
+#ifdef ITEM_IMMEDIATE_UPGRADE_SCORPION_FLAIL
 	if (defIdx == ITEM_IMMEDIATE_UPGRADE_SCORPION_FLAIL)
 		weaponId = WEAPON_ID_FLAIL;
 #endif
@@ -502,7 +586,7 @@ int mapOnItemCanBuyInStore_WeaponUpgrade(int defIdx, struct SurvivalItemDef *def
 	if (weaponId <= 0)
 		return 0;
 
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player))
 		return 0;
 
@@ -524,7 +608,7 @@ u32 mapOnItemGetStoreCost_WeaponUpgrade(int defIdx, struct SurvivalItemDef *def,
 	if (weaponId <= 0)
 		return 0;
 
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player))
 		return 0;
 
@@ -551,7 +635,7 @@ void mapOnItemConsumed_WeaponUpgrade(int defIdx, SurvivalItemDef_t *def, int pla
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_PlayerSpeed(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player) || !player->IsLocal)
 		return;
 
@@ -567,7 +651,7 @@ void mapOnItemApply_PlayerSpeed(int defIdx, SurvivalItemDef_t *def, Player *play
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_PlayerHealth(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player) || !player->IsLocal)
 		return;
 
@@ -583,7 +667,7 @@ void mapOnItemApply_PlayerHealth(int defIdx, SurvivalItemDef_t *def, Player *pla
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_PlayerDamage(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player) || !player->IsLocal)
 		return;
 
@@ -605,7 +689,7 @@ void mapOnItemApply_PlayerDamage(int defIdx, SurvivalItemDef_t *def, Player *pla
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_PlayerCrit(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetAll()[playerId];
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player) || !player->IsLocal)
 		return;
 
@@ -628,4 +712,60 @@ void mapOnItemApply_PlayerCrit(int defIdx, SurvivalItemDef_t *def, Player *playe
 	}
 
 	args->DamageQuarters = (u32)(damage * 4);
+}
+
+//--------------------------------------------------------------------------
+void mapOnItemConsumed_Pda(int defIdx, SurvivalItemDef_t *def, int playerId)
+{
+	Player *player = playerGetFromIndex(playerId);
+	if (!playerIsValid(player) || !player->IsLocal || !MapConfig.State)
+		return;
+
+	struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[playerId];
+	int localPlayerIndex = player->LocalPlayerIndex;
+
+	// open menu
+	((void (*)(int, int))0x00544748)(localPlayerIndex, 4);
+	((void (*)(int, int))0x005415c8)(localPlayerIndex, 2);
+	((void (*)(int))0x00543e10)(localPlayerIndex);				// hide player
+	int s = ((int (*)(int))0x00543648)(localPlayerIndex); // get hud enter state
+	((void (*)(int))0x005c2370)(s);												// swapto
+	playerData->IsInWeaponsMenu = 1;
+
+	// show consumed message
+	itemShowMessage(localPlayerIndex, defIdx, "%s Activated!", 30);
+}
+
+//--------------------------------------------------------------------------
+void mapOnItemConsumed_GetBolts(int defIdx, SurvivalItemDef_t *def, int playerId)
+{
+	Player *player = playerGetFromIndex(playerId);
+	if (!playerIsValid(player) || !MapConfig.State)
+		return;
+
+	// give bolts
+	const int bolts = 500000;
+	struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[playerId];
+	playerData->State.Bolts += bolts;
+	playerData->State.TotalBolts += bolts;
+
+	if (player->IsLocal)
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "Got %s!", 30);
+}
+
+//--------------------------------------------------------------------------
+void mapOnItemConsumed_GetTokens(int defIdx, SurvivalItemDef_t *def, int playerId)
+{
+	Player *player = playerGetFromIndex(playerId);
+	if (!playerIsValid(player) || !MapConfig.State)
+		return;
+
+	// give bolts
+	const int tokens = 25;
+	struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[playerId];
+	playerData->State.CurrentTokens += tokens;
+	playerData->State.TotalTokens += tokens;
+
+	if (player->IsLocal)
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "Got %s!", 30);
 }

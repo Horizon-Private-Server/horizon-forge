@@ -42,7 +42,7 @@ int dropGetItems(int forPlayerId, int *itemIdxs, int count)
 	int outIdx = 0;
 	int i;
 	SurvivalItemDef_t itemDef;
-	Player *player = playerGetAll()[forPlayerId];
+	Player *player = playerGetFromIndex(forPlayerId);
 	for (i = 0; i < MapConfig.ItemDefCount; ++i)
 	{
 		if (outIdx >= count)
@@ -106,7 +106,7 @@ int dropGetRandomItem(Moby *mobMoby, int forPlayerId, int gadgetId)
 int dropAmIOwner(Moby *moby)
 {
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
-	Player *player = playerGetAll()[pvars->OwnerPlayerId];
+	Player *player = playerGetFromIndex(pvars->OwnerPlayerId);
 	return playerIsValid(player) && player->IsLocal;
 }
 
@@ -218,12 +218,11 @@ void dropUpdate(Moby *moby)
 	VECTOR offset = {0, 0, 1, 0};
 	int i;
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
-	Player **players = playerGetAll();
 	GameSettings *gs = gameGetSettings();
 	if (!pvars)
 		return;
 
-	Player *ownerPlayer = players[pvars->OwnerPlayerId];
+	Player *ownerPlayer = playerGetFromIndex(pvars->OwnerPlayerId);
 	int isOwner = dropAmIOwner(moby);
 
 	// register draw event
@@ -270,7 +269,7 @@ void dropUpdate(Moby *moby)
 	// handle pickup
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
+		Player *player = playerGetFromIndex(i);
 		if (player && !playerIsDead(player) && player->IsLocal)
 		{
 			vector_subtract(t, player->PlayerPosition, moby->Position);
@@ -392,7 +391,6 @@ int dropHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 {
 	struct DropPickupEventArgs args;
 	int i, j;
-	Player **players = playerGetAll();
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
 
 	if (!pvars || pvars->Destroyed)

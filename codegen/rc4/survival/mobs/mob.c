@@ -268,7 +268,7 @@ float mobGetCurrentMoveSpeed(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float radius, int bKnockback)
+void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float radius, int knockbackPower)
 {
 	if (!MapConfig.State)
 		return;
@@ -277,7 +277,6 @@ void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float r
 	VECTOR delta;
 	struct MobDamageEventArgs args;
 	float sqrRadius = radius * radius;
-	Player **players = playerGetAll();
 	u32 uid = 0;
 	if (damager)
 		uid = guberGetUID(damager);
@@ -288,7 +287,7 @@ void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float r
 		Moby *m = MapConfig.State->AllMobsSorted[i];
 		if (m)
 		{
-
+			struct MobPVar *pvars = (struct MobPVar *)m->PVar;
 			vector_subtract(delta, m->Position, position);
 			if (vector_sqrmag(delta) <= sqrRadius)
 			{
@@ -304,11 +303,11 @@ void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float r
 					args.SourceOClass = 0;
 					args.DamageQuarters = damage * 4;
 					args.DamageFlags = 0;
-					if (bKnockback)
+					if (knockbackPower > 0)
 					{
 						args.Knockback.Angle = (short)(angle * 1000);
-						args.Knockback.Ticks = 10;
-						args.Knockback.Power = 6;
+						args.Knockback.Ticks = pvars->MobVars.MoveVars.MoveStep + 1;
+						args.Knockback.Power = knockbackPower > 255 ? 255 : knockbackPower;
 						args.Knockback.Force = 1;
 					}
 					guberEventWrite(guberEvent, &args, sizeof(struct MobDamageEventArgs));
@@ -400,7 +399,6 @@ int mobDoDamageTryHit(Moby *moby, Moby *hitMoby, VECTOR jointPosition, int isAoE
 int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE)
 {
 	VECTOR p, delta;
-	Player **players = playerGetAll();
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	int i;
 	int result = 0;
@@ -440,7 +438,7 @@ int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radiu
 
 			for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 			{
-				Player *player = players[i];
+				Player *player = playerGetFromIndex(i);
 				if (!player || !player->SkinMoby || playerIsDead(player))
 					continue;
 
@@ -476,7 +474,6 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 {
 	VECTOR p, delta;
 	MATRIX jointMtx;
-	Player **players = playerGetAll();
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	int i;
 	int result = 0;
@@ -511,8 +508,8 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 
 		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 		{
-			Player *player = players[i];
-			if (!player || !playerIsConnected(player) || playerIsDead(player))
+			Player *player = playerGetFromIndex(i);
+			if (!playerIsValid(player) || playerIsDead(player))
 				continue;
 
 			vector_subtract(delta, player->PlayerPosition, p);
@@ -1208,7 +1205,6 @@ void mobGetVelocityToTargetSimple(Moby *moby, VECTOR velocity, VECTOR from, VECT
 Moby *mobGetNextTarget(Moby *moby, float keepCurrentTargetFactor)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	Player **players = playerGetAll();
 	int i;
 	VECTOR delta;
 	Moby *currentTarget = pvars->MobVars.Target;
@@ -1251,19 +1247,19 @@ Moby *mobGetNextTarget(Moby *moby, float keepCurrentTargetFactor)
 	{
 		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 		{
-			Player *p = players[i];
-			if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80)
+			Player *player = playerGetFromIndex(i);
+			if (player && player->SkinMoby && !playerIsDead(player) && player->Health > 0 && player->SkinMoby->Opacity >= 0x80)
 			{
-				vector_subtract(delta, p->PlayerPosition, moby->Position);
+				vector_subtract(delta, player->PlayerPosition, moby->Position);
 				float dist = vector_length(delta);
 
 				if (dist < 300)
 				{
-					Moby *pTargetMoby = playerGetTargetMoby(p);
+					Moby *pTargetMoby = playerGetTargetMoby(player);
 
 					// don't target players that are in jump pad state
 					// unless we're already targeting them
-					if (p->PlayerState == PLAYER_STATE_MOON_JUMP && pTargetMoby != currentTarget)
+					if (player->PlayerState == PLAYER_STATE_MOON_JUMP && pTargetMoby != currentTarget)
 						continue;
 
 					// favor existing target

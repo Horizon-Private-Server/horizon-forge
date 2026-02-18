@@ -1,12 +1,15 @@
 #include <tamtypes.h>
 #include <libdl/color.h>
 #include <libdl/stdio.h>
+#include <libdl/ui.h>
+#include <libdl/game.h>
 #include "item.h"
 #include "utils.h"
 #include "window.h"
 #include "maputils.h"
 
 static int itemCurrentDrawnItemIdx[GAME_MAX_LOCALS] = {-1};
+static u32 itemCooldownTicks[GAME_MAX_PLAYERS][MAX_ITEM_COUNT] = {};
 
 //--------------------------------------------------------------------------
 void itemBeginAcquire(int playerId, int itemIdx)
@@ -46,8 +49,20 @@ void itemBeginConsume(int playerId, int itemIdx)
 	if (count <= 0)
 		return;
 
+	// set cooldown
+	itemCooldownTicks[playerId][itemIdx] = itemGetCooldownTicks(playerId, itemIdx);
+
 	// subtract from player item count
-	MapConfig.State->PlayerStates[playerId].State.ItemCounts[itemIdx] -= 1;
+	switch (MapConfig.ItemDefs[itemIdx].Type)
+	{
+		// these don't get removed on consumption
+	case SURVIVAL_ITEM_PASSIVE:
+		break;
+		// remove on consumption by default
+	default:
+		MapConfig.State->PlayerStates[playerId].State.ItemCounts[itemIdx] -= 1;
+		break;
+	}
 
 	// raise event
 	if (!MapConfig.Functions.ModeSendOnPlayerItemConsumedFunc)
@@ -79,17 +94,19 @@ void itemOnAcquireTriggered(Player *player, int itemId)
 	if (def->VTable.OnAcquiredFunc)
 		def->VTable.OnAcquiredFunc(itemId, def, player->PlayerId);
 
+	// don't check cooldown as effect is immediate
+	// maybe should think about how cooldown could work with immediate consumables
 	if (player->IsLocal && def->Type == SURVIVAL_ITEM_CONSUMABLE_IMMEDIATE)
 		itemBeginConsume(player->PlayerId, itemId);
 }
 
 //--------------------------------------------------------------------------
-void itemShowAcquired(int localPlayerIndex, int itemIdx, char *verb)
+void itemShowMessage(int localPlayerIndex, int itemIdx, char *format, int ticks)
 {
 	// show popup
 	char buf[64];
-	snprintf(buf, sizeof(buf), "%s %s!", verb ? verb : "Got", MapConfig.ItemDefs[itemIdx].Name);
-	pushSnack(localPlayerIndex, buf, 60);
+	snprintf(buf, sizeof(buf), format, MapConfig.ItemDefs[itemIdx].Name);
+	pushSnack(localPlayerIndex, buf, ticks);
 }
 
 //--------------------------------------------------------------------------
@@ -102,6 +119,22 @@ int itemCanAcquire(Player *player, int itemIdx)
 	if (item->VTable.HasRoomForMoreFunc && !item->VTable.HasRoomForMoreFunc(itemIdx, item, player->PlayerId))
 		return 0;
 	if (item->MaxHeldAtOnce > 0 && playerGetItemCount(player, itemIdx) >= item->MaxHeldAtOnce)
+		return 0;
+
+	return 1;
+}
+
+//--------------------------------------------------------------------------
+int itemCanConsume(Player *player, int itemIdx)
+{
+	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+		return 0;
+
+	SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
+	if (playerGetItemCount(player, itemIdx) <= 0)
+		return 0;
+
+	if (itemCooldownTicks[player->PlayerId][itemIdx] > 0)
 		return 0;
 
 	return 1;
@@ -191,6 +224,19 @@ int itemChargePlayerBank(int localPlayerIndex, int itemIdx)
 }
 
 //--------------------------------------------------------------------------
+u32 itemGetCooldownTicks(int playerId, int itemIdx)
+{
+	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+		return 0;
+
+	SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
+	if (item->VTable.GetConsumeCooldownTicksFunc)
+		return item->VTable.GetConsumeCooldownTicksFunc(itemIdx, item, playerId);
+
+	return item->ConsumeCooldownTicks;
+}
+
+//--------------------------------------------------------------------------
 int itemFindNextManualConsumable(int localPlayerIndex, int startItemIdx)
 {
 	int i;
@@ -242,15 +288,40 @@ float itemGetVendorRewardChanceWeight(int itemIdx, SurvivalItemDef_t *itemDef, i
 }
 
 //--------------------------------------------------------------------------
-void itemDrawIcon(int localPlayerIndex, float x, float y, float w, float h, float fade, SurvivalItemDef_t *def)
+void itemDrawIcon(Window_t *window, Player *player, int itemIdx, float texDim, float countTextScale, float opacity)
 {
-	// draw item icon
-	u32 color = colorLerp(def->TexColor, 0x00ffffff, fade);
-	u64 tex = gfxGetFrameTex(def->TexId);
-	int texW = gfxGetTexWidth(tex);
-	int texH = gfxGetTexHeight(tex);
-	transformToSplitscreenPixelCoordinates(localPlayerIndex, &x, &y);
-	gfxHelperDrawSprite(x, y, 0, 0, w, h, texW, texH, def->TexId, color, TEXT_ALIGN_TOPLEFT, COMMON_DZO_DRAW_NORMAL);
+	const u32 colorTexFaded = 0x20000000; // faded black
+	const u32 colorCount = 0x8000FFFF;		// yellow
+	const u32 colorCooldown = 0x80FFFFFF; // white
+	char buf[32];
+
+	SurvivalItemDef_t *def = &MapConfig.ItemDefs[itemIdx];
+	int count = playerGetItemCount(player, itemIdx);
+	int canConsume = itemCanConsume(player, itemIdx);
+	float opacityT = (canConsume ? 1 : 0.5) * opacity;
+	u32 colorTexBg = colorLerp(0, colorTexFaded, opacityT);
+	u32 colorTexFg = colorLerp(0, def->TexColor, opacityT);
+	u32 cooldownTicks = itemGetCooldownTicks(player->PlayerId, itemIdx);
+	float consumeBarPerc = 0;
+	if (cooldownTicks > 0)
+		consumeBarPerc = clamp(itemCooldownTicks[player->PlayerId][itemIdx] / (float)cooldownTicks, 0, 1);
+
+	// draw icon
+	windowDrawSprite(window, TEXT_ALIGN_MIDDLECENTER, 1, 1, texDim, texDim, def->TexId, colorTexBg, TEXT_ALIGN_MIDDLECENTER);
+	windowDrawSprite(window, TEXT_ALIGN_MIDDLECENTER, 0, 0, texDim, texDim, def->TexId, colorTexFg, TEXT_ALIGN_MIDDLECENTER);
+
+	// draw count
+	if (count > 1 && countTextScale > 0)
+	{
+		snprintf(buf, sizeof(buf), "%d", count);
+		windowDrawText(window, TEXT_ALIGN_BOTTOMCENTER, 0, 0, countTextScale, colorCount, buf, -1, TEXT_ALIGN_TOPCENTER);
+	}
+
+	// draw cooldown
+	if (consumeBarPerc > 0)
+	{
+		windowDrawBox(window, TEXT_ALIGN_BOTTOMLEFT, 0, 0, ceilf(maxf(1, texDim - 2) * consumeBarPerc), 2, colorCooldown, TEXT_ALIGN_MIDDLELEFT);
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -261,7 +332,7 @@ void itemDraw(void)
 
 	gfxSetupGifPaging(0);
 
-	// draw items
+	// call item OnDraw func
 	int i;
 	for (i = 0; i < MapConfig.ItemDefCount; ++i)
 	{
@@ -276,6 +347,9 @@ void itemDraw(void)
 	int l;
 	for (l = 0; l < GAME_MAX_LOCALS; ++l)
 	{
+		if (gameIsStartMenuOpen(l))
+			continue;
+
 		int activeIdx = itemFindNextManualConsumable(l, itemCurrentDrawnItemIdx[l]);
 		Player *player = playerGetFromSlot(l);
 		if (!playerIsValid(player))
@@ -287,22 +361,30 @@ void itemDraw(void)
 			itemCurrentDrawnItemIdx[l] = activeIdx;
 			SurvivalItemDef_t *def = &MapConfig.ItemDefs[activeIdx];
 			int count = playerGetItemCount(player, activeIdx);
+			int canConsume = itemCanConsume(player, i);
+			u32 cooldownTicks = itemGetCooldownTicks(player->PlayerId, i);
+			float consumeBarPerc = 0;
+			if (cooldownTicks > 0)
+				consumeBarPerc = clamp(itemCooldownTicks[player->PlayerId][i] / (float)cooldownTicks, 0, 1);
+
+			// create window
+			Window_t itemWindow;
+			windowCreate(&itemWindow, 20, SCREEN_HEIGHT - 15, 0, 0, 32, 32, TEXT_ALIGN_BOTTOMLEFT);
+			windowSetScreen(&itemWindow, l);
+			itemDrawIcon(&itemWindow, player, activeIdx, 32, 0.7, 1);
 
 			// draw use button
-			gfxHelperDrawText(20 + 16, SCREEN_HEIGHT - 15, 0, 0, 0.7, 0x80FFFFFF, "\x1C", 1, TEXT_ALIGN_TOPCENTER, COMMON_DZO_DRAW_NORMAL);
-
-			// draw active icon
-			itemDrawIcon(l, 20, SCREEN_HEIGHT - 50, 32, 32, 0, def);
-			if (count > 1)
-			{
-				snprintf(buf, sizeof(buf), "%d", count);
-				gfxHelperDrawText(20 + 32, SCREEN_HEIGHT - 15, 0, 0, 0.7, 0x8000FFFF, buf, -1, TEXT_ALIGN_BOTTOMRIGHT, COMMON_DZO_DRAW_NORMAL);
-			}
+			windowDrawText(&itemWindow, TEXT_ALIGN_BOTTOMLEFT, -2, 0, 0.7, 0x80FFFFFF, "\x1C", 1, TEXT_ALIGN_BOTTOMRIGHT);
 
 			// draw next item
 			int nextItem = itemFindNextManualConsumable(l, activeIdx + 1);
 			if (nextItem >= 0 && nextItem != activeIdx)
-				itemDrawIcon(l, 55, SCREEN_HEIGHT - 32, 16, 16, 0.5, &MapConfig.ItemDefs[nextItem]);
+			{
+				// create window
+				windowCreate(&itemWindow, itemWindow.AnchorPoint[0], itemWindow.AnchorPoint[1], itemWindow.Width + 2, 5, 16, 16, TEXT_ALIGN_BOTTOMLEFT);
+				windowSetScreen(&itemWindow, l);
+				itemDrawIcon(&itemWindow, player, nextItem, 16, 0, 0.9);
+			}
 		}
 
 		itemCurrentDrawnItemIdx[l] = activeIdx;
@@ -311,6 +393,9 @@ void itemDraw(void)
 	// draw passive/auto consumables
 	for (l = 0; l < GAME_MAX_LOCALS; ++l)
 	{
+		if (gameIsStartMenuOpen(l))
+			continue;
+
 		Player *player = playerGetFromSlot(l);
 		if (!playerIsValid(player))
 			continue;
@@ -339,6 +424,7 @@ void itemDraw(void)
 		// create window
 		Window_t itemsWindow;
 		windowCreate(&itemsWindow, SCREEN_WIDTH / 2, SCREEN_HEIGHT - texWidth - 12, 0, 0, minf(drawWidth, SCREEN_WIDTH - 200), texWidth, TEXT_ALIGN_TOPCENTER);
+		windowSetScreen(&itemsWindow, l);
 
 		// draw
 		float x = 0;
@@ -357,16 +443,10 @@ void itemDraw(void)
 			float countStrWidth = gfxGetFontWidth(buf, -1, countScale);
 			float pad = maxf(floorf(countStrWidth - texWidth), 0);
 
-			// build item window
+			// draw item
 			Window_t itemWindow;
 			windowCreateFrom(&itemWindow, &itemsWindow, x, 0, texWidth + pad * 2, texWidth, TEXT_ALIGN_TOPLEFT);
-			windowSetScreen(&itemWindow, l);
-
-			// draw active icon
-			windowDrawSprite(&itemWindow, TEXT_ALIGN_MIDDLECENTER, 1, 1, texWidth, texWidth, def->TexId, colorTexFaded, TEXT_ALIGN_MIDDLECENTER);
-			windowDrawSprite(&itemWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, texWidth, texWidth, def->TexId, def->TexColor, TEXT_ALIGN_MIDDLECENTER);
-			if (count > 1)
-				windowDrawText(&itemWindow, TEXT_ALIGN_BOTTOMCENTER, 0, -2, countScale, 0x8000FFFF, buf, -1, TEXT_ALIGN_TOPCENTER);
+			itemDrawIcon(&itemWindow, player, i, texWidth, countScale, 1);
 
 			// move along
 			x += itemWindow.Width + 4;
@@ -375,7 +455,7 @@ void itemDraw(void)
 			if (x >= itemsWindow.Width)
 			{
 				x = 0;
-				itemsWindow.WindowPoint[1] -= texWidth + 6;
+				itemsWindow.WindowPoint[1] -= texWidth + 10;
 			}
 		}
 	}
@@ -386,8 +466,14 @@ void itemDraw(void)
 //--------------------------------------------------------------------------
 void itemTick(void)
 {
+	int i, j;
+
+	// dec cooldown ticks
+	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+		for (j = 0; j < MapConfig.ItemDefCount; ++j)
+			decTimerU32(&itemCooldownTicks[i][j]);
+
 	// tick items
-	int i;
 	for (i = 0; i < MapConfig.ItemDefCount; ++i)
 	{
 		SurvivalItemDef_t *def = &MapConfig.ItemDefs[i];
@@ -413,7 +499,7 @@ void itemTick(void)
 			if (nextIdx >= 0)
 				itemCurrentDrawnItemIdx[l] = nextIdx;
 		}
-		else if (padGetButtonDown(l, PAD_DOWN) > 0 && playerGetItemCount(player, itemIdx) > 0)
+		else if (padGetButtonDown(l, PAD_DOWN) > 0 && itemCanConsume(player, itemIdx))
 		{
 			itemBeginConsume(player->PlayerId, itemIdx);
 		}

@@ -23,8 +23,6 @@ enum SurvivalItemType
 	SURVIVAL_ITEM_CONSUMABLE_AUTO,
 	SURVIVAL_ITEM_CONSUMABLE_MANUAL,
 	SURVIVAL_ITEM_CONSUMABLE_IMMEDIATE,
-	// anything else
-	SURVIVAL_ITEM_CONSUMABLE_OTHER,
 };
 
 enum SurvivalItemStoreCostType
@@ -40,6 +38,7 @@ typedef void (*ItemTickUpdate_func)(int defIdx, struct SurvivalItemDef *def);
 typedef void (*ItemDrawUpdate_func)(int defIdx, struct SurvivalItemDef *def);
 typedef void (*ItemOnAcquired_func)(int defIdx, struct SurvivalItemDef *def, int playerId);
 typedef void (*ItemOnConsumed_func)(int defIdx, struct SurvivalItemDef *def, int playerId);
+typedef u32 (*ItemGetConsumeCooldownTicks_func)(int defIdx, struct SurvivalItemDef *def, int playerId);
 typedef int (*ItemHasRoomForMore_func)(int defIdx, struct SurvivalItemDef *def, int playerId);
 typedef int (*ItemCanBuyInStore_func)(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId, int numTimesPurchased);
 typedef u32 (*ItemGetStoreCost_func)(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId, int numTimesPurchased);
@@ -55,6 +54,7 @@ typedef struct SurvivalItemVTable
 	ItemOnAcquired_func OnAcquiredFunc;
 	ItemOnConsumed_func OnConsumedFunc;
 	ItemHasRoomForMore_func HasRoomForMoreFunc;
+	ItemGetConsumeCooldownTicks_func GetConsumeCooldownTicksFunc;
 	ItemCanBuyInStore_func CanBuyInStoreFunc;
 	ItemGetStoreCost_func GetStoreCostFunc;
 	ItemGetMysteryBoxChance_func GetMysteryboxChanceFunc;
@@ -71,6 +71,7 @@ typedef struct SurvivalItemDef
 	enum SurvivalItemType Type;
 	int MaxHeldAtOnce;
 	char AppearOnWall;
+	u32 ConsumeCooldownTicks;
 
 	// mystery box
 	float MysteryboxChanceWeight;
@@ -97,10 +98,11 @@ typedef struct SurvivalItemDef
 void itemBeginAcquire(int playerId, int itemIdx);
 void itemBeginConsume(int playerId, int itemIdx);
 
-void itemShowAcquired(int localPlayerIndex, int itemIdx, char *verb);
+void itemShowMessage(int localPlayerIndex, int itemIdx, char *format, int ticks);
 u32 itemGetCost(int localPlayerIndex, int itemIdx);
 int itemGetPlayerBankAmount(int localPlayerIndex, SurvivalItemDef_t *item);
 int itemChargePlayerBank(int localPlayerIndex, int itemIdx);
+u32 itemGetCooldownTicks(int playerId, int itemIdx);
 
 float itemGetMysteryboxChanceWeight(int itemIdx, SurvivalItemDef_t *itemDef, int playerId);
 float itemGetDropChanceWeight(int itemIdx, SurvivalItemDef_t *itemDef, int playerId);
@@ -109,6 +111,7 @@ float itemGetVendorRewardChanceWeight(int itemIdx, SurvivalItemDef_t *itemDef, i
 void itemOnConsumeTriggered(Player *player, int itemId);
 void itemOnAcquireTriggered(Player *player, int itemId);
 int itemCanAcquire(Player *player, int itemIdx);
+int itemCanConsume(Player *player, int itemIdx);
 void itemDraw(void);
 void itemTick(void);
 void itemInit(void);

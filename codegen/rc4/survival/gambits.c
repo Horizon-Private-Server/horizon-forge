@@ -4,6 +4,7 @@
 #include <libdl/stdio.h>
 #include "shared.h"
 #include "store.h"
+#include "vendor.h"
 
 extern SurvivalBakedConfig_t bakedConfig;
 extern char MysteryBoxRespawnImmediately;
@@ -45,11 +46,11 @@ void gambitsSetupDisableRevives(void)
 
 	// prevent purchase of self revive or health tornado
 
-#if ITEM_HOLD_AUTO_SELF_REVIVE
+#ifdef ITEM_HOLD_AUTO_SELF_REVIVE
 	MapConfig.ItemDefs[ITEM_HOLD_AUTO_SELF_REVIVE].VTable.CanBuyInStoreFunc = &gambitsCannotBuyInStore;
 #endif
 
-#if ITEM_HOLD_MANUAL_HEALTH_TORNADO
+#ifdef ITEM_HOLD_MANUAL_HEALTH_TORNADO
 	MapConfig.ItemDefs[ITEM_HOLD_MANUAL_HEALTH_TORNADO].VTable.CanBuyInStoreFunc = &gambitsCannotBuyInStore;
 #endif
 }
@@ -61,7 +62,7 @@ void gambitsTickDisableRevives(void)
 	int i;
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-#if ITEM_HOLD_AUTO_SELF_REVIVE
+#ifdef ITEM_HOLD_AUTO_SELF_REVIVE
 		MapConfig.State->PlayerStates[i].State.ItemCounts[ITEM_HOLD_AUTO_SELF_REVIVE] = 0;
 #endif
 
@@ -177,7 +178,7 @@ void gambitsDropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team
 {
 	GambitDef_t *gambit = gambitsGetActive();
 
-#if ITEM_IMMEDIATE_GLOBAL_HEALTH
+#ifdef ITEM_IMMEDIATE_GLOBAL_HEALTH
 	// intercept health drops
 	if (gambit && gambit->DisableRevives && itemIdx == ITEM_IMMEDIATE_GLOBAL_HEALTH)
 	{

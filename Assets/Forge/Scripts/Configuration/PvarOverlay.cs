@@ -17,6 +17,7 @@ public class PvarOverlay
 
     public string Name { get; set; }
     public int RCVersion { get; set; }
+    public string CustomMode { get; set; }
     public int? MobyOClass { get; set; }
     public int? AmbientSoundType { get; set; }
     public int? CameraType { get; set; }
@@ -82,7 +83,7 @@ public class PvarOverlay
                             var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
                             var pvarPath = parts?.ElementAtOrDefault(1);
                             int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
-                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: oClass);
+                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(RCVersion, mobyClass: oClass, customMode: CustomMode);
                             if (mobyRefPvarOverlay != null)
                             {
                                 var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
@@ -332,16 +333,31 @@ public class PvarOverlay
         return s_PvarOverlays;
     }
 
-    public static PvarOverlay GetPvarOverlay(int racVersion, int? mobyClass = null, int? ambientSoundType = null, int? cameraType = null)
+    public static PvarOverlay GetPvarOverlay(int racVersion, int? mobyClass = null, int? ambientSoundType = null, int? cameraType = null, string? customMode = null)
     {
         var pvarOverlays = GetPvarOverlays();
 
         if (mobyClass.HasValue)
-            return pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.MobyOClass == mobyClass);
+            return FindPvarOverlay(pvarOverlays, racVersion, mobyClass: mobyClass, customMode: customMode);
         if (ambientSoundType.HasValue)
-            return pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.AmbientSoundType == ambientSoundType);
+            return FindPvarOverlay(pvarOverlays, racVersion, ambientSoundType: ambientSoundType, customMode: customMode);
         if (cameraType.HasValue)
-            return pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.CameraType == cameraType);
+            return FindPvarOverlay(pvarOverlays, racVersion, cameraType: cameraType, customMode: customMode);
+
+        return null;
+    }
+
+    public static PvarOverlay FindPvarOverlay(List<PvarOverlay> pvarOverlays, int racVersion, int? mobyClass = null, int? ambientSoundType = null, int? cameraType = null, string customMode = null)
+    {
+        if (mobyClass.HasValue)
+            return pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.MobyOClass == mobyClass && x.CustomMode == customMode)
+                ?? pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.MobyOClass == mobyClass && x.CustomMode == null);
+        if (ambientSoundType.HasValue)
+            return pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.AmbientSoundType == ambientSoundType && x.CustomMode == customMode)
+                ?? pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.AmbientSoundType == ambientSoundType && x.CustomMode == null);
+        if (cameraType.HasValue)
+            return pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.CameraType == cameraType && x.CustomMode == customMode)
+                ?? pvarOverlays?.FirstOrDefault(x => (x.RCVersion == racVersion || x.RCVersion < 0) && x.CameraType == cameraType && x.CustomMode == null);
 
         return null;
     }
@@ -717,7 +733,7 @@ public class PvarOverlayDef
                     var parts = (value as string)?.Split('|', StringSplitOptions.RemoveEmptyEntries);
                     var pvarPath = parts?.ElementAtOrDefault(1);
                     int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
-                    var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                    var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass, customMode: pvarOverlay.CustomMode);
                     if (mobyRefPvarOverlay != null)
                     {
                         var metadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);

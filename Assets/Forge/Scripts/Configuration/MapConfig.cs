@@ -414,6 +414,19 @@ public class MapConfig : MonoBehaviour
 
     #endregion
 
+    #region Misc
+
+    public string GetCustomModeName(int racVersion)
+    {
+        switch (racVersion)
+        {
+            default: return null;
+            case RCVER.DL: return DLForceCustomMode == DLCustomModeIds.None ? null : DLForceCustomMode.ToString();
+        }
+    }
+
+    #endregion
+
     #region Versioning
 
     public void InitializeVersion()

@@ -91,7 +91,7 @@ public class MobyEditor : Editor
             if (mapConfig)
             {
                 GUILayout.Space(20);
-                UnityHelper.PVarsPropertyField(_pvarPropertiesContainer, target as Moby, moby.RCVersion, mobyClass: moby.OClass);
+                UnityHelper.PVarsPropertyField(_pvarPropertiesContainer, target as Moby, moby.RCVersion, mobyClass: moby.OClass, customMode: mapConfig.GetCustomModeName(moby.RCVersion));
 
                 if (_pvarData.isExpanded)
                 {

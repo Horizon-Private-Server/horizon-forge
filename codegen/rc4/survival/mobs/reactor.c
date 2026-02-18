@@ -1209,22 +1209,21 @@ void reactorDoSmashDamage(Moby *moby, float radius, float amount, int damageFlag
 	int hitPlayerFull = 0;
 	float sqrRadius = radius * radius;
 	MobyColDamageIn in;
-	Player **players = playerGetAll();
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
 
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *p = players[i];
-		if (!p || !p->SkinMoby || playerIsDead(p))
+		Player *player = playerGetFromIndex(i);
+		if (!player || !player->SkinMoby || playerIsDead(player))
 			continue;
 
-		vector_subtract(dt, p->PlayerPosition, moby->Position);
+		vector_subtract(dt, player->PlayerPosition, moby->Position);
 		if (vector_sqrmag(dt) < sqrRadius)
 		{
 
 			// deal more damage if player is on ground
-			if (p->Ground.onGood)
+			if (player->Ground.onGood)
 			{
 				hitPlayerFull = 1;
 				in.DamageHp = amount;
@@ -1241,7 +1240,7 @@ void reactorDoSmashDamage(Moby *moby, float radius, float amount, int damageFlag
 			in.DamageStrength = 1;
 			in.DamageIndex = moby->OClass;
 			in.Flags = 1;
-			mobyCollDamageDirect(p->PlayerMoby, &in);
+			mobyCollDamageDirect(player->PlayerMoby, &in);
 		}
 	}
 

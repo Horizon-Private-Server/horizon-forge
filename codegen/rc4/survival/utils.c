@@ -75,14 +75,15 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 	int pIndex = player->PlayerId;
 
 	if (MapConfig.State)
-	{
 		playerData = &MapConfig.State->PlayerStates[pIndex];
-	}
+
+	int canAction = !playerData || !playerData->ActionCooldownTicks;
+	if (!canAction)
+		return 0;
 
 	vector_subtract(delta, player->PlayerPosition, moby->Position);
 	if (vector_sqrmag(delta) < sqrDistance)
 	{
-
 		// draw help popup
 		snprintf(LocalPlayerStrBuffer[localPlayerIndex], sizeof(LocalPlayerStrBuffer[localPlayerIndex]), message);
 		uiShowPopup(player->LocalPlayerIndex, LocalPlayerStrBuffer[localPlayerIndex]);
@@ -92,16 +93,13 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 		int btnDown = padGetAnyButton(localPlayerIndex, btns) > 0;
 		int btnDownThisFrame = padGetAnyButtonDown(localPlayerIndex, btns) > 0;
 		int btnCheck = hold ? btnDown : btnDownThisFrame;
-		if (btnCheck && (!playerData || (playerData->State.Bolts >= boltCost && playerData->State.CurrentTokens >= tokenCost)))
+		if (canAction && btnCheck && (!playerData || (playerData->State.Bolts >= boltCost && playerData->State.CurrentTokens >= tokenCost)))
 		{
 			if (playerData)
 			{
-				// playerData->State.Bolts -= boltCost;
-				// playerData->State.CurrentTokens -= tokenCost;
 				playerData->ActionCooldownTicks = actionCooldown;
-				playerData->MessageCooldownTicks = 5;
+				playerData->MessageCooldownTicks = 2;
 			}
-
 			return 1;
 		}
 
@@ -361,14 +359,13 @@ void spawnHealthBomb(Player *fromPlayer, VECTOR position, float radius, float he
 {
 	int i;
 	VECTOR dt;
-	Player **players = playerGetAll();
 
 	// heal / revive
 	if (fromPlayer)
 	{
 		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 		{
-			Player *player = players[i];
+			Player *player = playerGetFromIndex(i);
 			if (!playerIsValid(player))
 				continue;
 
@@ -395,7 +392,7 @@ void spawnHealthBomb(Player *fromPlayer, VECTOR position, float radius, float he
 		mobyPlaySoundByClass(0, 0, expMoby, MOBY_ID_ARBITER_ROCKET0);
 
 	if (fromPlayer && fromPlayer->IsLocal && fromPlayer->PlayerMoby)
-		mobReactToExplosionAt(fromPlayer->PlayerMoby, position, 1, 8, 1);
+		mobReactToExplosionAt(fromPlayer->PlayerMoby, position, 1, 8, 6);
 }
 
 //--------------------------------------------------------------------------
@@ -502,6 +499,9 @@ void randomizeWeaponPickups(void)
 //--------------------------------------------------------------------------
 void addRadarBlip(Moby *moby, int life, int type, int team)
 {
+	if (!moby)
+		return;
+
 	// draw on radar
 	int blipIdx = radarGetBlipIndex(moby);
 	if (blipIdx >= 0)

@@ -246,10 +246,10 @@ public static class UnityHelper
         public PathGraph[] PathGraphs { get; set; }
     }
 
-    public static void PVarsPropertyField(PVarsPropertiesContainer properties, IPVarObject pvarObject, int racVersion, int? mobyClass = null, int? ambientSoundType = null, int? cameraType = null, bool alwaysExpanded = false, bool showRawEditorIfNoOverlay = true)
+    public static void PVarsPropertyField(PVarsPropertiesContainer properties, IPVarObject pvarObject, int racVersion, int? mobyClass = null, int? ambientSoundType = null, int? cameraType = null, string customMode = null, bool alwaysExpanded = false, bool showRawEditorIfNoOverlay = true)
     {
         // pvar overlay
-        var pvarOverlay = PvarOverlay.GetPvarOverlay(racVersion, mobyClass: mobyClass, ambientSoundType: ambientSoundType, cameraType: cameraType);
+        var pvarOverlay = PvarOverlay.GetPvarOverlay(racVersion, mobyClass: mobyClass, ambientSoundType: ambientSoundType, cameraType: cameraType, customMode: customMode);
         if (pvarOverlay != null && pvarOverlay.Overlay.Any())
         {
             EditorGUI.BeginDisabledGroup(!properties.PVars.editable);
@@ -458,7 +458,7 @@ public static class UnityHelper
                         var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
                         var pvarPath = parts?.ElementAtOrDefault(1);
                         int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
-                        var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                        var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass, customMode: pvarOverlay.CustomMode);
                         if (mobyRefPvarOverlay != null)
                         {
                             var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
@@ -586,7 +586,7 @@ public static class UnityHelper
                         var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
                         var pvarPath = parts?.ElementAtOrDefault(1);
                         int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
-                        var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                        var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass, customMode: pvarOverlay.CustomMode);
                         if (mobyRefPvarOverlay != null)
                         {
                             var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
@@ -1033,7 +1033,7 @@ public static class UnityHelper
                             if (mobyRef)
                             {
                                 oClass = mobyRef.OClass.ToString();
-                                mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(mobyRef.RCVersion, mobyClass: mobyRef.OClass);
+                                mobyRefPvarOverlay = mobyRef.GetPVarOverlay(); // PvarOverlay.GetPvarOverlay(mobyRef.RCVersion, mobyClass: mobyRef.OClass);
                                 if (mobyRefPvarOverlay != null)
                                 {
                                     mobyRefPvarPaths = mobyRefPvarOverlay.GetPVarPaths(mobyRef);
@@ -1077,7 +1077,7 @@ public static class UnityHelper
                             var parts = pvarValues[refPath]?.Split('|', StringSplitOptions.RemoveEmptyEntries);
                             var pvarPath = parts?.ElementAtOrDefault(1);
                             int? oClass = int.TryParse(parts?.ElementAtOrDefault(0), out var mobyClass) ? mobyClass : null;
-                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass);
+                            var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(pvarOverlay.RCVersion, mobyClass: oClass, customMode: pvarOverlay.CustomMode);
                             if (mobyRefPvarOverlay != null)
                             {
                                 var pvarMetadata = mobyRefPvarOverlay.GetPVarMetadata(pvarPath);
@@ -1126,7 +1126,7 @@ public static class UnityHelper
                             var mobyRef = pvarRefs[refPath] as Moby;
                             if (mobyRef)
                             {
-                                var mobyRefPvarOverlay = PvarOverlay.GetPvarOverlay(mobyRef.RCVersion, mobyClass: mobyRef.OClass);
+                                var mobyRefPvarOverlay = mobyRef.GetPVarOverlay(); // PvarOverlay.GetPvarOverlay(mobyRef.RCVersion, mobyClass: mobyRef.OClass);
                                 if (mobyRefPvarOverlay != null)
                                 {
                                     stateOptions = mobyRefPvarOverlay.States;

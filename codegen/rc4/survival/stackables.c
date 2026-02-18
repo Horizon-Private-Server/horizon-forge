@@ -25,15 +25,14 @@ Player *stackableFindPlayerByGadgetBox(GadgetBox *gadgetBox)
 {
 	// find player
 	int i;
-	Player **players = playerGetAll();
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
-		if (!player || !playerIsConnected(player))
+		Player *player = playerGetFromIndex(i);
+		if (!playerIsValid(player))
 			continue;
 
 		if (player->GadgetBox == gadgetBox)
-			return players[i];
+			return player;
 	}
 
 	return NULL;
@@ -63,22 +62,22 @@ int stackableGetAlphaModCount(GadgetBox *gadgetBox, int weaponId, int alphaModId
 	int itemId = -1;
 	switch (alphaModId)
 	{
-#if ITEM_PASSIVE_ALPHA_MOD_AMMO
+#ifdef ITEM_PASSIVE_ALPHA_MOD_AMMO
 	case ALPHA_MOD_AMMO:
 		itemId = ITEM_PASSIVE_ALPHA_MOD_AMMO;
 		break;
 #endif
-#if ITEM_PASSIVE_ALPHA_MOD_AREA
+#ifdef ITEM_PASSIVE_ALPHA_MOD_AREA
 	case ALPHA_MOD_AREA:
 		itemId = ITEM_PASSIVE_ALPHA_MOD_AREA;
 		break;
 #endif
-#if ITEM_PASSIVE_ALPHA_MOD_IMPACT
+#ifdef ITEM_PASSIVE_ALPHA_MOD_IMPACT
 	case ALPHA_MOD_IMPACT:
 		itemId = ITEM_PASSIVE_ALPHA_MOD_IMPACT;
 		break;
 #endif
-#if ITEM_PASSIVE_ALPHA_MOD_SPEED
+#ifdef ITEM_PASSIVE_ALPHA_MOD_SPEED
 	case ALPHA_MOD_SPEED:
 		itemId = ITEM_PASSIVE_ALPHA_MOD_SPEED;
 		break;
@@ -107,7 +106,7 @@ void stackablesItemInit_Alphamod(int defIdx, struct SurvivalItemDef *def)
 //--------------------------------------------------------------------------
 void stackableOnDecrementAmmo(GadgetBox *gadgetBox, int weaponId, int amount)
 {
-#if ITEM_PASSIVE_EXTRA_SHOT
+#ifdef ITEM_PASSIVE_EXTRA_SHOT
 	if (amount == -1)
 	{
 		Player *player = stackableFindPlayerByGadgetBox(gadgetBox);
@@ -134,7 +133,7 @@ void stackablesItemInit_ExtraShot(int defIdx, struct SurvivalItemDef *def)
 //--------------------------------------------------------------------------
 int stackableOnPlayerCanPickupHealth(Player *player, Moby *healthMoby)
 {
-#if ITEM_PASSIVE_VAMPIRE
+#ifdef ITEM_PASSIVE_VAMPIRE
 	// vampire disables health pickups
 	if (player && playerGetItemCount(player, ITEM_PASSIVE_VAMPIRE) > 0)
 		return 0;
@@ -159,7 +158,7 @@ void stackablePlayerOnDoubleJump(Player *player, int stateId, int a2, int a3, in
 	if (!vtable)
 		return;
 
-#if ITEM_PASSIVE_EXTRA_JUMP
+#ifdef ITEM_PASSIVE_EXTRA_JUMP
 	int featherCount = playerGetItemCount(player, ITEM_PASSIVE_EXTRA_JUMP);
 	if (featherCount > 0 && (player->PlayerState == PLAYER_STATE_JUMP || player->PlayerState == PLAYER_STATE_RUN_JUMP) && (stackableExtraJumpJumpCount[player->PlayerId] < featherCount || player->timers.state < 6))
 	{
@@ -176,7 +175,7 @@ void stackablePlayerOnDoubleJump(Player *player, int stateId, int a2, int a3, in
 //--------------------------------------------------------------------------
 void stackableProcessPlayer_ExtraJumps(Player *player)
 {
-#if ITEM_PASSIVE_EXTRA_JUMP
+#ifdef ITEM_PASSIVE_EXTRA_JUMP
 
 	if (!MapConfig.State)
 		return;
@@ -215,10 +214,9 @@ void stackableProcessPlayer_ExtraJumps(Player *player)
 void stackablesItemTick_ExtraJump(int defIdx, struct SurvivalItemDef *def)
 {
 	int i;
-	Player **players = playerGetAll();
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
-		Player *player = players[i];
+		Player *player = playerGetFromIndex(i);
 		if (!playerIsValid(player))
 			continue;
 
@@ -239,7 +237,7 @@ void stackablePlayerOnChargeboot(Player *player, int stateId, int a2, int a3, in
 	if (!vtable)
 		return;
 
-#if ITEM_PASSIVE_HOVERBOOTS
+#ifdef ITEM_PASSIVE_HOVERBOOTS
 	// prevent cbooting with hoverboots
 	if (playerGetItemCount(player, ITEM_PASSIVE_HOVERBOOTS) > 0)
 		return;
@@ -252,7 +250,7 @@ void stackablePlayerOnChargeboot(Player *player, int stateId, int a2, int a3, in
 //--------------------------------------------------------------------------
 void stackableProcessPlayer_Hoverboots(Player *player)
 {
-#if ITEM_PASSIVE_HOVERBOOTS
+#ifdef ITEM_PASSIVE_HOVERBOOTS
 
 	if (!MapConfig.State)
 		return;
@@ -316,26 +314,23 @@ void stackablesItemInit_Hoverboots(int defIdx, struct SurvivalItemDef *def)
 //--------------------------------------------------------------------------
 void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 {
-#if ITEM_PASSIVE_VAMPIRE
-	if (killedByPlayerId >= 0)
+	Player *killedByPlayer = playerGetFromIndex(killedByPlayerId);
+
+#ifdef ITEM_PASSIVE_VAMPIRE
+	if (playerIsValid(killedByPlayer))
 	{
-		Player *killedByPlayer = playerGetAll()[killedByPlayerId];
-		if (playerIsValid(killedByPlayer))
+		int vampCount = playerGetItemCount(killedByPlayer, ITEM_PASSIVE_VAMPIRE);
+		if (vampCount > 0)
 		{
-			int vampCount = playerGetItemCount(killedByPlayer, ITEM_PASSIVE_VAMPIRE);
-			if (vampCount > 0)
-			{
-				playerSetHealth(killedByPlayer, minf(killedByPlayer->MaxHealth, killedByPlayer->Health + (vampCount * ITEM_STACKABLE_VAMPIRE_HEALTH_AMT)));
-			}
+			playerSetHealth(killedByPlayer, minf(killedByPlayer->MaxHealth, killedByPlayer->Health + (vampCount * ITEM_STACKABLE_VAMPIRE_HEALTH_AMT)));
 		}
 	}
 #endif
 
-#if ITEM_PASSIVE_EXPLODING_ENEMIES
+#ifdef ITEM_PASSIVE_EXPLODING_ENEMIES
 
-	if (killedByPlayerId >= 0 && killedByWeaponId >= 0)
+	if (playerIsValid(killedByPlayer) && killedByWeaponId >= 0)
 	{
-		Player *killedByPlayer = playerGetAll()[killedByPlayerId];
 		if (!killedByPlayer->IsLocal)
 			return; // only process dmg if local
 
@@ -383,7 +378,7 @@ void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId
 //--------------------------------------------------------------------------
 void stackablesOnBeforeDamage(Player *player, float *damage)
 {
-#if ITEM_PASSIVE_EXTRA_SHOT
+#ifdef ITEM_PASSIVE_EXTRA_SHOT
 	// multishot
 	int multishotCount = playerGetItemCount(player, ITEM_PASSIVE_EXTRA_SHOT);
 	if (multishotCount > 0)
@@ -392,7 +387,7 @@ void stackablesOnBeforeDamage(Player *player, float *damage)
 	}
 #endif
 
-#if ITEM_PASSIVE_LOW_HEALTH_DAMAGE_BUFF
+#ifdef ITEM_PASSIVE_LOW_HEALTH_DAMAGE_BUFF
 	// low health dmg buf
 	int lowHealthDmgBufCount = playerGetItemCount(player, ITEM_PASSIVE_LOW_HEALTH_DAMAGE_BUFF);
 	if (lowHealthDmgBufCount > 0)

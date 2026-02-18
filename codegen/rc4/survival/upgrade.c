@@ -222,8 +222,6 @@ void upgradeUpdate(Moby *moby)
 			continue;
 
 		struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[player->PlayerId];
-		if (playerData->ActionCooldownTicks)
-			continue;
 
 		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (UPGRADE_PICKUP_RADIUS * UPGRADE_PICKUP_RADIUS))
 			continue;
@@ -366,7 +364,6 @@ int upgradeHandleEvent_Destroy(Moby *moby, GuberEvent *event)
 int upgradeHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 {
 	struct UpgradePickupEventArgs args;
-	Player **players = playerGetAll();
 	struct UpgradePVar *pvars = (struct UpgradePVar *)moby->PVar;
 
 	if (!pvars)
@@ -375,7 +372,7 @@ int upgradeHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 	// read event
 	guberEventRead(event, &args, sizeof(struct UpgradePickupEventArgs));
 
-	Player *targetPlayer = players[args.PickedUpByPlayerId];
+	Player *targetPlayer = playerGetFromIndex(args.PickedUpByPlayerId);
 	if (!targetPlayer)
 		return 0;
 
@@ -388,7 +385,7 @@ int upgradeHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 
 	// reduce uses, if not post round 25 break
 	// respawn at next spot if used
-#if !DEBUG || 1
+#if !DEBUG
 	if (!MapConfig.State || MapConfig.State->RoundEndTime != -1)
 	{
 		pvars->Uses--;

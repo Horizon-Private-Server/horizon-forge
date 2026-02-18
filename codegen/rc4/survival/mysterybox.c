@@ -347,7 +347,6 @@ void mboxDraw(Moby *moby)
 //--------------------------------------------------------------------------
 void mboxUpdate(Moby *moby)
 {
-	Player **players = playerGetAll();
 	int i;
 	char buf[48];
 	if (!moby || !moby->PVar)
@@ -355,7 +354,7 @@ void mboxUpdate(Moby *moby)
 
 	SurvivalItemDef_t itemDef;
 	struct MysteryBoxPVar *pvars = (struct MysteryBoxPVar *)moby->PVar;
-	Player *activatedByPlayer = players[pvars->ActivatedByPlayerId];
+	Player *activatedByPlayer = playerGetFromIndex(pvars->ActivatedByPlayerId);
 	int timeSinceActivated = gameGetTime() - pvars->ActivatedTime;
 	int timeSinceStateChanged = gameGetTime() - pvars->StateChangedAtTime;
 	int ticksSinceLastStateChange = pvars->TicksSinceLastStateChanged++;
@@ -420,7 +419,7 @@ void mboxUpdate(Moby *moby)
 	{
 		mboxOpenDoor(moby, 1);
 
-#if ITEM_IMMEDIATE_VOX_MYSTERYBOX
+#ifdef ITEM_IMMEDIATE_VOX_MYSTERYBOX
 		// play vox dialog on appear
 		if (!ticksSinceLastStateChange && pvars->ItemIdx == ITEM_IMMEDIATE_VOX_MYSTERYBOX)
 		{
@@ -435,7 +434,7 @@ void mboxUpdate(Moby *moby)
 			int showInteract = itemDef.MysteryboxForceAcquire == 0;
 			int random = pvars->Random;
 			snprintf(buf, sizeof(buf), "\x11 %s", itemDef.Name);
-			if (showInteract && tryPlayerInteract(moby, players[pvars->ActivatedByPlayerId], buf, NULL, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
+			if (showInteract && tryPlayerInteract(moby, activatedByPlayer, buf, NULL, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
 			{
 				mboxGivePlayer(moby, pvars->ActivatedByPlayerId, pvars->ItemIdx, pvars->Random);
 			}
@@ -497,10 +496,11 @@ void mboxUpdate(Moby *moby)
 		// find local players to activate
 		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 		{
+			Player *player = playerGetFromIndex(i);
 			int cost = mboxGetCost(moby, i);
 			snprintf(buf, sizeof(buf), "\x11 Open [\x0E%'d\x08]", cost);
 
-			if (tryPlayerInteract(moby, players[i], buf, NULL, cost, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
+			if (tryPlayerInteract(moby, player, buf, NULL, cost, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
 			{
 				mboxActivate(moby, i);
 				break;
@@ -621,7 +621,6 @@ int mboxHandleEvent_Activate(Moby *moby, GuberEvent *event)
 int mboxHandleEvent_GivePlayer(Moby *moby, GuberEvent *event)
 {
 	int playerId, itemIdx, random, i;
-	Player **players = playerGetAll();
 
 	// DPRINTF("mbox give player: %08X\n", (u32)moby);
 	struct MysteryBoxPVar *pvars = (struct MysteryBoxPVar *)moby->PVar;
@@ -642,14 +641,14 @@ int mboxHandleEvent_GivePlayer(Moby *moby, GuberEvent *event)
 
 	if (playerId >= 0)
 	{
-		Player *player = players[playerId];
+		Player *player = playerGetFromIndex(playerId);
 		if (playerIsValid(player))
 		{
 			// make sure player can have item
 			if (player->IsLocal && itemCanAcquire(player, itemIdx))
 				itemBeginAcquire(playerId, itemIdx);
 
-#if ITEM_IMMEDIATE_VOX_MYSTERYBOX
+#ifdef ITEM_IMMEDIATE_VOX_MYSTERYBOX
 			if (itemIdx == ITEM_IMMEDIATE_VOX_MYSTERYBOX)
 			{
 				if (playerId >= 0)

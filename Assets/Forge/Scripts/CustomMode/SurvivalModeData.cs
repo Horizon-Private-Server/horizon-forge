@@ -340,6 +340,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gambits.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/store.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/item.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
 
@@ -363,8 +364,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.LDFlags.Add("-DGAMBITS");
         state.LDFlags.Add("-DSTACKABLES");
         state.LDFlags.Add($"-DMAP_BASE_COMPLEXITY={MapBaseComplexity}");
-        state.LDFlags.Add($"-DAMMO_DROP_PROBABILITY={AmmoDropProbability}");
-        state.LDFlags.Add($"-DMOB_DROP_PROBABILITY={MobDropProbability}"); 
+        state.LDFlags.Add($"-DAMMO_DROP_PROBABILITY={AmmoDropProbability.ToInvariantCulture()}");
+        state.LDFlags.Add($"-DMOB_DROP_PROBABILITY={MobDropProbability.ToInvariantCulture()}"); 
         state.LDFlags.Add($"-DMOB_DROP_COOLDOWN_MIN={(int)(MobDropCooldownSecondsMin * 60)}");
         state.LDFlags.Add($"-DMOB_DROP_COOLDOWN_MAX={(int)(MobDropCooldownSecondsMax * 60)}");
         var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
@@ -1971,6 +1972,10 @@ public enum SurvivalDefaultItems
     ImmediatePlayerDamageUpgrade = 42,
     ImmediatePlayerCritUpgrade = 43,
     ImmediatePlayerHealthUpgrade = 44,
+    HoldManualPda = 45,
+    PassiveEarthquake = 46,
+    ImmediateGetBolts = 47,
+    ImmediateGetTokens = 48
 };
 
 public enum SurvivalItemType
@@ -1979,7 +1984,6 @@ public enum SurvivalItemType
     [Description("SURVIVAL_ITEM_CONSUMABLE_AUTO"), InspectorName("Totem")] ConsumableAuto,
     [Description("SURVIVAL_ITEM_CONSUMABLE_MANUAL"), InspectorName("Consumable")] ConsumableManual,
     [Description("SURVIVAL_ITEM_CONSUMABLE_IMMEDIATE"), InspectorName("Instant")] ConsumableImmediate,
-    [Description("SURVIVAL_ITEM_CONSUMABLE_OTHER")] Other
 };
 
 public enum SurvivalItemStoreCostType
@@ -2043,6 +2047,7 @@ public class SurvivalTemplateItemEntry
     [Header("Usage")]
     [Tooltip("If 0 can hold an infinite amount.")] public Int32Override MaxHeldAtOnce;
     public BoolOverride AppearOnWall;
+    [Tooltip("Delay (seconds) after consumption before item can be consumed again.")] public FloatOverride ConsumeCooldown;
 
     [Header("Store")]
     public EnumOverride<SurvivalItemStoreCostType> StoreCostType;
@@ -2098,6 +2103,7 @@ public class SurvivalTemplateItemEntry
         sb.AppendLine($"\t\t.Type = {defaultItem.Def.Type.GetDescription()},");
         sb.AppendLine($"\t\t.MaxHeldAtOnce = {MaxHeldAtOnce.GetValue(defaultItem.Def.MaxHeldAtOnce)},");
         sb.AppendLine($"\t\t.AppearOnWall = {(AppearOnWall.GetValue(defaultItem.Def.AppearOnWall) ? 1 : 0)},");
+        sb.AppendLine($"\t\t.ConsumeCooldownTicks = {(int)(ConsumeCooldown.GetValue(defaultItem.Def.ConsumeCooldown) * 60)},");
         sb.AppendLine($"\t\t.MysteryboxChanceWeight = {MysteryboxChanceWeight.GetValue(defaultItem.Def.MysteryboxChanceWeight).ToInvariantCulture()},");
         sb.AppendLine($"\t\t.MysteryboxForceAcquire = {(MysteryboxForceAcquire.GetValue(defaultItem.Def.MysteryboxForceAcquire) ? 1 : 0)},");
         sb.AppendLine($"\t\t.DropChanceWeight = {DropChanceWeight.GetValue(defaultItem.Def.DropChanceWeight).ToInvariantCulture()},");
@@ -2115,6 +2121,7 @@ public class SurvivalTemplateItemEntry
         sb.AppendLine($"\t\t\t.OnAcquiredFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomOnAcquiredFunctionName) ? "NULL" : defaultItem.Def.CustomOnAcquiredFunctionName)},");
         sb.AppendLine($"\t\t\t.OnConsumedFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomOnConsumedFunctionName) ? "NULL" : defaultItem.Def.CustomOnConsumedFunctionName)},");
         sb.AppendLine($"\t\t\t.HasRoomForMoreFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomHasRoomForMoreFunctionName) ? "NULL" : defaultItem.Def.CustomHasRoomForMoreFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetConsumeCooldownTicksFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetConsumeCooldownTicksFunctionName) ? "NULL" : defaultItem.Def.CustomGetConsumeCooldownTicksFunctionName)},");
         sb.AppendLine($"\t\t\t.CanBuyInStoreFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomCanBuyInStoreFunctionName) ? "NULL" : defaultItem.Def.CustomCanBuyInStoreFunctionName)},");
         sb.AppendLine($"\t\t\t.GetStoreCostFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetStoreCostFunctionName) ? "NULL" : defaultItem.Def.CustomGetStoreCostFunctionName)},");
         sb.AppendLine($"\t\t\t.GetMysteryboxChanceFunc = {(string.IsNullOrEmpty(defaultItem.Def.CustomGetMysteryboxChanceFunctionName) ? "NULL" : defaultItem.Def.CustomGetMysteryboxChanceFunctionName)},");
@@ -2148,6 +2155,7 @@ public class SurvivalItemEntry
     public SurvivalItemType Type = SurvivalItemType.Passive;
     [Tooltip("If 0 can hold an infinite amount.")] public int MaxHeldAtOnce = 0;
     public bool AppearOnWall;
+    [Tooltip("Delay (seconds) after consumption before item can be consumed again.")] public float ConsumeCooldown;
 
     [Header("Sprite")]
     [Tooltip("Use existing sprite from game")] public int TexId;
@@ -2176,6 +2184,7 @@ public class SurvivalItemEntry
     public string CustomDrawUpdateFunctionName;
     public string CustomOnAcquiredFunctionName;
     public string CustomOnConsumedFunctionName;
+    public string CustomGetConsumeCooldownTicksFunctionName;
     public string CustomHasRoomForMoreFunctionName;
     public string CustomCanBuyInStoreFunctionName;
     public string CustomGetStoreCostFunctionName;
@@ -2208,6 +2217,7 @@ public class SurvivalItemEntry
         sb.AppendLine($"\t\t.Type = {Type.GetDescription()},");
         sb.AppendLine($"\t\t.MaxHeldAtOnce = {MaxHeldAtOnce},");
         sb.AppendLine($"\t\t.AppearOnWall = {(AppearOnWall ? 1 : 0)},");
+        sb.AppendLine($"\t\t.ConsumeCooldownTicks = {(int)(ConsumeCooldown * 60)},");
         sb.AppendLine($"\t\t.MysteryboxChanceWeight = {MysteryboxChanceWeight.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.MysteryboxForceAcquire = {(MysteryboxForceAcquire ? 1 : 0)},");
         sb.AppendLine($"\t\t.DropChanceWeight = {DropChanceWeight.ToInvariantCulture()},");
@@ -2225,6 +2235,7 @@ public class SurvivalItemEntry
         sb.AppendLine($"\t\t\t.OnAcquiredFunc = {(string.IsNullOrEmpty(CustomOnAcquiredFunctionName) ? "NULL" : CustomOnAcquiredFunctionName)},");
         sb.AppendLine($"\t\t\t.OnConsumedFunc = {(string.IsNullOrEmpty(CustomOnConsumedFunctionName) ? "NULL" : CustomOnConsumedFunctionName)},");
         sb.AppendLine($"\t\t\t.HasRoomForMoreFunc = {(string.IsNullOrEmpty(CustomHasRoomForMoreFunctionName) ? "NULL" : CustomHasRoomForMoreFunctionName)},");
+        sb.AppendLine($"\t\t\t.GetConsumeCooldownTicksFunc = {(string.IsNullOrEmpty(CustomGetConsumeCooldownTicksFunctionName) ? "NULL" : CustomGetConsumeCooldownTicksFunctionName)},");
         sb.AppendLine($"\t\t\t.CanBuyInStoreFunc = {(string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName) ? "NULL" : CustomCanBuyInStoreFunctionName)},");
         sb.AppendLine($"\t\t\t.GetStoreCostFunc = {(string.IsNullOrEmpty(CustomGetStoreCostFunctionName) ? "NULL" : CustomGetStoreCostFunctionName)},");
         sb.AppendLine($"\t\t\t.GetMysteryboxChanceFunc = {(string.IsNullOrEmpty(CustomGetMysteryboxChanceFunctionName) ? "NULL" : CustomGetMysteryboxChanceFunctionName)},");
@@ -2246,10 +2257,13 @@ public class SurvivalItemEntry
         if (!string.IsNullOrEmpty(CustomOnAcquiredFunctionName)) sb.AppendLine($"void {CustomOnAcquiredFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomOnConsumedFunctionName)) sb.AppendLine($"void {CustomOnConsumedFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomHasRoomForMoreFunctionName)) sb.AppendLine($"void {CustomHasRoomForMoreFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+        if (!string.IsNullOrEmpty(CustomGetConsumeCooldownTicksFunctionName)) sb.AppendLine($"void {CustomGetConsumeCooldownTicksFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName)) sb.AppendLine($"void {CustomCanBuyInStoreFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetStoreCostFunctionName)) sb.AppendLine($"void {CustomGetStoreCostFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetMysteryboxChanceFunctionName)) sb.AppendLine($"void {CustomGetMysteryboxChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
-
+        if (!string.IsNullOrEmpty(CustomGetDropChanceFunctionName)) sb.AppendLine($"void {CustomGetDropChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+        if (!string.IsNullOrEmpty(CustomGetVendorRewardChanceFunctionName)) sb.AppendLine($"void {CustomGetVendorRewardChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
+        
         return sb.ToString();
     }
 }

@@ -31,7 +31,6 @@
 
 #define STATUE_MOBY_OCLASS (0x2402)
 #define BIGAL_MOBY_OCLASS (0x2124)
-#define VENDOR_MOBY_OCLASS (0x263A)
 
 #define GRAVITY_MAGNITUDE (15 * MATH_DT)
 
@@ -114,8 +113,6 @@
 #define PLAYER_RESPAWN_INV_TICKS (TPS * 2)
 
 #define BIG_AL_MAX_DIST (5)
-#define WEAPON_VENDOR_MAX_DIST (3)
-#define WEAPON_UPGRADE_COOLDOWN_TICKS (15)
 #define WEAPON_MENU_COOLDOWN_TICKS (60)
 
 #define PRESTIGE_MACHINE_MAX_DIST (5)
@@ -249,7 +246,6 @@ struct SurvivalState
 	int StorePurchaseCount[GAME_MAX_LOCALS][MAX_ITEM_COUNT];
 	char ClientReady[GAME_MAX_PLAYERS];
 	int RoundInitialized;
-	Moby *Vendor;
 	Moby *BigAl;
 	Moby *PrestigeMachine;
 	Moby *Bankbox;

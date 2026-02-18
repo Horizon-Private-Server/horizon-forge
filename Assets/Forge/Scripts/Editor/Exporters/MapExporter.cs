@@ -1,7 +1,5 @@
 using GLTFast.Export;
-using Newtonsoft.Json;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -69,6 +67,7 @@ public static class MapExporter
             var sky = dzoConfig.Sky ? GameObject.FindObjectOfType<Sky>() : null;
             var convertToShrubs = dzoConfig.Shrubs ? GameObject.FindObjectsOfType<ConvertToShrub>() : new ConvertToShrub[0];
             var extraGeometry = dzoConfig.IncludeInExport ?? new GameObject[0];
+            var sharedQuadMesh = UnityHelper.BuildQuad();
 
             // create minimap object
             GameObject minimapGo = null;
@@ -81,10 +80,27 @@ public static class MapExporter
                 var mat = new Material(Shader.Find("Standard"));
                 mat.mainTexture = UnityHelper.ResizeTexture(minimapTex, dzoConfig.MinimapResolution, dzoConfig.MinimapResolution);
                 mr.sharedMaterial = mat;
-                mf.sharedMesh = UnityHelper.BuildQuad();
+                mf.sharedMesh = sharedQuadMesh;
 
                 gameObjectsToCleanup.Add(minimapGo);
             }
+
+            // create sprite objects
+            GameObject spritesGo = new GameObject("sprite-container");
+            var sprites = mapConfig.GetSpriteDefs(RCVER.DL);
+            foreach (var spriteIdx in Enumerable.Range(0, sprites.Length))
+            {
+                var sprite = sprites[spriteIdx];
+                var spriteGo = new GameObject($"{spriteIdx}");
+                var mf = spriteGo.AddComponent<MeshFilter>();
+                var mr = spriteGo.AddComponent<MeshRenderer>();
+                var mat = new Material(Shader.Find("Standard"));
+                mat.mainTexture = UnityHelper.CloneTexture(sprite.m_Texture, tint: sprite.m_Tint);
+                mr.sharedMaterial = mat;
+                mf.sharedMesh = sharedQuadMesh;
+                spriteGo.transform.SetParent(spritesGo.transform, false);
+            }
+            gameObjectsToCleanup.Add(spritesGo);
 
             var fogT = mapConfig.FogFarIntensity - mapConfig.FogNearIntensity;
             var fogRange = (mapConfig.FogFarDistance - mapConfig.FogNearDistance) / (mapConfig.FogFarIntensity - mapConfig.FogNearIntensity);
@@ -94,6 +110,7 @@ public static class MapExporter
             {
                 SkymeshName = sky ? objectPathPrefix + sky.gameObject.name : null,
                 MinimapMeshName = minimapGo ? objectPathPrefix + minimapGo.name : null,
+                SpritesMeshName = spritesGo ? objectPathPrefix + spritesGo.name : null,
                 BackgroundColor = dzoConfig.UseBackgroundColorOverride ? dzoConfig.BackgroundColorOverride : mapConfig.BackgroundColor,
                 FogColor = dzoConfig.FogOverride ? dzoConfig.FogOverrideColor : mapConfig.FogColor,
                 FogNearDistance = dzoConfig.FogOverride ? dzoConfig.FogOverrideNearDistance : fogNear,
@@ -117,6 +134,7 @@ public static class MapExporter
             if (combinedCopy) gameObjectsToExport.Add(combinedCopy);
             //gameObjectsToExport.AddRange(extraGeometry);
             if (minimapGo) gameObjectsToExport.Add(minimapGo);
+            if (spritesGo) gameObjectsToExport.Add(spritesGo);
             gameObjectsToExport.AddRange(convertToShrubs.Where(x => x.DZOExportWithShrubs).Select(x => x.gameObject));
             foreach (var light in lights) gameObjectsToExport.Add(light.gameObject);
 

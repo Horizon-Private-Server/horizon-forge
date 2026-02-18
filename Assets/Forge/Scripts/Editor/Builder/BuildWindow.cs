@@ -246,9 +246,6 @@ public class BuildWindow : EditorWindow
         var forceRebuildAll = false;
         var buildBothRC3Regions = buildTargets.HasFlag(ForgeBuildTargets.UYA_NTSC) && buildTargets.HasFlag(ForgeBuildTargets.RAC3_PAL);
 
-        // build dzo first
-        if (toggleRebuildDZO.value && buildTargets.HasFlag(ForgeBuildTargets.DL_NTSC)) await ForgeBuilder.BuildDZOFiles(scene);
-
         // rebuild
         foreach (ForgeBuildTargets buildTarget in Enum.GetValues(typeof(ForgeBuildTargets)))
         {
@@ -321,6 +318,12 @@ public class BuildWindow : EditorWindow
 
                 // pass to build hook
                 IBuildHook.Run(state, BuildStateStage.BeforeBuild);
+
+                // build dzo
+                if (region == GameRegion.NTSC && racVersion == RCVER.DL)
+                {
+                    if (toggleRebuildDZO.value && buildTargets.HasFlag(ForgeBuildTargets.DL_NTSC)) await ForgeBuilder.BuildDZOFiles(scene);
+                }
 
                 // PAL is always built after NTSC
                 // PAL only needs to be rebuilt with new PAL code segment

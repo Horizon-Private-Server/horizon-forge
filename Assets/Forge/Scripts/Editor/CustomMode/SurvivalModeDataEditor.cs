@@ -217,7 +217,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
         var height = EditorGUIUtility.singleLineHeight;
 
         if (property.isExpanded)
-            height += EditorGUIUtility.singleLineHeight * 16;
+            height += EditorGUIUtility.singleLineHeight * 17;
 
         return height;
     }
@@ -257,6 +257,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
             // draw override fields
             line = UnityHelper.Int32Override(line, property, "MaxHeldAtOnce", defaultItemDef.Def.MaxHeldAtOnce);
             line = UnityHelper.BoolOverride(line, property, "AppearOnWall", defaultItemDef.Def.AppearOnWall);
+            line = UnityHelper.FloatOverride(line, property, "ConsumeCooldown", defaultItemDef.Def.ConsumeCooldown);
             line = UnityHelper.EnumOverride(line, property, "StoreCostType", defaultItemDef.Def.StoreCostType);
             line = UnityHelper.UInt32Override(line, property, "StoreCost", defaultItemDef.Def.StoreCost);
             line = UnityHelper.DoubleOverride(line, property, "StoreCostIncrease", defaultItemDef.Def.StoreCostIncrease);
@@ -366,6 +367,7 @@ public class SurvivalItemEntryDrawer : PropertyDrawer
             line = UnityHelper.PropertyField(line, property, "Type");
             line = UnityHelper.PropertyField(line, property, "MaxHeldAtOnce");
             line = UnityHelper.PropertyField(line, property, "AppearOnWall");
+            line = UnityHelper.PropertyField(line, property, "ConsumeCooldown");
 
             line = UnityHelper.PropertyField(line, property, "TexId");
             line = UnityHelper.PropertyField(line, property, "TexColor");
@@ -385,9 +387,12 @@ public class SurvivalItemEntryDrawer : PropertyDrawer
             line = UnityHelper.PropertyField(line, property, "CustomOnAcquiredFunctionName");
             line = UnityHelper.PropertyField(line, property, "CustomOnConsumedFunctionName");
             line = UnityHelper.PropertyField(line, property, "CustomHasRoomForMoreFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomGetConsumeCooldownTicksFunctionName");
             line = UnityHelper.PropertyField(line, property, "CustomCanBuyInStoreFunctionName");
             line = UnityHelper.PropertyField(line, property, "CustomGetStoreCostFunctionName");
             line = UnityHelper.PropertyField(line, property, "CustomGetMysteryboxChanceFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomGetDropChanceFunctionName");
+            line = UnityHelper.PropertyField(line, property, "CustomGetVendorRewardChanceFunctionName");
 
             // draw probabilities
             if (survivalMode)
