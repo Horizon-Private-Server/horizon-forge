@@ -643,7 +643,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 50000
       StoreCostIncrease: 25000
-      MysteryboxChanceWeight: 0.1
+      MysteryboxChanceWeight: 1
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 1
@@ -678,7 +678,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 50000
       StoreCostIncrease: 25000
-      MysteryboxChanceWeight: 0.1
+      MysteryboxChanceWeight: 1
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 1
@@ -713,7 +713,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 50000
       StoreCostIncrease: 25000
-      MysteryboxChanceWeight: 0.1
+      MysteryboxChanceWeight: 1
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 1
@@ -748,7 +748,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 50000
       StoreCostIncrease: 25000
-      MysteryboxChanceWeight: 0.1
+      MysteryboxChanceWeight: 1
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 1
@@ -783,7 +783,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 50000
       StoreCostIncrease: 25000
-      MysteryboxChanceWeight: 0.1
+      MysteryboxChanceWeight: 1
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 1
@@ -818,7 +818,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 50000
       StoreCostIncrease: 25000
-      MysteryboxChanceWeight: 0.1
+      MysteryboxChanceWeight: 1
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 1
@@ -853,7 +853,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.09
+      MysteryboxChanceWeight: 0.9
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -888,7 +888,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.3
+      MysteryboxChanceWeight: 3
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -923,7 +923,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.3
       MysteryboxForceAcquire: 1
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -958,7 +958,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.5
       MysteryboxForceAcquire: 1
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -994,7 +994,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.15
+      MysteryboxChanceWeight: 1.5
       MysteryboxForceAcquire: 1
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -1029,7 +1029,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.5
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -1064,7 +1064,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.5
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -1099,7 +1099,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 0
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.5
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -1169,7 +1169,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 100000
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.5
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -1204,7 +1204,7 @@ MonoBehaviour:
       StoreCostType: 0
       StoreCost: 100000
       StoreCostIncrease: 0
-      MysteryboxChanceWeight: 0.05
+      MysteryboxChanceWeight: 0.5
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
       VendorRewardChanceWeight: 0
@@ -2174,7 +2174,7 @@ MonoBehaviour:
       AppearOnWall: 1
       ConsumeCooldown: 0
       TexId: 52
-      TexColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+      TexColor: {r: 0.75, g: 0.75, b: 0.75, a: 1}
       SpriteDefOverride:
         m_Texture: {fileID: 2800000, guid: 87a8ad16c18dbf14597395394809079b, type: 3}
         m_Bank: 1
@@ -2217,7 +2217,7 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 10000
+      StoreCost: 25000
       StoreCostIncrease: 0
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
@@ -2308,11 +2308,11 @@ MonoBehaviour:
   - Item: 46
     Def:
       Name: Earthquake Perk
-      Description: +2 Knockback on landing. -1s cooldown per perk.
+      Description: +2 Knockback, +5 Damage on landing.
       Type: 0
       MaxHeldAtOnce: 10
       AppearOnWall: 0
-      ConsumeCooldown: 15
+      ConsumeCooldown: 1
       TexId: 81
       TexColor: {r: 1, g: 1, b: 1, a: 1}
       SpriteDefOverride:

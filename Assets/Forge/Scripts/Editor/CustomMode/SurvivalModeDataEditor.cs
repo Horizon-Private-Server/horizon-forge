@@ -21,6 +21,8 @@ public class SurvivalModeDataEditor : Editor
     private SerializedProperty m_DebugPaydayProperty;
     private SerializedProperty m_DebugMoonjumpProperty;
     private SerializedProperty m_DebugStartRoundProperty;
+
+    private SurvivalMobDef[] m_Mobs;
     
     private void OnEnable()
     {
@@ -33,6 +35,8 @@ public class SurvivalModeDataEditor : Editor
         m_DebugPaydayProperty = serializedObject.FindProperty("DebugPayday");
         m_DebugMoonjumpProperty = serializedObject.FindProperty("DebugMoonjump");
         m_DebugStartRoundProperty = serializedObject.FindProperty("DebugStartRound");
+
+        m_Mobs = (target as SurvivalModeData).GetEnabledMobs();
     }
 
     public override void OnInspectorGUI()
@@ -76,7 +80,7 @@ public class SurvivalModeDataEditor : Editor
         var racVersion = RCVER.DL;
         var mobyDir = $"{FolderNames.GetMapFolder(mapName)}/{FolderNames.GetMapMobyFolder(racVersion)}";
         var missingVariants = new List<(string, SurvivalMobsScriptableObject.SurvivalMobVariant)>();
-        foreach (var mob in survivalModeData.Mobs)
+        foreach (var mob in m_Mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -116,7 +120,7 @@ public class SurvivalModeDataEditor : Editor
 
         if (GUILayout.Button("Reinstall All Mobs"))
         {
-            foreach (var mob in survivalModeData.Mobs)
+            foreach (var mob in m_Mobs)
             {
                 var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
                 var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -205,10 +209,11 @@ public class SurvivalMobSpawnParamDrawer : PropertyDrawer
 
 }
 
-[CustomPropertyDrawer(typeof(SurvivalTemplateItemEntry))]
+[CustomPropertyDrawer(typeof(SurvivalDefaultItemOverrideEntry))]
 public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
 {
-    SurvivalMobsScriptableObject survivalData;
+    SurvivalMobsScriptableObject survivalConfig;
+    SurvivalModeData survivalModeData;
     string[] itemOptions;
     int[] itemOptionMapping;
 
@@ -216,7 +221,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
     {
         var height = EditorGUIUtility.singleLineHeight;
 
-        if (property.isExpanded)
+        //if (property.isExpanded)
             height += EditorGUIUtility.singleLineHeight * 17;
 
         return height;
@@ -224,24 +229,24 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        if (!survivalData) survivalData = SurvivalMobsScriptableObject.Load();
+        if (!survivalConfig) survivalConfig = SurvivalMobsScriptableObject.Load();
+        if (!survivalModeData) survivalModeData = GameObject.FindObjectOfType<SurvivalModeData>();
         if (itemOptions == null) BuildItemOptions();
+
         var defaultItemId = ((SurvivalDefaultItems[])Enum.GetValues(typeof(SurvivalDefaultItems)))[property.FindPropertyRelative("Item").enumValueIndex];
-        var defaultItemDef = survivalData.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItemId);
+        var defaultItemDef = survivalConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItemId);
         if (defaultItemDef == null) return;
 
         // compute sum total mbox weights
-        var survivalMode = property.serializedObject.targetObject as SurvivalModeData;
-        var mboxSumWeights = Math.Max(survivalMode?.GetMysteryboxSumWeights() ?? 1, 0.001f);
-        var dropSumWeights = Math.Max(survivalMode?.GetDropsSumWeights() ?? 1, 0.001f);
-        var wepUpgradeSumWeights = Math.Max(survivalMode?.GetVendorWeaponUpgradeSumWeights() ?? 1, 0.001f);
+        var mboxSumWeights = Math.Max(survivalModeData?.GetMysteryboxSumWeights() ?? 1, 0.001f);
+        var dropSumWeights = Math.Max(survivalModeData?.GetDropsSumWeights() ?? 1, 0.001f);
+        var wepUpgradeSumWeights = Math.Max(survivalModeData?.GetVendorWeaponUpgradeSumWeights() ?? 1, 0.001f);
 
-        var labelWithType = new GUIContent($"[{defaultItemDef.Def.Type.GetInspectorName()}] {label.text}", label.image, label.tooltip);
-        EditorGUI.BeginProperty(position, labelWithType, property);
+        EditorGUI.BeginProperty(position, label, property);
 
         var line = new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
-        property.isExpanded = EditorGUI.ToggleLeft(line, labelWithType, property.isExpanded);
-        if (property.isExpanded)
+        //property.isExpanded = EditorGUI.ToggleLeft(line, labelWithType, property.isExpanded);
+        if (property.isExpanded || true)
         {
             var indent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
@@ -267,7 +272,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
             line = UnityHelper.FloatOverride(line, property, "VendorRewardChanceWeight", defaultItemDef.Def.VendorRewardChanceWeight);
             
             // draw probabilities
-            if (survivalMode)
+            if (survivalModeData)
             {
                 // mbox
                 var chanceProp = property.FindPropertyRelative("MysteryboxChanceWeight");
@@ -295,7 +300,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
 
                 // item idx define
                 line.y += EditorGUIUtility.singleLineHeight;
-                EditorGUI.HelpBox(line, $"-D{(property.boxedValue as SurvivalTemplateItemEntry)?.DefineName}=#", MessageType.Info);
+                EditorGUI.HelpBox(line, $"-D{(property.boxedValue as SurvivalDefaultItemOverrideEntry)?.DefineName}=#", MessageType.Info);
             }
 
             EditorGUI.indentLevel = indent;
@@ -309,12 +314,12 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
         var dict = ((SurvivalDefaultItems[])Enum.GetValues(typeof(SurvivalDefaultItems)))
             .ToDictionary(x =>
             {
-                if (survivalData)
+                if (survivalConfig)
                 {
-                    var def = survivalData.SurvivalDefaultItems.FirstOrDefault(def => def.Item == x);
+                    var def = survivalConfig.SurvivalDefaultItems.FirstOrDefault(def => def.Item == x);
                     if (def != null)
                     {
-                        return $"[{def.Def.Type.GetInspectorName()}] {def.Def.Name}";
+                        return $"{def.Def.Type.GetInspectorName()}/{def.Def.Name}";
                     }
                 }
 
@@ -330,6 +335,8 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
 [CustomPropertyDrawer(typeof(SurvivalItemEntry))]
 public class SurvivalItemEntryDrawer : PropertyDrawer
 {
+    SurvivalModeData survivalModeData;
+
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         var height = EditorGUI.GetPropertyHeight(property, label, includeChildren: true);
@@ -342,18 +349,17 @@ public class SurvivalItemEntryDrawer : PropertyDrawer
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        // compute sum total mbox weights
-        var survivalMode = property.serializedObject.targetObject as SurvivalModeData;
-        var mboxSumWeights = Math.Max(survivalMode?.GetMysteryboxSumWeights() ?? 1, 0.001f);
-        var dropSumWeights = Math.Max(survivalMode?.GetDropsSumWeights() ?? 1, 0.001f);
-        var wepUpgradeSumWeights = Math.Max(survivalMode?.GetVendorWeaponUpgradeSumWeights() ?? 1, 0.001f);
+        if (!survivalModeData) survivalModeData = GameObject.FindObjectOfType<SurvivalModeData>();
 
-        var type = (SurvivalItemType)property.FindPropertyRelative("Type").enumValueIndex;
-        var labelWithType = new GUIContent($"[{type.GetInspectorName()}] {label.text}", label.image, label.tooltip);
-        EditorGUI.BeginProperty(position, labelWithType, property);
+        // compute sum total mbox weights
+        var mboxSumWeights = Math.Max(survivalModeData?.GetMysteryboxSumWeights() ?? 1, 0.001f);
+        var dropSumWeights = Math.Max(survivalModeData?.GetDropsSumWeights() ?? 1, 0.001f);
+        var wepUpgradeSumWeights = Math.Max(survivalModeData?.GetVendorWeaponUpgradeSumWeights() ?? 1, 0.001f);
+
+        EditorGUI.BeginProperty(position, label, property);
 
         var line = new Rect(position.x, position.y, Math.Max(0, position.width), EditorGUIUtility.singleLineHeight);
-        property.isExpanded = EditorGUI.ToggleLeft(line, labelWithType, property.isExpanded);
+        property.isExpanded = EditorGUI.ToggleLeft(line, label, property.isExpanded);
         if (property.isExpanded)
         {
             var indent = EditorGUI.indentLevel;
@@ -395,7 +401,7 @@ public class SurvivalItemEntryDrawer : PropertyDrawer
             line = UnityHelper.PropertyField(line, property, "CustomGetVendorRewardChanceFunctionName");
 
             // draw probabilities
-            if (survivalMode)
+            if (survivalModeData)
             {
                 // mbox
                 var chance = property.FindPropertyRelative("MysteryboxChanceWeight").floatValue;

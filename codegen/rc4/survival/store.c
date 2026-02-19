@@ -368,7 +368,9 @@ void storeDrawTabs(Moby *moby, int localPlayerIndex, Window_t *drawWindow, int s
 	windowFill(drawWindow, bgColor);
 
 	// draw selected tab text
-	storeGetPage(moby, localPlayerIndex, selectedIdx, &page);
+	if (!storeGetPage(moby, localPlayerIndex, selectedIdx, &page))
+		return;
+
 	windowDrawText(drawWindow, TEXT_ALIGN_MIDDLERIGHT, -5, 0, 0.9, textColor, page.Name, -1, TEXT_ALIGN_MIDDLERIGHT);
 
 	int i;
@@ -458,16 +460,19 @@ void storeDrawMenu(Moby *moby, int localPlayerIndex)
 	storeDrawTabs(moby, localPlayerIndex, &drawWindowTabs, pvars->PageIdx[localPlayerIndex]);
 
 	// draw item list
-	Window_t drawWindowItemList;
-	windowCreateFrom(&drawWindowItemList, &drawWindow, 0, tabRowHeight + headerHeight, drawWindow.Width, itemListHeight, TEXT_ALIGN_TOPLEFT);
-	storeDrawItemList(moby, localPlayerIndex, &drawWindowItemList, pvars->RowIdx[localPlayerIndex], &page);
+	if (page.ItemsCount > 0)
+	{
+		Window_t drawWindowItemList;
+		windowCreateFrom(&drawWindowItemList, &drawWindow, 0, tabRowHeight + headerHeight, drawWindow.Width, itemListHeight, TEXT_ALIGN_TOPLEFT);
+		storeDrawItemList(moby, localPlayerIndex, &drawWindowItemList, pvars->RowIdx[localPlayerIndex], &page);
 
-	// draw selected item decription
-	Window_t windowDesc;
-	windowCreateFrom(&windowDesc, &drawWindow, 0, tabRowHeight + headerHeight + itemListHeight, drawWindow.Width, descHeight, TEXT_ALIGN_TOPCENTER);
-	windowFill(&windowDesc, bgColor);
-	windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLELEFT, descPaddingX, 0, 0.6, textColor, item.Description, -1, TEXT_ALIGN_MIDDLELEFT);
-	windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLERIGHT, -descPaddingX, 0, 0.6, textColor, ITEM_TYPE_NAMES[item.Type], -1, TEXT_ALIGN_MIDDLERIGHT);
+		// draw selected item decription
+		Window_t windowDesc;
+		windowCreateFrom(&windowDesc, &drawWindow, 0, tabRowHeight + headerHeight + itemListHeight, drawWindow.Width, descHeight, TEXT_ALIGN_TOPCENTER);
+		windowFill(&windowDesc, bgColor);
+		windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLELEFT, descPaddingX, 0, 0.6, textColor, item.Description, -1, TEXT_ALIGN_MIDDLELEFT);
+		windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLERIGHT, -descPaddingX, 0, 0.6, textColor, ITEM_TYPE_NAMES[item.Type], -1, TEXT_ALIGN_MIDDLERIGHT);
+	}
 
 	// draw footer
 	Window_t windowFooter;
@@ -638,7 +643,7 @@ int storeTryInteract(Moby *moby, Player *player, char *buf)
 	case STORE_INTERACT_LOOK_AT:
 		if (vector_sqrmag(playerToStore) > maxDistSqr)
 			return 0;
-		if (vector_innerproduct(cameraToStore, player->CameraForward) > -0.9)
+		if (vector_innerproduct(cameraToStore, player->CameraForward) > -0.8)
 			return 0;
 		break;
 	case STORE_INTERACT_STAND_ON:
@@ -675,7 +680,9 @@ void storeUpdate(Moby *moby)
 		{
 			if (moby->State != STORE_STATE_DISABLED)
 			{
+#if !DEBUG
 				storeSetState(moby, STORE_STATE_DISABLED);
+#endif
 			}
 		}
 	}

@@ -1608,6 +1608,12 @@ public static class UnityHelper
         return position;
     }
 
+    public static void PopupField(SerializedProperty property, string field, string[] options, params GUILayoutOption[] layoutOptions)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, layoutOptions);
+        PopupField(rect, property, field, options);
+    }
+
     public static Rect PopupField(Rect position, SerializedProperty property, string field, string[] options, int[] mapping)
     {
         // find prop
@@ -1629,6 +1635,12 @@ public static class UnityHelper
 
         position.y += height;
         return position;
+    }
+
+    public static void PopupField(SerializedProperty property, string field, string[] options, int[] mapping, params GUILayoutOption[] layoutOptions)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, layoutOptions);
+        PopupField(rect, property, field, options, mapping);
     }
 
     public static Rect ColorOverride(Rect position, SerializedProperty property, string field, Color defaultValue)
@@ -1674,6 +1686,12 @@ public static class UnityHelper
         return position;
     }
 
+    public static void ColorOverride(SerializedProperty property, string field, Color defaultValue, params GUILayoutOption[] options)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        ColorOverride(rect, property, field, defaultValue);
+    }
+
     public static Rect EnumOverride<T>(Rect position, SerializedProperty property, string field, T defaultValue) where T : Enum
     {
         // find prop
@@ -1715,6 +1733,12 @@ public static class UnityHelper
 
         position.y += height;
         return position;
+    }
+
+    public static void EnumOverride<T>(SerializedProperty property, string field, T defaultValue, params GUILayoutOption[] options) where T : Enum
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        EnumOverride(rect, property, field, defaultValue);
     }
 
     public static Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue)
@@ -1760,6 +1784,12 @@ public static class UnityHelper
         return position;
     }
 
+    public static void FloatOverride(SerializedProperty property, string field, float defaultValue, params GUILayoutOption[] options)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        FloatOverride(rect, property, field, defaultValue);
+    }
+
     public static Rect BoolOverride(Rect position, SerializedProperty property, string field, bool defaultValue)
     {
         // find prop
@@ -1801,6 +1831,12 @@ public static class UnityHelper
 
         position.y += height;
         return position;
+    }
+
+    public static void BoolOverride(SerializedProperty property, string field, bool defaultValue, params GUILayoutOption[] options)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        BoolOverride(rect, property, field, defaultValue);
     }
 
     public static Rect Int32Override(Rect position, SerializedProperty property, string field, int defaultValue)
@@ -1846,6 +1882,12 @@ public static class UnityHelper
         return position;
     }
 
+    public static void Int32Override(SerializedProperty property, string field, int defaultValue, params GUILayoutOption[] options)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        Int32Override(rect, property, field, defaultValue);
+    }
+
     public static Rect UInt32Override(Rect position, SerializedProperty property, string field, uint defaultValue)
     {
         // find prop
@@ -1889,6 +1931,12 @@ public static class UnityHelper
         return position;
     }
 
+    public static void UInt32Override(SerializedProperty property, string field, uint defaultValue, params GUILayoutOption[] options)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        UInt32Override(rect, property, field, defaultValue);
+    }
+
     public static Rect DoubleOverride(Rect position, SerializedProperty property, string field, double defaultValue)
     {
         // find prop
@@ -1930,6 +1978,12 @@ public static class UnityHelper
 
         position.y += height;
         return position;
+    }
+
+    public static void DoubleOverride(SerializedProperty property, string field, double defaultValue, params GUILayoutOption[] options)
+    {
+        var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
+        DoubleOverride(rect, property, field, defaultValue);
     }
 
     #endregion
