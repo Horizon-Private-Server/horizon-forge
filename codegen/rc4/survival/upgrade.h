@@ -47,6 +47,7 @@ struct UpgradePickupEventArgs
 	int PickedUpByPlayerId;
 };
 
+void upgradeSpawn(void);
 void upgradeTick(void);
 void upgradeInit(void);
 struct GuberMoby *upgradeGetGuber(Moby *moby);

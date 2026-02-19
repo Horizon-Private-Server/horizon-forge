@@ -464,22 +464,26 @@ int upgradeCreate(VECTOR position, VECTOR rotation, int itemIdx)
 }
 
 //--------------------------------------------------------------------------
-void upgradeSpawnInit(void)
+void upgradeSpawn(void)
 {
+	static int spawned = 0;
+	if (spawned)
+		return;
+
+	// only spawn if host
+	if (!gameAmIHost())
+		return;
+
+	// need to know where to spawn
+	if (!MapConfig.Functions.GetBakedSpawnPointsFunc)
+		return;
+
 	VECTOR pos, rot;
 	int i, j;
 	int r;
 	int bakedUpgradeSpawnpointCount = 0;
 	char upgradeBakedSpawnpointIdx[MAX_ITEM_COUNT];
 	int itemIdxs[MAX_ITEM_COUNT];
-
-	// only spawn if host
-	if (!gameAmIHost())
-		return;
-
-	if (!MapConfig.Functions.GetBakedSpawnPointsFunc)
-		return;
-
 	int itemCount = upgradeGetItems(itemIdxs, MAX_ITEM_COUNT);
 
 	// initialize spawnpoint idx to -1
@@ -530,6 +534,8 @@ void upgradeSpawnInit(void)
 		if (MapConfig.Functions.CreateUpgradePickupFunc)
 			MapConfig.Functions.CreateUpgradePickupFunc(pos, rot, itemIdx);
 	}
+
+	spawned = 1;
 }
 
 //--------------------------------------------------------------------------
@@ -551,8 +557,6 @@ void upgradeInit(void)
 
 	MapConfig.Functions.CreateUpgradePickupFunc = &upgradeCreate;
 	MapConfig.Functions.PickupUpgradeFunc = &upgradePickup;
-
-	upgradeSpawnInit();
 }
 
 //--------------------------------------------------------------------------
