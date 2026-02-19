@@ -27,6 +27,32 @@ int mapOnMobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFrom
 }
 
 //--------------------------------------------------------------------------
+void mapConsiderSpawnDrop(Moby *moby, int killedByPlayerId, int killedByWeaponId)
+{
+	if (!MapConfig.State)
+		return;
+
+	// have drop funcs
+	if (!MapConfig.Functions.GetDropItemOnMobKilledFunc || !MapConfig.Functions.CreateMobDropFunc)
+		return;
+
+	int roundIsSpecial = MapConfig.State->RoundIsSpecial;
+	int disableDrops = MapConfig.SpecialRoundParams[MapConfig.State->RoundSpecialIdx].DisableDrops;
+	if (!roundIsSpecial || !disableDrops)
+	{
+		Player *killedByPlayer = playerGetFromIndex(killedByPlayerId);
+		if (playerIsValid(killedByPlayer) && killedByPlayer->IsLocal)
+		{
+			int itemIdx = MapConfig.Functions.GetDropItemOnMobKilledFunc(killedByPlayer, moby, killedByWeaponId);
+			if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+			{
+				MapConfig.Functions.CreateMobDropFunc(moby->Position, itemIdx, gameGetTime() + DROP_DURATION, killedByPlayer->Team);
+			}
+		}
+	}
+}
+
+//--------------------------------------------------------------------------
 void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 {
 #if STACKABLES
@@ -45,17 +71,7 @@ void mapOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 	}
 #endif
 
-	// spawn mob drop
-	if (MapConfig.Functions.GetDropItemOnMobKilledFunc && killedByPlayerId >= 0)
-	{
-		Player *player = playerGetFromIndex(killedByPlayerId);
-		if (playerIsValid(player) && player->IsLocal)
-		{
-			int dropItem = MapConfig.Functions.GetDropItemOnMobKilledFunc(player, moby, killedByWeaponId);
-			if (dropItem >= 0)
-				MapConfig.Functions.CreateMobDropFunc(moby->Position, dropItem, gameGetTime() + DROP_DURATION, player->Team);
-		}
-	}
+	mapConsiderSpawnDrop(moby, killedByPlayerId, killedByWeaponId);
 }
 
 //--------------------------------------------------------------------------
