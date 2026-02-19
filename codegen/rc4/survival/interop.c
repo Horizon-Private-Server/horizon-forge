@@ -358,7 +358,7 @@ void mapOnPlayerGetVendorReward(Player *player, int gadgetId, int levelNum)
 	// reward
 	int selectedRewardItemIdx = itemIdxs[i];
 	itemBeginAcquire(player->PlayerId, selectedRewardItemIdx);
-	itemShowMessage(player->LocalPlayerIndex, selectedRewardItemIdx, "Got %s!", 60);
+	// itemShowMessage(player->LocalPlayerIndex, selectedRewardItemIdx, "Got %s!", 60);
 }
 
 //--------------------------------------------------------------------------

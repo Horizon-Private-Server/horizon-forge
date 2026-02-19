@@ -22,7 +22,8 @@
 #define ITEM_HEALTHTORNADO_DURATION (10 * TIME_SECOND)
 #define ITEM_HEALTHTORNADO_PERIOD_TICKS (TPS * 0.25)
 #define ITEM_HEALTHTORNADO_HEAL_PERCENT (0.05)
-#define ITEM_EARTHQUAKE_COOLDOWN_TICKS_DEC (60)
+#define ITEM_EARTHQUAKE_DAMAGE_PER (5)
+#define ITEM_EARTHQUAKE_COOLDOWN_TICKS_DEC (0)
 
 #define PLAYER_UPGRADE_DAMAGE_FACTOR (0.08)
 #define PLAYER_UPGRADE_SPEED_FACTOR (0.03)
@@ -51,7 +52,9 @@ void mapOnItemTick_Earthquake(int defIdx, SurvivalItemDef_t *def)
 
 		if (player->Ground.offAny)
 		{
-			playerInAir[i] = 1;
+			if (player->Ground.dist > 0.25)
+				playerInAir[i] = 1;
+
 			// playerPeakAir[i] = maxf(playerPeakAir[i], player->PlayerPosition[2]);
 			continue;
 		}
@@ -88,14 +91,14 @@ void mapOnItemConsumed_Earthquake(int defIdx, SurvivalItemDef_t *def, int player
 		return;
 
 	int count = playerGetItemCount(player, defIdx);
-	const float radius = 5;
+	const float radius = 8;
 	const int knockbackMaxPower = 10;
 
 	// generate splash position
-	VECTOR pos = {0, 0, 0.1, 0};
+	VECTOR pos = {0, 0, 0.25, 0};
 	u32 baseColor = hudGetTeamColor(player->Team, 2);
-	u32 color = (baseColor & 0xffffff) | 0x40000000;
-	vector_add(pos, pos, player->PlayerPosition);
+	u32 color = 0xff202020; //(baseColor & 0xffffff) | 0x60000000;
+	vector_add(pos, pos, player->Ground.point);
 
 	// generate splash rotation along surface normal
 	VECTOR quat = {0, 0, 0, 1};
@@ -103,25 +106,41 @@ void mapOnItemConsumed_Earthquake(int defIdx, SurvivalItemDef_t *def, int player
 	matrix_from_up_normal_twist(m, player->Ground.normal, 0);
 	quat_from_matrix(quat, m);
 
-	// spawn splash
+	// spawn tall splash
 	mobySpawnSplash(
 			vector_read(pos),
 			vector_read(quat),
-			12,
+			30,
+			color,
+			1,
+			1.0,
+			3 * radius,
+			1.00,
+			1.05,
+			0.99);
+
+	// spawn flat splash
+	mobySpawnSplash(
+			vector_read(pos),
+			vector_read(quat),
+			60,
 			color,
 			1,
 			0.5,
-			1 * radius,
+			3 * radius,
 			1.00,
 			1.01,
-			1.1);
+			1.01);
 
 	// camera shake
 	mobySpawnExplosion(vector_read(pos), 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, 0, radius, 0, 0, 0);
 
+	// sound
+	mobyPlaySoundByClass(0, 0, player->PlayerMoby, 0x2087);
+
 	// knockback enemies
 	int power = count * 2;
-	mobReactToExplosionAt(player, pos, 0, radius, power > knockbackMaxPower ? knockbackMaxPower : power);
+	mobReactToExplosionAt(player, pos, count * ITEM_EARTHQUAKE_DAMAGE_PER, radius, power > knockbackMaxPower ? knockbackMaxPower : power);
 }
 
 //--------------------------------------------------------------------------
@@ -452,6 +471,9 @@ void mapOnItemConsumed_Alphamod(int defIdx, SurvivalItemDef_t *def, int playerId
 		playerGiveAlphaMod(player, ALPHA_MOD_XP);
 	}
 #endif
+
+	if (player->IsLocal)
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "Got %s!", 60);
 }
 
 //--------------------------------------------------------------------------

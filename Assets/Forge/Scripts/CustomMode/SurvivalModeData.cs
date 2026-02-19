@@ -17,6 +17,11 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public const int BANK_OCLASS = 0x1F7;
     public const int STORE_OCLASS = 0x4100;
     public const int SURVIVAL_MAX_SPAWNED_MOBS = 50;
+    public const int MAX_ITEMS = 64;
+    public const int MAX_STORES = 8;
+    public const int MAX_MOBS = 16;
+    public const int MAX_GAMBITS = 16;
+
     static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 200000, 400000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
     static readonly string[] DEFAULT_ALPHA_MODS = { "SPEED", "AMMO", "IMPACT", "AREA", "JACKPOT", "XP" };
@@ -33,6 +38,58 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.Vampire, Max = 0 },
 		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExplodingEnemies, Max = 0 }
 	};
+
+    static readonly KeyValuePair<string, SurvivalDefaultItems>[] DEFAULT_ITEMS =
+    {
+        // put self revive first so it appears on the hud first -- easier for players to know if they have one
+        new("Store/Self Revive", SurvivalDefaultItems.HoldAutoSelfRevive),
+        new("Store/PDA", SurvivalDefaultItems.HoldManualPda),
+        
+        // default wall pickups
+        new("Wall/Speed Upgrade", SurvivalDefaultItems.ImmediatePlayerSpeedUpgrade),
+        new("Wall/Health Upgrade", SurvivalDefaultItems.ImmediatePlayerHealthUpgrade),
+        new("Wall/Damage Upgrade", SurvivalDefaultItems.ImmediatePlayerDamageUpgrade),
+        new("Wall/Crit Upgrade", SurvivalDefaultItems.ImmediatePlayerCritUpgrade),
+
+        // default mysterybox items
+        new("Mbox/Quad", SurvivalDefaultItems.ImmediateGlobalQuad),
+        new("Mbox/Shield", SurvivalDefaultItems.ImmediateGlobalShield),
+        new("Mbox/Infinite Ammo", SurvivalDefaultItems.ImmediateGlobalInfiniteAmmo),
+        new("Mbox/Invis Cloak", SurvivalDefaultItems.HoldManualInvisibilityCloak),
+        new("Mbox/Health Tornado", SurvivalDefaultItems.HoldManualHealthTornado),
+        new("Mbox/Randomize Weapon Pickups", SurvivalDefaultItems.ImmediateRandomizeWeaponPickups),
+        new("Mbox/Upgrade Equipped Weapon", SurvivalDefaultItems.ImmediateUpgradeWeapon),
+        new("Mbox/Vox", SurvivalDefaultItems.ImmediateVoxMysterybox),
+        new("Mbox/Gate Reset", SurvivalDefaultItems.ImmediateResetRandomGate),
+        new("Mbox/Dread Token", SurvivalDefaultItems.ImmediateDreadToken),
+        new("Mbox/Alphamod Speed", SurvivalDefaultItems.AlphamodSpeed),
+        new("Mbox/Alphamod Area", SurvivalDefaultItems.AlphamodArea),
+        new("Mbox/Alphamod Impact", SurvivalDefaultItems.AlphamodImpact),
+        new("Mbox/Alphamod Ammo", SurvivalDefaultItems.AlphamodAmmo),
+        new("Mbox/Alphamod Jackpot", SurvivalDefaultItems.AlphamodJackpot),
+        new("Mbox/Alphamod Xp", SurvivalDefaultItems.AlphamodXp),
+
+        // default store items
+        new("Perks/Berserker", SurvivalDefaultItems.PassiveLowHealthDamageBuff),
+        new("Perks/Extra Jump", SurvivalDefaultItems.PassiveExtraJump),
+        new("Perks/Double Shot", SurvivalDefaultItems.PassiveExtraShot),
+        new("Perks/Hoverboots", SurvivalDefaultItems.PassiveHoverboots),
+        new("Perks/Alphamod Speed", SurvivalDefaultItems.PassiveAlphaModSpeed),
+        new("Perks/Alphamod Impact", SurvivalDefaultItems.PassiveAlphaModImpact),
+        new("Perks/Alphamod Area", SurvivalDefaultItems.PassiveAlphaModArea),
+        new("Perks/Alphamod Ammo", SurvivalDefaultItems.PassiveAlphaModAmmo),
+        new("Perks/Vampire", SurvivalDefaultItems.PassiveVampire),
+        new("Perks/Will o Wisp", SurvivalDefaultItems.PassiveExplodingEnemies),
+        new("Perks/Earthquake", SurvivalDefaultItems.PassiveEarthquake),
+
+        // default drops
+        new("Drops/Max Ammo", SurvivalDefaultItems.ImmediateGlobalAmmo),
+        new("Drops/Nuke", SurvivalDefaultItems.ImmediateGlobalNuke),
+        new("Drops/Double Bolts", SurvivalDefaultItems.ImmediateGlobalDoublePoints),
+        new("Drops/Double Xp", SurvivalDefaultItems.ImmediateGlobalDoubleXp),
+        new("Drops/Freeze", SurvivalDefaultItems.ImmediateGlobalFreeze),
+        new("Drops/Health", SurvivalDefaultItems.ImmediateGlobalHealth),
+    };
 
     public override DLCustomModeIds CustomMode => DLCustomModeIds.Survival;
     public override bool IsEnabled => Enabled && this.isActiveAndEnabled;
@@ -58,16 +115,19 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public float MobDropCooldownSecondsMin = 10;
     public float MobDropCooldownSecondsMax = 60;
 
-    [Header("Mobs"), Tooltip("Your map's customized mob list. Max of 10.")]
-    public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
-    {
-        new SurvivalMobSpawnParam() { Name = "Zombie" }
-    };
+    [Header("Mobs")]
     public Cuboid MobAllowedArea;
     public Area MobSpawnPoints;
     public string ReactorMinionMobName;
 
+    [Obsolete, HideInInspector, Tooltip("Your map's customized mob list. Max of 10.")]
+    public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
+    {
+        new SurvivalMobSpawnParam() { Name = "Zombie" }
+    };
+
     [Header("Special Rounds")]
+    [Obsolete, HideInInspector]
     public List<SurvivalMobSpecialRoundParam> SpecialRounds = new List<SurvivalMobSpecialRoundParam>()
     {
         new SurvivalMobSpecialRoundParam() { Name = "Boss Round", Disabled = true, MinRound = 25, RepeatEveryNRounds = 25, UnlimitedPostRoundTime = true, MobNamesToSpawn = new List<string>() { "Zombie" } }
@@ -99,61 +159,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1 },
     };
 
-    [Header("Items")]
-    public List<SurvivalTemplateItemEntry> Items = new List<SurvivalTemplateItemEntry>()
-    {
-        // put self revive first so it appears on the hud first -- easier for players to know if they have one
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.HoldAutoSelfRevive),
-
-        // default wall pickups
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerSpeedUpgrade),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerHealthUpgrade),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerDamageUpgrade),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediatePlayerCritUpgrade),
-
-        // default mysterybox items
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalQuad),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalShield),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalInfiniteAmmo),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.HoldManualInvisibilityCloak),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.HoldManualHealthTornado),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateRandomizeWeaponPickups),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateUpgradeWeapon),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateVoxMysterybox),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateDreadToken),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodSpeed),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodArea),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodImpact),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodAmmo),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodJackpot),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.AlphamodXp),
-
-        // default store items
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveLowHealthDamageBuff),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveExtraJump),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveExtraShot),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveHoverboots),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModSpeed),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModImpact),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModArea),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveAlphaModAmmo),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveVampire),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.PassiveExplodingEnemies),
-
-        // default drops
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalAmmo),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalNuke),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalDoublePoints),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalDoubleXp),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalFreeze),
-        new SurvivalTemplateItemEntry(SurvivalDefaultItems.ImmediateGlobalHealth),
-    };
-
-    public List<SurvivalItemEntry> CustomItems = new List<SurvivalItemEntry>()
-    {
-
-    };
-
     [Header("Store")]
     public List<SurvivalStore> Stores = new List<SurvivalStore>()
     {
@@ -167,46 +172,19 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
                 {
                     Name = "Items",
                     TexId = 63, // envelope
-                    Disabled = true,
-                    ItemNames = new List<string>()
-                    {
-                        "Self Revive",
-                        "Invisibility Cloak",
-                        "Health Tornado"
-                    }
+                    Disabled = false,
+                    Items = new List<SurvivalItemDef>()
                 },
                 new SurvivalStorePage()
                 {
                     Name = "Perks",
                     TexId = 9, // fist
-                    ItemNames = new List<string>()
-                    {
-                        "Berserker Perk",
-                        "Extra Jump Perk",
-                        "Double Shot Perk",
-                        "Hoverboots Perk",
-                        "Speed Mod Perk",
-                        "Impact Mod Perk",
-                        "Area Mod Perk",
-                        "Ammo Mod Perk",
-                        "Vampire Perk",
-                        "Will o' the Wisp Perk"
-                    }
                 },
                 new SurvivalStorePage()
                 {
                     Name = "Alpha Mods",
                     TexId = 38, // ammo mod
                     Disabled = true,
-                    ItemNames = new List<string>()
-                    {
-                        "Speed Mod",
-                        "Area Mod",
-                        "Impact Mod",
-                        "Ammo Mod",
-                        "Jackpot Mod",
-                        "Xp Mod"
-                    }
                 }
             }
         }
@@ -241,54 +219,26 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     [NonSerialized] SurvivalMobsScriptableObject _mobConfig;
 
-    public List<SurvivalMobSpawnParam> GetEnabledMobs() => Mobs.Where(x => !x.Disabled).OrderBy(x => x.Probability).ThenBy(x => Mobs.IndexOf(x)).ToList();
-
-    private void OnValidate()
+    public SurvivalMobDef[] GetEnabledMobs()
     {
-        if (!_mobConfig) _mobConfig = SurvivalMobsScriptableObject.Load();
+        // Mobs.Where(x => !x.Disabled).OrderBy(x => x.Probability).ThenBy(x => Mobs.IndexOf(x)).ToList();
 
-        while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
-        while (SpecialRounds != null && SpecialRounds.Count > 16) SpecialRounds.RemoveAt(16);
+        // fetch enabled and sort
+        return HierarchicalSorting.Sort(FindObjectsOfType<SurvivalMobDef>())
+            .OrderBy(x => x.Probability)
+            .ToArray();
+    }
 
-        foreach (var gambit in Gambits)
-        {
-            if (gambit.Name != null && gambit.Name.Length > 32) gambit.Name = gambit.Name.Substring(0, 32);
-            if (gambit.Description != null && gambit.Description.Length > 128) gambit.Description = gambit.Description.Substring(0, 128);
-        }
-		
-		WeaponPrestigeMax = Mathf.Clamp(WeaponPrestigeMax, 1, 5);
-        while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) PrestigeCostPerLevel.Add(DEFAULT_PRESTIGE_COSTS[PrestigeCostPerLevel.Count]);
-        while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
+    public SurvivalSpecialRoundDef[] GetEnabledSpecialRounds()
+    {
+        // fetch enabled and sorted
+        return HierarchicalSorting.Sort(FindObjectsOfType<SurvivalSpecialRoundDef>());
+    }
 
-        foreach (var upgrade in Upgrades)
-        {
-            int maxAllowed;
-            switch (upgrade.Type)
-            {
-                case SurvivalUpgradeId.Crit: maxAllowed = 100; break;
-                default: maxAllowed = 5000; break;
-            }
-            upgrade.Max = Mathf.Clamp(upgrade.Max, 1, maxAllowed);
-        }
-		
-		foreach (var stackable in Stackables)
-        {
-            switch (stackable.Type)
-            {
-                case SurvivalStackableItemId.AlphaModSpeed: 
-					stackable.Max = Mathf.Clamp(stackable.Max, 1, 10); break;
-				case SurvivalStackableItemId.AlphaModArea: 
-					stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
-				case SurvivalStackableItemId.AlphaModImpact: 
-					stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
-            }
-        }
-
-        foreach (var item in Items)
-        {
-            var name = _mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.Item)?.Def?.Name;
-            item.Name = name ?? ObjectNames.NicifyVariableName(item.Item.ToString());
-        }
+    public SurvivalItemDef[] GetEnabledItems()
+    {
+        // fetch enabled and sorted
+        return HierarchicalSorting.Sort(FindObjectsOfType<SurvivalItemDef>());
     }
 
     public override void Write(BinaryWriter writer)
@@ -372,16 +322,12 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
         foreach (var mob in enabledMobs)
-            state.LDFlags.Add($"-DMOB_SPAWN_PARAM_{mob.Name.ToUpper().Trim().Replace(" ", "_")}={enabledMobs.IndexOf(mob)}");
+            state.LDFlags.Add($"-DMOB_SPAWN_PARAM_{mob.Name.ToUpper().Trim().Replace(" ", "_")}={Array.IndexOf(enabledMobs, mob)}");
 
         // define items
+        var items = GetEnabledItems();
         var itemIdx = 0;
-        foreach (var item in Items)
-        {
-            state.LDFlags.Add($"-D{item.DefineName}={itemIdx}");
-            itemIdx++;
-        }
-        foreach (var item in CustomItems)
+        foreach (var item in items)
         {
             state.LDFlags.Add($"-D{item.DefineName}={itemIdx}");
             itemIdx++;
@@ -447,6 +393,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     void OnBeforeBuild(BuildState state)
     {
+        ValidateSurvivalConfigOrError();
+
         state.MobyOClasses.Add(RaidsModeData.LASERBEAM_OCLASS);
         state.MobyOClasses.Add(0x2075); // node base (sounds)
         state.MobyOClasses.Add(0x2635); // mysterybox
@@ -458,7 +406,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         // add mob oclasses
         var mobConfig = SurvivalMobsScriptableObject.Load();
-        foreach (var mob in this.Mobs.Where(x => !x.Disabled))
+        var mobs = GetEnabledMobs();
+        foreach (var mob in mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -482,7 +431,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         //if (EnableStackables) spriteContainer.Sprites.AddRange(mobConfig.SurvivalStackableSprites);
 
         // add mob sprites
-        foreach (var mob in this.Mobs.Where(x => !x.Disabled))
+        foreach (var mob in mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -529,6 +478,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         var sb = new StringBuilder();
         var mapConfig = FindObjectOfType<MapConfig>();
         var enabledMobs = GetEnabledMobs();
+        var enabledItems = GetEnabledItems();
         var spriteDefs = mapConfig.GetSpriteDefs(RCVER.DL);
 
         // collect
@@ -545,10 +495,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         // forward declarations
         sb.AppendLine("// forward declarations");
-        foreach (var item in Items)
+        foreach (var item in enabledItems)
             sb.Append(item.GetForwardDeclarations());
-        foreach (var customItem in CustomItems)
-            sb.Append(customItem.GetForwardDeclarations());
         sb.AppendLine();
 
 
@@ -573,8 +521,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 		// special rounds config
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("struct SurvivalSpecialRoundParam specialRoundParams[] = {");
-        foreach (var param in SpecialRounds.Where(x => !x.Disabled))
-            sb.AppendLine(param.GetDef(this));
+        var specialRounds = GetEnabledSpecialRounds();
+        foreach (var def in specialRounds)
+            sb.AppendLine(def.GetDef(this));
         sb.AppendLine("};");
         sb.AppendLine();
 
@@ -652,7 +601,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         // item defs
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("SurvivalItemDef_t itemDefs[] = {");
-        sb.AppendLine(GetItemDefs(Items, CustomItems));
+        sb.AppendLine(GetItemDefs(enabledItems));
         sb.AppendLine("};");
         sb.AppendLine();
 
@@ -674,7 +623,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         // misc
         sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine($"int reactorMinionSpawnParamIdx = {enabledMobs.FindIndex(x => x.Name == ReactorMinionMobName)};");
+        sb.AppendLine($"int reactorMinionSpawnParamIdx = {Array.FindIndex(enabledMobs, x => x.Name == ReactorMinionMobName)};");
         sb.AppendLine($"int mobAllowedCuboidIdx = {mapConfig.GetIndexOfCuboid(MobAllowedArea)};");
         sb.AppendLine($"int mobSpawnPointsAreaIdx = {mapConfig.GetIndexOfArea(MobSpawnPoints)};");
         
@@ -713,43 +662,40 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     List<SpriteDef> GetItemSpriteDefs()
     {
         var sprites = new List<SpriteDef>();
+        var enabledItems = GetEnabledItems();
         if (!_mobConfig) _mobConfig = SurvivalMobsScriptableObject.Load();
 
-        foreach (var item in Items)
+        foreach (var item in enabledItems)
         {
-            var templateItemDef = _mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.Item);
-            if (templateItemDef is null) continue;
-            if (!templateItemDef.Def.SpriteDefOverride.m_Texture) continue;
-            if (sprites.Any(s => s.m_Texture == templateItemDef.Def.SpriteDefOverride.m_Texture)) continue;
+            if (item.IsCustomItem)
+            {
+                if (!item.CustomItem.SpriteDefOverride.m_Texture) continue;
+                if (sprites.Any(s => s.m_Texture == item.CustomItem.SpriteDefOverride.m_Texture)) continue;
 
-            sprites.Add(templateItemDef.Def.SpriteDefOverride);
-        }
+                sprites.Add(item.CustomItem.SpriteDefOverride);
+            }
+            else
+            {
+                var templateItemDef = _mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.DefaultItemOverrides.Item);
+                if (templateItemDef is null) continue;
+                if (!templateItemDef.Def.SpriteDefOverride.m_Texture) continue;
+                if (sprites.Any(s => s.m_Texture == templateItemDef.Def.SpriteDefOverride.m_Texture)) continue;
 
-        foreach (var customItem in CustomItems)
-        {
-            if (!customItem.SpriteDefOverride.m_Texture) continue;
-            if (sprites.Any(s => s.m_Texture == customItem.SpriteDefOverride.m_Texture)) continue;
-
-            sprites.Add(customItem.SpriteDefOverride);
+                sprites.Add(templateItemDef.Def.SpriteDefOverride);
+            }
         }
 
         return sprites;
     }
 
-    string GetItemDefs(List<SurvivalTemplateItemEntry> items, List<SurvivalItemEntry> customItems)
+    string GetItemDefs(SurvivalItemDef[] items)
     {
         var sb = new StringBuilder();
 
-        // add default items first
+        // add items
         foreach (var item in items)
         {
             sb.AppendLine(item.GetDef());
-        }
-
-        // next add custom items
-        foreach (var customItem in customItems)
-        {
-            sb.AppendLine(customItem.GetDef());
         }
 
         return sb.ToString();
@@ -758,12 +704,13 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     string GetStorePageDefs(List<SurvivalStore> stores)
     {
         var sb = new StringBuilder();
+        var enabledItems = GetEnabledItems();
 
         foreach (var store in stores.Where(x => !x.Disabled))
         {
             foreach (var page in store.Pages.Where(x => !x.Disabled))
             {
-                sb.Append(page.GetDef(Items, CustomItems));
+                sb.Append(page.GetDef(enabledItems));
             }
         }
 
@@ -789,20 +736,22 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     {
         var sum = 0f;
         var mobConfig = SurvivalMobsScriptableObject.Load();
+        var enabledItems = GetEnabledItems();
 
-        // default items
-        foreach (var defaultItem in Items)
+        // items
+        foreach (var item in enabledItems)
         {
-            var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItem.Item);
-            if (def == null) continue;
+            if (item.IsCustomItem)
+            {
+                sum += item.CustomItem.MysteryboxChanceWeight;
+            }
+            else
+            {
+                var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.DefaultItemOverrides.Item);
+                if (def == null) continue;
 
-            sum += defaultItem.MysteryboxChanceWeight.GetValue(def.Def.MysteryboxChanceWeight);
-        }
-
-        // custom items
-        foreach (var customItem in CustomItems)
-        {
-            sum += customItem.MysteryboxChanceWeight;
+                sum += item.DefaultItemOverrides.MysteryboxChanceWeight.GetValue(def.Def.MysteryboxChanceWeight);
+            }
         }
 
         return sum;
@@ -812,20 +761,22 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     {
         var sum = 0f;
         var mobConfig = SurvivalMobsScriptableObject.Load();
+        var enabledItems = GetEnabledItems();
 
-        // default items
-        foreach (var defaultItem in Items)
+        // items
+        foreach (var item in enabledItems)
         {
-            var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItem.Item);
-            if (def == null) continue;
+            if (item.IsCustomItem)
+            {
+                sum += item.CustomItem.DropChanceWeight;
+            }
+            else
+            {
+                var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.DefaultItemOverrides.Item);
+                if (def == null) continue;
 
-            sum += defaultItem.DropChanceWeight.GetValue(def.Def.DropChanceWeight);
-        }
-
-        // custom items
-        foreach (var customItem in CustomItems)
-        {
-            sum += customItem.DropChanceWeight;
+                sum += item.DefaultItemOverrides.DropChanceWeight.GetValue(def.Def.DropChanceWeight);
+            }
         }
 
         return sum;
@@ -835,20 +786,22 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     {
         var sum = 0f;
         var mobConfig = SurvivalMobsScriptableObject.Load();
+        var enabledItems = GetEnabledItems();
 
-        // default items
-        foreach (var defaultItem in Items)
+        // items
+        foreach (var item in enabledItems)
         {
-            var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == defaultItem.Item);
-            if (def == null) continue;
+            if (item.IsCustomItem)
+            {
+                sum += item.CustomItem.VendorRewardChanceWeight;
+            }
+            else
+            {
+                var def = mobConfig.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item.DefaultItemOverrides.Item);
+                if (def == null) continue;
 
-            sum += defaultItem.VendorRewardChanceWeight.GetValue(def.Def.VendorRewardChanceWeight);
-        }
-
-        // custom items
-        foreach (var customItem in CustomItems)
-        {
-            sum += customItem.VendorRewardChanceWeight;
+                sum += item.DefaultItemOverrides.VendorRewardChanceWeight.GetValue(def.Def.VendorRewardChanceWeight);
+            }
         }
 
         return sum;
@@ -877,7 +830,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         return sb.ToString().TrimEnd();
     }
 
-    string GetMobDefs(List<SurvivalMobSpawnParam> mobs, SpriteDef[] spriteDefs)
+    string GetMobDefs(SurvivalMobDef[] mobs, SpriteDef[] spriteDefs)
     {
         var sb = new StringBuilder();
 
@@ -885,11 +838,11 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         // sort each item by probability ascending
         // real probability is target probability divided by the probability the previous items weren't successful
         var totalProbability = 1f;
-        for (int i = 0; i < mobs.Count; ++i)
+        for (int i = 0; i < mobs.Length; ++i)
         {
             var mob = mobs[i];
             var probability = mob.Probability / totalProbability;
-            if (i == (mobs.Count - 1)) probability = 1; // last item is guaranteed to match roll if all others fail
+            if (i == (mobs.Length - 1)) probability = 1; // last item is guaranteed to match roll if all others fail
 
             sb.Append(mob.GetDef(spriteDefs, probability));
 
@@ -1071,6 +1024,11 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             },
         };
 
+        // create items
+        var itemsGo = AddDefaultItems();
+        if (itemsGo)
+            itemsGo.transform.SetParent(go.transform, false);
+
         // create player spawn
         var playerSpawnCuboid = new GameObject("Player Spawn").AddComponent<Cuboid>();
         if (playerSpawnCuboid)
@@ -1231,6 +1189,59 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         UnityHelper.OnAfterCreateGameObject(go);
     }
 
+    [MenuItem("GameObject/Forge/Deadlocked/Survival/Add Mob Def", priority = 10)]
+    public static void AddMobDef()
+    {
+        var go = new GameObject("Zombie");
+        var mobDef = go.AddComponent<SurvivalMobDef>();
+        mobDef.Mob = SurvivalMob.Zombie;
+        UnityHelper.OnAfterCreateGameObject(go);
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Survival/Add Default Items", priority = 10)]
+    public static GameObject AddDefaultItems()
+    {
+        var go = new GameObject("Default Items");
+        var config = SurvivalMobsScriptableObject.Load();
+
+        foreach (var defaultItemKvp in DEFAULT_ITEMS)
+        {
+            var path = defaultItemKvp.Key.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var name = path.LastOrDefault();
+            var parentName = path.Length > 1 ? path.First() : null;
+            var item = defaultItemKvp.Value;
+            var parentGo = go;
+
+            var def = config.SurvivalDefaultItems.FirstOrDefault(x => x.Item == item);
+            if (def is null)
+                continue;
+
+            // find or create parent
+            if (!string.IsNullOrEmpty(parentName))
+            {
+                var parentTransform = go.transform.Find(parentName);
+                if (!parentTransform)
+                {
+                    parentGo = new GameObject(parentName);
+                    parentGo.transform.SetParent(go.transform, false);
+                }
+                else
+                {
+                    parentGo = parentTransform.gameObject;
+                }
+            }
+
+            var itemGo = new GameObject(name);
+            itemGo.transform.SetParent(parentGo.transform, false);
+            var itemDefComp = itemGo.AddComponent<SurvivalItemDef>();
+            itemDefComp.IsCustomItem = false;
+            itemDefComp.DefaultItemOverrides.Item = item;
+        }
+
+        UnityHelper.OnAfterCreateGameObject(go);
+        return go;
+    }
+
     private static Moby SurvivalSetupAddMoby(Transform parent, int oclass, string name, Vector3 position)
     {
         var moby = new GameObject(name).AddComponent<Moby>();
@@ -1257,8 +1268,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         var mobConfig = SurvivalMobsScriptableObject.Load();
         var mapName = SceneManager.GetActiveScene().name;
         var racVersion = RCVER.DL;
+        var mobs = GetEnabledMobs();
 
-        foreach (var mob in Mobs)
+        foreach (var mob in mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -1479,357 +1491,183 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     #endregion
 
-    #region Port Legacy
+    #region Migration
 
-    static string _lastOpenFileDir;
-
-    //[MenuItem("Forge/Read Survival Legacy PathGraph", priority = 10)]
-    public static void PortLegacyPath()
+    private void CheckToMigrateMobsListToHierarchy()
     {
-        var path = EditorUtility.OpenFilePanelWithFilters("Open path.c", _lastOpenFileDir, new string[] { "C Files", "c" });
-        if (string.IsNullOrEmpty(path)) return;
+        // check if mobs already exist
+        // if so assume we've already migrated
+        var mobs = FindObjectsOfType<SurvivalMobDef>(true);
+        if (mobs.Length > 0)
+            return;
 
-        _lastOpenFileDir = new FileInfo(path).DirectoryName;
-        var text = File.ReadAllText(path);
+        // nothing to migrate
+        if (this.Mobs.Count == 0)
+            return;
 
-        var fileNodes = new List<Vector4>();
-        var fileEdges = new List<Vector2Int>();
-        var fileCornering = new List<float>();
-        var fileRequired = new List<float?>();
-        var filePathFit = new List<float>();
-        var fileJumpPadSpeed = new List<float>();
-        var fileJumpPadAt = new List<float>();
+        // create Mobs container and begin migration
+        var mobsRootGo = new GameObject("Mobs");
+        mobsRootGo.transform.SetParent(this.transform, false);
+        MigrateMobsListToHierarchy(mobsRootGo);
+    }
 
-        Regex regexCtx = new Regex(@"(\w+) (\w+)\[\]");
-        Regex regexInt = new Regex(@"^\s+(\d+),?$");
-        Regex regexInt2 = new Regex(@"\{ (\d+), (\d+) \},?");
-        Regex regexVector = new Regex(@"\{ ([+-]?([0-9]*[.])?[0-9]+), ([+-]?([0-9]*[.])?[0-9]+), ([+-]?([0-9]*[.])?[0-9]+), ([+-]?([0-9]*[.])?[0-9]+) \}");
-
-        var lines = text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var ctx = "";
-        foreach (var line in lines)
+    private void MigrateMobsListToHierarchy(GameObject parentGo)
+    {
+        foreach (var mobDef in this.Mobs)
         {
-            // look for context
-            if (string.IsNullOrEmpty(ctx))
-            {
-                var match = regexCtx.Match(line);
-                if (match.Success)
-                {
-                    ctx = match.Groups[2].Value;
-                }
+            var mobGo = new GameObject(mobDef.Name);
+            mobGo.transform.SetParent(parentGo.transform, false);
+            mobGo.SetActive(!mobDef.Disabled);
 
-                continue;
-            }
+            var defComponent = mobGo.AddComponent<SurvivalMobDef>();
+            defComponent.Mob = mobDef.Mob;
+            defComponent.Variant = mobDef.Variant;
+            defComponent.Behavior = mobDef.Behavior;
+            defComponent.Attributes = mobDef.Attributes;
+            defComponent.BlipType = mobDef.BlipType;
 
-            // look for context end
-            if (line.Trim() == "};")
-            {
-                ctx = string.Empty;
-                continue;
-            }
+            defComponent.SpecialRoundOnly = mobDef.SpecialRoundOnly;
+            defComponent.MinRound = mobDef.MinRound;
+            defComponent.MaxSpawnedAtOnce = mobDef.MaxSpawnedAtOnce;
+            defComponent.MaxSpawnedPerRound = mobDef.MaxSpawnedPerRound;
+            defComponent.Probability = mobDef.Probability;
+            defComponent.SpawnType = mobDef.SpawnType;
+            defComponent.CooldownTicks = mobDef.CooldownTicks;
+            defComponent.CooldownOffsetPerRoundFactor = mobDef.CooldownOffsetPerRoundFactor;
 
-            switch (ctx)
-            {
-                case "MOB_PATHFINDING_NODES":
-                    {
-                        var match = regexVector.Match(line);
-                        if (match.Success)
-                        {
-                            fileNodes.Add(new Vector4(
-                                float.Parse(match.Groups[1].Value), 
-                                float.Parse(match.Groups[3].Value), 
-                                float.Parse(match.Groups[5].Value), 
-                                float.Parse(match.Groups[7].Value)));
-                        }
-                        break;
-                    }
-                case "MOB_PATHFINDING_EDGES":
-                    {
-                        var match = regexInt2.Match(line);
-                        if (match.Success)
-                        {
-                            var e0 = int.Parse(match.Groups[1].Value);
-                            var e1 = int.Parse(match.Groups[2].Value);
-                            fileEdges.Add(new Vector2Int(e0, e1));
-                        }
-                        break;
-                    }
-                case "MOB_PATHFINDING_NODES_CORNERING":
-                    {
-                        var match = regexInt.Match(line);
-                        if (match.Success)
-                        {
-                            var value = float.Parse(match.Groups[1].Value) / 255f;
-                            fileCornering.Add(value);
-                        }
-                        break;
-                    }
-                case "MOB_PATHFINDING_EDGES_REQUIRED":
-                    {
-                        var match = regexInt.Match(line);
-                        if (match.Success)
-                        {
-                            var value = int.Parse(match.Groups[1].Value);
-                            if (value == 0) fileRequired.Add(null);
-                            else fileRequired.Add((value - 1) / 255f);
-                        }
-                        break;
-                    }
-                case "MOB_PATHFINDING_EDGES_PATHFIT":
-                    {
-                        var match = regexInt.Match(line);
-                        if (match.Success)
-                        {
-                            var value = float.Parse(match.Groups[1].Value) / 255f;
-                            filePathFit.Add(value);
-                        }
-                        break;
-                    }
-                case "MOB_PATHFINDING_EDGES_JUMPPADSPEED":
-                    {
-                        var match = regexInt.Match(line);
-                        if (match.Success)
-                        {
-                            var value = float.Parse(match.Groups[1].Value);
-                            fileJumpPadSpeed.Add(value);
-                        }
-                        break;
-                    }
-                case "MOB_PATHFINDING_EDGES_JUMPPADAT":
-                    {
-                        var match = regexInt.Match(line);
-                        if (match.Success)
-                        {
-                            var value = float.Parse(match.Groups[1].Value) / 255f;
-                            fileJumpPadAt.Add(value);
-                        }
-                        break;
-                    }
-            }
-        }
+            defComponent.SizeMultiplier = mobDef.SizeMultiplier;
+            defComponent.TurnSpeedMultiplier = mobDef.TurnSpeedMultiplier;
+            defComponent.RangedAttackDistance = mobDef.RangedAttackDistance;
+            defComponent.Xp = mobDef.Xp;
+            defComponent.Bolts = mobDef.Bolts;
 
+            defComponent.Damage = mobDef.Damage;
+            defComponent.DamageMax = mobDef.DamageMax;
+            defComponent.DamageScale = mobDef.DamageScale;
 
-        var go = new GameObject("Path Graph");
-        var pathGraph = go.AddComponent<PathGraph>();
-        go.transform.position = ((Vector3)fileNodes.Aggregate((a, b) => a + b)).SwizzleXZY() / fileNodes.Count;
-        
+            defComponent.Speed = mobDef.Speed;
+            defComponent.SpeedMax = mobDef.SpeedMax;
+            defComponent.SpeedScale = mobDef.SpeedScale;
 
-        for (int i = 0; i < fileNodes.Count; ++i)
-        {
-            var nodeGo = new GameObject($"node {i}");
-            nodeGo.transform.SetParent(go.transform, false);
+            defComponent.Health = mobDef.Health;
+            defComponent.HealthMax = mobDef.HealthMax;
+            defComponent.HealthScale = mobDef.HealthScale;
 
-            var node = nodeGo.AddComponent<PathGraphNode>();
-            node.transform.position = ((Vector3)fileNodes[i]).SwizzleXZY();
-            node.Radius = fileNodes[i].w;
-            node.Cornering = fileCornering[i];
-        }
-
-        pathGraph.RefreshCache();
-        var nodes = pathGraph.GetNodes();
-
-        for (int i = 0; i < fileEdges.Count; ++i)
-        {
-            var fileEdge = fileEdges[i];
-            var node0 = nodes.ElementAtOrDefault(fileEdge.x);
-            var node1 = nodes.ElementAtOrDefault(fileEdge.y);
-
-            var edge = new PathGraphEdge();
-            pathGraph.Edges.Add(edge);
-            edge.From = node0;
-            edge.To = node1;
-            edge.PathFitStartEnd = filePathFit[i];
-            edge.Required = fileRequired[i].HasValue;
-            edge.RequiredUntil = fileRequired[i] ?? 0;
-            edge.JumpPad = fileJumpPadSpeed[i] > 0;
-            edge.JumpPadSpeed = fileJumpPadSpeed[i];
-            edge.JumpPadAt = fileJumpPadAt[i];
+            defComponent.BaseColor = mobDef.BaseColor;
+            defComponent.GlowColor = mobDef.GlowColor;
+            defComponent.SpriteColor = mobDef.SpriteColor;
         }
     }
 
-    //[MenuItem("Forge/Read Survival Legacy Config", priority = 10)]
-    public static void PortLegacyConfig()
+    private void CheckToMigrateSpecialRoundListToHierarchy()
     {
-        var path = EditorUtility.OpenFilePanelWithFilters("Open config.c", _lastOpenFileDir, new string[] { "C Files", "c" });
-        if (string.IsNullOrEmpty(path)) return;
+        // check if defs already exist
+        // if so assume we've already migrated
+        var defs = FindObjectsOfType<SurvivalSpecialRoundDef>(true);
+        if (defs.Length > 0)
+            return;
 
-        _lastOpenFileDir = new FileInfo(path).DirectoryName;
-        var text = File.ReadAllText(path);
-        var fileTypes = new List<SurvivalBakedSpawnpointType>();
-        var filePositions = new List<Vector3>();
-        var fileRotations = new List<Vector3>();
+        // nothing to migrate
+        if (this.SpecialRounds.Count == 0)
+            return;
 
-        Regex regexCtx = new Regex(@"\.BakedSpawnPoints = \{");
-        Regex regexType = new Regex(@"\{ \.Type = (\w+),");
-        Regex regexPosition = new Regex(@"\.Position = \{ ([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?), ([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?), ([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?) \}");
-        Regex regexRotation = new Regex(@"\.Rotation = \{ ([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?), ([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?), ([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?) \}");
+        // create Mobs container and begin migration
+        var defsRootGo = new GameObject("Special Rounds");
+        defsRootGo.transform.SetParent(this.transform, false);
+        MigrateSpecialRoundListToHierarchy(defsRootGo);
+    }
 
-        var lines = text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var foundBakedSpawnpoints = false;
-        foreach (var line in lines)
+    private void MigrateSpecialRoundListToHierarchy(GameObject parentGo)
+    {
+        // expect mobs to be migrated already
+        var mobs = FindObjectsOfType<SurvivalMobDef>(true);
+
+        foreach (var def in this.SpecialRounds)
         {
-            // look for context
-            if (!foundBakedSpawnpoints)
-            {
-                var match = regexCtx.Match(line);
-                if (match.Success)
-                {
-                    foundBakedSpawnpoints = true;
-                }
+            var defGo = new GameObject(def.Name);
+            defGo.transform.SetParent(parentGo.transform, false);
+            defGo.SetActive(!def.Disabled);
 
-                continue;
-            }
+            var defComponent = defGo.AddComponent<SurvivalSpecialRoundDef>();
+            defComponent.MinRound = def.MinRound;
+            defComponent.RepeatEveryNRounds = def.RepeatEveryNRounds;
+            defComponent.RepeatCount = def.RepeatCount;
+            defComponent.SpawnCountFactor = def.SpawnCountFactor;
+            defComponent.SpawnRateFactor = def.SpawnRateFactor;
+            defComponent.MaxSpawnedAtOnce = def.MaxSpawnedAtOnce;
+            defComponent.UnlimitedPostRoundTime = def.UnlimitedPostRoundTime;
+            defComponent.MaxSpawnedAtOnce = def.MaxSpawnedAtOnce;
+            defComponent.DisableDrops = def.DisableDrops;
 
-            // look for context end
-            if (line.Trim() == "}")
-                break;
-
-            // item starts with {
-            if (!line.Trim().StartsWith("{")) continue;
-
-            if (regexType.IsMatch(line))
-            {
-                var match = regexType.Match(line);
-                var type = match.Groups[1].Value;
-                switch (type)
-                {
-                    case "BAKED_SPAWNPOINT_PLAYER_START": fileTypes.Add(SurvivalBakedSpawnpointType.PlayerStart); break;
-                    case "BAKED_SPAWNPOINT_DEMON_BELL": fileTypes.Add(SurvivalBakedSpawnpointType.DemonBell); break;
-                    case "BAKED_SPAWNPOINT_STACK_BOX": fileTypes.Add(SurvivalBakedSpawnpointType.StackBox); break;
-                    case "BAKED_SPAWNPOINT_MYSTERY_BOX": fileTypes.Add(SurvivalBakedSpawnpointType.MysteryBox); break;
-                    case "BAKED_SPAWNPOINT_UPGRADE": fileTypes.Add(SurvivalBakedSpawnpointType.Upgrade); break;
-                    default: throw new NotImplementedException();
-                }
-            }
-            if (regexPosition.IsMatch(line))
-            {
-                var match = regexPosition.Match(line);
-                filePositions.Add(new Vector3(
-                    float.Parse(match.Groups[1].Value),
-                    float.Parse(match.Groups[2].Value),
-                    float.Parse(match.Groups[3].Value)));
-            }
-            if (regexRotation.IsMatch(line))
-            {
-                var match = regexRotation.Match(line);
-                fileRotations.Add(new Vector3(
-                    float.Parse(match.Groups[1].Value),
-                    float.Parse(match.Groups[2].Value),
-                    float.Parse(match.Groups[3].Value)));
-            }
-        }
-
-        var survivalModeData = FindObjectOfType<SurvivalModeData>();
-        var rootGo = new GameObject("Baked Spawnpoints");
-        for (int i = 0; i < fileTypes.Count; i++)
-        {
-            var type = fileTypes[i];
-            var pos = filePositions[i].SwizzleXZY();
-            var rot = fileRotations[i].SwizzleXZY() * -Mathf.Rad2Deg;
-
-            switch (type)
-            {
-                case SurvivalBakedSpawnpointType.PlayerStart:
-                case SurvivalBakedSpawnpointType.MysteryBox:
-                    {
-                        rot.y += 90f;
-                        break;
-                    }
-            }
-
-            var go = new GameObject($"{type} {i}");
-            go.transform.position = pos;
-            go.transform.rotation = Quaternion.Euler(rot);
-
-            go.transform.SetParent(rootGo.transform, true);
-
-            //if (survivalModeData)
-            //{
-            //    survivalModeData.BakedSpawnPoints.Add(new SurvivalBakedSpawnPointItem()
-            //    {
-            //        Type = type,
-            //        Transform = go.transform
-            //    });
-            //}
+            // convert names to mob def references
+            defComponent.MobToSpawn = def.MobNamesToSpawn.Select(x => mobs.FirstOrDefault(m => m.Name == x)).Where(x => x).ToList();
         }
     }
 
-    //[MenuItem("Forge/Read Survival Legacy Gates", priority = 10)]
-    public static void PortLegacyGates()
+    #endregion
+
+    #region Validation
+
+    private void OnValidate()
     {
-        var path = EditorUtility.OpenFilePanelWithFilters("Open main.c", _lastOpenFileDir, new string[] { "C Files", "c" });
-        if (string.IsNullOrEmpty(path)) return;
+        if (!_mobConfig) _mobConfig = SurvivalMobsScriptableObject.Load();
 
-        _lastOpenFileDir = new FileInfo(path).DirectoryName;
-        var text = File.ReadAllText(path);
-        var filePositions = new List<(Vector3 v0, Vector3 v1)>();
-        var fileHeights = new List<float>();
-        var fileCosts = new List<int>();
+        //while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
+        //while (SpecialRounds != null && SpecialRounds.Count > 16) SpecialRounds.RemoveAt(16);
 
-        Regex regexCtx = new Regex(@"VECTOR GateLocations\[\] = \{");
-        Regex regexVector = new Regex(@"\{ ([+-]?([0-9]*[.])?[0-9]+), ([+-]?([0-9]*[.])?[0-9]+), ([+-]?([0-9]*[.])?[0-9]+), ([+-]?([0-9]*[.])?[0-9]+) \}");
+        // check stores
+        while (Stores != null && Stores.Count > MAX_STORES) Stores.RemoveAt(MAX_STORES);
 
-        var lines = text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var foundGates = false;
-        foreach (var line in lines)
+        // check gambits
+        while (Gambits != null && Gambits.Count > MAX_GAMBITS) Gambits.RemoveAt(MAX_GAMBITS);
+        foreach (var gambit in Gambits)
         {
-            // look for context
-            if (!foundGates)
-            {
-                var match = regexCtx.Match(line);
-                if (match.Success)
-                {
-                    foundGates = true;
-                }
+            if (gambit.Name != null && gambit.Name.Length > 32) gambit.Name = gambit.Name.Substring(0, 32);
+            if (gambit.Description != null && gambit.Description.Length > 128) gambit.Description = gambit.Description.Substring(0, 128);
+        }
 
-                continue;
+        WeaponPrestigeMax = Mathf.Clamp(WeaponPrestigeMax, 1, 5);
+        while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) PrestigeCostPerLevel.Add(DEFAULT_PRESTIGE_COSTS[PrestigeCostPerLevel.Count]);
+        while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
+
+        foreach (var upgrade in Upgrades)
+        {
+            int maxAllowed;
+            switch (upgrade.Type)
+            {
+                case SurvivalUpgradeId.Crit: maxAllowed = 100; break;
+                default: maxAllowed = 5000; break;
             }
+            upgrade.Max = Mathf.Clamp(upgrade.Max, 1, maxAllowed);
+        }
 
-            // look for context end
-            if (line.Trim() == "};")
-                break;
-
-            // item starts with {
-            if (!line.Trim().StartsWith("{")) continue;
-
-            if (regexVector.IsMatch(line))
+        foreach (var stackable in Stackables)
+        {
+            switch (stackable.Type)
             {
-                var matches = regexVector.Matches(line);
-                var edge0 = new Vector3(
-                    float.Parse(matches[0].Groups[1].Value),
-                    float.Parse(matches[0].Groups[3].Value),
-                    float.Parse(matches[0].Groups[5].Value));
-                var edge1 = new Vector3(
-                    float.Parse(matches[1].Groups[1].Value),
-                    float.Parse(matches[1].Groups[3].Value),
-                    float.Parse(matches[1].Groups[5].Value));
-
-                filePositions.Add((edge0, edge1));
-                fileHeights.Add(float.Parse(matches[0].Groups[7].Value));
-                fileCosts.Add(int.Parse(matches[1].Groups[7].Value));
+                case SurvivalStackableItemId.AlphaModSpeed:
+                    stackable.Max = Mathf.Clamp(stackable.Max, 1, 10); break;
+                case SurvivalStackableItemId.AlphaModArea:
+                    stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
+                case SurvivalStackableItemId.AlphaModImpact:
+                    stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
             }
         }
 
-        var rootGo = new GameObject("Gates");
-        for (int i = 0; i < filePositions.Count; i++)
-        {
-            var v0 = filePositions[i].v0.SwizzleXZY();
-            var v1 = filePositions[i].v1.SwizzleXZY();
-            var height = fileHeights[i];
-            var cost = fileCosts[i];
+        // run migration checks
+        CheckToMigrateMobsListToHierarchy();
+        CheckToMigrateSpecialRoundListToHierarchy();
+    }
 
-            var go = CommonCodeGen.CreateGateMoby();
-            go.name = $"Gate {i}";
-            go.transform.position = (v0 + v1) * 0.5f;
-            go.transform.rotation = Quaternion.LookRotation(v1 - v0, Vector3.up);
-            go.transform.SetParent(rootGo.transform, true);
+    private void ValidateSurvivalConfigOrError()
+    {
+        var mobs = GetEnabledMobs();
+        if (mobs.Length > MAX_MOBS)
+            throw new Exception($"Too many mobs {mobs.Length}/{MAX_MOBS}");
 
-            var moby = go.GetComponent<Moby>();
-            moby.PVarValues[".Default State"] = "1";
-            moby.PVarValues[".Height"] = height.ToString();
-            moby.PVarValues[".Length"] = Vector3.Distance(v0, v1).ToString();
-            moby.PVarValues[".Cost"] = cost.ToString();
-        }
+        var items = GetEnabledItems();
+        if (items.Length > MAX_ITEMS)
+            throw new Exception($"Too many items {items.Length}/{MAX_ITEMS}");
     }
 
     #endregion
@@ -2039,7 +1877,7 @@ public class SurvivalStackableEntry
 }
 
 [System.Serializable]
-public class SurvivalTemplateItemEntry
+public class SurvivalDefaultItemOverrideEntry
 {
     [ReadOnly] public string Name;
     public SurvivalDefaultItems Item;
@@ -2066,9 +1904,9 @@ public class SurvivalTemplateItemEntry
 
     public string DefineName => $"ITEM_{ObjectNames.NicifyVariableName(Item.ToString()).ToCDefine()}";
 
-    public SurvivalTemplateItemEntry() { }
+    public SurvivalDefaultItemOverrideEntry() { }
 
-    public SurvivalTemplateItemEntry(SurvivalDefaultItems item)
+    public SurvivalDefaultItemOverrideEntry(SurvivalDefaultItems item)
     {
         Item = item;
     }
@@ -2295,32 +2133,33 @@ public class SurvivalStorePage
     public string Name;
     public int TexId;
     public bool Disabled;
-    public List<string> ItemNames = new List<string>();
+    public List<SurvivalItemDef> Items = new List<SurvivalItemDef>();
 
-    public string GetDef(List<SurvivalTemplateItemEntry> items, List<SurvivalItemEntry> customItems)
+    public string GetDef(SurvivalItemDef[] items)
     {
         var sb = new StringBuilder();
+        var count = 0;
 
         sb.AppendLine("\t{");
         sb.AppendLine($"\t\t.Name = \"{Name.MaxLength(31).Escape()}\",");
         sb.AppendLine($"\t\t.TexId = {TexId},");
-        sb.AppendLine($"\t\t.ItemsCount = {ItemNames.Count},");
         sb.AppendLine($"\t\t.Items = {{");
-        foreach (var itemName in ItemNames)
+        foreach (var storeItem in Items)
         {
-            var templateItemDef = items.FirstOrDefault(x => x.Name == itemName);
+            var templateItemDef = items.FirstOrDefault(x => x == storeItem);
             if (templateItemDef != null)
             {
                 sb.AppendLine($"\t\t\t{templateItemDef.DefineName},");
+                ++count;
                 continue;
             }
 
-            var customItem = customItems.FirstOrDefault(x => x.Name == itemName);
-            if (customItem == null) throw new InvalidOperationException($"StorePage {Name} cannot find item with name {itemName}");
-
-            sb.AppendLine($"\t\t\t{customItem.DefineName},");
+            // item couldn't be found in enabled list
+            // so probably just disabled
+            // continue as normal
         }
-        sb.AppendLine($"\t\t}}");
+        sb.AppendLine($"\t\t}},");
+        sb.AppendLine($"\t\t.ItemsCount = {count}");
         sb.AppendLine("\t},");
 
         return sb.ToString();
@@ -2622,7 +2461,7 @@ public class SurvivalMobSpecialRoundParam
                 continue;
             }
 
-            spawnParamIdxs.Add(enabledMobs.IndexOf(spawnParam));
+            spawnParamIdxs.Add(Array.IndexOf(enabledMobs, spawnParam));
         }
 
         sb.AppendLine("\t{");

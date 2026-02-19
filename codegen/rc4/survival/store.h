@@ -10,7 +10,7 @@
 #include "item.h"
 
 #define STORE_MOBY_OCLASS (0x4100)
-#define STORE_MAX_DIST (3)
+#define STORE_MAX_DIST (4)
 #define STORE_MAX_PAGES (8)
 #define PLAYER_STORE_COOLDOWN_TICKS (5)
 

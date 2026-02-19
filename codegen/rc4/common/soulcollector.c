@@ -314,12 +314,13 @@ void soulcollectorFrameUpdate(void)
         
         for (j = 0; j < GAME_MAX_LOCALS; ++j) {
           Player* player = playerGetFromSlot(j);
-          if (!player) break;
+          if (!player) continue;
+          if (gameIsStartMenuOpen(j)) continue;
 
           if (spawnPointIsPointInside(sp, player->PlayerPosition, NULL)) {
             char buf[64];
             snprintf(buf, sizeof(buf), "Souls Captured \x0E%d\x08/%d", pvars->Value, pvars->Target);
-            gfxHelperDrawText(SCREEN_WIDTH / 2, SCREEN_HEIGHT, 0, -10, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMCENTER, COMMON_DZO_DRAW_NORMAL);
+            gfxHelperDrawText(SCREEN_WIDTH / 2, 60, 0, -10, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_TOPCENTER, COMMON_DZO_DRAW_NORMAL);
           }
         }
       }
