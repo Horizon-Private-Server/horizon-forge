@@ -686,6 +686,7 @@ int survivalTick(void)
 	if (MapConfig.ClientsReady || !netGetDmeServerConnection())
 	{
 		mboxSpawn();
+		upgradeSpawn();
 	}
 
 	poolTick();
