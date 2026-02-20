@@ -1377,8 +1377,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
@@ -1412,8 +1412,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
@@ -1447,8 +1447,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
@@ -1482,8 +1482,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
