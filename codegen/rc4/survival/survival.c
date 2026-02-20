@@ -119,35 +119,6 @@ int mapSpawnMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID
 }
 
 //--------------------------------------------------------------------------
-void mapConsiderSpawnDrop(Moby *moby, int killedByPlayerId, int killedByWeaponId)
-{
-	if (!MapConfig.State)
-		return;
-
-	// have drop funcs
-	if (!MapConfig.Functions.GetDropItemOnMobKilledFunc || !MapConfig.Functions.CreateMobDropFunc)
-		return;
-
-	int roundIsSpecial = MapConfig.State->RoundIsSpecial;
-	int disableDrops = MapConfig.SpecialRoundParams[MapConfig.State->RoundSpecialIdx].DisableDrops;
-	if (!roundIsSpecial || !disableDrops)
-	{
-		if (killedByPlayerId >= 0 && gameAmIHost())
-		{
-			Player *killedByPlayer = playerGetFromIndex(killedByPlayerId);
-			if (playerIsValid(killedByPlayer))
-			{
-				int itemIdx = MapConfig.Functions.GetDropItemOnMobKilledFunc(killedByPlayer, moby, killedByWeaponId);
-				if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
-				{
-					MapConfig.Functions.CreateMobDropFunc(moby->Position, itemIdx, gameGetTime() + DROP_DURATION, killedByPlayer->Team);
-				}
-			}
-		}
-	}
-}
-
-//--------------------------------------------------------------------------
 void mapReturnPlayersToMap(void)
 {
 	int i;

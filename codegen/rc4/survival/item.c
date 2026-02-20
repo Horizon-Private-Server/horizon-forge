@@ -3,6 +3,7 @@
 #include <libdl/stdio.h>
 #include <libdl/ui.h>
 #include <libdl/game.h>
+#include <libdl/string.h>
 #include "item.h"
 #include "utils.h"
 #include "window.h"
@@ -107,6 +108,13 @@ void itemShowMessage(int localPlayerIndex, int itemIdx, char *format, int ticks)
 	char buf[64];
 	snprintf(buf, sizeof(buf), format, MapConfig.ItemDefs[itemIdx].Name);
 	pushSnack(localPlayerIndex, buf, ticks);
+}
+
+//--------------------------------------------------------------------------
+void itemGetDescription(char *buf, int size, int itemIdx, int playerId)
+{
+	SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
+	strncpy(buf, item->Description, size);
 }
 
 //--------------------------------------------------------------------------

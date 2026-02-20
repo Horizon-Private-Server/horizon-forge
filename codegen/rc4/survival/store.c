@@ -425,9 +425,13 @@ void storeDrawMenu(Moby *moby, int localPlayerIndex)
 	const float totalHeight = headerHeight + tabRowHeight + itemListHeight + descHeight + footerHeight;
 	const float descPaddingX = 5;
 	char nameBuf[32];
+	char descBuf[64];
 	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 	struct StorePageDef page;
 	SurvivalItemDef_t item;
+	Player *player = playerGetFromSlot(localPlayerIndex);
+	if (!player)
+		return;
 
 	// get page
 	int pageCount = storeGetPageCount(moby, localPlayerIndex);
@@ -441,6 +445,7 @@ void storeDrawMenu(Moby *moby, int localPlayerIndex)
 
 	// get name
 	storeGetName(moby, localPlayerIndex, nameBuf, sizeof(nameBuf));
+	itemGetDescription(descBuf, sizeof(descBuf), page.Items[currRow], player->PlayerId);
 
 	// setup draw state
 	windowCreate(&drawWindow, SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 0, 0, 350, totalHeight, TEXT_ALIGN_MIDDLECENTER);

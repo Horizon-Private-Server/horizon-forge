@@ -73,7 +73,7 @@ void mapOnItemTick_Earthquake(int defIdx, SurvivalItemDef_t *def)
 //--------------------------------------------------------------------------
 int mapOnItemGetConsumeCooldownTicks_Earthquake(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetFromSlot(playerId);
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player))
 		return 0;
 
@@ -86,7 +86,7 @@ int mapOnItemGetConsumeCooldownTicks_Earthquake(int defIdx, SurvivalItemDef_t *d
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_Earthquake(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	Player *player = playerGetFromSlot(playerId);
+	Player *player = playerGetFromIndex(playerId);
 	if (!playerIsValid(player))
 		return;
 

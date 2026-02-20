@@ -977,8 +977,7 @@ MonoBehaviour:
   - Item: 10
     Def:
       Name: Vox
-      Description: Destroys mysterybox for round. Increases cost of rolling the box
-        for user.
+      Description: +5,000 bolts per roll. Disables box for round.
       Type: 3
       MaxHeldAtOnce: 0
       AppearOnWall: 0
@@ -1377,8 +1376,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
@@ -1412,8 +1411,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
@@ -1447,8 +1446,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0
@@ -1482,8 +1481,8 @@ MonoBehaviour:
         m_Unknown: 1
         m_TextureSizeOverride: 0
       StoreCostType: 0
-      StoreCost: 125000
-      StoreCostIncrease: 125000
+      StoreCost: 75000
+      StoreCostIncrease: 75000
       MysteryboxChanceWeight: 0
       MysteryboxForceAcquire: 0
       DropChanceWeight: 0

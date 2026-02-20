@@ -349,6 +349,7 @@ void mboxUpdate(Moby *moby)
 {
 	int i;
 	char buf[48];
+	char descBuf[64];
 	if (!moby || !moby->PVar)
 		return;
 
@@ -433,8 +434,9 @@ void mboxUpdate(Moby *moby)
 		{
 			int showInteract = itemDef.MysteryboxForceAcquire == 0;
 			int random = pvars->Random;
-			snprintf(buf, sizeof(buf), "\x11 %s", itemDef.Name);
-			if (showInteract && tryPlayerInteract(moby, activatedByPlayer, buf, NULL, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
+			snprintf(buf, sizeof(buf), "\x11 %s", showInteract ? itemDef.Name : "Close");
+			itemGetDescription(descBuf, sizeof(descBuf), pvars->ItemIdx, pvars->ActivatedByPlayerId);
+			if (tryPlayerInteract(moby, activatedByPlayer, buf, descBuf, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
 			{
 				mboxGivePlayer(moby, pvars->ActivatedByPlayerId, pvars->ItemIdx, pvars->Random);
 			}
@@ -494,15 +496,17 @@ void mboxUpdate(Moby *moby)
 		moby->CollActive = 0;
 
 		// find local players to activate
-		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+		for (i = 0; i < GAME_MAX_LOCALS; ++i)
 		{
-			Player *player = playerGetFromIndex(i);
-			int cost = mboxGetCost(moby, i);
-			snprintf(buf, sizeof(buf), "\x11 Open [\x0E%'d\x08]", cost);
+			Player *player = playerGetFromSlot(i);
+			if (!playerIsValid(player))
+				continue;
 
+			int cost = mboxGetCost(moby, player->PlayerId);
+			snprintf(buf, sizeof(buf), "\x11 Open [\x0E%'d\x08]", cost);
 			if (tryPlayerInteract(moby, player, buf, NULL, cost, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
 			{
-				mboxActivate(moby, i);
+				mboxActivate(moby, player->PlayerId);
 				break;
 			}
 		}

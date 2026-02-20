@@ -18,7 +18,7 @@
 
 GuberEvent *upgradeCreateEvent(Moby *moby, u32 eventType);
 
-Moby *UpgradeMobies[MAX_ITEM_COUNT] = {};
+char UpgradeBakedSpawnInUse[BAKED_SPAWNPOINT_COUNT] = {};
 
 //--------------------------------------------------------------------------
 int upgradeGetItems(int *itemIdxs, int count)
@@ -85,43 +85,16 @@ void upgradeSpawnNew(VECTOR curPos, int itemIdx)
 	int freeBakedSpawnPointsIdxCount = 0;
 	int i, j;
 	VECTOR spPos;
-	int isFree = 0;
-	int itemIdxs[MAX_ITEM_COUNT];
-
 	if (!MapConfig.State)
 		return;
-
-	int count = upgradeGetItems(itemIdxs, MAX_ITEM_COUNT);
 
 	// iterate list of baked spawn points
 	for (i = 0; i < BAKED_SPAWNPOINT_COUNT; ++i)
 	{
-		isFree = 1;
-
-		// find upgrade spawn points
 		if (bakedConfig.BakedSpawnPoints[i].Type != BAKED_SPAWNPOINT_UPGRADE)
 			continue;
 
-		// check if already in use
-		for (j = 0; j < count; ++j)
-		{
-			int otherItemIdx = itemIdxs[j];
-			if (otherItemIdx == itemIdx)
-				continue;
-
-			if (!UpgradeMobies[otherItemIdx])
-				continue;
-
-			memcpy(spPos, bakedConfig.BakedSpawnPoints[i].Position, 12);
-			if (vector_sqrdistance(spPos, UpgradeMobies[otherItemIdx]->Position) < 0.1)
-			{
-				isFree = 0;
-				break;
-			}
-		}
-
-		//
-		if (isFree)
+		if (UpgradeBakedSpawnInUse[i] == 0)
 			freeBakedSpawnPointsIdxs[freeBakedSpawnPointsIdxCount++] = i;
 	}
 
@@ -139,7 +112,8 @@ void upgradeSpawnNew(VECTOR curPos, int itemIdx)
 		i = freeBakedSpawnPointsIdxs[(random + 1) % freeBakedSpawnPointsIdxCount];
 
 	// spawn
-	upgradeCreate(bakedConfig.BakedSpawnPoints[i].Position, bakedConfig.BakedSpawnPoints[i].Rotation, itemIdx);
+	if (MapConfig.Functions.CreateUpgradePickupFunc)
+		MapConfig.Functions.CreateUpgradePickupFunc(i, itemIdx);
 }
 
 //--------------------------------------------------------------------------
@@ -202,6 +176,7 @@ void upgradeUpdate(Moby *moby)
 
 	int i;
 	struct UpgradePVar *pvars = (struct UpgradePVar *)moby->PVar;
+	char descBuf[64];
 	if (!pvars)
 		return;
 
@@ -225,6 +200,10 @@ void upgradeUpdate(Moby *moby)
 
 		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (UPGRADE_PICKUP_RADIUS * UPGRADE_PICKUP_RADIUS))
 			continue;
+
+		// draw description even if player can't acquire
+		itemGetDescription(descBuf, sizeof(descBuf), pvars->ItemIdx, player->PlayerId);
+		pushSnack(player->LocalPlayerIndex, descBuf, 0);
 
 		if (!itemCanAcquire(player, pvars->ItemIdx))
 		{
@@ -284,20 +263,17 @@ GuberEvent *upgradeCreateEvent(Moby *moby, u32 eventType)
 //--------------------------------------------------------------------------
 int upgradeHandleEvent_Spawn(Moby *moby, GuberEvent *event)
 {
-	VECTOR p, r;
 	struct UpgradeSpawnEventArgs args;
 
 	// read event
-	guberEventRead(event, p, 12);
-	guberEventRead(event, r, 12);
 	guberEventRead(event, &args, sizeof(struct UpgradeSpawnEventArgs));
 
 	// add to table
-	UpgradeMobies[args.ItemIdx] = moby;
+	UpgradeBakedSpawnInUse[args.BakedSpawnIdx]++;
 
 	// set position
-	vector_copy(moby->Position, p);
-	vector_copy(moby->Rotation, r);
+	memcpy(moby->Position, bakedConfig.BakedSpawnPoints[args.BakedSpawnIdx].Position, 12);
+	memcpy(moby->Rotation, bakedConfig.BakedSpawnPoints[args.BakedSpawnIdx].Rotation, 12);
 
 	// set update
 	moby->PUpdate = &upgradeUpdate;
@@ -323,6 +299,7 @@ int upgradeHandleEvent_Spawn(Moby *moby, GuberEvent *event)
 	pvars->MaxUses = UPGRADE_MAX_USES;
 	pvars->TexId = item.TexId;
 	pvars->TexColor = item.TexColor;
+	pvars->BakedSpawnIdx = args.BakedSpawnIdx;
 	memset(pvars->Particles, 0, sizeof(pvars->Particles));
 
 	// set team
@@ -354,7 +331,8 @@ int upgradeHandleEvent_Destroy(Moby *moby, GuberEvent *event)
 	}
 
 	// remove from table
-	UpgradeMobies[pvars->ItemIdx] = NULL;
+	if (UpgradeBakedSpawnInUse[pvars->BakedSpawnIdx] > 0)
+		UpgradeBakedSpawnInUse[pvars->BakedSpawnIdx]--;
 
 	guberMobyDestroy(moby);
 	return 0;
@@ -440,7 +418,7 @@ int upgradeHandleEvent(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-int upgradeCreate(VECTOR position, VECTOR rotation, int itemIdx)
+int upgradeCreate(int bakedSpawnIdx, int itemIdx)
 {
 	struct UpgradeSpawnEventArgs args;
 
@@ -450,9 +428,8 @@ int upgradeCreate(VECTOR position, VECTOR rotation, int itemIdx)
 	if (guberEvent)
 	{
 		args.ItemIdx = itemIdx;
+		args.BakedSpawnIdx = bakedSpawnIdx;
 
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, rotation, 12);
 		guberEventWrite(guberEvent, &args, sizeof(struct UpgradeSpawnEventArgs));
 	}
 	else
@@ -469,6 +446,8 @@ void upgradeSpawn(void)
 	static int spawned = 0;
 	if (spawned)
 		return;
+
+	spawned = 1;
 
 	// only spawn if host
 	if (!gameAmIHost())
@@ -491,7 +470,6 @@ void upgradeSpawn(void)
 	for (i = 0; i < MAX_ITEM_COUNT; ++i)
 	{
 		upgradeBakedSpawnpointIdx[i] = -1;
-		UpgradeMobies[i] = NULL;
 	}
 
 	// count number of baked spawnpoints used for upgrade
@@ -526,22 +504,16 @@ void upgradeSpawn(void)
 		if (spawnPoint < 0)
 			continue;
 
-		SurvivalBakedSpawnpoint_t *sp = &bakedSpawnPoints[spawnPoint];
-		memcpy(pos, sp->Position, sizeof(float) * 3);
-		memcpy(rot, sp->Rotation, sizeof(float) * 3);
-
 		// spawn
 		if (MapConfig.Functions.CreateUpgradePickupFunc)
-			MapConfig.Functions.CreateUpgradePickupFunc(pos, rot, itemIdx);
+			MapConfig.Functions.CreateUpgradePickupFunc(spawnPoint, itemIdx);
 	}
-
-	spawned = 1;
 }
 
 //--------------------------------------------------------------------------
 void upgradeInit(void)
 {
-	memset(UpgradeMobies, 0, sizeof(UpgradeMobies));
+	memset(UpgradeBakedSpawnInUse, 0, sizeof(UpgradeBakedSpawnInUse));
 	Moby *temp = mobySpawn(UPGRADE_MOBY_OCLASS, 0);
 	if (!temp)
 		return;

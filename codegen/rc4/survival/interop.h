@@ -44,7 +44,7 @@ typedef int (*MapGetSpawnPoints_func)(int **outSpawnPointIndices);
 typedef int (*MapConsiderMobSpawnPoint_func)(struct MobSpawnParams *mobSpawnParams, VECTOR position, float yaw, Player *targetPlayer);
 typedef int (*MapOnPlayerGetRes_func)(Player *player, VECTOR outPos, VECTOR outRot, int firstRes);
 typedef int (*MapOnPlayerRevived_func)(Player *player, Player *revivedByPlayer);
-typedef int (*MapCreateUpgradePickup_func)(VECTOR position, VECTOR rotation, int itemIdx);
+typedef int (*MapCreateUpgradePickup_func)(int bakedSpawnIdx, int itemIdx);
 typedef void (*MapPickupUpgradePickup_func)(Moby *moby, int pickedUpByPlayerId);
 typedef int (*MapCreateMobDrop_func)(VECTOR position, int itemIdx, int destroyAtTime, int team);
 typedef void (*MapFrameTick_func)(void);
