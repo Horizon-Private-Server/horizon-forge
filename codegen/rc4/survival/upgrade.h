@@ -30,12 +30,14 @@ struct UpgradePVar
 	u32 TexColor;
 	int MaxUses;
 	float Opacity;
+	int BakedSpawnIdx;
 	struct PartInstance *Particles[4];
 };
 
 struct UpgradeSpawnEventArgs
 {
 	int ItemIdx;
+	int BakedSpawnIdx;
 };
 
 struct UpgradeDestroyedEventArgs
@@ -52,7 +54,7 @@ void upgradeTick(void);
 void upgradeInit(void);
 struct GuberMoby *upgradeGetGuber(Moby *moby);
 int upgradeHandleEvent(Moby *moby, GuberEvent *event);
-int upgradeCreate(VECTOR position, VECTOR rotation, int itemIdx);
+int upgradeCreate(int bakedSpawnIdx, int itemIdx);
 void upgradePickup(Moby *moby, int pickedUpByPlayerId);
 
 #endif // SURVIVAL_UPGRADE_H
