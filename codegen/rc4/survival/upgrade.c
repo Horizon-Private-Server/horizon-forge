@@ -176,6 +176,7 @@ void upgradeUpdate(Moby *moby)
 
 	int i;
 	struct UpgradePVar *pvars = (struct UpgradePVar *)moby->PVar;
+	char descBuf[64];
 	if (!pvars)
 		return;
 
@@ -199,6 +200,10 @@ void upgradeUpdate(Moby *moby)
 
 		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (UPGRADE_PICKUP_RADIUS * UPGRADE_PICKUP_RADIUS))
 			continue;
+
+		// draw description even if player can't acquire
+		itemGetDescription(descBuf, sizeof(descBuf), pvars->ItemIdx, player->PlayerId);
+		pushSnack(player->LocalPlayerIndex, descBuf, 0);
 
 		if (!itemCanAcquire(player, pvars->ItemIdx))
 		{

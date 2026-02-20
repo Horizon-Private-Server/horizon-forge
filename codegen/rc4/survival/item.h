@@ -99,6 +99,7 @@ void itemBeginAcquire(int playerId, int itemIdx);
 void itemBeginConsume(int playerId, int itemIdx);
 
 void itemShowMessage(int localPlayerIndex, int itemIdx, char *format, int ticks);
+void itemGetDescription(char *buf, int size, int itemIdx, int playerId);
 u32 itemGetCost(int localPlayerIndex, int itemIdx);
 int itemGetPlayerBankAmount(int localPlayerIndex, SurvivalItemDef_t *item);
 int itemChargePlayerBank(int localPlayerIndex, int itemIdx);

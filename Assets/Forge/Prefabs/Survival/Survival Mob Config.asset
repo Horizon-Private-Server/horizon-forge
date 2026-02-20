@@ -977,8 +977,7 @@ MonoBehaviour:
   - Item: 10
     Def:
       Name: Vox
-      Description: Destroys mysterybox for round. Increases cost of rolling the box
-        for user.
+      Description: +5,000 bolts per roll. Disables box for round.
       Type: 3
       MaxHeldAtOnce: 0
       AppearOnWall: 0
