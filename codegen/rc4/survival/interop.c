@@ -278,6 +278,11 @@ int mapGetRoundTransitionTime(int round)
 	// return negative value for unlimited round time
 	// return 0 for no round time
 
+	// solo players want to be able to take breaks more frequently
+	// should infinite post round time just be the default?
+	if (MapConfig.State && MapConfig.State->ActivePlayerCount == 1)
+		return -1;
+
 	// by default give infinite post round every 25 rounds
 	if ((round % 25) == 0)
 		return -1;
