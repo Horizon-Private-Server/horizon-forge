@@ -331,7 +331,7 @@ void storeDrawItemList(Moby *moby, int localPlayerIndex, Window_t *drawWindow, i
 
 		// draw cost
 		windowDrawSprite(&drawWindowItem, TEXT_ALIGN_TOPRIGHT, -paddingLeft - 2, paddingTop, lineHeight - 2, lineHeight - 2, currencyTexId, boltColor, TEXT_ALIGN_TOPRIGHT);
-		snprintf(strBuf, sizeof(strBuf), "%'d", cost);
+		uiPrintCommaNumber(strBuf, sizeof(strBuf), cost, 0);
 		windowDrawText(&drawWindowItem, TEXT_ALIGN_TOPRIGHT, -paddingLeft - 6 - lineHeight, paddingTop, 0.6, costColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
 
 		windowMove(&drawWindowItem, 0, lineHeight);

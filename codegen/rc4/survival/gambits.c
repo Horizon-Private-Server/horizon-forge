@@ -15,7 +15,7 @@ struct
 {
 	char FinishedSetup;
 	char PrintedGambit;
-} GambitsState;
+} GambitsState = {};
 
 //--------------------------------------------------------------------------
 int gambitsGetActiveValue(void)

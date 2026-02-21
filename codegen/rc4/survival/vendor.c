@@ -37,7 +37,7 @@
 #define WEAPON_VENDOR_MAX_DIST (3)
 #define WEAPON_UPGRADE_COOLDOWN_TICKS (15)
 
-const char *SURVIVAL_UPGRADE_MESSAGE = "\x11 Upgrade [\x0E%'d\x08]";
+const char *SURVIVAL_UPGRADE_MESSAGE = "\x11 Upgrade [\x0E%s\x08]";
 
 //--------------------------------------------------------------------------
 void vendorUpdate(Moby *moby)
@@ -78,7 +78,9 @@ void vendorUpdate(Moby *moby)
 
 		// prompt for payment if near
 		char buf[64];
-		snprintf(buf, sizeof(buf), SURVIVAL_UPGRADE_MESSAGE, cost);
+		char costBuf[32];
+		uiPrintCommaNumber(costBuf, sizeof(costBuf), cost, 0);
+		snprintf(buf, sizeof(buf), SURVIVAL_UPGRADE_MESSAGE, costBuf);
 		if (!tryPlayerInteract(moby, player, buf, NULL, cost, 0, WEAPON_UPGRADE_COOLDOWN_TICKS, WEAPON_VENDOR_MAX_DIST * WEAPON_VENDOR_MAX_DIST, PAD_CIRCLE, 1))
 			continue;
 

@@ -348,7 +348,8 @@ void mboxDraw(Moby *moby)
 void mboxUpdate(Moby *moby)
 {
 	int i;
-	char buf[48];
+	char costBuf[32];
+	char buf[64];
 	char descBuf[64];
 	if (!moby || !moby->PVar)
 		return;
@@ -503,7 +504,8 @@ void mboxUpdate(Moby *moby)
 				continue;
 
 			int cost = mboxGetCost(moby, player->PlayerId);
-			snprintf(buf, sizeof(buf), "\x11 Open [\x0E%'d\x08]", cost);
+			uiPrintCommaNumber(costBuf, sizeof(costBuf), cost, 0);
+			snprintf(buf, sizeof(buf), "\x11 Open [\x0E%s\x08]", costBuf);
 			if (tryPlayerInteract(moby, player, buf, NULL, cost, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
 			{
 				mboxActivate(moby, player->PlayerId);
