@@ -80,12 +80,12 @@ void storeGetName(Moby *moby, int localPlayerIndex, char *buf, int len)
 	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 
 	// default to Store
-	strncpy(buf, "Store", len);
+	safe_strcpy(buf, "Store", len);
 	struct StoreDef *storeDef = storeGetStoreDef(moby, localPlayerIndex);
 	if (!storeDef)
 		return;
 
-	strncpy(buf, storeDef->Name, len);
+	safe_strcpy(buf, storeDef->Name, len);
 }
 
 //--------------------------------------------------------------------------

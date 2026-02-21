@@ -130,7 +130,7 @@ int mboxGetRandomItem(Moby *moby, int forPlayerId)
 	int i;
 	SurvivalItemDef_t itemDef;
 	int itemIdxs[MAX_ITEM_COUNT];
-	int count = mboxGetItems(moby, forPlayerId, &itemIdxs, MAX_ITEM_COUNT);
+	int count = mboxGetItems(moby, forPlayerId, itemIdxs, MAX_ITEM_COUNT);
 	if (count <= 0)
 		return -1;
 
@@ -578,7 +578,7 @@ int mboxHandleEvent_Activate(Moby *moby, GuberEvent *event)
 	MysteryBoxTotalRolls += 1;
 	MysteryBoxItemCounts[itemIdx] += 1;
 	int itemIdxs[MAX_ITEM_COUNT];
-	int count = mboxGetItems(moby, activatedByPlayerId, &itemIdxs, MAX_ITEM_COUNT);
+	int count = mboxGetItems(moby, activatedByPlayerId, itemIdxs, MAX_ITEM_COUNT);
 	printf("Total Rolls: %d\n", MysteryBoxTotalRolls);
 	int i;
 	for (i = 0; i < count; ++i)

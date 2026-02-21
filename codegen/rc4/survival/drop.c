@@ -67,7 +67,7 @@ int dropGetRandomItem(Moby *mobMoby, int forPlayerId, int gadgetId)
 	int i;
 	SurvivalItemDef_t itemDef;
 	int itemIdxs[MAX_ITEM_COUNT];
-	int count = dropGetItems(forPlayerId, &itemIdxs, MAX_ITEM_COUNT);
+	int count = dropGetItems(forPlayerId, itemIdxs, MAX_ITEM_COUNT);
 	if (count <= 0)
 		return -1;
 
@@ -279,7 +279,7 @@ void dropUpdate(Moby *moby)
 				{
 					dropPickup(moby, i);
 				}
-				else
+				else if (pvars->OwnerPlayerId >= 0 && pvars->OwnerPlayerId < GAME_MAX_PLAYERS)
 				{
 					snprintf(dropLocalStrBuf[player->LocalPlayerIndex], sizeof(dropLocalStrBuf[player->LocalPlayerIndex]), DROP_CANNOT_PICKUP_MESSAGE, gs->PlayerNames[pvars->OwnerPlayerId]);
 					uiShowPopup(player->LocalPlayerIndex, dropLocalStrBuf[player->LocalPlayerIndex]);
