@@ -44,7 +44,7 @@ void mapConsiderSpawnDrop(Moby *moby, int killedByPlayerId, int killedByWeaponId
 		if (playerIsValid(killedByPlayer) && killedByPlayer->IsLocal)
 		{
 			int itemIdx = MapConfig.Functions.GetDropItemOnMobKilledFunc(killedByPlayer, moby, killedByWeaponId);
-			if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+			if (itemIdx >= 0 && itemIdx < MapConfig.ItemDefCount)
 			{
 				MapConfig.Functions.CreateMobDropFunc(moby->Position, itemIdx, gameGetTime() + DROP_DURATION, killedByPlayer->Team);
 			}
