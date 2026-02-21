@@ -176,6 +176,7 @@ void upgradeUpdate(Moby *moby)
 
 	int i;
 	struct UpgradePVar *pvars = (struct UpgradePVar *)moby->PVar;
+	char costBuf[32];
 	char descBuf[64];
 	if (!pvars)
 		return;
@@ -216,7 +217,8 @@ void upgradeUpdate(Moby *moby)
 
 		u32 cost = itemGetCost(i, pvars->ItemIdx);
 		int tokens = itemDef.StoreCostType >= SURVIVAL_ITEM_STORE_COST_TOKENS_LINEAR;
-		snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "%s (%d)\x01\x01\x11   \x0E%'d\x08 %s", itemDef.Name, pvars->Uses, cost, tokens ? "Tokens" : "Bolts");
+		uiPrintCommaNumber(costBuf, sizeof(costBuf), cost, 0);
+		snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "%s (%d)\x01\x01\x11   \x0E%s\x08 %s", itemDef.Name, pvars->Uses, costBuf, tokens ? "Tokens" : "Bolts");
 		if (tryPlayerInteract(moby, player, LocalPlayerStrBuffer[i], NULL, tokens ? 0 : cost, tokens ? cost : 0, PLAYER_UPGRADE_COOLDOWN_TICKS, 100, PAD_CIRCLE, 1))
 		{
 			if (itemChargePlayerBank(i, pvars->ItemIdx))

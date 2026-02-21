@@ -85,7 +85,9 @@ void ammosupplyUpdate(Moby *moby)
 		if (cost <= 0)
 			continue;
 
-		snprintf(buf, sizeof(buf), "\x11 Refill Ammo [\x0E%'d\x08]", cost);
+		char costBuf[32];
+		uiPrintCommaNumber(costBuf, sizeof(costBuf), cost, 0);
+		snprintf(buf, sizeof(buf), "\x11 Refill Ammo [\x0E%s\x08]", costBuf);
 		if (tryPlayerInteract(moby, player, buf, NULL, cost, 0, 30, 9, PAD_CIRCLE, 1))
 		{
 			player->GadgetBox->Gadgets[weaponId].Ammo = playerGetWeaponMaxAmmo(player->GadgetBox, weaponId);
