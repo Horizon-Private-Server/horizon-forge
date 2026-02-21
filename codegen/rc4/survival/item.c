@@ -114,7 +114,7 @@ void itemShowMessage(int localPlayerIndex, int itemIdx, char *format, int ticks)
 void itemGetDescription(char *buf, int size, int itemIdx, int playerId)
 {
 	SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
-	strncpy(buf, item->Description, size);
+	safe_strcpy(buf, item->Description, size);
 }
 
 //--------------------------------------------------------------------------

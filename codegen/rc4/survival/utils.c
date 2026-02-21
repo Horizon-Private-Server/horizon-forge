@@ -107,7 +107,7 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 		if (lowerMessage)
 		{
 			char *a = uiMsgString(0x2415);
-			strncpy(a, lowerMessage, 0x40);
+			safe_strcpy(a, lowerMessage, 0x40);
 			uiShowLowerPopup(0, 0x2415);
 		}
 	}
@@ -249,7 +249,7 @@ void mapPrintGambit(int gambit)
 		{
 			if ((i + 1) == gambit)
 			{
-				strncpy(gambitName, gambits, sizeof(gambitName));
+				safe_strcpy(gambitName, gambits, sizeof(gambitName));
 				break;
 			}
 
@@ -289,7 +289,7 @@ void mapSendSendGambitCompletedMessage(int gambit)
 		{
 			if ((i + 1) == gambit)
 			{
-				strncpy(msg.GambitName, gambits, sizeof(msg.GambitName));
+				safe_strcpy(msg.GambitName, gambits, sizeof(msg.GambitName));
 				break;
 			}
 
@@ -299,7 +299,7 @@ void mapSendSendGambitCompletedMessage(int gambit)
 	}
 
 	// send request to server
-	strncpy(msg.MapFilename, PATCH_INTEROP->MapLoaderFilename, sizeof(msg.MapFilename));
+	safe_strcpy(msg.MapFilename, PATCH_INTEROP->MapLoaderFilename, sizeof(msg.MapFilename));
 	netSendCustomAppMessage(NET_DELIVERY_CRITICAL, lobbyConnection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_CLIENT_UPDATE_SURVIVAL_GAMBIT_COMPLETED_REQUEST, sizeof(msg), &msg);
 
 	// show user

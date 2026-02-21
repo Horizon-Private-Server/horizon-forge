@@ -372,8 +372,8 @@ void bankRequestMapStats(char* mapFilename, char* mapName, struct RaidsBankMapSt
     .MissionType = missionType
   };
 
-  strncpy(msg.MapFilename, mapFilename, sizeof(msg.MapFilename));
-  strncpy(msg.MapName, mapName, sizeof(msg.MapName));
+  safe_strcpy(msg.MapFilename, mapFilename, sizeof(msg.MapFilename));
+  safe_strcpy(msg.MapName, mapName, sizeof(msg.MapName));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_GET_MAP_STATS_REQUEST, sizeof(msg), &msg);
 }
 
@@ -389,7 +389,7 @@ void bankSendMapStats(struct RaidsBankMapStats* mapStats)
   msg.ChallengesMask = mapStats->ChallengesMask;
   msg.CollectiblesCount = mapStats->CollectiblesCount;
   msg.CollectiblesMask = mapStats->CollectiblesMask;
-  strncpy(msg.MapFilename, mapStats->MapFilename, sizeof(msg.MapFilename));
+  safe_strcpy(msg.MapFilename, mapStats->MapFilename, sizeof(msg.MapFilename));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_SET_MAP_STATS_REQUEST, sizeof(msg), &msg);
   DPRINTF("sent map stats\n");
 }
@@ -409,7 +409,7 @@ int bankSendMapContractRules(void)
 
   struct RaidsBankUpdateMapContractRulesRequest msg;
   memset(&msg, 0, sizeof(msg));
-  strncpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+  safe_strcpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
   memcpy(msg.ContractRules, MapConfig.MobContractRules, sizeof(struct RaidsMobContractRule) * MapConfig.MobContractRulesCount);
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST, sizeof(msg), &msg);
   DPRINTF("bankSendMapContractRules\n");
@@ -429,7 +429,7 @@ void bankSendMapMobMetadata(int mobOClass, int difficultyStars)
     .AddMobOClass = mobOClass,
     .AddMobOClassAtDifficulty = difficultyStars
   };
-  strncpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+  safe_strcpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_METADATA_REQUEST, sizeof(msg), &msg);
   DPRINTF("bankSendMapMobMetadata\n");
 }

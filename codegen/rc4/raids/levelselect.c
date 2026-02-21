@@ -452,7 +452,7 @@ void levelselectDraw(void)
   if (levelselectDrawState.SelectedMapDef) {
     CustomMapDef_t* def = levelselectDrawState.SelectedMapDef;
     if (strncmp(def->Filename, levelselectDrawState.SelectedMapFilename, sizeof(levelselectDrawState.SelectedMapFilename)) != 0) {
-      strncpy(levelselectDrawState.SelectedMapFilename, def->Filename, sizeof(levelselectDrawState.SelectedMapFilename));
+      safe_strcpy(levelselectDrawState.SelectedMapFilename, def->Filename, sizeof(levelselectDrawState.SelectedMapFilename));
       PATCH_INTEROP->ReadCustomMapExtraData(def->Filename, levelselectDrawState.SelectedMapExtraDataBuf, sizeof(levelselectDrawState.SelectedMapExtraDataBuf), CUSTOM_MODE_RAIDS);
       levelselectDrawState.MapStats.ChallengesCount = levelselectDrawState.SelectedMapExtraData.ChallengesCount;
       levelselectDrawState.MapStats.CollectiblesCount = levelselectDrawState.SelectedMapExtraData.CollectiblesCount;
