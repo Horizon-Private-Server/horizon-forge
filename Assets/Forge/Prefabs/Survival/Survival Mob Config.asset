@@ -1364,7 +1364,7 @@ MonoBehaviour:
       Name: Speed Mod Perk
       Description: Gives +1 extra speed mod for all weapons.
       Type: 0
-      MaxHeldAtOnce: 10
+      MaxHeldAtOnce: 5
       AppearOnWall: 0
       ConsumeCooldown: 0
       TexId: 52
