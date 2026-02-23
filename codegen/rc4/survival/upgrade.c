@@ -365,18 +365,24 @@ int upgradeHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 
 	// reduce uses, if not post round 25 break
 	// respawn at next spot if used
-#if !DEBUG
 	if (!MapConfig.State || MapConfig.State->RoundEndTime != -1)
 	{
 		pvars->Uses--;
 	}
-#endif
+
 	if (pvars->Uses <= 0 && gameAmIHost())
 	{
 		VECTOR lastPos;
 		vector_copy(lastPos, moby->Position);
-		upgradeDestroy(moby);
-		upgradeSpawnNew(lastPos, pvars->ItemIdx);
+
+		// use the state to check if we've already started the spawning of a new upgrade
+		// in case multiple players use the last upgrade and send the Pickup message at the same time
+		if (moby->State == 0)
+		{
+			mobySetState(moby, 1, -1);
+			upgradeDestroy(moby);
+			upgradeSpawnNew(lastPos, pvars->ItemIdx);
+		}
 	}
 
 	return 0;
