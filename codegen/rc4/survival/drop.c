@@ -290,8 +290,10 @@ void dropUpdate(Moby *moby)
 	}
 
 	// handle auto destruct
-	if (pvars->DestroyAtTime && gameGetTime() > pvars->DestroyAtTime)
+	if (isOwner && pvars->DestroyAtTime && gameGetTime() > pvars->DestroyAtTime)
 	{
+		// make sure we don't call this again next frame
+		pvars->DestroyAtTime = 0;
 		dropDestroy(moby);
 	}
 }
