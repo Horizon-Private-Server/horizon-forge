@@ -71,6 +71,9 @@ void vendorUpdate(Moby *moby)
 		if (!MapConfig.Functions.CanUpgradePlayerWeaponFunc || !MapConfig.Functions.CanUpgradePlayerWeaponFunc(player, heldWeapon, level))
 			continue;
 
+		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (WEAPON_VENDOR_MAX_DIST * WEAPON_VENDOR_MAX_DIST))
+			continue;
+
 		// get upgrade cost
 		int cost = 0;
 		if (MapConfig.Functions.GetUpgradePlayerWeaponCostFunc)

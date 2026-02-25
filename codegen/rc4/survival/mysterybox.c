@@ -433,13 +433,16 @@ void mboxUpdate(Moby *moby)
 		// if the item is interactable
 		if (pvars->ActivatedByPlayerId >= 0 && mboxGetItem(moby, pvars->ItemIdx, &itemDef))
 		{
-			int showInteract = itemDef.MysteryboxForceAcquire == 0;
-			int random = pvars->Random;
-			snprintf(buf, sizeof(buf), "\x11 %s", showInteract ? itemDef.Name : "Close");
-			itemGetDescription(descBuf, sizeof(descBuf), pvars->ItemIdx, pvars->ActivatedByPlayerId);
-			if (tryPlayerInteract(moby, activatedByPlayer, buf, descBuf, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, 9, PAD_CIRCLE, 0))
+			if (vector_sqrdistance(moby->Position, activatedByPlayer->PlayerPosition) < (MYSTERY_BOX_PICKUP_RADIUS * MYSTERY_BOX_PICKUP_RADIUS))
 			{
-				mboxGivePlayer(moby, pvars->ActivatedByPlayerId, pvars->ItemIdx, pvars->Random);
+				int showInteract = itemDef.MysteryboxForceAcquire == 0;
+				int random = pvars->Random;
+				snprintf(buf, sizeof(buf), "\x11 %s", showInteract ? itemDef.Name : "Close");
+				itemGetDescription(descBuf, sizeof(descBuf), pvars->ItemIdx, pvars->ActivatedByPlayerId);
+				if (tryPlayerInteract(moby, activatedByPlayer, buf, descBuf, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, MYSTERY_BOX_PICKUP_RADIUS, PAD_CIRCLE, 0))
+				{
+					mboxGivePlayer(moby, pvars->ActivatedByPlayerId, pvars->ItemIdx, pvars->Random);
+				}
 			}
 		}
 

@@ -1,4 +1,3 @@
-#include <string.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
 #include <libdl/color.h>
@@ -8,6 +7,7 @@
 #include <libdl/graphics.h>
 #include <libdl/random.h>
 #include <libdl/radar.h>
+#include <libdl/string.h>
 #include "upgrade.h"
 #include "drop.h"
 #include "mob.h"
@@ -182,6 +182,7 @@ void upgradeUpdate(Moby *moby)
 	struct UpgradePVar *pvars = (struct UpgradePVar *)moby->PVar;
 	char costBuf[32];
 	char descBuf[64];
+	char interactBuf[64];
 	if (!pvars)
 		return;
 
@@ -202,7 +203,6 @@ void upgradeUpdate(Moby *moby)
 			continue;
 
 		struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[player->PlayerId];
-
 		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (UPGRADE_PICKUP_RADIUS * UPGRADE_PICKUP_RADIUS))
 			continue;
 
@@ -213,17 +213,16 @@ void upgradeUpdate(Moby *moby)
 		if (!itemCanAcquire(player, pvars->ItemIdx))
 		{
 			// draw maxed out popup
-			snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "Maxed Out");
-			uiShowPopup(player->LocalPlayerIndex, LocalPlayerStrBuffer[i]);
-			playerData->MessageCooldownTicks = 2;
+			safe_strcpy(interactBuf, "Maxed Out", 10);
+			tryPlayerInteract(moby, player, interactBuf, NULL, 0, 0, 0, 100, 0, 0);
 			continue;
 		}
 
 		u32 cost = itemGetCost(i, pvars->ItemIdx);
 		int tokens = itemDef.StoreCostType >= SURVIVAL_ITEM_STORE_COST_TOKENS_LINEAR;
 		uiPrintCommaNumber(costBuf, sizeof(costBuf), cost, 0);
-		snprintf(LocalPlayerStrBuffer[i], sizeof(LocalPlayerStrBuffer[i]), "%s (%d)\x01\x01\x11   \x0E%s\x08 %s", itemDef.Name, pvars->Uses, costBuf, tokens ? "Tokens" : "Bolts");
-		if (tryPlayerInteract(moby, player, LocalPlayerStrBuffer[i], NULL, tokens ? 0 : cost, tokens ? cost : 0, PLAYER_UPGRADE_COOLDOWN_TICKS, 100, PAD_CIRCLE, 1))
+		snprintf(interactBuf, sizeof(interactBuf), "%s (%d)\x01\x01\x11   \x0E%s\x08 %s", itemDef.Name, pvars->Uses, costBuf, tokens ? "Tokens" : "Bolts");
+		if (tryPlayerInteract(moby, player, interactBuf, NULL, tokens ? 0 : cost, tokens ? cost : 0, PLAYER_UPGRADE_COOLDOWN_TICKS, 100, PAD_CIRCLE, 1))
 		{
 			if (itemChargePlayerBank(i, pvars->ItemIdx))
 			{
