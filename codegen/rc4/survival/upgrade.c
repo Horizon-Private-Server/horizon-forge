@@ -79,14 +79,17 @@ void upgradePickup(Moby *moby, int pickedUpByPlayerId)
 }
 
 //--------------------------------------------------------------------------
-void upgradeSpawnNew(VECTOR curPos, int itemIdx)
+int upgradeSpawnNew(int currBakedSpawnIdx, int itemIdx)
 {
 	char freeBakedSpawnPointsIdxs[BAKED_SPAWNPOINT_COUNT];
 	int freeBakedSpawnPointsIdxCount = 0;
 	int i, j;
 	VECTOR spPos;
 	if (!MapConfig.State)
-		return;
+		return 0;
+
+	if (!MapConfig.Functions.CreateUpgradePickupFunc)
+		return 0;
 
 	// iterate list of baked spawn points
 	for (i = 0; i < BAKED_SPAWNPOINT_COUNT; ++i)
@@ -94,26 +97,27 @@ void upgradeSpawnNew(VECTOR curPos, int itemIdx)
 		if (bakedConfig.BakedSpawnPoints[i].Type != BAKED_SPAWNPOINT_UPGRADE)
 			continue;
 
-		if (UpgradeBakedSpawnInUse[i] == 0)
+		// allow respawning at same location
+		if (UpgradeBakedSpawnInUse[i] == 0 || currBakedSpawnIdx == i)
 			freeBakedSpawnPointsIdxs[freeBakedSpawnPointsIdxCount++] = i;
 	}
 
 	// if no free points then fail
 	if (!freeBakedSpawnPointsIdxCount)
-		return;
+		return 0;
 
 	// pick random
-	int random = rand(freeBakedSpawnPointsIdxCount);
+	int random = randRangeInt(0, 100) % freeBakedSpawnPointsIdxCount;
 	i = freeBakedSpawnPointsIdxs[random];
 
 	// if picked current position, try to move to another
 	memcpy(spPos, bakedConfig.BakedSpawnPoints[i].Position, 12);
-	if (vector_sqrdistance(spPos, curPos) < 0.1)
+	if (currBakedSpawnIdx == i)
 		i = freeBakedSpawnPointsIdxs[(random + 1) % freeBakedSpawnPointsIdxCount];
 
 	// spawn
-	if (MapConfig.Functions.CreateUpgradePickupFunc)
-		MapConfig.Functions.CreateUpgradePickupFunc(i, itemIdx);
+	MapConfig.Functions.CreateUpgradePickupFunc(i, itemIdx);
+	return 1;
 }
 
 //--------------------------------------------------------------------------
@@ -380,8 +384,8 @@ int upgradeHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 		if (moby->State == 0)
 		{
 			mobySetState(moby, 1, -1);
+			upgradeSpawnNew(pvars->BakedSpawnIdx, pvars->ItemIdx);
 			upgradeDestroy(moby);
-			upgradeSpawnNew(lastPos, pvars->ItemIdx);
 		}
 	}
 
