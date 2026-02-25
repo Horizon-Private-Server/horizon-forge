@@ -52,7 +52,7 @@ void mapOnItemTick_Earthquake(int defIdx, SurvivalItemDef_t *def)
 
 		if (player->Ground.offAny)
 		{
-			if (player->Ground.dist > 0.25 && (player->PlayerState == PLAYER_STATE_JUMP || player->PlayerState == PLAYER_STATE_FALL || player->PlayerState == PLAYER_STATE_JUMP_ATTACK))
+			if (player->Ground.dist > 0.25 && (player->PlayerState == PLAYER_STATE_JUMP || player->PlayerState == PLAYER_STATE_RUN_JUMP || player->PlayerState == PLAYER_STATE_FALL || player->PlayerState == PLAYER_STATE_JUMP_ATTACK))
 				playerInAir[i] = 1;
 
 			// playerPeakAir[i] = maxf(playerPeakAir[i], player->PlayerPosition[2]);
