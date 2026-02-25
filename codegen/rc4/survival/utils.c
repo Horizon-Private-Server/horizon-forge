@@ -66,10 +66,12 @@ void playPaidSound(Player *player)
 int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMessage, int boltCost, int tokenCost, int actionCooldown, float sqrDistance, int btns, int hold)
 {
 	static int shown[GAME_MAX_LOCALS] = {0, 0};
+	static char strBuf[GAME_MAX_LOCALS][64] = {};
 	VECTOR delta;
 	if (!player || !player->PlayerMoby || !player->IsLocal || !isInGame() || playerIsDead(player))
 		return 0;
 
+	int gameTime = gameGetTime();
 	struct SurvivalPlayer *playerData = NULL;
 	int localPlayerIndex = player->LocalPlayerIndex;
 	int pIndex = player->PlayerId;
@@ -81,13 +83,21 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 	if (!canAction)
 		return 0;
 
+	// only show one interact per frame
+	if (shown[localPlayerIndex] == gameTime)
+		return 0;
+
 	vector_subtract(delta, player->PlayerPosition, moby->Position);
 	if (vector_sqrmag(delta) < sqrDistance)
 	{
+		shown[localPlayerIndex] = gameTime;
+
 		// draw help popup
-		snprintf(LocalPlayerStrBuffer[localPlayerIndex], sizeof(LocalPlayerStrBuffer[localPlayerIndex]), message);
-		uiShowPopup(player->LocalPlayerIndex, LocalPlayerStrBuffer[localPlayerIndex]);
-		shown[localPlayerIndex] = gameGetTime();
+		if (message)
+		{
+			snprintf(strBuf[localPlayerIndex], sizeof(strBuf[localPlayerIndex]), message);
+			uiShowPopup(player->LocalPlayerIndex, strBuf[localPlayerIndex]);
+		}
 
 		// handle pad input
 		int btnDown = padGetAnyButton(localPlayerIndex, btns) > 0;
@@ -111,7 +121,7 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 			uiShowLowerPopup(0, 0x2415);
 		}
 	}
-	else if (shown[localPlayerIndex] && gameGetTime() > shown[localPlayerIndex])
+	else if (shown[localPlayerIndex] && gameTime > shown[localPlayerIndex])
 	{
 		hudHidePopup();
 		shown[localPlayerIndex] = 0;

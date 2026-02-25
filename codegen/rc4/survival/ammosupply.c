@@ -80,6 +80,9 @@ void ammosupplyUpdate(Moby *moby)
 		if (!playerIsValid(player))
 			continue;
 
+		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (3 * 3))
+			continue;
+
 		int weaponId = player->WeaponHeldId;
 		int cost = ammosupplyGetCost(moby, player, weaponId);
 		if (cost <= 0)

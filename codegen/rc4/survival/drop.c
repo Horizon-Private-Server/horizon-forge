@@ -1,4 +1,3 @@
-#include <string.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
 #include <libdl/color.h>
@@ -8,6 +7,7 @@
 #include <libdl/graphics.h>
 #include <libdl/random.h>
 #include <libdl/radar.h>
+#include <libdl/string.h>
 #include "drop.h"
 #include "mob.h"
 #include "maputils.h"
