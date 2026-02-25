@@ -664,7 +664,7 @@ int mboxHandleEvent_GivePlayer(Moby *moby, GuberEvent *event)
 				spawnExplosion(moby->Position, 5, 0x802060C0);
 				damageRadius(moby, moby->Position, 0x00081801, 5, 5);
 #if !DEBUGMBOX
-				mboxSetRandomRespawn(moby, pvars->Random);
+				mboxSetRandomRespawn(moby, random);
 #endif
 			}
 #endif
