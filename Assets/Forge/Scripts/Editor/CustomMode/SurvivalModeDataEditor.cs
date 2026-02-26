@@ -20,6 +20,7 @@ public class SurvivalModeDataEditor : Editor
     private SerializedProperty m_DebugInfiniteAmmoProperty;
     private SerializedProperty m_DebugPaydayProperty;
     private SerializedProperty m_DebugMoonjumpProperty;
+    private SerializedProperty m_DebugInfinitePostRoundTimeProperty;
     private SerializedProperty m_DebugStartRoundProperty;
 
     private SurvivalMobDef[] m_Mobs;
@@ -34,6 +35,7 @@ public class SurvivalModeDataEditor : Editor
         m_DebugInfiniteAmmoProperty = serializedObject.FindProperty("DebugInfiniteAmmo");
         m_DebugPaydayProperty = serializedObject.FindProperty("DebugPayday");
         m_DebugMoonjumpProperty = serializedObject.FindProperty("DebugMoonjump");
+        m_DebugInfinitePostRoundTimeProperty = serializedObject.FindProperty("DebugInfinitePostRoundTime");
         m_DebugStartRoundProperty = serializedObject.FindProperty("DebugStartRound");
 
         m_Mobs = (target as SurvivalModeData).GetEnabledMobs();
@@ -59,6 +61,7 @@ public class SurvivalModeDataEditor : Editor
             EditorGUILayout.PropertyField(m_DebugInfiniteAmmoProperty, new GUIContent("Infinite Ammo"));
             EditorGUILayout.PropertyField(m_DebugPaydayProperty, new GUIContent("Max Money/Tokens"));
             EditorGUILayout.PropertyField(m_DebugMoonjumpProperty, new GUIContent("Moonjump"));
+            EditorGUILayout.PropertyField(m_DebugInfinitePostRoundTimeProperty, new GUIContent("Infinite Post Round Time"));
             EditorGUILayout.PropertyField(m_DebugStartRoundProperty, new GUIContent("Start at Round"));
             EditorGUILayout.PropertyField(m_DebugManualSpawningProperty, new GUIContent("Manual Mob Spawning"));
             if (m_DebugManualSpawningProperty.boolValue)

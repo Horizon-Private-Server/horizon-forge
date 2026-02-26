@@ -36,4 +36,6 @@ void randomizeWeaponPickups(void);
 
 void addRadarBlip(Moby *moby, int life, int type, int team);
 
+int survivalIsPaused(void);
+
 #endif // SURVIVAL_UTILS_H

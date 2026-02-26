@@ -215,6 +215,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [HideInInspector] public bool DebugInfiniteAmmo;
     [HideInInspector] public bool DebugPayday;
     [HideInInspector] public bool DebugMoonjump;
+    [HideInInspector] public bool DebugInfinitePostRoundTime;
     [HideInInspector] public int DebugStartRound;
 
     [NonSerialized] SurvivalMobsScriptableObject _mobConfig;
@@ -342,6 +343,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
             if (DebugInfiniteAmmo) state.LDFlags.Add("-DDEBUG_INFINITE_AMMO");
             if (DebugPayday) state.LDFlags.Add("-DDEBUG_PAYDAY");
             if (DebugMoonjump) state.LDFlags.Add("-DDEBUG_MOONJUMP");
+            if (DebugInfinitePostRoundTime) state.LDFlags.Add("-DDEBUG_INF_ROUNDTIME");
             if (DebugStartRound > 0) state.LDFlags.Add($"-DDEBUG_START_ROUND={DebugStartRound}");
         }
 
