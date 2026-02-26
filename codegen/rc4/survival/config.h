@@ -44,8 +44,6 @@ typedef struct SurvivalBakedConfig
 extern int mobAllowedCuboidIdx;
 extern int mobSpawnPointsAreaIdx;
 extern SurvivalBakedConfig_t bakedConfig;
-extern const char AlphaModsEnabled[];
-extern const int AlphaModsEnabledCount;
 
 void configInit(void);
 

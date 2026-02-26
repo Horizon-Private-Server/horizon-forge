@@ -24,20 +24,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 200000, 400000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
-    static readonly string[] DEFAULT_ALPHA_MODS = { "SPEED", "AMMO", "IMPACT", "AREA", "JACKPOT", "XP" };
-    [Obsolete]
-    static readonly SurvivalStackableEntry[] DEFAULT_STACKABLE_ENTRIES = { 
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.LowHealthDamageBuff, Max = 0 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExtraJump, Max = 0 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExtraShot, Max = 0 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.Hoverboots, Max = 0 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModSpeed, Max = 10 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModImpact, Max = 5 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModArea, Max = 5 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.AlphaModAmmo, Max = 0 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.Vampire, Max = 0 },
-		new SurvivalStackableEntry() { Type = SurvivalStackableItemId.ExplodingEnemies, Max = 0 }
-	};
 
     static readonly KeyValuePair<string, SurvivalDefaultItems>[] DEFAULT_ITEMS =
     {
@@ -120,44 +106,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public Area MobSpawnPoints;
     public string ReactorMinionMobName;
 
-    [Obsolete, HideInInspector, Tooltip("Your map's customized mob list. Max of 10.")]
-    public List<SurvivalMobSpawnParam> Mobs = new List<SurvivalMobSpawnParam>()
-    {
-        new SurvivalMobSpawnParam() { Name = "Zombie" }
-    };
-
-    [Header("Special Rounds")]
-    [Obsolete, HideInInspector]
-    public List<SurvivalMobSpecialRoundParam> SpecialRounds = new List<SurvivalMobSpecialRoundParam>()
-    {
-        new SurvivalMobSpecialRoundParam() { Name = "Boss Round", Disabled = true, MinRound = 25, RepeatEveryNRounds = 25, UnlimitedPostRoundTime = true, MobNamesToSpawn = new List<string>() { "Zombie" } }
-    };
-
     [Header("Gambits")]
     public List<SurvivalGambit> Gambits = new List<SurvivalGambit>();
-
-    [Header("Stackables")]
-    [Obsolete] public bool EnableStackables;
-    [Obsolete] public int StackableBaseCost = 250000;
-    [Obsolete] public int StackableIncrementCost = 250000;
-    [Obsolete] public List<SurvivalStackableEntry> Stackables = new List<SurvivalStackableEntry>(DEFAULT_STACKABLE_ENTRIES);
-
-    [Header("Mystery Box")]
-    [Obsolete]
-    public List<SurvivalMysteryboxItem> MysteryboxItems = new List<SurvivalMysteryboxItem>()
-    {
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Quad, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.Shield, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.InvisibilityCloak, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.RandomizeWeaponPickups, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.HealthTornado, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.ReviveTotem, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.InfiniteAmmo, Probability = 0.05f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.UpgradeWeapon, Probability = 0.09f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.VoxTeddyBear, Probability = 0.1f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.DreadToken, Probability = 0.3f },
-        new SurvivalMysteryboxItem() { Item = SurvivalMysteryboxItemId.WeaponMod, Probability = 1 },
-    };
 
     [Header("Store")]
     public List<SurvivalStore> Stores = new List<SurvivalStore>()
@@ -197,16 +147,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     [Header("Vendor")]
     public List<uint> VendorCostPerLevel = new List<uint>(DEFAULT_VENDOR_COSTS);
 
-    [Header("Wall Upgrades")]
-    [Obsolete]
-    public List<SurvivalUpgradeEntry> Upgrades = new List<SurvivalUpgradeEntry>()
-    {
-        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Health, Max = 1000 },
-        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Damage, Max = 1000 },
-        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Crit, Max = 100 },
-        new SurvivalUpgradeEntry() { Type = SurvivalUpgradeId.Speed, Max = 40 },
-    };
-
     [HideInInspector] public bool DebugEnabled;
     [HideInInspector] public bool DebugPath;
     [HideInInspector] public bool DebugMove;
@@ -222,8 +162,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     public SurvivalMobDef[] GetEnabledMobs()
     {
-        // Mobs.Where(x => !x.Disabled).OrderBy(x => x.Probability).ThenBy(x => Mobs.IndexOf(x)).ToList();
-
         // fetch enabled and sort
         return HierarchicalSorting.Sort(FindObjectsOfType<SurvivalMobDef>())
             .OrderBy(x => x.Probability)
@@ -592,14 +530,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         //sb.AppendLine("const int MysteryBoxItemProbabilitiesCount = COUNT_OF(MysteryBoxItemProbabilities);");
         //sb.AppendLine();
 
-        // alphamods
-        sb.AppendLine("//--------------------------------------------------------------------------");
-        sb.AppendLine("const char AlphaModsEnabled[] = {");
-        sb.AppendLine(string.Join("\n", DEFAULT_ALPHA_MODS.Select(x => $"\tALPHA_MOD_{x},")));
-        sb.AppendLine("};");
-        sb.AppendLine("const int AlphaModsEnabledCount = COUNT_OF(AlphaModsEnabled);");
-        sb.AppendLine();
-
         // item defs
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("SurvivalItemDef_t itemDefs[] = {");
@@ -932,66 +862,68 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         if (!FindObjectOfType<CommonCodeGen>())
             go.AddComponent<CommonCodeGen>();
 
-        // enable stackables
-        survivalData.EnableStackables = true;
+        // create boss round
+        var specialRoundsGo = new GameObject("Special Rounds");
+        specialRoundsGo.transform.SetParent(go.transform, false);
+        var bossSpecialRoundGo = new GameObject("Boss Round");
+        bossSpecialRoundGo.transform.SetParent(specialRoundsGo.transform, false);
+        var bossSpecialRoundDef = bossSpecialRoundGo.AddComponent<SurvivalSpecialRoundDef>();
+        bossSpecialRoundDef.MinRound = 25;
+        bossSpecialRoundDef.RepeatCount = 0;
+        bossSpecialRoundDef.RepeatEveryNRounds = 25;
+        bossSpecialRoundDef.MobToSpawn = new List<SurvivalMobDef>();
+        bossSpecialRoundDef.SpawnRateFactor = 0.1f;
+        bossSpecialRoundDef.SpawnCountFactor = 0.25f;
+        bossSpecialRoundDef.UnlimitedPostRoundTime = true;
+        bossSpecialRoundDef.DisableDrops = true;
 
         // create default mobs
-        survivalData.Mobs = new List<SurvivalMobSpawnParam>()
+        var mobsRootGo = new GameObject("Mobs");
+        mobsRootGo.transform.SetParent(go.transform, false);
         {
-            new SurvivalMobSpawnParam()
-            {
-                Name = "Reactor",
-                Mob = SurvivalMob.Reactor,
-                Probability = 1f,
-                Variant = 0,
-                SpecialRoundOnly = true,
-                MaxSpawnedPerRound = 1,
-                Attributes = SurvivalMobAttributes.Boss,
-            },
-            new SurvivalMobSpawnParam()
-            {
-                Name = "Reaper",
-                Mob = SurvivalMob.Reaper,
-                Probability = 0.1f,
-                Variant = 0,
-                CooldownTicks = 60,
-                CooldownOffsetPerRoundFactor = -0.6f,
-                MinRound = 5
-            },
-            new SurvivalMobSpawnParam()
-            {
-                Name = "Zombie",
-                Mob = SurvivalMob.Zombie,
-                Probability = 0.5f,
-                Variant = 1,
-                CooldownTicks = 0,
-            },
-            new SurvivalMobSpawnParam()
-            {
-                Name = "Swarmer",
-                Mob = SurvivalMob.Swarmer,
-                Probability = 1f,
-                Variant = 0,
-                CooldownTicks = 0,
-            },
-        };
+            var mobGo = new GameObject("Reactor");
+            mobGo.transform.SetParent(mobGo.transform, false);
+            var mobDef = mobGo.AddComponent<SurvivalMobDef>();
+            mobDef.Mob = SurvivalMob.Reactor;
+            mobDef.Probability = 1;
+            mobDef.Variant = 0;
+            mobDef.SpecialRoundOnly = true;
+            mobDef.MaxSpawnedPerRound = 1;
+            mobDef.Attributes = SurvivalMobAttributes.Boss;
+        }
+        {
+            var mobGo = new GameObject("Reaper");
+            mobGo.transform.SetParent(mobGo.transform, false);
+            var mobDef = mobGo.AddComponent<SurvivalMobDef>();
+            mobDef.Mob = SurvivalMob.Reaper;
+            mobDef.Probability = 0.1f;
+            mobDef.Variant = 0;
+            mobDef.CooldownTicks = 60;
+            mobDef.CooldownOffsetPerRoundFactor = -0.6f;
+            mobDef.MinRound = 5;
+        }
+        {
+            var mobGo = new GameObject("Zombie");
+            mobGo.transform.SetParent(mobGo.transform, false);
+            var mobDef = mobGo.AddComponent<SurvivalMobDef>();
+            mobDef.Mob = SurvivalMob.Zombie;
+            mobDef.Probability = 0.5f;
+            mobDef.Variant = 1;
+            mobDef.CooldownTicks = 0;
 
-        // create boss round
-        survivalData.SpecialRounds = new List<SurvivalMobSpecialRoundParam>()
+            bossSpecialRoundDef.MobToSpawn.Add(mobDef);
+        }
         {
-            new SurvivalMobSpecialRoundParam()
-            {
-                Name = "Boss Round",
-                MinRound = 25,
-                RepeatCount = 0,
-                RepeatEveryNRounds = 25,
-                MobNamesToSpawn = new List<string>() { "Zombie", "Swarmer" },
-                SpawnRateFactor = 0.1f,
-                SpawnCountFactor = 0.25f,
-                UnlimitedPostRoundTime = true,
-                DisableDrops = true,
-            }
-        };
+            var mobGo = new GameObject("Swarmer");
+            mobGo.transform.SetParent(mobGo.transform, false);
+            var mobDef = mobGo.AddComponent<SurvivalMobDef>();
+            mobDef.Mob = SurvivalMob.Swarmer;
+            mobDef.Probability = 1f;
+            mobDef.Variant = 0;
+            mobDef.CooldownTicks = 0;
+
+            bossSpecialRoundDef.MobToSpawn.Add(mobDef);
+        }
 
         // create gambits
         survivalData.Gambits = new List<SurvivalGambit>()
@@ -1493,129 +1425,11 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
     #endregion
 
-    #region Migration
-
-    private void CheckToMigrateMobsListToHierarchy()
-    {
-        // check if mobs already exist
-        // if so assume we've already migrated
-        var mobs = FindObjectsOfType<SurvivalMobDef>(true);
-        if (mobs.Length > 0)
-            return;
-
-        // nothing to migrate
-        if (this.Mobs.Count == 0)
-            return;
-
-        // create Mobs container and begin migration
-        var mobsRootGo = new GameObject("Mobs");
-        mobsRootGo.transform.SetParent(this.transform, false);
-        MigrateMobsListToHierarchy(mobsRootGo);
-    }
-
-    private void MigrateMobsListToHierarchy(GameObject parentGo)
-    {
-        foreach (var mobDef in this.Mobs)
-        {
-            var mobGo = new GameObject(mobDef.Name);
-            mobGo.transform.SetParent(parentGo.transform, false);
-            mobGo.SetActive(!mobDef.Disabled);
-
-            var defComponent = mobGo.AddComponent<SurvivalMobDef>();
-            defComponent.Mob = mobDef.Mob;
-            defComponent.Variant = mobDef.Variant;
-            defComponent.Behavior = mobDef.Behavior;
-            defComponent.Attributes = mobDef.Attributes;
-            defComponent.BlipType = mobDef.BlipType;
-
-            defComponent.SpecialRoundOnly = mobDef.SpecialRoundOnly;
-            defComponent.MinRound = mobDef.MinRound;
-            defComponent.MaxSpawnedAtOnce = mobDef.MaxSpawnedAtOnce;
-            defComponent.MaxSpawnedPerRound = mobDef.MaxSpawnedPerRound;
-            defComponent.Probability = mobDef.Probability;
-            defComponent.SpawnType = mobDef.SpawnType;
-            defComponent.CooldownTicks = mobDef.CooldownTicks;
-            defComponent.CooldownOffsetPerRoundFactor = mobDef.CooldownOffsetPerRoundFactor;
-
-            defComponent.SizeMultiplier = mobDef.SizeMultiplier;
-            defComponent.TurnSpeedMultiplier = mobDef.TurnSpeedMultiplier;
-            defComponent.RangedAttackDistance = mobDef.RangedAttackDistance;
-            defComponent.Xp = mobDef.Xp;
-            defComponent.Bolts = mobDef.Bolts;
-
-            defComponent.Damage = mobDef.Damage;
-            defComponent.DamageMax = mobDef.DamageMax;
-            defComponent.DamageScale = mobDef.DamageScale;
-
-            defComponent.Speed = mobDef.Speed;
-            defComponent.SpeedMax = mobDef.SpeedMax;
-            defComponent.SpeedScale = mobDef.SpeedScale;
-
-            defComponent.Health = mobDef.Health;
-            defComponent.HealthMax = mobDef.HealthMax;
-            defComponent.HealthScale = mobDef.HealthScale;
-
-            defComponent.BaseColor = mobDef.BaseColor;
-            defComponent.GlowColor = mobDef.GlowColor;
-            defComponent.SpriteColor = mobDef.SpriteColor;
-        }
-    }
-
-    private void CheckToMigrateSpecialRoundListToHierarchy()
-    {
-        // check if defs already exist
-        // if so assume we've already migrated
-        var defs = FindObjectsOfType<SurvivalSpecialRoundDef>(true);
-        if (defs.Length > 0)
-            return;
-
-        // nothing to migrate
-        if (this.SpecialRounds.Count == 0)
-            return;
-
-        // create Mobs container and begin migration
-        var defsRootGo = new GameObject("Special Rounds");
-        defsRootGo.transform.SetParent(this.transform, false);
-        MigrateSpecialRoundListToHierarchy(defsRootGo);
-    }
-
-    private void MigrateSpecialRoundListToHierarchy(GameObject parentGo)
-    {
-        // expect mobs to be migrated already
-        var mobs = FindObjectsOfType<SurvivalMobDef>(true);
-
-        foreach (var def in this.SpecialRounds)
-        {
-            var defGo = new GameObject(def.Name);
-            defGo.transform.SetParent(parentGo.transform, false);
-            defGo.SetActive(!def.Disabled);
-
-            var defComponent = defGo.AddComponent<SurvivalSpecialRoundDef>();
-            defComponent.MinRound = def.MinRound;
-            defComponent.RepeatEveryNRounds = def.RepeatEveryNRounds;
-            defComponent.RepeatCount = def.RepeatCount;
-            defComponent.SpawnCountFactor = def.SpawnCountFactor;
-            defComponent.SpawnRateFactor = def.SpawnRateFactor;
-            defComponent.MaxSpawnedAtOnce = def.MaxSpawnedAtOnce;
-            defComponent.UnlimitedPostRoundTime = def.UnlimitedPostRoundTime;
-            defComponent.MaxSpawnedAtOnce = def.MaxSpawnedAtOnce;
-            defComponent.DisableDrops = def.DisableDrops;
-
-            // convert names to mob def references
-            defComponent.MobToSpawn = def.MobNamesToSpawn.Select(x => mobs.FirstOrDefault(m => m.Name == x)).Where(x => x).ToList();
-        }
-    }
-
-    #endregion
-
     #region Validation
 
     private void OnValidate()
     {
         if (!_mobConfig) _mobConfig = SurvivalMobsScriptableObject.Load();
-
-        //while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
-        //while (SpecialRounds != null && SpecialRounds.Count > 16) SpecialRounds.RemoveAt(16);
 
         // check stores
         while (Stores != null && Stores.Count > MAX_STORES) Stores.RemoveAt(MAX_STORES);
@@ -1631,34 +1445,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         WeaponPrestigeMax = Mathf.Clamp(WeaponPrestigeMax, 1, 5);
         while (PrestigeCostPerLevel.Count < WeaponPrestigeMax) PrestigeCostPerLevel.Add(DEFAULT_PRESTIGE_COSTS[PrestigeCostPerLevel.Count]);
         while (PrestigeCostPerLevel.Count > WeaponPrestigeMax) PrestigeCostPerLevel.RemoveAt(PrestigeCostPerLevel.Count - 1);
-
-        foreach (var upgrade in Upgrades)
-        {
-            int maxAllowed;
-            switch (upgrade.Type)
-            {
-                case SurvivalUpgradeId.Crit: maxAllowed = 100; break;
-                default: maxAllowed = 5000; break;
-            }
-            upgrade.Max = Mathf.Clamp(upgrade.Max, 1, maxAllowed);
-        }
-
-        foreach (var stackable in Stackables)
-        {
-            switch (stackable.Type)
-            {
-                case SurvivalStackableItemId.AlphaModSpeed:
-                    stackable.Max = Mathf.Clamp(stackable.Max, 1, 10); break;
-                case SurvivalStackableItemId.AlphaModArea:
-                    stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
-                case SurvivalStackableItemId.AlphaModImpact:
-                    stackable.Max = Mathf.Clamp(stackable.Max, 1, 5); break;
-            }
-        }
-
-        // run migration checks
-        CheckToMigrateMobsListToHierarchy();
-        CheckToMigrateSpecialRoundListToHierarchy();
     }
 
     private void ValidateSurvivalConfigOrError()

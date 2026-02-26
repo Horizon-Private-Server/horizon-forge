@@ -290,12 +290,6 @@ int mapGetRoundTransitionTime(int round)
 }
 
 //--------------------------------------------------------------------------
-int mapGetRandomAlphamodForPlayer(Player *player, int gadgetIdOrEmpty)
-{
-	return AlphaModsEnabled[rand(AlphaModsEnabledCount)];
-}
-
-//--------------------------------------------------------------------------
 int mapGetPlayerItemCount(Player *player, int itemId)
 {
 	if (!MapConfig.State)
@@ -430,7 +424,6 @@ void interopInit(void)
 	MapConfig.Functions.GetCurrentDifficultyFunc = &mapGetCurrentDifficulty;
 	MapConfig.Functions.GetDropItemOnMobKilledFunc = &mapGetDropItemOnMobKilled;
 	MapConfig.Functions.GetRoundTransitionTimeFunc = &mapGetRoundTransitionTime;
-	MapConfig.Functions.GetRandomAlphamodForPlayerFunc = &mapGetRandomAlphamodForPlayer;
 	MapConfig.Functions.GetPlayerItemCountFunc = &mapGetPlayerItemCount;
 	MapConfig.Functions.GetOnPlayerItemAcquiredFunc = &itemOnAcquireTriggered;
 	MapConfig.Functions.GetOnPlayerItemConsumedFunc = &itemOnConsumeTriggered;
