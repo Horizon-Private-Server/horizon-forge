@@ -79,6 +79,7 @@ typedef struct SurvivalItemDef
 
 	// drops
 	float DropChanceWeight;
+	char DropPickupByAnyPlayer;
 
 	// chance to get on weapon upgrade at weapon vendor
 	float VendorRewardChanceWeight;

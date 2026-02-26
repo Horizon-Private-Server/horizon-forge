@@ -225,6 +225,9 @@ void dropUpdate(Moby *moby)
 	Player *ownerPlayer = playerGetFromIndex(pvars->OwnerPlayerId);
 	int isOwner = dropAmIOwner(moby);
 
+	SurvivalItemDef_t itemDef;
+	dropGetItem(pvars->ItemIdx, &itemDef);
+
 	// register draw event
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&dropPostDraw, moby);
 
@@ -275,7 +278,7 @@ void dropUpdate(Moby *moby)
 			vector_subtract(t, player->PlayerPosition, moby->Position);
 			if (vector_sqrmag(t) < (DROP_PICKUP_RADIUS * DROP_PICKUP_RADIUS))
 			{
-				if (isOwner)
+				if (isOwner || itemDef.DropPickupByAnyPlayer)
 				{
 					dropPickup(moby, i);
 				}
@@ -401,9 +404,12 @@ int dropHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 	// read event
 	guberEventRead(event, &args, sizeof(struct DropPickupEventArgs));
 
-	// acquire item
-	if (dropAmIOwner(moby))
+	// acquire item if state is 0
+	if (dropAmIOwner(moby) && moby->State == 0)
 		itemBeginAcquire(args.PickedUpByPlayerId, pvars->ItemIdx);
+
+	// indicate moby has been picked up
+	mobySetState(moby, 1, -1);
 
 	// destroy particles
 	for (i = 0; i < 4; ++i)

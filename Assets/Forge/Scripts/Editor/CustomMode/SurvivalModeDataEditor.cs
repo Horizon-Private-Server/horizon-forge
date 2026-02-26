@@ -225,7 +225,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
         var height = EditorGUIUtility.singleLineHeight;
 
         //if (property.isExpanded)
-            height += EditorGUIUtility.singleLineHeight * 17;
+            height += EditorGUIUtility.singleLineHeight * 18;
 
         return height;
     }
@@ -272,6 +272,7 @@ public class SurvivalTemplateItemEntryDrawer : PropertyDrawer
             line = UnityHelper.FloatOverride(line, property, "MysteryboxChanceWeight", defaultItemDef.Def.MysteryboxChanceWeight);
             line = UnityHelper.BoolOverride(line, property, "MysteryboxForceAcquire", defaultItemDef.Def.MysteryboxForceAcquire);
             line = UnityHelper.FloatOverride(line, property, "DropChanceWeight", defaultItemDef.Def.DropChanceWeight);
+            line = UnityHelper.BoolOverride(line, property, "DropPickupByAnyPlayer", defaultItemDef.Def.DropPickupByAnyPlayer);
             line = UnityHelper.FloatOverride(line, property, "VendorRewardChanceWeight", defaultItemDef.Def.VendorRewardChanceWeight);
             
             // draw probabilities
@@ -388,6 +389,7 @@ public class SurvivalItemEntryDrawer : PropertyDrawer
             line = UnityHelper.PropertyField(line, property, "MysteryboxChanceWeight");
             line = UnityHelper.PropertyField(line, property, "MysteryboxForceAcquire");
             line = UnityHelper.PropertyField(line, property, "DropChanceWeight");
+            line = UnityHelper.PropertyField(line, property, "DropPickupByAnyPlayer");
             line = UnityHelper.PropertyField(line, property, "VendorRewardChanceWeight");
             
             line = UnityHelper.PropertyField(line, property, "CustomInitFunctionName");

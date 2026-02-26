@@ -1900,6 +1900,7 @@ public class SurvivalDefaultItemOverrideEntry
 
     [Header("Drops")]
     public FloatOverride DropChanceWeight;
+    public BoolOverride DropPickupByAnyPlayer;
 
     [Header("Weapon Vendor")]
     [Tooltip("Chance to acquire item on weapon upgrade at vendor.")] public FloatOverride VendorRewardChanceWeight;
@@ -1947,6 +1948,7 @@ public class SurvivalDefaultItemOverrideEntry
         sb.AppendLine($"\t\t.MysteryboxChanceWeight = {MysteryboxChanceWeight.GetValue(defaultItem.Def.MysteryboxChanceWeight).ToInvariantCulture()},");
         sb.AppendLine($"\t\t.MysteryboxForceAcquire = {(MysteryboxForceAcquire.GetValue(defaultItem.Def.MysteryboxForceAcquire) ? 1 : 0)},");
         sb.AppendLine($"\t\t.DropChanceWeight = {DropChanceWeight.GetValue(defaultItem.Def.DropChanceWeight).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.DropPickupByAnyPlayer = {(DropPickupByAnyPlayer.GetValue(defaultItem.Def.DropPickupByAnyPlayer) ? 1 : 0)},");
         sb.AppendLine($"\t\t.VendorRewardChanceWeight = {VendorRewardChanceWeight.GetValue(defaultItem.Def.VendorRewardChanceWeight).ToInvariantCulture()},");
         sb.AppendLine($"\t\t.StoreCostType = {storeCostType.GetDescription()},");
         sb.AppendLine($"\t\t.StoreCost = {StoreCost.GetValue(defaultItem.Def.StoreCost)},");
@@ -2013,6 +2015,7 @@ public class SurvivalItemEntry
 
     [Header("Drops")]
     public float DropChanceWeight;
+    public bool DropPickupByAnyPlayer;
 
     [Header("Weapon Vendor")]
     [Tooltip("Chance to acquire item on weapon upgrade at vendor.")] public float VendorRewardChanceWeight;
@@ -2061,6 +2064,7 @@ public class SurvivalItemEntry
         sb.AppendLine($"\t\t.MysteryboxChanceWeight = {MysteryboxChanceWeight.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.MysteryboxForceAcquire = {(MysteryboxForceAcquire ? 1 : 0)},");
         sb.AppendLine($"\t\t.DropChanceWeight = {DropChanceWeight.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.DropPickupByAnyPlayer = {(DropPickupByAnyPlayer ? 1 : 0)},");
         sb.AppendLine($"\t\t.VendorRewardChanceWeight = {VendorRewardChanceWeight.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.StoreCostType = {StoreCostType.GetDescription()},");
         sb.AppendLine($"\t\t.StoreCost = {StoreCost},");
