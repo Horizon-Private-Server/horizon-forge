@@ -63,7 +63,6 @@ typedef u32 (*MapGetXpForNextToken_func)(Player *player, int token);
 typedef float (*MapGetCurrentDifficulty_func)(void);
 typedef int (*MapGetDropItemOnMobKilled_func)(Player *killedByPlayer, Moby *mob, int gadgetId);
 typedef int (*MapGetRoundTransitionTime_func)(int round);
-typedef int (*MapGetRandomAlphamodForPlayer_func)(Player *player, int gadgetIdOrEmpty);
 typedef int (*MapGetPlayerItemCount_func)(Player *player, int itemId);
 typedef void (*MapOnPlayerItemAcquired_func)(Player *player, int itemId);
 typedef void (*MapOnPlayerItemConsumed_func)(Player *player, int itemId);
@@ -120,7 +119,6 @@ struct SurvivalInteropTable
 	MapGetCurrentDifficulty_func GetCurrentDifficultyFunc;
 	MapGetDropItemOnMobKilled_func GetDropItemOnMobKilledFunc;
 	MapGetRoundTransitionTime_func GetRoundTransitionTimeFunc;
-	MapGetRandomAlphamodForPlayer_func GetRandomAlphamodForPlayerFunc;
 	MapGetPlayerItemCount_func GetPlayerItemCountFunc;
 	MapOnPlayerItemAcquired_func GetOnPlayerItemAcquiredFunc;
 	MapOnPlayerItemConsumed_func GetOnPlayerItemConsumedFunc;

@@ -524,3 +524,9 @@ void addRadarBlip(Moby *moby, int life, int type, int team)
 		blip->Team = team;
 	}
 }
+
+//--------------------------------------------------------------------------
+int survivalIsPaused(void)
+{
+	return MapConfig.State && MapConfig.State->Paused;
+}

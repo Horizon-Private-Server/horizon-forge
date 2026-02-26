@@ -110,6 +110,9 @@ int mobIsFrozen(Moby *moby)
 	if (!moby || !moby->PVar || !MapConfig.State)
 		return 0;
 
+	if (survivalIsPaused())
+		return 1;
+
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	return MapConfig.State->Freeze && pvars->MobVars.Config.MobAttribute != MOB_ATTRIBUTE_FREEZE && pvars->MobVars.Health > 0;
 }
