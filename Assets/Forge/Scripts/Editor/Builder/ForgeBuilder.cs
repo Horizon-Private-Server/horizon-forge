@@ -2015,6 +2015,7 @@ public static class ForgeBuilder
                     }
                     else
                     {
+						ctx.Cancel = true;
                         Debug.LogError("Failed to build. Make sure that Docker is running.");
                     }
                 }

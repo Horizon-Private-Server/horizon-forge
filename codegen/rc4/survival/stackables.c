@@ -5,6 +5,7 @@
 #include "game.h"
 #include "messageid.h"
 #include "utils.h"
+#include "shared.h"
 #include "maputils.h"
 
 #define ITEM_STACKABLE_HOVERBOOTS_DUR_TPS (2 * TPS)
@@ -182,8 +183,6 @@ void stackableProcessPlayer_ExtraJumps(Player *player)
 	if (!playerIsValid(player))
 		return;
 
-	struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[player->PlayerId];
-
 	// trigger extra jump on JUMP button
 	int featherCount = playerGetItemCount(player, ITEM_PASSIVE_EXTRA_JUMP);
 	int jumpBits = padGetMappedPad(0x40, player->PlayerId) << 8;
@@ -257,7 +256,6 @@ void stackableProcessPlayer_Hoverboots(Player *player)
 	if (!playerIsValid(player))
 		return;
 
-	struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[player->PlayerId];
 	int playerId = player->PlayerId;
 	int canHover = (player->PlayerState == PLAYER_STATE_WALK || player->PlayerState == PLAYER_STATE_IDLE || player->PlayerState == PLAYER_STATE_FALL || player->PlayerState == PLAYER_STATE_GET_HIT) && !player->Ground.onGood;
 	int count = playerGetItemCount(player, ITEM_PASSIVE_HOVERBOOTS);
@@ -315,21 +313,19 @@ void stackablesItemInit_Hoverboots(int defIdx, struct SurvivalItemDef *def)
 void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId)
 {
 	Player *killedByPlayer = playerGetFromIndex(killedByPlayerId);
+  if (!playerIsValid(killedByPlayer))
+    return;
 
 #ifdef ITEM_PASSIVE_VAMPIRE
-	if (playerIsValid(killedByPlayer))
-	{
-		int vampCount = playerGetItemCount(killedByPlayer, ITEM_PASSIVE_VAMPIRE);
-		if (vampCount > 0)
-		{
-			playerSetHealth(killedByPlayer, minf(killedByPlayer->MaxHealth, killedByPlayer->Health + (vampCount * ITEM_STACKABLE_VAMPIRE_HEALTH_AMT)));
-		}
-	}
+  int vampCount = playerGetItemCount(killedByPlayer, ITEM_PASSIVE_VAMPIRE);
+  if (vampCount > 0)
+  {
+    playerSetHealth(killedByPlayer, minf(killedByPlayer->MaxHealth, killedByPlayer->Health + (vampCount * ITEM_STACKABLE_VAMPIRE_HEALTH_AMT)));
+  }
 #endif
 
 #ifdef ITEM_PASSIVE_EXPLODING_ENEMIES
-
-	if (playerIsValid(killedByPlayer) && killedByWeaponId >= 0)
+	if (killedByWeaponId >= 0)
 	{
 		if (!killedByPlayer->IsLocal)
 			return; // only process dmg if local
@@ -365,13 +361,12 @@ void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId
 							.DamageStrength = 1,
 							.DamageIndex = 0,
 							.Flags = 1,
-							.Momentum = 0};
+							.Momentum = {0}};
 					mobyCollDamageDirect(mob, &in);
 				}
 			}
 		}
 	}
-
 #endif
 }
 

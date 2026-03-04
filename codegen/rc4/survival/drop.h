@@ -68,7 +68,7 @@ int dropGetRandomItem(Moby *mobMoby, int forPlayerId, int gadgetId);
 void dropTick(void);
 void dropInit(void);
 int dropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team);
-struct GuberMoby *dropGetGuber(Moby *moby);
+struct Guber *dropGetGuber(Moby *moby);
 int dropHandleEvent(Moby *moby, GuberEvent *event);
 
 #endif // SURVIVAL_DROP_H

@@ -30,6 +30,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
+#include <libdl/random.h>
 #include "game.h"
 #include "mob.h"
 #include "maputils.h"

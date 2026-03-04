@@ -2,6 +2,7 @@
 #include <libdl/dialog.h>
 #include <libdl/random.h>
 #include <libdl/stdio.h>
+#include <libdl/game.h>
 #include <libdl/string.h>
 #include <libdl/hud.h>
 #include <libdl/player.h>
@@ -96,7 +97,7 @@ void mapOnItemConsumed_Earthquake(int defIdx, SurvivalItemDef_t *def, int player
 
 	// generate splash position
 	VECTOR pos = {0, 0, 0.25, 0};
-	u32 baseColor = hudGetTeamColor(player->Team, 2);
+	// u32 baseColor = hudGetTeamColor(player->Team, 2);
 	u32 color = 0xff202020; //(baseColor & 0xffffff) | 0x60000000;
 	vector_add(pos, pos, player->Ground.point);
 
@@ -140,7 +141,7 @@ void mapOnItemConsumed_Earthquake(int defIdx, SurvivalItemDef_t *def, int player
 
 	// knockback enemies
 	int power = count * 2;
-	mobReactToExplosionAt(player, pos, count * ITEM_EARTHQUAKE_DAMAGE_PER, radius, power > knockbackMaxPower ? knockbackMaxPower : power);
+	mobReactToExplosionAt(player->PlayerMoby, pos, count * ITEM_EARTHQUAKE_DAMAGE_PER, radius, power > knockbackMaxPower ? knockbackMaxPower : power);
 }
 
 //--------------------------------------------------------------------------

@@ -77,7 +77,7 @@ struct StoreDef *storeGetStoreDef(Moby *moby, int localPlayerIndex)
 //--------------------------------------------------------------------------
 void storeGetName(Moby *moby, int localPlayerIndex, char *buf, int len)
 {
-	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
+	// struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 
 	// default to Store
 	safe_strcpy(buf, "Store", len);
@@ -91,7 +91,7 @@ void storeGetName(Moby *moby, int localPlayerIndex, char *buf, int len)
 //--------------------------------------------------------------------------
 int storeGetPageCount(Moby *moby, int localPlayerIndex)
 {
-	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
+	// struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 	struct StoreDef *storeDef = storeGetStoreDef(moby, localPlayerIndex);
 	if (!storeDef)
 		return 0;
@@ -102,13 +102,19 @@ int storeGetPageCount(Moby *moby, int localPlayerIndex)
 //--------------------------------------------------------------------------
 int storeGetPage(Moby *moby, int localPlayerIndex, int pageIdx, struct StorePageDef *page)
 {
-	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
+	// struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 	struct StoreDef *storeDef = storeGetStoreDef(moby, localPlayerIndex);
 	if (!storeDef)
+	{
+		memset(page, 0, sizeof(struct StorePageDef));
 		return 0;
+	}
 
 	if (pageIdx < 0 || pageIdx >= storeDef->PagesCount)
+	{
+		memset(page, 0, sizeof(struct StorePageDef));
 		return 0;
+	}
 
 	memcpy(page, &storeDef->Pages[pageIdx], sizeof(struct StorePageDef));
 	return 1;
@@ -117,14 +123,20 @@ int storeGetPage(Moby *moby, int localPlayerIndex, int pageIdx, struct StorePage
 //--------------------------------------------------------------------------
 int storeGetItem(Moby *moby, int localPlayerIndex, int itemId, SurvivalItemDef_t *item)
 {
-	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
+	// struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 	struct StoreDef *storeDef = storeGetStoreDef(moby, localPlayerIndex);
 	if (!storeDef)
+	{
+		memset(item, 0, sizeof(SurvivalItemDef_t));
 		return 0;
+	}
 
 	// get default item
 	if (itemId < 0 || itemId >= MapConfig.ItemDefCount)
+	{
+		memset(item, 0, sizeof(SurvivalItemDef_t));
 		return 0;
+	}
 
 	// return copy of item
 	memcpy(item, &MapConfig.ItemDefs[itemId], sizeof(SurvivalItemDef_t));
@@ -162,7 +174,7 @@ int storeChargeItemPlayerBank(Moby *moby, int localPlayerIndex, int itemId, Surv
 enum StoreItemCanBuyResult storeCanBuyItem(Moby *moby, int localPlayerIndex, int itemIdx)
 {
 	SurvivalItemDef_t itemDef;
-	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
+	// struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 	Player *player = playerGetFromSlot(localPlayerIndex);
 
 	// check we have state
@@ -211,7 +223,7 @@ enum StoreItemCanBuyResult storeCanBuyItem(Moby *moby, int localPlayerIndex, int
 void storePlayerBuy(Moby *moby, int localPlayerIndex, int itemIdx)
 {
 	SurvivalItemDef_t itemDef;
-	struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
+	// struct StorePVar *pvars = (struct StorePVar *)moby->PVar;
 	Player *player = playerGetFromSlot(localPlayerIndex);
 
 	// check can buy
@@ -236,8 +248,6 @@ void storePlayerBuy(Moby *moby, int localPlayerIndex, int itemIdx)
 //--------------------------------------------------------------------------
 void storeSetState(Moby *moby, int state)
 {
-	int i;
-
 	// only host can change state
 	if (!gameAmIHost())
 		return;
@@ -254,9 +264,9 @@ void storeSetState(Moby *moby, int state)
 void storeDrawItemList(Moby *moby, int localPlayerIndex, Window_t *drawWindow, int selectedIdx, struct StorePageDef *page)
 {
 	static int drawItemsFrom = 0;
-	const u32 bgColor = 0x70000000;						// dark gray
-	const u32 textColor = 0x80FFFFFF;					// white
-	const u32 spriteColor = 0x80808080;				// gray
+	const u32 bgColor = 0x70000000;		// dark gray
+	const u32 textColor = 0x80FFFFFF; // white
+	// const u32 spriteColor = 0x80808080;				// gray
 	const u32 selectedColor = 0x40008080;			// yellow
 	const u32 cannotAffordColor = 0x80000080; // red
 	const u32 canAffordColor = 0x80108010;		// green
@@ -356,7 +366,6 @@ void storeDrawItemList(Moby *moby, int localPlayerIndex, Window_t *drawWindow, i
 void storeDrawTabs(Moby *moby, int localPlayerIndex, Window_t *drawWindow, int selectedIdx)
 {
 	const u32 bgColor = 0x60000010;
-	const u32 bgSolidColor = 0x80000000;
 	const u32 textColor = 0x80FFFFFF;
 	const u32 borderColor = 0x80000020;
 	const float tabPadding = 4;
@@ -401,10 +410,6 @@ void storeDrawFooter(Moby *moby, int localPlayerIndex, Window_t *drawWindow)
 
 	// draw bg
 	windowFill(drawWindow, bgSolidColor);
-
-	// get selected item
-	SurvivalItemDef_t *selectedItem = NULL;
-
 	snprintf(strBuf, sizeof(strBuf), "\x14 \x15 PAGE    \x10 BUY    \x12 CLOSE");
 	windowDrawText(drawWindow, TEXT_ALIGN_MIDDLELEFT, 2, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
 }
@@ -413,7 +418,6 @@ void storeDrawFooter(Moby *moby, int localPlayerIndex, Window_t *drawWindow)
 void storeDrawMenu(Moby *moby, int localPlayerIndex)
 {
 	u32 bgColor = 0x60000000;
-	u32 bgSolidColor = 0x80000000;
 	u32 borderColor = 0x80000020;
 	u32 textColor = 0x80FFFFFF;
 	Window_t drawWindow;
@@ -476,7 +480,7 @@ void storeDrawMenu(Moby *moby, int localPlayerIndex)
 		windowCreateFrom(&windowDesc, &drawWindow, 0, tabRowHeight + headerHeight + itemListHeight, drawWindow.Width, descHeight, TEXT_ALIGN_TOPCENTER);
 		windowFill(&windowDesc, bgColor);
 		windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLELEFT, descPaddingX, 0, 0.6, textColor, item.Description, -1, TEXT_ALIGN_MIDDLELEFT);
-		windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLERIGHT, -descPaddingX, 0, 0.6, textColor, ITEM_TYPE_NAMES[item.Type], -1, TEXT_ALIGN_MIDDLERIGHT);
+		windowDrawText(&windowDesc, TEXT_ALIGN_MIDDLERIGHT, -descPaddingX, 0, 0.6, textColor, (char *)ITEM_TYPE_NAMES[item.Type], -1, TEXT_ALIGN_MIDDLERIGHT);
 	}
 
 	// draw footer
@@ -764,10 +768,10 @@ int storeHandleEvent_SetState(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-struct GuberMoby *storeGetGuber(Moby *moby)
+struct Guber *storeGetGuber(Moby *moby)
 {
 	if (moby->OClass == STORE_MOBY_OCLASS && moby->PVar)
-		return moby->GuberMoby;
+		return moby->Guber;
 
 	return 0;
 }
@@ -847,7 +851,7 @@ void storeInit(struct StoreVTable *defaultVTable)
 	Moby *testMoby = mobySpawn(STORE_MOBY_OCLASS, 0);
 	if (testMoby)
 	{
-		u32 mobyFunctionsPtr = (u32)mobyGetFunctions(testMoby);
+		MobyFunctions *mobyFunctionsPtr = mobyGetFunctions(testMoby);
 		if (mobyFunctionsPtr)
 		{
 			mapInstallMobyFunctions(mobyFunctionsPtr);

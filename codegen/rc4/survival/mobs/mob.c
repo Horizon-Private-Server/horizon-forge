@@ -182,7 +182,7 @@ float mobGetTargetRadius(Moby *target)
 //--------------------------------------------------------------------------
 float mobGetDistanceToTarget(Moby *moby, Moby *target)
 {
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	// struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	VECTOR t;
 
 	if (!target)
@@ -402,11 +402,11 @@ int mobDoDamageTryHit(Moby *moby, Moby *hitMoby, VECTOR jointPosition, int isAoE
 int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE)
 {
 	VECTOR p, delta;
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	// struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	int i;
 	int result = 0;
 	float t = 0;
-	float sqrRadius = radius * radius;
+	// float sqrRadius = radius * radius;
 	float firstPassRadius = 5 + radius;
 	float firstPassSqrRadius = powf(firstPassRadius, 2);
 
@@ -477,10 +477,10 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 {
 	VECTOR p, delta;
 	MATRIX jointMtx;
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	// struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	int i;
 	int result = 0;
-	float sqrRadius = radius * radius;
+	// float sqrRadius = radius * radius;
 	float firstPassRadius = 5 + radius;
 	float firstPassSqrRadius = powf(5 + radius, 2);
 
@@ -544,7 +544,7 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 //--------------------------------------------------------------------------
 void mobSetAction(Moby *moby, int action)
 {
-	struct MobActionUpdateEventArgs args;
+	// struct MobActionUpdateEventArgs args;
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 
 	// don't set if already action
@@ -673,7 +673,7 @@ void mobResetMoveStep(Moby *moby)
 int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	VECTOR delta, horizontalDelta, reflectedDelta;
+	VECTOR delta, horizontalDelta;
 	VECTOR hitTo, hitFrom;
 	VECTOR hitToEx, hitNormal, hitToExBack;
 	VECTOR up = {0, 0, 0, 0};
@@ -777,6 +777,7 @@ int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to)
 		vector_scale(hitDir, hitDir, hitBitangentDotDelta * vector_length(delta));
 		vector_add(outputPos, from, hitDir);
 
+    // VECTOR reflectedDelta;
 		// vector_projectonhorizontal(hitToEx, hitToEx);
 		// vector_reflect(reflectedDelta, hitToEx, hitNormal);
 		// if (reflectedDelta[2] > delta[2])
@@ -802,18 +803,18 @@ void mobMove(Moby *moby)
 	VECTOR nextPos;
 	VECTOR temp;
 	VECTOR groundCheckFrom, groundCheckTo;
-	VECTOR up = {0, 0, 1, 0};
 	int isMovingDown = 0;
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	int isOwner = mobAmIOwner(moby);
 	int moveStep = pvars->MobVars.MoveVars.LastMoveStep;
 
 	u8 stuckCheckTicks = decTimerU8(&pvars->MobVars.MoveVars.StuckCheckTicks);
-	u8 ungroundedTicks = decTimerU8(&pvars->MobVars.MoveVars.UngroundedTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.UngroundedTicks);
 	u8 moveSkipTicks = decTimerU8(&pvars->MobVars.MoveVars.MoveSkipTicks);
 	u8 slowTicks = decTimerU8(&pvars->MobVars.SlowTicks);
 
 #if DEBUG_MOVE
+  VECTOR up = {0,0,1,0};
 	if (pvars->MobVars.Target)
 	{
 		VECTOR from, to, delta;
@@ -1175,8 +1176,6 @@ void mobGetVelocityToTarget(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to,
 void mobGetVelocityToTargetSimple(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration)
 {
 	VECTOR targetVelocity;
-	VECTOR fromToTarget;
-	VECTOR next, nextToTarget;
 	VECTOR temp;
 	float targetSpeed = speed * MATH_DT;
 
@@ -1184,7 +1183,7 @@ void mobGetVelocityToTargetSimple(Moby *moby, VECTOR velocity, VECTOR from, VECT
 	if (!pvars)
 		return;
 
-	float collRadius = pvars->MobVars.Config.CollRadius + 0.5;
+	// float collRadius = pvars->MobVars.Config.CollRadius + 0.5;
 
 	// target velocity from rotation
 	vector_subtract(targetVelocity, to, from);
@@ -1412,8 +1411,8 @@ void mobPostDrawQuad(Moby *moby, float scale, u32 color, int jointId)
 //--------------------------------------------------------------------------
 void mobPostDrawDebug(Moby *moby)
 {
-	MATRIX jointMtx;
 #if PRINT_JOINTS
+	MATRIX jointMtx;
 	int i = 0;
 	char buf[32];
 	int animJointCount = 0;

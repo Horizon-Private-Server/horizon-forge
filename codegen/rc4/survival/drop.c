@@ -26,7 +26,10 @@ GuberEvent *dropCreateEvent(Moby *moby, u32 eventType);
 int dropGetItem(int itemIdx, SurvivalItemDef_t *item)
 {
 	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+	{
+		memset(item, 0, sizeof(SurvivalItemDef_t));
 		return 0;
+	}
 
 	memcpy(item, &MapConfig.ItemDefs[itemIdx], sizeof(SurvivalItemDef_t));
 	return 1;
@@ -270,22 +273,22 @@ void dropUpdate(Moby *moby)
 	}
 
 	// handle pickup
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+	for (i = 0; i < GAME_MAX_LOCALS; ++i)
 	{
-		Player *player = playerGetFromIndex(i);
-		if (player && !playerIsDead(player) && player->IsLocal)
+		Player *player = playerGetFromSlot(i);
+		if (playerIsValid(player) && !playerIsDead(player))
 		{
 			vector_subtract(t, player->PlayerPosition, moby->Position);
 			if (vector_sqrmag(t) < (DROP_PICKUP_RADIUS * DROP_PICKUP_RADIUS))
 			{
 				if (isOwner || itemDef.DropPickupByAnyPlayer)
 				{
-					dropPickup(moby, i);
+					dropPickup(moby, player->PlayerId);
 				}
 				else if (pvars->OwnerPlayerId >= 0 && pvars->OwnerPlayerId < GAME_MAX_PLAYERS)
 				{
-					snprintf(dropLocalStrBuf[player->LocalPlayerIndex], sizeof(dropLocalStrBuf[player->LocalPlayerIndex]), DROP_CANNOT_PICKUP_MESSAGE, gs->PlayerNames[pvars->OwnerPlayerId]);
-					uiShowPopup(player->LocalPlayerIndex, dropLocalStrBuf[player->LocalPlayerIndex]);
+					snprintf(dropLocalStrBuf[i], sizeof(dropLocalStrBuf[i]), DROP_CANNOT_PICKUP_MESSAGE, gs->PlayerNames[(int)pvars->OwnerPlayerId]);
+					uiShowPopup(i, dropLocalStrBuf[i]);
 				}
 				break;
 			}
@@ -340,7 +343,7 @@ int dropHandleEvent_Spawn(Moby *moby, GuberEvent *event)
 	// moby->PClass = NULL;
 
 	SurvivalItemDef_t itemDef;
-	int hasItem = dropGetItem(args.ItemIdx, &itemDef);
+	dropGetItem(args.ItemIdx, &itemDef);
 
 	// update pvars
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
@@ -395,7 +398,7 @@ int dropHandleEvent_Destroy(Moby *moby, GuberEvent *event)
 int dropHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 {
 	struct DropPickupEventArgs args;
-	int i, j;
+	int i;
 	struct DropPVar *pvars = (struct DropPVar *)moby->PVar;
 
 	if (!pvars || pvars->Destroyed)
@@ -431,10 +434,10 @@ int dropHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-struct GuberMoby *dropGetGuber(Moby *moby)
+struct Guber *dropGetGuber(Moby *moby)
 {
 	if (moby->OClass == DROP_MOBY_OCLASS && moby->PVar)
-		return moby->GuberMoby;
+		return moby->Guber;
 
 	return 0;
 }
@@ -524,11 +527,11 @@ void dropInit(void)
 		return;
 
 	// set vtable callbacks
-	u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
+	MobyFunctions *mobyFunctionsPtr = mobyGetFunctions(temp);
 	if (mobyFunctionsPtr)
 	{
 		mapInstallMobyFunctions(mobyFunctionsPtr);
-		DPRINTF("DROP oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32 *)(mobyFunctionsPtr + 0x04), *(u32 *)(mobyFunctionsPtr + 0x14));
+		DPRINTF("DROP oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
 	}
 	mobyDestroy(temp);
 

@@ -19,6 +19,7 @@ void gateSetCollision(int collActive);
 #endif
 
 int mapPathCanBeSkippedForTarget(Moby* moby);
+int pathBuildPath(int fromNodeIdx, int toNodeIdx, u8* outPath, int maxLength);
 
 struct TargetCache
 {
@@ -278,7 +279,6 @@ int pathGetClosestNodeInSight(Moby* moby, int * foundInSight)
 {
   int i,j;
   VECTOR position = {0,0,1,0};
-  VECTOR from;
   VECTOR delta;
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   float collRadius = 0.5;
@@ -467,7 +467,7 @@ int pathGetPath(Moby* moby)
   if (!pathHasRouteFromTo(closestNodeIdxToMob, closestNodeIdxToTarget)) {
     pvars->MobVars.Target = NULL;
     moveVars->PathStartEndNodes[1] = closestNodeIdxToMob;
-    return;
+    return 0;
   }
 
   int maxLength = sizeof(moveVars->CurrentPath) / sizeof(u8);
@@ -558,7 +558,6 @@ int pathBuildPath(int fromNodeIdx, int toNodeIdx, u8* outPath, int maxLength)
 //--------------------------------------------------------------------------
 void pathSetPath(Moby* moby, int fromNodeIdx, int toNodeIdx, int currentOnPath, int hasReachedStart, int hasReachedEnd)
 {
-  int i;
   if (!moby || !moby->PVar)
     return;
 

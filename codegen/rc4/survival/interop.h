@@ -33,7 +33,7 @@ typedef void (*ModeSendPlayerStats_func)(int playerId);
 typedef void (*ModeSendOnPlayerItemAcquired_func)(int playerId, int itemId);
 typedef void (*ModeSendOnPlayerItemConsumed_func)(int playerId, int itemId);
 
-typedef struct GuberMoby *(*ModeGetGuber_func)(Moby *moby);
+typedef struct Guber *(*ModeGetGuber_func)(Moby *moby);
 typedef int (*ModeHandleGuberEvent_func)(Moby *moby, GuberEvent *event);
 
 typedef void (*MapOnMobSpawned_func)(Moby *moby);

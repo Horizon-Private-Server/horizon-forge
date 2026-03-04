@@ -120,7 +120,7 @@ void reactorPreUpdate(Moby *moby)
 
 	// decrement tickers regardless of frozen state
 	for (i = 0; i < GAME_MAX_LOCALS; ++i)
-		decTimerU8(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
 
 	if (mobIsFrozen(moby))
 		return;
@@ -551,7 +551,6 @@ Moby *reactorGetNextTarget(Moby *moby)
 int reactorGetPreferredAction(Moby *moby, int *delayTicks)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	VECTOR t;
 	VECTOR mobyPosUp, targetPosUp;
 	VECTOR up = {0, 0, 0.5, 0};
 
@@ -664,9 +663,8 @@ void reactorDoAction(Moby *moby)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
 	Moby *target = pvars->MobVars.Target;
-	VECTOR t, t2;
+	VECTOR t;
 	u32 damageFlags = 0x00081801;
-	int i;
 	int walkBackwards = 0;
 	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? REACTOR_TURN_RADIANS_PER_SEC : REACTOR_TURN_AIR_RADIANS_PER_SEC;
@@ -676,8 +674,8 @@ void reactorDoAction(Moby *moby)
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
 
-	MATRIX *joints = (MATRIX *)moby->JointCache;
-	static int asd = 3;
+	// MATRIX *joints = (MATRIX *)moby->JointCache;
+	// static int asd = 3;
 	// printf("a:%d id:%d f:%d j:%d: ", pvars->MobVars.Action, moby->AnimSeqId, moby->AnimFlags, asd); vector_print(&joints[asd][12]); printf("\n");
 
 	// reset anim speed add
@@ -1203,14 +1201,13 @@ exit:;
 //--------------------------------------------------------------------------
 void reactorDoSmashDamage(Moby *moby, float radius, float amount, int damageFlags)
 {
-	MATRIX m;
 	VECTOR dt;
 	int i;
 	int hitPlayerFull = 0;
 	float sqrRadius = radius * radius;
 	MobyColDamageIn in;
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
+	// struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	// ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
 
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{

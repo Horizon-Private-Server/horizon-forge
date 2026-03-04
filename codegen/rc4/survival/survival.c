@@ -44,6 +44,7 @@
 #include "item.h"
 #include "upgrade.h"
 #include "drop.h"
+#include "gambits.h"
 #include "pool.h"
 #include "ammosupply.h"
 #include "ammodrop.h"
@@ -100,14 +101,12 @@ struct SurvivalMapConfig MapConfig __attribute__((section(".config"))) = {
 //--------------------------------------------------------------------------
 int mapSpawnMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, int spawnFlags)
 {
+	if (!gameAmIHost())
+		return 0;
+
 	// increment # mobs to spawn
 	if (MapConfig.State && spawnFromUID < 0)
-	{
 		MapConfig.State->RoundMaxMobCount += 1;
-	}
-
-	if (!gameAmIHost())
-		return;
 
 	struct MobConfig *config = &MapConfig.DefaultSpawnParams[spawnParamsIdx].Config;
 
@@ -122,7 +121,6 @@ int mapSpawnMob(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID
 void mapReturnPlayersToMap(void)
 {
 	int i;
-	VECTOR p, r, o;
 	float deathHeight = maxf(1, gameGetDeathHeight()) + 1; // if death height is 0, use 1
 
 	for (i = 0; i < GAME_MAX_LOCALS; ++i)
@@ -241,7 +239,7 @@ void updateBossMeter(void)
 	u32 id = hudPanelGetElement((void *)0x222b18, 6);
 	struct HUDWidgetRectangleObject *bossImgRectObject = (struct HUDWidgetRectangleObject *)hudCanvasGetObject(hudGetCanvas(4), id);
 	if (bossImgRectObject)
-		((void (*)(u32, u32))0x005ca3e8)(bossImgRectObject, MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BossTexUid /*0x75AF + 3*/);
+		((void (*)(struct HUDWidgetRectangleObject *, int))0x005ca3e8)(bossImgRectObject, MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].BossTexUid /*0x75AF + 3*/);
 }
 
 //--------------------------------------------------------------------------
@@ -335,7 +333,7 @@ void playerOnPushedIntoWall(Player *player)
 	}
 
 	// push mobs away
-	mobReactToExplosionAt(player->PlayerId, player->PlayerPosition, 1, 8, 6);
+	mobReactToExplosionAt(player->PlayerMoby, player->PlayerPosition, 1, 8, 6);
 
 	// move player out of clipped wall
 	// using lastGoodPos doesn't always return us to before the clip
@@ -378,6 +376,8 @@ void frameTick(void)
 	// snprintf(buf, sizeof(buf), "%d", mobyGetNumSpawnableMobys());
 	// gfxHelperDrawText(5, SCREEN_HEIGHT - 5, 0, 0, 1, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMLEFT, COMMON_DZO_DRAW_NORMAL);
 }
+
+#if DEBUG
 
 //--------------------------------------------------------------------------
 void survivalDebugManualSpawn(void)
@@ -563,6 +563,8 @@ void survivalDebugStartRound(int roundNumber)
 	DPRINTF("Skipped to Round #%d with %d mobs spawned\n", state->RoundNumber + 1, state->MobStats.TotalSpawned);
 	init = 1;
 }
+
+#endif
 
 //--------------------------------------------------------------------------
 struct StoreDef *mapGetStore(Moby *moby, int localPlayerIndex, int storeIdx)

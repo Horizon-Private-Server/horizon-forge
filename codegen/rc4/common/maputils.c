@@ -241,11 +241,10 @@ Player* mobyGetPlayer(Moby* moby)
 {
   if (!moby) return 0;
   
-  Player** players = playerGetAll();
   int i;
 
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!player) continue;
 
     if (player->PlayerMoby == moby) return player;
@@ -378,10 +377,9 @@ void replenishAmmo(Player* player)
 void respawnAllPlayers(void)
 {
   // respawn all players
-  Player** players = playerGetAll();
   int i;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
     
     // respawn player
@@ -403,7 +401,7 @@ void respawnAllPlayers(void)
 void * mobyGetClassPtr(int oClass)
 {
   int mClass = *(u8*)(0x0024a110 + oClass);
-  return *(u32*)(0x002495c0 + mClass*4);
+  return (void*)*(u32*)(0x002495c0 + mClass*4);
 }
 
 //--------------------------------------------------------------------------

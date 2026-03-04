@@ -73,7 +73,7 @@ void soulcollectorOnSoul(VECTOR position, int collectedByPlayerId)
   if (collectedByPlayerId < 0) return;
   if (!soulcollectorCount) return;
 
-  Player* player = playerGetAll()[collectedByPlayerId];
+  Player* player = playerGetFromIndex(collectedByPlayerId);
   if (!player || !playerIsConnected(player)) return;
 
   int i;
@@ -164,7 +164,6 @@ void soulcollectorOnStateChanged(Moby* moby)
 //--------------------------------------------------------------------------
 void soulcollectorUpdate(Moby* moby)
 {
-  int i;
   struct SoulCollectorPVar* pvars = (struct SoulCollectorPVar*)moby->PVar;
 
   // detect when state was changed
@@ -244,7 +243,7 @@ void soulcollectorOnGuberCreated(Moby* moby)
     DPRINTF("REACHED MAX SOULCOLLECTORS uid:%d %08X\n", moby->UID, (u32)moby);
   }
 
-  DLOG(moby, "FOUND TARGET %08X\n", pvars->TargetMoby);
+  DLOG(moby, "FOUND TARGET %08X\n", (u32)pvars->TargetMoby);
   mobySetState(moby, pvars->DefaultState, -1);
 }
 
@@ -346,7 +345,7 @@ void soulcollectorInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("SOULCOLLECTOR oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("SOULCOLLECTOR oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
   

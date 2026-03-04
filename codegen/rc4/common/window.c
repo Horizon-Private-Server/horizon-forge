@@ -79,7 +79,7 @@ void windowResolve(Window_t *window, float *x, float *y, float offsetX, float of
 void windowDrawSprite(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float width, float height, int spriteId, u32 color, enum TextAlign alignment)
 {
 	if (!windowHasArea(window))
-		return 0;
+		return;
 
 	u64 spriteFrameTex = gfxGetFrameTex(spriteId);
 	int spriteTexW = gfxGetTexWidth(spriteFrameTex);
@@ -97,7 +97,7 @@ void windowDrawSprite(Window_t *window, enum TextAlign windowAnchor, float offse
 void windowDrawBox(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float width, float height, u32 color, enum TextAlign alignment)
 {
 	if (!windowHasArea(window))
-		return 0;
+		return;
 
 	float x, y, w, h;
   Window_t drawWindow;
@@ -111,7 +111,7 @@ void windowDrawBox(Window_t *window, enum TextAlign windowAnchor, float offsetX,
 void windowFill(Window_t *window, u32 color)
 {
 	if (!windowHasArea(window))
-		return 0;
+		return;
 
 	float x, y, w, h;
   Window_t drawWindow;
@@ -125,7 +125,7 @@ void windowFill(Window_t *window, u32 color)
 void windowBorder(Window_t *window, u32 color, float left, float top, float right, float bottom)
 {
 	if (!windowHasArea(window))
-		return 0;
+		return;
 
 	float x, y;
   Window_t drawWindow;
@@ -160,7 +160,7 @@ void windowBorder(Window_t *window, u32 color, float left, float top, float righ
 void windowDrawTextWindow(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char *str, int length, enum TextAlign alignment)
 {
 	if (!windowHasArea(window))
-		return 0;
+		return;
 
 	float x, y, w, h;
   Window_t drawWindow;

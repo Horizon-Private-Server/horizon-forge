@@ -120,7 +120,7 @@ int controllerIsMobyStateConditionTrue(Moby* moby, int conditionIdx)
 
   // invalid moby
   int targetState = -1; // destroyed
-  int cValue = condition->MobyState.State;
+  // int cValue = condition->MobyState.State;
   Moby* target = condition->Moby;
   if (!target) return 0;
   if (controllerValidateMobyRef(target, condition->MobyUID))
@@ -140,7 +140,6 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   int j;
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
-  Player** players = playerGetAll();
   int cuboidIdx = condition->Cuboid.CuboidIdx;
   SpawnPoint* triggerCuboid = spawnPointGet(cuboidIdx);
   int pSucceeded = 0, pCount = 0, pHostSucceeded = 0;
@@ -154,7 +153,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   // check for all players
   if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_CHECK_ALL_PLAYERS) {
     for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
-      Player* p = players[j];
+      Player* p = playerGetFromIndex(j);
       if (!playerIsValid(p) || playerIsDead(p)) continue;
 
       int isHost = (p->IsLocal && controllerAmIOwner(moby)) || (p->pNetPlayer->netClientIndex == gameGetHostId());
@@ -176,7 +175,7 @@ int controllerIsCuboidConditionTrue(Moby* moby, int conditionIdx, char validPlay
   // check for only host/local
   else if (condition->Cuboid.TriggerBy & CONTROLLER_CUBOID_TRIGGER_BY_HOST) {
     for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
-      Player* p = players[j];
+      Player* p = playerGetFromIndex(j);
       if (!playerIsValid(p) || playerIsDead(p)) continue;
       
       int isHost = (p->IsLocal && controllerAmIOwner(moby)) || (p->pNetPlayer->netClientIndex == gameGetHostId());
@@ -269,13 +268,12 @@ int controllerIsPlayerButtonConditionTrue(Moby* moby, int conditionIdx, char val
 {
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
-  Player** players = playerGetAll();
   int j;
   int succeeded = 0;
 
   int acceptsHost = (condition->PlayerButtons.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
-    Player* p = players[j];
+    Player* p = playerGetFromIndex(j);
     if (!playerIsValid(p) || playerIsDead(p)) continue;
 
     int bit = 1 << j;
@@ -352,10 +350,9 @@ int controllerIsNpcTargetConditionTrue(Moby* moby, int conditionIdx)
 //--------------------------------------------------------------------------
 int controllerDifficultyConditionTrue(Moby* moby, int conditionIdx)
 {
+#if RAIDS
   struct ControllerPVar* pvars = (struct ControllerPVar*)moby->PVar;
   struct ControllerCondition* condition = &pvars->Conditions[conditionIdx];
-
-#if RAIDS
   pvars->State.CounterValue[conditionIdx] = MapConfig.State->DifficultyStars;
   return MapConfig.State && (condition->Difficulty.Mask & (1 << MapConfig.State->DifficultyStars)) != 0;
 #endif
@@ -432,7 +429,6 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
   if (!condition->PlayerKills.MobMask) return 0;
   if (!MapConfig.State) return 0;
   
-  Player** players = playerGetAll();
   int i,j,k;
   int playerCount = 0;
   int playerMatch = 0;
@@ -442,7 +438,7 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
   int acceptsHost = (condition->PlayerKills.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   float sumValue = 0;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
 
     int bit = 1 << i;
@@ -515,14 +511,13 @@ int controllerPlayerHealthConditionTrue(Moby* moby, int conditionIdx)
 
   if (!condition->PlayerHealth.PlayerMask) return 0;
   
-  Player** players = playerGetAll();
-  int i,j;
+  int i;
   int playerCount = 0;
   int playerMatch = 0;
   int result = 0;
   int acceptsHost = (condition->PlayerHealth.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
 
     int bit = 1 << i;
@@ -559,11 +554,10 @@ int controllerPlayerCountConditionTrue(Moby* moby, int conditionIdx)
   if (!condition->PlayerCount.CountMask) return 0;
   if (!condition->PlayerCount.Filter) return 0;
   
-  Player** players = playerGetAll();
   int i;
   int count = 0;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
 
     int isDead = playerIsDead(player);
@@ -818,12 +812,11 @@ int controllerControlGivePlayerAmmo(Moby* moby, struct ControllerTarget* target)
 {
   if (!target->GivePlayer.PlayerMask) return 0;
 
-  Player** players = playerGetAll();
   int i;
   int count = 0;
   int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!player || !player->PlayerMoby || !player->GadgetBox) continue;
 
     int bit = 1 << i;
@@ -855,12 +848,11 @@ int controllerControlGivePlayerHealth(Moby* moby, struct ControllerTarget* targe
 {
   if (!target->GivePlayer.PlayerMask) return 0;
 
-  Player** players = playerGetAll();
   int i;
   int count = 0;
   int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!player || !player->PlayerMoby) continue;
 
     int bit = 1 << i;
@@ -883,12 +875,11 @@ int controllerControlRespawnPlayer(Moby* moby, struct ControllerTarget* target)
 {
   if (!target->RespawnPlayer.PlayerMask) return 0;
 
-  Player** players = playerGetAll();
   int i;
   int count = 0;
   int acceptsHost = (target->RespawnPlayer.PlayerMask & CONTROLLER_PLAYER_MASK_HOST) && controllerAmIOwner(moby);
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!player || !player->PlayerMoby) continue;
 
     int bit = 1 << i;
@@ -1321,7 +1312,7 @@ int controllerHandleEvent_Iterate(Moby* moby, GuberEvent* event)
 	guberEventRead(event, &time, 4);
 
   int i;
-  int mask;
+  int mask = 0;
   for (i = 0; i < CONTROLLER_MAX_TARGETS; ++i) {
     if (pvars->Targets[i].TargetUpdateType == CONTROLLER_TARGET_UPDATE_TYPE_UPDATE_COUNTER) {
       int idx = pvars->Targets[i].Counter.CounterValueIdx;
@@ -1390,13 +1381,11 @@ void controllerStart(void)
 
   // cache values used for delta conditions
   int i;
-  Player** players = playerGetAll();
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
 
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
     
-    int j;
 #if RAIDS
     if (MapConfig.State) {
       memcpy(playerKillsLast[i], MapConfig.State->PlayerStates[i].State.AllKills, sizeof(playerKillsLast[i]));
@@ -1421,7 +1410,7 @@ void controllerInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("CONTROLLER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("CONTROLLER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
   

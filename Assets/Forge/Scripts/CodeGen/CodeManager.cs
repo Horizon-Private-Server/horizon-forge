@@ -17,23 +17,22 @@ public class CodeManager : MonoBehaviour
         if (racVersion != RCVER.DL) return false;
 
 #if DOCKER
-        var manager = DockerManager.GetOrCreate();
-        if (!manager) return false;
-        manager.Validate();
-        if (!manager.ContainerStarting() && !manager.ContainerReady()) await manager.Run();
-
-        // waiting on docker container
-        if (!manager.ContainerReady()) return false;
-
         var folder = FolderNames.GetMapCodeBuildFolder(map, racVersion);
-        var res = await manager.ExecuteAsync("/bin/sh", "-c", $"cd \"/{folder}\" && make clean && make");
+        var res = await DockerManager.RunCommandWithContainer("/bin/sh", "-c", $"cd \"/{folder}\" && make clean && make");
         if (res.ExitCode != 0)
         {
             Dispatcher.RunOnMainThread(() =>
             {
-                Debug.Log(res.ExitCode + ": " + res.Stdout);
                 if (!string.IsNullOrEmpty(res.Stderr))
-                    Debug.LogError(res.Stderr);
+                {
+                    var compilerErrors = res.Stderr
+                        .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+                        .Select(x => x?.Trim())
+                        .Where(x => !string.IsNullOrWhiteSpace(x));
+
+                    foreach (var compilerError in compilerErrors)
+                        Debug.LogError(compilerError);
+                }
             });
         }
 

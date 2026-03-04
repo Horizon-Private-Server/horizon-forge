@@ -190,10 +190,10 @@ int demonbellHandleEvent_Deactivate(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
-struct GuberMoby* demonbellGetGuber(Moby* moby)
+struct Guber* demonbellGetGuber(Moby* moby)
 {
 	if (moby->OClass == DEMONBELL_MOBY_OCLASS)
-		return moby->GuberMoby;
+		return moby->Guber;
 	
 	return 0;
 }
@@ -262,14 +262,15 @@ void demonbellTick(void)
 //--------------------------------------------------------------------------
 void demonbellInit(void)
 {
-	Moby* testMoby = mobySpawn(DEMONBELL_MOBY_OCLASS, 0);
-	if (testMoby) {
-		u32 mobyFunctionsPtr = (u32)mobyGetFunctions(testMoby);
+	Moby* temp = mobySpawn(DEMONBELL_MOBY_OCLASS, 0);
+	if (temp) {
+		MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
 		if (mobyFunctionsPtr) {
       mapInstallMobyFunctions(mobyFunctionsPtr);
+		  DPRINTF("DEMONBELL oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
 		}
 
-		mobyDestroy(testMoby);
+		mobyDestroy(temp);
 	}
 
   // create gubers for demonbells

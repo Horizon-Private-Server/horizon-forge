@@ -91,7 +91,10 @@ float mboxRand(void)
 int mboxGetItem(Moby *moby, int itemIdx, SurvivalItemDef_t *item)
 {
 	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+	{
+		memset(item, 0, sizeof(SurvivalItemDef_t));
 		return 0;
+	}
 
 	memcpy(item, &MapConfig.ItemDefs[itemIdx], sizeof(SurvivalItemDef_t));
 	return 1;
@@ -170,7 +173,6 @@ int mboxGetRandomItem(Moby *moby, int forPlayerId)
 //--------------------------------------------------------------------------
 void mboxActivate(Moby *moby, int activatedByPlayerId)
 {
-	int i;
 	int itemIdx = mboxGetRandomItem(moby, activatedByPlayerId);
 	if (itemIdx < 0)
 		return;
@@ -190,8 +192,6 @@ void mboxActivate(Moby *moby, int activatedByPlayerId)
 //--------------------------------------------------------------------------
 void mboxGetRandomRespawn(int random, VECTOR outPos, VECTOR outRot)
 {
-	int i;
-
 	if (!MysteryBoxLocationCount)
 		return;
 
@@ -436,7 +436,6 @@ void mboxUpdate(Moby *moby)
 			if (vector_sqrdistance(moby->Position, activatedByPlayer->PlayerPosition) < (MYSTERY_BOX_PICKUP_RADIUS * MYSTERY_BOX_PICKUP_RADIUS))
 			{
 				int showInteract = itemDef.MysteryboxForceAcquire == 0;
-				int random = pvars->Random;
 				snprintf(buf, sizeof(buf), "\x11 %s", showInteract ? itemDef.Name : "Close");
 				itemGetDescription(descBuf, sizeof(descBuf), pvars->ItemIdx, pvars->ActivatedByPlayerId);
 				if (tryPlayerInteract(moby, activatedByPlayer, buf, descBuf, 0, 0, PLAYER_MYSTERY_BOX_COOLDOWN_TICKS, MYSTERY_BOX_PICKUP_RADIUS, PAD_CIRCLE, 0))
@@ -568,7 +567,6 @@ int mboxHandleEvent_Spawned(Moby *moby, GuberEvent *event)
 int mboxHandleEvent_Activate(Moby *moby, GuberEvent *event)
 {
 	int activatedByPlayerId, itemIdx, random;
-	SurvivalItemDef_t itemDef;
 
 	// DPRINTF("mbox activate: %08X\n", (u32)moby);
 	struct MysteryBoxPVar *pvars = (struct MysteryBoxPVar *)moby->PVar;
@@ -580,6 +578,7 @@ int mboxHandleEvent_Activate(Moby *moby, GuberEvent *event)
 	guberEventRead(event, &random, 4);
 
 #if DEBUGMBOX
+	SurvivalItemDef_t itemDef;
 	MysteryBoxTotalRolls += 1;
 	MysteryBoxItemCounts[itemIdx] += 1;
 	int itemIdxs[MAX_ITEM_COUNT];
@@ -629,7 +628,7 @@ int mboxHandleEvent_Activate(Moby *moby, GuberEvent *event)
 //--------------------------------------------------------------------------
 int mboxHandleEvent_GivePlayer(Moby *moby, GuberEvent *event)
 {
-	int playerId, itemIdx, random, i;
+	int playerId, itemIdx, random;
 
 	// DPRINTF("mbox give player: %08X\n", (u32)moby);
 	struct MysteryBoxPVar *pvars = (struct MysteryBoxPVar *)moby->PVar;
@@ -678,10 +677,10 @@ int mboxHandleEvent_GivePlayer(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-struct GuberMoby *mboxGetGuber(Moby *moby)
+struct Guber *mboxGetGuber(Moby *moby)
 {
 	if (moby->OClass == MYSTERY_BOX_OCLASS && moby->PVar)
-		return moby->GuberMoby;
+		return moby->Guber;
 
 	return 0;
 }
@@ -764,11 +763,11 @@ void mboxInit(void)
 		return;
 
 	// set vtable callbacks
-	u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
+	MobyFunctions *mobyFunctionsPtr = mobyGetFunctions(temp);
 	if (mobyFunctionsPtr)
 	{
 		mapInstallMobyFunctions(mobyFunctionsPtr);
-		DPRINTF("MBOX oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32 *)(mobyFunctionsPtr + 0x04), *(u32 *)(mobyFunctionsPtr + 0x14));
+		DPRINTF("MBOX oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
 	}
 	mobyDestroy(temp);
 

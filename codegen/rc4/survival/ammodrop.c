@@ -51,6 +51,8 @@ Player *ammodropFindPlayerFromGadgetBox(GadgetBox *gbox)
 		if (player->GadgetBox == gbox)
 			return player;
 	}
+
+  return NULL;
 }
 
 //--------------------------------------------------------------------------

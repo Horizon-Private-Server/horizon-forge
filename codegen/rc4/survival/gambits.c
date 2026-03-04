@@ -2,6 +2,7 @@
 #include <libdl/net.h>
 #include <libdl/moby.h>
 #include <libdl/stdio.h>
+#include <libdl/string.h>
 #include "shared.h"
 #include "store.h"
 #include "vendor.h"
@@ -42,8 +43,6 @@ int gambitsCannotBuyInStore(int defIdx, struct SurvivalItemDef *def, Moby *store
 //--------------------------------------------------------------------------
 void gambitsSetupDisableRevives(void)
 {
-	int i;
-
 	// prevent purchase of self revive or health tornado
 
 #ifdef ITEM_HOLD_AUTO_SELF_REVIVE
@@ -87,8 +86,6 @@ void gambitsSetupDisableVendor(void)
 //--------------------------------------------------------------------------
 void gambitsSetupDisableStores(void)
 {
-	int i;
-
 	// disable stores
 	Moby *moby = mobyListGetStart();
 	while ((moby = mobyFindNextByOClass(moby, STORE_MOBY_OCLASS)))
@@ -174,7 +171,7 @@ void gambitsSetupInitialBoltsTokens(int bolts, int tokens)
 }
 
 //--------------------------------------------------------------------------
-void gambitsDropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team)
+int gambitsDropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team)
 {
 	GambitDef_t *gambit = gambitsGetActive();
 
@@ -182,11 +179,11 @@ void gambitsDropCreate(VECTOR position, int itemIdx, int destroyAtTime, int team
 	// intercept health drops
 	if (gambit && gambit->DisableRevives && itemIdx == ITEM_IMMEDIATE_GLOBAL_HEALTH)
 	{
-		return;
+		return 0;
 	}
 #endif
 
-	dropCreate(position, itemIdx, destroyAtTime, team);
+	return dropCreate(position, itemIdx, destroyAtTime, team);
 }
 
 //--------------------------------------------------------------------------
@@ -210,8 +207,8 @@ void gambitsOnRoundComplete(int roundNo)
 void gambitsSetup(void)
 {
 	int i;
-	GameOptions *gameOptions = gameGetOptions();
-	Moby *mStart = mobyListGetStart();
+	// GameOptions *gameOptions = gameGetOptions();
+	// Moby *mStart = mobyListGetStart();
 
 	GambitDef_t *gambit = gambitsGetActive();
 	if (!gambit)

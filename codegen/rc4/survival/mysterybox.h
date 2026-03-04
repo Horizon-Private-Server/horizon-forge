@@ -54,7 +54,7 @@ struct MysteryBoxPVar
 
 void mboxSpawn(void);
 void mboxInit(void);
-struct GuberMoby *mboxGetGuber(Moby *moby);
+struct Guber *mboxGetGuber(Moby *moby);
 int mboxHandleEvent(Moby *moby, GuberEvent *event);
 
 #endif // SURVIVAL_MYSTERY_BOX_H

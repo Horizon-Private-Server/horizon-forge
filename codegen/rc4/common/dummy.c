@@ -171,7 +171,6 @@ void dummyDrawHealthbar(Moby* moby)
 //--------------------------------------------------------------------------
 void dummyUpdate(Moby* moby)
 {
-  int i;
   struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
   struct DummyDifficultyConfig* difficultyConfig = dummyGetDifficultyConfig(moby);
 
@@ -241,7 +240,7 @@ void dummyUpdate(Moby* moby)
 
   // healthbar
   if (pvars->Config.Healthbar) {
-    gfxRegisterDrawFunction((void**)0x0022251C, &dummyDrawHealthbar, moby);
+    gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&dummyDrawHealthbar, moby);
   }
 
   // handle damage
@@ -367,7 +366,7 @@ int dummyHandleEvent_SetHealth(Moby* moby, GuberEvent* event)
 	// read event
 	guberEventRead(event, &health, 4);
 
-  float dh = health - pvars->TargetVars.hitPoints;
+  // float dh = health - pvars->TargetVars.hitPoints;
   pvars->TargetVars.hitPoints = health;
   return 0;
 }
@@ -422,7 +421,7 @@ void dummyInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("DUMMY oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("DUMMY oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
   

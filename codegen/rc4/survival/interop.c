@@ -1,6 +1,7 @@
 #include <libdl/area.h>
 #include <libdl/spawnpoint.h>
 #include <libdl/stdio.h>
+#include <libdl/game.h>
 #include <libdl/random.h>
 #include <libdl/player.h>
 #include "mob.h"
@@ -9,7 +10,17 @@
 #include "survival_items.h"
 #include "interop.h"
 #include "utils.h"
+#include "ammodrop.h"
+#include "pathfind.h"
 #include "maputils.h"
+
+#if SOULCOLLECTOR
+#include "soulcollector.h"
+#endif
+
+#if STACKABLES
+void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId);
+#endif
 
 const char *SURVIVAL_PRESTIGE_WEAPON_NEED_V10_MESSAGE = "Your weapon is not powerful enough";
 const char *SURVIVAL_PRESTIGE_WEAPON_MAXED_MESSAGE = "Your weapon is too powerful";
@@ -165,7 +176,7 @@ int mapCanPrestigePlayerWeapon(Player *player, int gadgetId, int prestigeNum, ch
 	if (prestigeNum > bakedConfig.WeaponPrestigeMax)
 	{
 		if (outMsg)
-			*outMsg = SURVIVAL_PRESTIGE_WEAPON_MAXED_MESSAGE;
+			*outMsg = (char*)SURVIVAL_PRESTIGE_WEAPON_MAXED_MESSAGE;
 
 		return 0;
 	}
@@ -174,7 +185,7 @@ int mapCanPrestigePlayerWeapon(Player *player, int gadgetId, int prestigeNum, ch
 	if (player->GadgetBox->Gadgets[gadgetId].Level != VENDOR_MAX_WEAPON_LEVEL)
 	{
 		if (outMsg)
-			*outMsg = SURVIVAL_PRESTIGE_WEAPON_NEED_V10_MESSAGE;
+			*outMsg = (char*)SURVIVAL_PRESTIGE_WEAPON_NEED_V10_MESSAGE;
 
 		return 0;
 	}
