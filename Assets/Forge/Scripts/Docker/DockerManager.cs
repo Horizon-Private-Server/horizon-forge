@@ -12,106 +12,46 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 
-[ExecuteInEditMode]
-public class DockerManager : MonoBehaviour
+public class DockerManager
 {
-    public static DockerManager Singleton { get; private set; }
-    public static readonly string[] SleepInfinity = { "/bin/sh", "-c", "trap : TERM INT; sleep infinity & wait" };
-
-    private IContainer container;
-
-    public static DockerManager GetOrCreate()
+    public static async Task<ExecResult> RunCommandWithContainer(params string[] command)
     {
-        if (Singleton) return Singleton;
+		using var stdoutStream = new MemoryStream();
+		using var stderrStream = new MemoryStream();
+		IContainer localContainer = null;
 
-        Singleton = FindObjectOfType<DockerManager>();
-        if (Singleton) return Singleton;
+		try
+		{
+			ContainerBuilder builder = new ContainerBuilder()
+				// use particular version always 
+				.WithImage("dnawrkshp/ps2dev-libdl:latest")
+				.WithImagePullPolicy(PullPolicy.Always)
+				// name it nicely
+				.WithBindMount(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, FolderNames.BinaryFolder)), "/levels")
+				// with some configuration
+				//.WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")
+				//.WithWaitStrategy(Wait.ForUnixContainer())
+				//.WithReuse(true)
+				.WithCleanUp(true)
+				.WithReuse(false)
+				.WithEntrypoint(command)
+				.WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(stdoutStream, stderrStream));
 
-        var go = new GameObject("Docker Manager");
-        go.hideFlags = HideFlags.HideAndDontSave;
-        return Singleton = go.AddComponent<DockerManager>();
-    }
+			localContainer = builder.Build();
+			await localContainer.StartAsync().ConfigureAwait(true);
 
-    private void Update()
-    {
-        // destroy duplicate
-        if (Singleton && Singleton != this)
-        {
-            DestroyImmediate(this.gameObject);
-            return;
-        }
-
-        Singleton = this;
-    }
-
-    private void OnDestroy()
-    {
-        if (container != null)
-        {
-            var c = container;
-            _ = c.StopAsync().ContinueWith((_) => c.DisposeAsync());
-            container = null;
-        }
-    }
-
-    public async void Validate()
-    {
-        if (container == null) return;
-
-        try
-        {
-            await container.GetExitCodeAsync();
-        }
-        catch
-        {
-            // bad container
-            container = null;
-        }
-    }
-
-    public TestcontainersStates? GetStatus()
-    {
-        return container?.State;
-    }
-
-    public bool ContainerReady() => container != null && container.State == TestcontainersStates.Running;
-    public bool ContainerStarting() => container != null && (container.State == TestcontainersStates.Undefined || container.State == TestcontainersStates.Restarting);
-
-    public async Task<ExecResult> ExecuteAsync(params string[] commands)
-    {
-        if (container == null) return default;
-        return await container.ExecAsync(commands)
-          .ConfigureAwait(true);
-    }
-
-    public async Task Run()
-    {
-        if (container != null)
-        {
-            //await container.StopAsync();
-            await container.DisposeAsync();
-            container = null;
-        }
-
-        ContainerBuilder builder = new ContainerBuilder()
-              // use particular version always 
-              .WithImage("dnawrkshp/ps2dev-libdl:latest")
-              .WithImagePullPolicy(PullPolicy.Always)
-              // name it nicely
-              .WithName("FORGE_PS2DEV")
-              .WithBindMount(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, FolderNames.BinaryFolder)), "/levels")
-              // with some configuration
-              //.WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")
-              //.WithWaitStrategy(Wait.ForUnixContainer())
-              //.WithReuse(true)
-              .WithCleanUp(true)
-              .WithReuse(true)
-              .WithEntrypoint(SleepInfinity)
-              .WithOutputConsumer(Consume.RedirectStdoutAndStderrToConsole());
-
-        //builder = builder.WithPortBinding(5432, 5432);
-        container = builder.Build();
-        await container.StartAsync().ConfigureAwait(true);
+			var exitCode = await localContainer.GetExitCodeAsync();
+			var stdout = Encoding.UTF8.GetString(stdoutStream.ToArray());
+			var stderr = Encoding.UTF8.GetString(stderrStream.ToArray());
+			return new ExecResult(stdout, stderr, exitCode);
+		}
+		finally
+		{
+			if (localContainer != null)
+			{
+				await localContainer.DisposeAsync();
+			}
+		}
     }
 
 }

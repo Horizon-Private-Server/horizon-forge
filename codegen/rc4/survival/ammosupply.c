@@ -71,7 +71,7 @@ void ammosupplyUpdate(Moby *moby)
 	if (!moby || !moby->PVar)
 		return;
 
-	struct AmmoSupplyPVar *pvars = (struct AmmoSupplyPVar *)moby->PVar;
+	// struct AmmoSupplyPVar *pvars = (struct AmmoSupplyPVar *)moby->PVar;
 
 	// find local players to activate
 	for (i = 0; i < GAME_MAX_LOCALS; ++i)

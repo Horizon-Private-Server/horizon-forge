@@ -139,6 +139,8 @@ public class PropHuntModeData : CustomModeData, IBuildHook, ICodeGen
         //state.LDFlags.Add("-DDEBUG_DRAW_PROPS");
         //state.LDFlags.Add("-DDEBUG_FIND_PROPS");
 
+        state.Includes.Add("#include \"prophunt.h\"");
+
         state.InitBody.Add($"propInit();");
         state.CleanupBody.Add("propCleanup();");
         state.MainBodyReady.Add("propTick();");

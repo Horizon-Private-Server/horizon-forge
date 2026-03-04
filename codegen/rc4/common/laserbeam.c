@@ -71,7 +71,7 @@ void laserbeamPostDraw(Moby* moby)
 
   // draw impact particles
   if (pvars->ColorParticleEnd && hit) {
-    VECTOR partVelEmpty = {0,0,0,0};
+    // VECTOR partVelEmpty = {0,0,0,0};
     VECTOR partVel = {randRange(-1,1),randRange(-1,1),0,0};
     vector_scale(partVel, partVel, MATH_DT * 3);
     laserbeamSpawnParticle(fireTo, partVel, randRangeInt(5, 15), pvars->ColorParticleEnd, randRangeInt(2, 5), 0x7f, 0x7f, 1.0 * randRange(0.4, 0.6), 0.01, 0.00444444, 1);
@@ -163,7 +163,7 @@ void laserbeamPostDraw(Moby* moby)
       .DamageStrength = 1,
       .DamageIndex = moby->PParent ? moby->PParent->OClass : moby->OClass,
       .Flags = 1,
-      .Momentum = 0
+      .Momentum = {0}
     };
     mobyCollDamageDirect(hitMoby, &in);
   }
@@ -184,7 +184,7 @@ void laserbeamUpdate(Moby* moby)
   }
 
   if (moby->State == LASERBEAM_STATE_ACTIVATED) {
-    gfxRegisterDrawFunction((void**)0x0022251C, &laserbeamPostDraw, moby);
+    gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef *)&laserbeamPostDraw, moby);
   }
 }
 

@@ -80,6 +80,7 @@ struct StorePVar
 	char MenuOpen[GAME_MAX_LOCALS];
 };
 
+struct Guber *storeGetGuber(Moby *moby);
 int storeHandleEvent(Moby *moby, GuberEvent *event);
 void storeOnGuberCreated(Moby *moby, struct StoreVTable *defaultVTable);
 void storeFrameTick(void);

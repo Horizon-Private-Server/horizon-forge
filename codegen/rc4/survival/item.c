@@ -138,7 +138,7 @@ int itemCanConsume(Player *player, int itemIdx)
 	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
 		return 0;
 
-	SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
+	// SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
 	if (playerGetItemCount(player, itemIdx) <= 0)
 		return 0;
 
@@ -336,7 +336,6 @@ void itemDrawIcon(Window_t *window, Player *player, int itemIdx, float texDim, f
 void itemDraw(void)
 {
 	char buf[16];
-	const u32 colorTexFaded = 0x20000000;
 
 	gfxSetupGifPaging(0);
 
@@ -367,9 +366,9 @@ void itemDraw(void)
 		if (activeIdx >= 0)
 		{
 			itemCurrentDrawnItemIdx[l] = activeIdx;
-			SurvivalItemDef_t *def = &MapConfig.ItemDefs[activeIdx];
-			int count = playerGetItemCount(player, activeIdx);
-			int canConsume = itemCanConsume(player, i);
+			// SurvivalItemDef_t *def = &MapConfig.ItemDefs[activeIdx];
+			// int count = playerGetItemCount(player, activeIdx);
+			// int canConsume = itemCanConsume(player, i);
 			u32 cooldownTicks = itemGetCooldownTicks(player->PlayerId, i);
 			float consumeBarPerc = 0;
 			if (cooldownTicks > 0)

@@ -78,3 +78,7 @@
 #define TREE_MAX_OCTANTS          (1 << (TREE_BITS_PER_AXIS * 2))
 #define TREE_OCTANT_SIZE          (1 << TREE_OCTANT_SIZE_BITS)
 #define TREE_AXIS_BITMASK         ((1 << TREE_BITS_PER_AXIS) - 1)
+
+void propCleanup(void);
+void propInit(void);
+void propTick(void);

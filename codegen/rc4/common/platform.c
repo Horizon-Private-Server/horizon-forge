@@ -203,9 +203,8 @@ void platformDoPivot(Moby* moby)
 
   // calculate force from players on platform
   int i;
-  Player** players = playerGetAll();
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
 
     if (player->Ground.pMoby != moby) continue;
@@ -260,9 +259,8 @@ void platformDoBuoyancy(Moby* moby)
 
   // calculate force from players on platform
   int i;
-  Player** players = playerGetAll();
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
 
     if (player->Ground.pMoby != moby) continue;
@@ -373,7 +371,7 @@ void platformPivotUpdate(Moby* moby)
   // remove last transform
   platformUndoTransformation(moby);
 
-  struct PlatformPivotPVar* pvars = (struct PlatformPivotPVar*)moby->PVar;
+  // struct PlatformPivotPVar* pvars = (struct PlatformPivotPVar*)moby->PVar;
   platformDoHover(moby);
   platformDoPivot(moby);
   platformDoBuoyancy(moby);
@@ -387,7 +385,7 @@ int platformHandleEvent_SetState(Moby* moby, GuberEvent* event)
   if (!moby || !moby->PVar)
     return 0;
 
-  struct PlatformFlipperPVar* pvars = (struct PlatformFlipperPVar*)moby->PVar;
+  // struct PlatformFlipperPVar* pvars = (struct PlatformFlipperPVar*)moby->PVar;
 
 	// read event
 	guberEventRead(event, &state, 1);
@@ -442,7 +440,7 @@ void platformInitType(int oclass, void* updateFunc)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("PLATFORM oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("PLATFORM oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
   
@@ -457,8 +455,7 @@ void platformInitType(int oclass, void* updateFunc)
 
       // only fall platforms should be synced
       if (isFlipper && flipperPVars->Type == PLATFORM_FLIPPER_FALL) {
-        struct Guber* guber = guberGetOrCreateObjectByMoby(moby, -1, 1);
-        DLOG(moby, "found platform %08X %08X\n", (u32)moby, (u32)guber);
+        DLOG(moby, "found platform %08X %08X\n", (u32)moby, (u32)guberGetOrCreateObjectByMoby(moby, -1, 1));
       } else {
         DLOG(moby, "found platform %08X\n", (u32)moby);
       }

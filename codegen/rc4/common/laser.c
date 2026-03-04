@@ -87,14 +87,13 @@ void laserUpdateBeam(Moby* moby)
 //--------------------------------------------------------------------------
 void laserOnStateChanged(Moby* moby)
 {
-  struct LaserPVar* pvars = (struct LaserPVar*)moby->PVar;
+  // struct LaserPVar* pvars = (struct LaserPVar*)moby->PVar;
 
 }
 
 //--------------------------------------------------------------------------
 void laserUpdate(Moby* moby)
 {
-  int i;
   struct LaserPVar* pvars = (struct LaserPVar*)moby->PVar;
 
   // detect when state was changed
@@ -131,8 +130,6 @@ void laserStart(void)
 //--------------------------------------------------------------------------
 void laserInit(void)
 {
-  int i;
-
   // set update functions
   Moby* moby = mobyListGetStart();
 	while ((moby = mobyFindNextByOClass(moby, LASER_OCLASS)))

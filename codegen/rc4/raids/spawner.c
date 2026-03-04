@@ -1012,8 +1012,7 @@ void spawnerInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("SPAWNER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
-  }
+    DPRINTF("SPAWNER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   mobyDestroy(temp);
   
   // create gubers for spawners

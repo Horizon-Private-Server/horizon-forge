@@ -50,7 +50,6 @@ void pvarpokeOnStateChanged(Moby* moby)
 //--------------------------------------------------------------------------
 void pvarpokeUpdate(Moby* moby)
 {
-  int i;
   struct PVarPokePVar* pvars = (struct PVarPokePVar*)moby->PVar;
 
   // detect when state was changed
@@ -63,7 +62,7 @@ void pvarpokeUpdate(Moby* moby)
     return;
  
   // run once
-  DLOG(moby, "%08X at +%04X (count=%d)\n", pvars->Target, pvars->PVarOffset, pvars->DataSize);
+  DLOG(moby, "%08X at +%04X (count=%d)\n", (u32)pvars->Target, pvars->PVarOffset, pvars->DataSize);
 
   if (pvars->DataSize > 0 && pvars->Target && pvars->Target->PVar) {
     memcpy(pvars->Target->PVar + pvars->PVarOffset, pvars->Buffer, pvars->DataSize);
@@ -81,8 +80,6 @@ void pvarpokeStart(void)
 //--------------------------------------------------------------------------
 void pvarpokeInit(void)
 {
-  int i;
-
   // set update functions
   Moby* moby = mobyListGetStart();
 	while ((moby = mobyFindNextByOClass(moby, PVARPOKE_OCLASS)))

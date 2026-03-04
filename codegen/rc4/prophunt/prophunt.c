@@ -99,10 +99,10 @@ struct State
   struct OctantTree PropsTree;
 } State;
 
-VECTOR PropMobyDefaultRotations[MAX_PROP_CLASSES] = {0};
-VECTOR PropMobyDefaultOffsets[MAX_PROP_CLASSES] = {0};
-float PropMobyDefaultScales[MAX_PROP_CLASSES] = {0};
-short PropMobyClasses[MAX_PROP_CLASSES] = {0};
+VECTOR PropMobyDefaultRotations[MAX_PROP_CLASSES] = {};
+VECTOR PropMobyDefaultOffsets[MAX_PROP_CLASSES] = {};
+float PropMobyDefaultScales[MAX_PROP_CLASSES] = {};
+short PropMobyClasses[MAX_PROP_CLASSES] = {};
 int PropMobyClassCount = 0;
 
 const short PropSoundDefs[][2] = {
@@ -311,7 +311,7 @@ int propOnPlayerPlaySoundRemote(void* connection, void* data)
 
   // play sound
   if (msg.PlayerId >= 0 && msg.PlayerId < GAME_MAX_PLAYERS) {
-    Player* player = playerGetAll()[msg.PlayerId];
+    Player* player = playerGetFromIndex(msg.PlayerId);
     if (player->PlayerMoby) {
       mobyPlaySoundByClass(PropSoundDefs[msg.SoundDefIndex][1], 0, player->PlayerMoby, PropSoundDefs[msg.SoundDefIndex][0]);
     }
@@ -362,14 +362,13 @@ void propPlayerPropMobyDrawIdle(Moby* moby)
 {
   char buf[64];
 
-  Player** players = playerGetAll();
   struct PlayerPropPVars* pvars = (struct PlayerPropPVars*)moby->PVar;
   if (!pvars) return;
 
   int playerId = moby->Mission;
   if (playerId < 0 || playerId >= GAME_MAX_PLAYERS) return;
 
-  Player* player = players[playerId];
+  Player* player = playerGetFromIndex(playerId);
   if (!playerIsValid(player)) return;
 
   // after awhile start to show
@@ -391,14 +390,13 @@ void propPlayerPropMobyDrawIdle(Moby* moby)
 // ------------------------------------------------------
 void propPlayerPropMobyUpdate(Moby* moby)
 {
-  Player** players = playerGetAll();
   struct PlayerPropPVars* pvars = (struct PlayerPropPVars*)moby->PVar;
   if (!pvars) return;
 
   int playerId = moby->Mission;
   if (playerId < 0 || playerId >= GAME_MAX_PLAYERS) return;
 
-  Player* player = players[playerId];
+  Player* player = playerGetFromIndex(playerId);
   if (!playerIsValid(player)) return;
 
   moby->ModeBits |= MOBY_MODE_BIT_CAN_BE_DAMAGED;
@@ -611,10 +609,9 @@ void propPlayerSetCollider(Player* player, int playerEnabled, int propEnabled)
 // ------------------------------------------------------
 void propSetOtherPlayersColliders(Player* player, int playerEnabled, int propEnabled)
 {
-  Player** players = playerGetAll();
   int i;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* otherPlayer = players[i];
+    Player* otherPlayer = playerGetFromIndex(i);
     if (otherPlayer == player || !playerIsValid(otherPlayer)) continue;
 
     propPlayerSetCollider(otherPlayer, playerEnabled, propEnabled);
@@ -724,7 +721,7 @@ void propPlayerCheckForIdle(Player* player)
 void propProcessRemote(Player* player)
 {
   int isSeeker = player->Team == TEAM_SEEKER;
-  struct PlayerPropState* playerState = &State.PlayerStates[player->PlayerId];
+  // struct PlayerPropState* playerState = &State.PlayerStates[player->PlayerId];
 
   // update player
   player->Invisible = !isSeeker;
@@ -854,7 +851,7 @@ int propRenderPropsInOctant(int octantIndex)
     VECTOR propPosition = {0,0,0,0};
     memcpy(&propPosition, prop->Position, 12);
     float distSqr = vector_sqrdistance(camera->pos, propPosition);
-    int propOctant = propGetOctant(&State.PropsTree, propPosition);
+    // int propOctant = propGetOctant(&State.PropsTree, propPosition);
     int shouldRender = distSqr < (PROP_MAX_SPAWN_DIST*PROP_MAX_SPAWN_DIST) && State.PropsDrawn < MAX_DRAW_PROPS;
 
     if (!shouldRender && propMoby) {
@@ -899,12 +896,11 @@ void propCheckForPropsToRender(void)
 #define MAX_OCTANTS_TO_DRAW (64)
 
   int i,j;
-  Player** players = playerGetAll();
   VECTOR cameraPos, cameraForward;
   GameCamera* camera = cameraGetGameCamera(0);
   vector_copy(cameraPos, camera->pos);
   vector_fromyaw(cameraForward, camera->rot[2]);
-  int cameraOctant = propGetOctant(&State.PropsTree, cameraPos);
+  // int cameraOctant = propGetOctant(&State.PropsTree, cameraPos);
   
   // reset counter of how many drawn
   State.PropsDrawn = 0;
@@ -932,7 +928,7 @@ void propCheckForPropsToRender(void)
     vector_subtract(toOctant, octantPos, cameraPos);
     vector_normalize(toOctant, toOctant);
     float dot = vector_innerproduct(cameraForward, toOctant);
-    float angle = acosf(dot) * (180.0f / MATH_PI);
+    // float angle = acosf(dot) * (180.0f / MATH_PI);
     float distSqr = vector_sqrdistance(cameraPos, octantPos);
     int isInFront = dot > 0 && distSqr < (PROP_MAX_SPAWN_DIST*PROP_MAX_SPAWN_DIST);
 
@@ -974,10 +970,11 @@ void propCheckForPropsToRender(void)
 
   // hide players
   for (j = 0; j < GAME_MAX_PLAYERS; ++j) {
+    Player* player = playerGetFromIndex(j);
     Moby* playerPropMoby = State.PlayerStates[j].PropMoby;
     if (!playerPropMoby) continue;
-    if (!playerIsValid(players[j])) continue;
-    if (players[j]->IsLocal) continue;
+    if (!playerIsValid(player)) continue;
+    if (player->IsLocal) continue;
 
     playerPropMoby->DrawDist = 0;
   }
@@ -1101,7 +1098,7 @@ int propSpawnRandom(int cuboidIdx, int count)
     if (collId == 2) {
       VECTOR hitNormal;
       VECTOR forward, right;
-      VECTOR up = {0,0,1,0};
+      // VECTOR up = {0,0,1,0};
       vector_normalize(hitNormal, CollLine_Fix_GetHitNormal());
       vector_fromyaw(forward, propRotation[2]);
       vector_outerproduct(right, forward, hitNormal);
@@ -1203,7 +1200,6 @@ void propReadMapPropList(void)
 void propForceWeapons(void)
 {
   // disable autospawn weapons
-  GameSettings* gs = gameGetSettings();
   GameOptions* go = gameGetOptions();
   go->GameFlags.MultiplayerGameFlags.AutospawnWeapons = 0;
   go->GameFlags.MultiplayerGameFlags.UnlimitedAmmo = 0;
@@ -1219,7 +1215,7 @@ void propForceWeapons(void)
 }
 
 // ------------------------------------------------------
-void propCleanup()
+void propCleanup(void)
 {
   // free
   if (State.Props) {
@@ -1230,7 +1226,7 @@ void propCleanup()
 }
 
 // ------------------------------------------------------
-void propInit()
+void propInit(void)
 {
   // reset state
   memset(&State, 0, sizeof(State));
@@ -1330,10 +1326,9 @@ void propInit()
 }
 
 // ------------------------------------------------------
-void propTick()
+void propTick(void)
 {
   int i;
-  Player** players = playerGetAll();
 
   // need props
   if (!State.Props) return;
@@ -1346,7 +1341,7 @@ void propTick()
 
   // check all players
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
 
     if (player->IsLocal) propProcessLocal(player);

@@ -214,7 +214,6 @@ void gateHandleInteract(Moby* moby)
 {
   struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
   int i;
-  char buf[32];
   
   // handle interact
   if (pvars->CurrentCost > 0 && moby->State == GATE_STATE_ACTIVATED) {
@@ -225,6 +224,7 @@ void gateHandleInteract(Moby* moby)
       // draw help popup
       if (gateCanInteract(moby, lp->PlayerPosition)) {
 #if SURVIVAL
+        char buf[32];
         snprintf(buf, sizeof(buf), "\x11 %d Tokens to Open", pvars->CurrentCost);
         if (tryPlayerInteract(moby, lp, buf, NULL, 0, 1, 15, 10000, PAD_CIRCLE, 1)) {
           gatePayToken(moby, lp->PlayerId);
@@ -358,7 +358,7 @@ int gateHandleEvent_SetState(Moby* moby, GuberEvent* event)
 	guberEventRead(event, &state, 4);
   mobySetState(moby, state, -1);
   
-  struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
+  // struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
   return 0;
 }
 
@@ -366,7 +366,6 @@ int gateHandleEvent_SetState(Moby* moby, GuberEvent* event)
 int gateHandleEvent_PayToken(Moby* moby, GuberEvent* event)
 {
   int pIdx;
-  Player** players = playerGetAll();
   
   DPRINTF("gate token paid: %08X\n", (u32)moby);
   struct GatePVar* pvars = (struct GatePVar*)moby->PVar;
@@ -397,7 +396,7 @@ int gateHandleEvent_PayToken(Moby* moby, GuberEvent* event)
       MapConfig.State->PlayerStates[pIdx].State.CurrentTokens -= 1;
     }
 
-    playPaidSound(players[pIdx]);
+    playPaidSound(playerGetFromIndex(pIdx));
 #endif
   }
 
@@ -515,7 +514,7 @@ void gateInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("GATE oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("GATE oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
 

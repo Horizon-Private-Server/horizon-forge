@@ -52,7 +52,7 @@ struct UpgradePickupEventArgs
 void upgradeSpawn(void);
 void upgradeTick(void);
 void upgradeInit(void);
-struct GuberMoby *upgradeGetGuber(Moby *moby);
+struct Guber *upgradeGetGuber(Moby *moby);
 int upgradeHandleEvent(Moby *moby, GuberEvent *event);
 int upgradeCreate(int bakedSpawnIdx, int itemIdx);
 void upgradePickup(Moby *moby, int pickedUpByPlayerId);

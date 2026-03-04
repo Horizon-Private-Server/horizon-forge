@@ -47,11 +47,10 @@ void holderUpdatePlayerHolder(Moby* moby)
 {
   struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
   Player* player = pvars->State.HeldByPlayer;
-  Player** players = playerGetAll();
 
   int i;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* pi = players[i];
+    Player* pi = playerGetFromIndex(i);
     if (!playerIsValid(pi)) continue;
     
     if (pi == player) {
@@ -118,7 +117,6 @@ void holderBroadcastState(Moby* moby, enum HolderState state)
     guberEventWrite(guberEvent, &state, 4);
   }
 
-  struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
   mobySetState(moby, state, -1);
 }
 
@@ -126,8 +124,6 @@ void holderBroadcastState(Moby* moby, enum HolderState state)
 void holderBroadcastPickup(Moby* moby, Player* player)
 {
   if (!player) return;
-
-  struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
 
 	// create event
 	GuberEvent * guberEvent = guberCreateEvent(moby, HOLDER_EVENT_PICKUP);
@@ -143,7 +139,7 @@ void holderBroadcastDrop(Moby* moby, Player* player)
 {
   if (player == NULL) return;
 
-  struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
+  // struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
 
   VECTOR collTestToPos = {0,0,-100,0};
   vector_add(collTestToPos, moby->Position, collTestToPos);
@@ -269,7 +265,6 @@ void holderCheckForDrop(Moby* moby)
 //--------------------------------------------------------------------------
 void holderUpdate(Moby* moby)
 {
-  int i;
   struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
 
   // detect when state was changed
@@ -390,7 +385,7 @@ int holderHandleEvent_SetState(Moby* moby, GuberEvent* event)
   if (!moby || !moby->PVar)
     return 0;
 
-  struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
+  // struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
   
 	// read event
 	guberEventRead(event, &state, 4);
@@ -406,13 +401,13 @@ int holderHandleEvent_Pickup(Moby* moby, GuberEvent* event)
   if (!moby || !moby->PVar)
     return 0;
 
-  struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
+  // struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
   
 	// read event
 	guberEventRead(event, &playerId, 4);
 
   // find pickup player
-  Player* player = playerGetAll()[playerId];
+  Player* player = playerGetFromIndex(playerId);
   if (playerId < 0 || playerId >= GAME_MAX_PLAYERS || !playerIsValid(player))
     player = NULL;
 
@@ -429,14 +424,14 @@ int holderHandleEvent_Drop(Moby* moby, GuberEvent* event)
   if (!moby || !moby->PVar)
     return 0;
 
-  struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
+  // struct HolderPVar* pvars = (struct HolderPVar*)moby->PVar;
   
 	// read event
 	guberEventRead(event, pos, 12);
 	guberEventRead(event, &playerId, 4);
 
   // find drop player
-  Player* player = playerGetAll()[playerId];
+  Player* player = playerGetFromIndex(playerId);
   if (playerId < 0 || playerId >= GAME_MAX_PLAYERS || !playerIsValid(player))
     player = NULL;
 
@@ -503,7 +498,7 @@ void holderInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("HOLDER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("HOLDER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
   

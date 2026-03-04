@@ -45,9 +45,9 @@
 //--------------------------------------------------------------------------
 void launchstreamUpdatePlayerTrajectory(Moby* moby, Player* player, struct LaunchStreamPlayerState* playerState)
 {
-  struct LaunchStreamPVar* pvars = (struct LaunchStreamPVar*)moby->PVar;
-  float distance = pvars->Speed * MATH_DT;
-  VECTOR delta = {0,0,0,0};
+  // struct LaunchStreamPVar* pvars = (struct LaunchStreamPVar*)moby->PVar;
+  // float distance = pvars->Speed * MATH_DT;
+  // VECTOR delta = {0,0,0,0};
 
   if (!playerState->Active) return;
 
@@ -112,9 +112,8 @@ void launchstreamGetInitialVelocity(VECTOR out, float pitchDeg, float range)
   float yaw = 0;
   float pitch = pitchDeg * MATH_DEG2RAD;
   float sin2Pitch = sinf(2.0 * pitch);
-  if (fabsf(sin2Pitch) < 1e-6) {
-    return 0;
-  }
+  if (fabsf(sin2Pitch) < 1e-6)
+    return;
   
   float speed = sqrtf((range * GRAVITY_MAG) / sin2Pitch);
   float cosPitch = cosf(pitch);
@@ -173,14 +172,13 @@ void launchstreamOnHeroDoJumpBehavior(Player* player)
 void launchstreamUpdate(Moby* moby)
 {
   struct LaunchStreamPVar* pvars = (struct LaunchStreamPVar*)moby->PVar;
-  Player** players = playerGetAll();
 
   if (moby->State != 0) return;
   if (pvars->Speed <= 0) return;
 
   int i;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* player = players[i];
+    Player* player = playerGetFromIndex(i);
     if (!playerIsValid(player)) continue;
 
     int pid = player->PlayerId;

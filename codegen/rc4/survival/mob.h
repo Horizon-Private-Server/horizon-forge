@@ -161,8 +161,8 @@ struct MobConfig
 	u16 Bangles;
 	u16 Xp;
 	u16 DamageCooldownTickCount;
+	u16 AttackCooldownTickCount;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 	char MobAttribute;
 	char Behavior;
 	char SharedXp;
@@ -402,6 +402,7 @@ struct MobSpawnEventArgs
 	u16 Damage;
 	u16 Xp;
 	u16 DamageCooldownTickCount;
+	u16 AttackCooldownTickCount;
 	char MobType;
 	char MobAttribute;
 	char Behavior;
@@ -410,7 +411,6 @@ struct MobSpawnEventArgs
 	u8 HitRadiusEighths;
 	u8 CollRadiusEighths;
 	u8 ReactionTickCount;
-	u8 AttackCooldownTickCount;
 };
 
 struct MobUnreliableBaseMsgArgs
@@ -428,6 +428,7 @@ struct MobUnreliableMsgStateUpdateArgs
 GuberEvent *mobCreateEvent(Moby *moby, u32 eventType);
 float mobGetTargetRadius(Moby *target);
 float mobGetDistanceToTarget(Moby *moby, Moby *target);
+void mobRegisterTarget(Moby *moby);
 int mobOnUnreliableMsgRemote(void *connection, void *data);
 void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float radius, int knockbackTicks);
 void mobNuke(int killedByPlayerId);

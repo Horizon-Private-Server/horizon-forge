@@ -48,7 +48,10 @@ int upgradeGetItems(int *itemIdxs, int count)
 int upgradeGetItem(int itemIdx, SurvivalItemDef_t *item)
 {
 	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
+	{
+		memset(item, 0, sizeof(SurvivalItemDef_t));
 		return 0;
+	}
 
 	memcpy(item, &MapConfig.ItemDefs[itemIdx], sizeof(SurvivalItemDef_t));
 	return 1;
@@ -83,7 +86,7 @@ int upgradeSpawnNew(int currBakedSpawnIdx, int itemIdx)
 {
 	char freeBakedSpawnPointsIdxs[BAKED_SPAWNPOINT_COUNT];
 	int freeBakedSpawnPointsIdxCount = 0;
-	int i, j;
+	int i;
 	VECTOR spPos;
 	if (!MapConfig.State)
 		return 0;
@@ -202,7 +205,6 @@ void upgradeUpdate(Moby *moby)
 		if (!playerIsValid(player) || !MapConfig.State)
 			continue;
 
-		struct SurvivalPlayer *playerData = &MapConfig.State->PlayerStates[player->PlayerId];
 		if (vector_sqrdistance(moby->Position, player->PlayerPosition) > (UPGRADE_PICKUP_RADIUS * UPGRADE_PICKUP_RADIUS))
 			continue;
 
@@ -392,10 +394,10 @@ int upgradeHandleEvent_Pickup(Moby *moby, GuberEvent *event)
 }
 
 //--------------------------------------------------------------------------
-struct GuberMoby *upgradeGetGuber(Moby *moby)
+struct Guber *upgradeGetGuber(Moby *moby)
 {
 	if (moby->OClass == UPGRADE_MOBY_OCLASS && moby->PVar)
-		return moby->GuberMoby;
+		return moby->Guber;
 
 	return 0;
 }
@@ -468,9 +470,7 @@ void upgradeSpawn(void)
 	if (!MapConfig.Functions.GetBakedSpawnPointsFunc)
 		return;
 
-	VECTOR pos, rot;
 	int i, j;
-	int r;
 	int bakedUpgradeSpawnpointCount = 0;
 	char upgradeBakedSpawnpointIdx[MAX_ITEM_COUNT];
 	int itemIdxs[MAX_ITEM_COUNT];
@@ -530,11 +530,11 @@ void upgradeInit(void)
 		return;
 
 	// set vtable callbacks
-	u32 mobyFunctionsPtr = (u32)mobyGetFunctions(temp);
+	MobyFunctions *mobyFunctionsPtr = mobyGetFunctions(temp);
 	if (mobyFunctionsPtr)
 	{
 		mapInstallMobyFunctions(mobyFunctionsPtr);
-		DPRINTF("UPGRADE oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, mobyFunctionsPtr, *(u32 *)(mobyFunctionsPtr + 0x04), *(u32 *)(mobyFunctionsPtr + 0x14));
+		DPRINTF("UPGRADE oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
 	}
 	mobyDestroy(temp);
 

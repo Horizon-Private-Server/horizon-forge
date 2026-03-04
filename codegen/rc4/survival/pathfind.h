@@ -43,6 +43,7 @@ extern u8 MOB_PATHFINDING_PATHS[];
 int pathGetClosestNodeIdx(VECTOR pos);
 int pathGetClosestNode(Moby* moby);
 int pathGetClosestNodeInSight(Moby* moby, int * foundInSight);
+u8* pathGetCurrentEdge(Moby* moby);
 int pathTargetCacheGetClosestNodeIdx(Moby* moby);
 int pathHasRouteFromTo(int fromNodeIdx, int toNodeIdx);
 int pathHasRouteToTarget(Moby* moby, Moby* target);

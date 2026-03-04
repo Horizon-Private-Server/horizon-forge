@@ -31,7 +31,7 @@ struct DemonBellPVar {
   int ForcedOn;
 };
 
-struct GuberMoby* demonbellGetGuber(Moby* moby);
+struct Guber* demonbellGetGuber(Moby* moby);
 int demonbellHandleEvent(Moby* moby, GuberEvent* event);
 void demonbellTick(void);
 void demonbellInit(void);

@@ -15,6 +15,7 @@
 #include <libdl/string.h>
 #include <libdl/math.h>
 #include <libdl/math3d.h>
+#include <libdl/random.h>
 #include <libdl/collision.h>
 #include <libdl/stdio.h>
 #include <libdl/gamesettings.h>
@@ -185,7 +186,6 @@ void initialize(void)
 //--------------------------------------------------------------------------
 int main(void)
 {
-  int i;
   if (baseCleanedUp) return 0;
   if (!isInGame() && !isSceneLoadedNotYetInGame())
     return 0;

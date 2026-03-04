@@ -114,7 +114,6 @@ int checkpointSetActive(Moby* checkpointMoby)
   if (!checkpointManagerMoby) return 0;
 
   struct CheckpointManagerPVar* pvars = (struct CheckpointManagerPVar*)checkpointManagerMoby->PVar;
-  struct CheckpointPVar* checkpointPvars = (struct CheckpointPVar*)checkpointMoby->PVar;
 
   // get index of checkpoint
   int idx = 0;
@@ -136,6 +135,7 @@ int checkpointSetActive(Moby* checkpointMoby)
   checkpointUpdate(checkpointMoby);
 
 #if OBSTACLE
+  struct CheckpointPVar* checkpointPvars = (struct CheckpointPVar*)checkpointMoby->PVar;
   if (MapConfig.SetLocalPlayerReachedCheckpoint && checkpointPvars->Save) {
     MapConfig.SetLocalPlayerReachedCheckpoint(checkpointMoby);
     uiShowPopup(0, "Saved Checkpoint");
@@ -258,7 +258,7 @@ void checkpointInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("CHECKPOINT MANAGER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("CHECKPOINT MANAGER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
   

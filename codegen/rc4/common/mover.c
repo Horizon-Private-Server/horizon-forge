@@ -94,10 +94,10 @@ void moverGetTurnEase(VECTOR outRot, Moby* moby, int currIdx, int dir, float dis
     vector_subtract(dtLast, spline->Points[currIdx], spline->Points[lastIdx]);
   }
 
-  float lastSegLen = vector_length(dtLast);
+  // float lastSegLen = vector_length(dtLast);
   float segT = (dist / seglen);
   float rDist = dist + 0.5;
-  float rTotalDist = (lastSegLen*0.5) + (seglen*0.5);
+  // float rTotalDist = (lastSegLen*0.5) + (seglen*0.5);
   if (segT < 0.5) {
     vector_fromforwardup(r0, dtLast, up);
     vector_fromforwardup(r1, dtCurr, up);
@@ -270,7 +270,6 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
     if (seglen > dist) {
 
       // compute last rotation, lerp from last to current
-      VECTOR r0, r1, dt2;
       if (pvars->SplineTurnSpeed > 0) {
         moverGetTurnEase(outRotDelta, moby, idx, dir, dist, seglen);
       } else {
@@ -320,9 +319,6 @@ void moverInitMoby(Moby* moby)
 //--------------------------------------------------------------------------
 void moverMoveMoby(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
 {
-  VECTOR dt;
-  VECTOR up = {0,0,1,0};
-  int i;
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
   if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
@@ -407,9 +403,8 @@ void moverApplyMobyTransformationToAttachedPlayers(Moby* moby, MATRIX mWorldBefo
   // we can hack a similar effect by finding any player standing on the target
   // and applying the same delta to them
   int i;
-  Player** players = playerGetAll();
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-    Player* p = players[i];
+    Player* p = playerGetFromIndex(i);
     if (!p || !p->SkinMoby || !p->PlayerMoby || p->Ground.pMoby != moby) continue;
     if (!p->Ground.onGood) continue;
 
@@ -453,8 +448,6 @@ void moverApplyMobyTransformationToAttachedPlayers(Moby* moby, MATRIX mWorldBefo
 //--------------------------------------------------------------------------
 void moverApplyMoby(Moby* moby, Moby* target, VECTOR posDelta, VECTOR rotDelta)
 {
-  int i;
-  Player** players = playerGetAll();
   VECTOR position, rotation;
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   if (!target) return;
@@ -767,7 +760,7 @@ void moverInit(void)
   MobyFunctions* mobyFunctionsPtr = mobyGetFunctions(temp);
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
-    DPRINTF("MOVER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, *(u32*)(mobyFunctionsPtr + 0x04), *(u32*)(mobyFunctionsPtr + 0x14));
+    DPRINTF("MOVER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
   }
   mobyDestroy(temp);
 
