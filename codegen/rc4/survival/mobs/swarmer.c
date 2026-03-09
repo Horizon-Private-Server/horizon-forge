@@ -408,14 +408,6 @@ void swarmerRenderPath(Moby *moby)
 	int pathLen = pvars->MobVars.MoveVars.PathEdgeCount;
 	int pathIdx = pvars->MobVars.MoveVars.PathEdgeCurrent;
 
-	if (pathLen > 0)
-	{
-		u8 *edge = MOB_PATHFINDING_EDGES[path[0]];
-		if (gfxWorldSpaceToScreenSpace(MOB_PATHFINDING_NODES[edge[0]], &x, &y))
-		{
-			gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, i == pathIdx ? "o" : "-", -1, 4);
-		}
-	}
 	for (i = 0; i < pathLen; ++i)
 	{
 		u8 *edge = MOB_PATHFINDING_EDGES[path[i]];
