@@ -882,7 +882,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         mobsRootGo.transform.SetParent(go.transform, false);
         {
             var mobGo = new GameObject("Reactor");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Reactor;
             mobDef.Probability = 1;
@@ -893,7 +893,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         {
             var mobGo = new GameObject("Reaper");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Reaper;
             mobDef.Probability = 0.1f;
@@ -904,7 +904,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         {
             var mobGo = new GameObject("Zombie");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Zombie;
             mobDef.Probability = 0.5f;
@@ -915,7 +915,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         {
             var mobGo = new GameObject("Swarmer");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Swarmer;
             mobDef.Probability = 1f;
