@@ -356,6 +356,23 @@ public static class ForgeBuilder
             }
         }
     }
+	
+    public static void CopyToBuildFolder(UnityEngine.SceneManagement.Scene scene, string dlBuildFolder = null, string uyaBuildFolder = null)
+    {
+        for (int racVersion = RCVER.UYA; racVersion <= RCVER.DL; ++racVersion)
+        {
+            var binFolder = FolderNames.GetMapBinFolder(scene.name, racVersion);
+            var mapBuildFolder = FolderNames.GetMapBuildFolder(scene.name, racVersion);
+            var buildFolder = racVersion == RCVER.DL ? dlBuildFolder : uyaBuildFolder;
+            if (!Directory.Exists(mapBuildFolder)) continue;
+			if (string.IsNullOrEmpty(buildFolder)) continue;
+
+			if (Directory.Exists(buildFolder))
+			{
+				IOHelper.CopyDirectory(mapBuildFolder, buildFolder);
+			}
+        }
+    }
 
     public static void RebuildMapFiles(RebuildContext ctx, string resourcesFolder, string binFolder)
     {
