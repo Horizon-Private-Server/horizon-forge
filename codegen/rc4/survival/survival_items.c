@@ -213,7 +213,9 @@ void mapOnItemConsumed_UpgradeWeapon(int defIdx, SurvivalItemDef_t *def, int pla
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_RandomizeWeaponPickups(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	randomizeWeaponPickups();
+	if (gameAmIHost())
+		randomizeWeaponPickups();
+
 	pushSnack(-1, "Weapon Pickups Randomized!", TPS);
 }
 
