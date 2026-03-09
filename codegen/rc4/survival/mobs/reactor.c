@@ -708,6 +708,7 @@ void reactorDoAction(Moby *moby)
 	case REACTOR_ACTION_FLINCH:
 	case REACTOR_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int nextAnimId = moby->AnimSeqId;
 
 		switch (moby->AnimSeqId)

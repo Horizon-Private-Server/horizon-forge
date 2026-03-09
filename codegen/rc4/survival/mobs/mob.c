@@ -294,7 +294,6 @@ void mobReactToExplosionAt(Moby *damager, VECTOR position, float damage, float r
 			vector_subtract(delta, m->Position, position);
 			if (vector_sqrmag(delta) <= sqrRadius)
 			{
-
 				float dist = vector_length(delta);
 				float angle = atan2f(delta[1] / dist, delta[0] / dist);
 
@@ -777,7 +776,7 @@ int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to)
 		vector_scale(hitDir, hitDir, hitBitangentDotDelta * vector_length(delta));
 		vector_add(outputPos, from, hitDir);
 
-    // VECTOR reflectedDelta;
+		// VECTOR reflectedDelta;
 		// vector_projectonhorizontal(hitToEx, hitToEx);
 		// vector_reflect(reflectedDelta, hitToEx, hitNormal);
 		// if (reflectedDelta[2] > delta[2])
@@ -814,7 +813,7 @@ void mobMove(Moby *moby)
 	u8 slowTicks = decTimerU8(&pvars->MobVars.SlowTicks);
 
 #if DEBUG_MOVE
-  VECTOR up = {0,0,1,0};
+	VECTOR up = {0, 0, 1, 0};
 	if (pvars->MobVars.Target)
 	{
 		VECTOR from, to, delta;

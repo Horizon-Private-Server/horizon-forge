@@ -441,6 +441,7 @@ void zombieDoAction(Moby *moby)
 	case ZOMBIE_ACTION_FLINCH:
 	case ZOMBIE_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int animFlinchId = pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH ? ZOMBIE_ANIM_BIG_FLINCH : ZOMBIE_ANIM_BIG_FLINCH;
 
 		mobTransAnim(moby, animFlinchId, 0);
@@ -796,8 +797,8 @@ int zombieCanNonOwnerTransitionToAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int zombieShouldForceStateUpdateOnAction(Moby *moby, int action)
 {
-	// only send state updates at regular intervals, unless dying
-	if (action == ZOMBIE_ACTION_DIE)
+	// only send state updates at regular intervals, unless dying or flinching
+	if (action == ZOMBIE_ACTION_DIE || action == ZOMBIE_ACTION_FLINCH || action == ZOMBIE_ACTION_BIG_FLINCH)
 		return 1;
 
 	return 0;

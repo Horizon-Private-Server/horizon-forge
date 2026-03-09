@@ -746,6 +746,7 @@ void leviathanDoAction(Moby *moby)
 	case LEVIATHAN_ACTION_FLINCH:
 	case LEVIATHAN_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int animFlinchId = pvars->MobVars.Action == LEVIATHAN_ACTION_BIG_FLINCH ? LEVIATHAN_ANIM_BIG_FLINCH : LEVIATHAN_ANIM_BIG_FLINCH;
 
 		mobTransAnim(moby, animFlinchId, 0);
@@ -1188,6 +1189,8 @@ int leviathanShouldForceStateUpdateOnAction(Moby *moby, int action)
 	// only send state updates at regular intervals, unless dying
 	// or if we're entering/leaving the roaming/laser/chase states
 	if (action == LEVIATHAN_ACTION_DIE)
+		return 1;
+	if (action == LEVIATHAN_ACTION_FLINCH || action == LEVIATHAN_ACTION_BIG_FLINCH)
 		return 1;
 	if (pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER || action == LEVIATHAN_ACTION_ATTACK_LASER)
 		return 1;
