@@ -463,6 +463,7 @@ void swarmerDoAction(Moby *moby)
 	case SWARMER_ACTION_FLINCH:
 	case SWARMER_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int animFlinchId = pvars->MobVars.Action == SWARMER_ACTION_BIG_FLINCH ? SWARMER_ANIM_FLINCH_SPIN_AND_STAND2 : SWARMER_ANIM_FLINCH_SPIN_AND_STAND;
 
 		mobTransAnim(moby, animFlinchId, 0);
@@ -793,8 +794,8 @@ int swarmerCanNonOwnerTransitionToAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int swarmerShouldForceStateUpdateOnAction(Moby *moby, int action)
 {
-	// only send state updates at regular intervals, unless dying
-	if (action == SWARMER_ACTION_DIE)
+	// only send state updates at regular intervals, unless dying or flinching
+	if (action == SWARMER_ACTION_DIE || action == SWARMER_ACTION_FLINCH || action == SWARMER_ACTION_BIG_FLINCH)
 		return 1;
 
 	return 0;

@@ -390,6 +390,7 @@ void tremorDoAction(Moby *moby)
 	case TREMOR_ACTION_FLINCH:
 	case TREMOR_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int animFlinchId = pvars->MobVars.Action == TREMOR_ACTION_BIG_FLINCH ? TREMOR_ANIM_FLINCH_FALL_GET_UP : TREMOR_ANIM_FLINCH;
 
 		mobTransAnim(moby, animFlinchId, 0);
@@ -667,8 +668,8 @@ int tremorCanNonOwnerTransitionToAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int tremorShouldForceStateUpdateOnAction(Moby *moby, int action)
 {
-	// only send state updates at regular intervals, unless dying
-	if (action == TREMOR_ACTION_DIE)
+	// only send state updates at regular intervals, unless dying or flinching
+	if (action == TREMOR_ACTION_DIE || action == TREMOR_ACTION_FLINCH || action == TREMOR_ACTION_BIG_FLINCH)
 		return 1;
 
 	return 0;

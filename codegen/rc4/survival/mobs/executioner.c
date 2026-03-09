@@ -489,6 +489,7 @@ void executionerDoAction(Moby *moby)
 	case EXECUTIONER_ACTION_FLINCH:
 	case EXECUTIONER_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int animFlinchId = pvars->MobVars.Action == EXECUTIONER_ACTION_BIG_FLINCH ? EXECUTIONER_ANIM_BIG_FLINCH : EXECUTIONER_ANIM_FLINCH;
 
 		mobTransAnim(moby, animFlinchId, 0);
@@ -850,8 +851,8 @@ int executionerShouldForceStateUpdateOnAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 
-	// only send state updates at regular intervals, unless dying
-	if (action == EXECUTIONER_ACTION_DIE)
+	// only send state updates at regular intervals, unless dying or flinching
+	if (action == EXECUTIONER_ACTION_DIE || action == EXECUTIONER_ACTION_FLINCH || action == EXECUTIONER_ACTION_BIG_FLINCH)
 		return 1;
 	if (pvars->MobVars.Action == EXECUTIONER_ACTION_FIRE || action == EXECUTIONER_ACTION_FIRE)
 		return 1;

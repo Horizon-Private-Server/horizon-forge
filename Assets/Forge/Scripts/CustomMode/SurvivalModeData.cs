@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 10;
+    public static readonly int SURVIVAL_VERSION = 11;
     public const int DEMONBELL_OCLASS = 0x2479;
     public const int BANK_OCLASS = 0x1F7;
     public const int STORE_OCLASS = 0x4100;
@@ -882,7 +882,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         mobsRootGo.transform.SetParent(go.transform, false);
         {
             var mobGo = new GameObject("Reactor");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Reactor;
             mobDef.Probability = 1;
@@ -893,7 +893,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         {
             var mobGo = new GameObject("Reaper");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Reaper;
             mobDef.Probability = 0.1f;
@@ -904,7 +904,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         {
             var mobGo = new GameObject("Zombie");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Zombie;
             mobDef.Probability = 0.5f;
@@ -915,7 +915,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
         {
             var mobGo = new GameObject("Swarmer");
-            mobGo.transform.SetParent(mobGo.transform, false);
+            mobGo.transform.SetParent(mobsRootGo.transform, false);
             var mobDef = mobGo.AddComponent<SurvivalMobDef>();
             mobDef.Mob = SurvivalMob.Swarmer;
             mobDef.Probability = 1f;
@@ -1888,8 +1888,8 @@ public class SurvivalItemEntry
         if (!string.IsNullOrEmpty(CustomOnConsumedFunctionName)) sb.AppendLine($"void {CustomOnConsumedFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetConsumeCooldownTicksFunctionName)) sb.AppendLine($"u32 {CustomGetConsumeCooldownTicksFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomHasRoomForMoreFunctionName)) sb.AppendLine($"int {CustomHasRoomForMoreFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
-        if (!string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName)) sb.AppendLine($"int {CustomCanBuyInStoreFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
-        if (!string.IsNullOrEmpty(CustomGetStoreCostFunctionName)) sb.AppendLine($"u32 {CustomGetStoreCostFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
+        if (!string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName)) sb.AppendLine($"int {CustomCanBuyInStoreFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId, int numTimesPurchased);");
+        if (!string.IsNullOrEmpty(CustomGetStoreCostFunctionName)) sb.AppendLine($"u32 {CustomGetStoreCostFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId, int numTimesPurchased);");
         if (!string.IsNullOrEmpty(CustomGetMysteryboxChanceFunctionName)) sb.AppendLine($"float {CustomGetMysteryboxChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetDropChanceFunctionName)) sb.AppendLine($"float {CustomGetDropChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetVendorRewardChanceFunctionName)) sb.AppendLine($"float {CustomGetVendorRewardChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");

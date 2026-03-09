@@ -187,8 +187,7 @@ void mapOnItemInit_SelfRevive(int defIdx, SurvivalItemDef_t *def)
 void mapOnItemConsumed_SelfRevive(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	Player *player = playerGetFromIndex(playerId);
-
-	if (!MapConfig.Functions.ModeRevivePlayerFunc || !playerIsValid(player))
+	if (!MapConfig.Functions.ModeRevivePlayerFunc || !playerIsValid(player) || !player->IsLocal)
 		return;
 
 	// revive
@@ -203,17 +202,18 @@ void mapOnItemConsumed_SelfRevive(int defIdx, SurvivalItemDef_t *def, int player
 void mapOnItemConsumed_UpgradeWeapon(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	Player *player = playerGetFromIndex(playerId);
-	if (!playerIsValid(player) || !player->IsLocal)
+	if (!MapConfig.Functions.ModeUpgradePlayerWeaponFunc || !playerIsValid(player) || !player->IsLocal)
 		return;
 
-	if (MapConfig.Functions.ModeUpgradePlayerWeaponFunc)
-		MapConfig.Functions.ModeUpgradePlayerWeaponFunc(playerId, player->WeaponHeldId);
+	MapConfig.Functions.ModeUpgradePlayerWeaponFunc(playerId, player->WeaponHeldId);
 }
 
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_RandomizeWeaponPickups(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	randomizeWeaponPickups();
+	if (gameAmIHost())
+		randomizeWeaponPickups();
+
 	pushSnack(-1, "Weapon Pickups Randomized!", TPS);
 }
 
@@ -405,9 +405,7 @@ void mapOnItemConsumed_ResetRandomGate(int defIdx, SurvivalItemDef_t *def, int p
 	pushSnack(-1, "Gate reset!", 60);
 
 	if (gameAmIHost())
-	{
 		gateResetRandomGate();
-	}
 #endif
 }
 
@@ -419,11 +417,15 @@ void mapOnItemConsumed_MysteryboxVox(int defIdx, SurvivalItemDef_t *def, int pla
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_DreadToken(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
-	if (!MapConfig.State)
+	Player *player = playerGetFromIndex(playerId);
+	if (!MapConfig.State || !playerIsValid(player))
 		return;
 
 	MapConfig.State->PlayerStates[playerId].State.TotalTokens += 1;
 	MapConfig.State->PlayerStates[playerId].State.CurrentTokens += 1;
+
+	if (player->IsLocal)
+		itemShowMessage(player->LocalPlayerIndex, defIdx, "Got %s!", 60);
 }
 
 //--------------------------------------------------------------------------
@@ -481,8 +483,10 @@ void mapOnItemConsumed_Alphamod(int defIdx, SurvivalItemDef_t *def, int playerId
 void mapOnItemConsumed_GlobalNuke(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	pushSnack(-1, "Nuke Activated!", TPS);
-	if (MapConfig.Functions.ModeMobNukeFunc)
-		MapConfig.Functions.ModeMobNukeFunc(playerId);
+	if (!MapConfig.Functions.ModeMobNukeFunc || !gameAmIHost())
+		return;
+
+	MapConfig.Functions.ModeMobNukeFunc(playerId);
 }
 
 //--------------------------------------------------------------------------
@@ -511,24 +515,30 @@ void mapOnItemConsumed_GlobalAmmo(int defIdx, SurvivalItemDef_t *def, int player
 void mapOnItemConsumed_GlobalDoublePoints(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	pushSnack(-1, "Double Bolts!", TPS);
-	if (MapConfig.Functions.ModeSetDoublePointsFunc)
-		MapConfig.Functions.ModeSetDoublePointsFunc(1);
+	if (!MapConfig.Functions.ModeSetDoublePointsFunc || !gameAmIHost())
+		return;
+
+	MapConfig.Functions.ModeSetDoublePointsFunc(1);
 }
 
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_GlobalDoubleXp(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	pushSnack(-1, "Double XP!", TPS);
-	if (MapConfig.Functions.ModeSetDoubleXPFunc)
-		MapConfig.Functions.ModeSetDoubleXPFunc(1);
+	if (!MapConfig.Functions.ModeSetDoubleXPFunc || !gameAmIHost())
+		return;
+
+	MapConfig.Functions.ModeSetDoubleXPFunc(1);
 }
 
 //--------------------------------------------------------------------------
 void mapOnItemConsumed_GlobalFreeze(int defIdx, SurvivalItemDef_t *def, int playerId)
 {
 	pushSnack(-1, "Freeze Activated!", TPS);
-	if (MapConfig.Functions.ModeSetFreezeMobsFunc)
-		MapConfig.Functions.ModeSetFreezeMobsFunc(1);
+	if (!MapConfig.Functions.ModeSetFreezeMobsFunc || !gameAmIHost())
+		return;
+
+	MapConfig.Functions.ModeSetFreezeMobsFunc(1);
 }
 
 //--------------------------------------------------------------------------
@@ -544,7 +554,7 @@ void mapOnItemConsumed_GlobalHealth(int defIdx, SurvivalItemDef_t *def, int play
 			{
 				playerSetHealth(player, player->MaxHealth);
 			}
-			else if (MapConfig.Functions.ModeRevivePlayerFunc && MapConfig.State && MapConfig.State->PlayerStates[i].ReviveCooldownTicks)
+			else if (MapConfig.Functions.ModeRevivePlayerFunc && MapConfig.State && MapConfig.State->PlayerStates[i].ReviveCooldownTicks && gameAmIHost())
 			{
 				MapConfig.Functions.ModeRevivePlayerFunc(player, playerId);
 			}
@@ -651,8 +661,11 @@ void mapOnItemConsumed_WeaponUpgrade(int defIdx, SurvivalItemDef_t *def, int pla
 	int weaponId = mapItem_WeaponUpgrade_GetWeaponIdFromItem(defIdx);
 
 	// upgrade
-	if (weaponId > 0 && MapConfig.Functions.ModeUpgradePlayerWeaponFunc)
-		MapConfig.Functions.ModeUpgradePlayerWeaponFunc(playerId, weaponId);
+	Player *player = playerGetFromIndex(playerId);
+	if (weaponId <= 0 || !MapConfig.Functions.ModeUpgradePlayerWeaponFunc || !playerIsValid(player) || !player->IsLocal)
+		return;
+
+	MapConfig.Functions.ModeUpgradePlayerWeaponFunc(playerId, weaponId);
 }
 
 //--------------------------------------------------------------------------

@@ -609,7 +609,10 @@ void survivalInit(void)
 	gambitsInit();
 #endif
 #if RANDOMIZE_WEAPONS_AT_START
-	randomizeWeaponPickups();
+	if (gameAmIHost())
+	{
+		randomizeWeaponPickups();
+	}
 #endif
 #ifdef AMMO_DROP_PROBABILITY
 	ammodropInit();

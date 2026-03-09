@@ -466,6 +466,7 @@ void reaperDoAction(Moby *moby)
 	case REAPER_ACTION_FLINCH:
 	case REAPER_ACTION_BIG_FLINCH:
 	{
+		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int animFlinchId = pvars->MobVars.Action == REAPER_ACTION_BIG_FLINCH ? REAPER_ANIM_FLINCH_KNOCKBACK : REAPER_ANIM_FLINCH;
 
 		mobTransAnim(moby, animFlinchId, 0);
@@ -815,8 +816,8 @@ int reaperCanNonOwnerTransitionToAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int reaperShouldForceStateUpdateOnAction(Moby *moby, int action)
 {
-	// only send state updates at regular intervals, unless dying
-	if (action == REAPER_ACTION_DIE)
+	// only send state updates at regular intervals, unless dying or flinching
+	if (action == REAPER_ACTION_DIE || action == REAPER_ACTION_FLINCH || action == REAPER_ACTION_BIG_FLINCH)
 		return 1;
 
 	return 0;
