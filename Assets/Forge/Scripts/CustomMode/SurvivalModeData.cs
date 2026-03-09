@@ -1888,8 +1888,8 @@ public class SurvivalItemEntry
         if (!string.IsNullOrEmpty(CustomOnConsumedFunctionName)) sb.AppendLine($"void {CustomOnConsumedFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetConsumeCooldownTicksFunctionName)) sb.AppendLine($"u32 {CustomGetConsumeCooldownTicksFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomHasRoomForMoreFunctionName)) sb.AppendLine($"int {CustomHasRoomForMoreFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
-        if (!string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName)) sb.AppendLine($"int {CustomCanBuyInStoreFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
-        if (!string.IsNullOrEmpty(CustomGetStoreCostFunctionName)) sb.AppendLine($"u32 {CustomGetStoreCostFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId);");
+        if (!string.IsNullOrEmpty(CustomCanBuyInStoreFunctionName)) sb.AppendLine($"int {CustomCanBuyInStoreFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId, int numTimesPurchased);");
+        if (!string.IsNullOrEmpty(CustomGetStoreCostFunctionName)) sb.AppendLine($"u32 {CustomGetStoreCostFunctionName}(int defIdx, struct SurvivalItemDef *def, Moby *storeMoby, int playerId, int numTimesPurchased);");
         if (!string.IsNullOrEmpty(CustomGetMysteryboxChanceFunctionName)) sb.AppendLine($"float {CustomGetMysteryboxChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetDropChanceFunctionName)) sb.AppendLine($"float {CustomGetDropChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
         if (!string.IsNullOrEmpty(CustomGetVendorRewardChanceFunctionName)) sb.AppendLine($"float {CustomGetVendorRewardChanceFunctionName}(int defIdx, struct SurvivalItemDef *def, int playerId);");
