@@ -325,7 +325,7 @@ public class PackerImporterWindow : EditorWindow
                                         }
 
                                         // import mesh
-                                        if (!BlenderHelper.ImportMesh(meshFileName, assetDestFolder, className, overwrite, out var outPath, fixNormals: true)) continue;
+                                        if (!BlenderHelper.ImportMesh(meshFileName, assetDestFolder, className, overwrite, out var outPath, fixNormals: true, fixUvs: true)) continue;
 
                                         // import collision
                                         if (import.GenerateCollisionId.HasValue)
@@ -361,7 +361,7 @@ public class PackerImporterWindow : EditorWindow
                                         //File.Copy(assetFile, outPath, true);
 
                                         // import mesh
-                                        if (!BlenderHelper.ImportMeshAsBlend(assetFile, assetDestFolder, className, overwrite, out outPath)) continue;
+                                        if (!BlenderHelper.ImportMeshAsBlend(assetFile, assetDestFolder, className, overwrite, out outPath, fixNormals: false, fixUvs: false)) continue;
 
                                         lock (lockObject)
                                         {

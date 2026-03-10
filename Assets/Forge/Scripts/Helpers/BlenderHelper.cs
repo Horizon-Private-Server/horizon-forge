@@ -78,6 +78,22 @@ public static class BlenderHelper
         return RunBlender("export-collision.py", "\"" + outDaeFile + "\" " + additionalMeshesArgs, blendFile: inBlendFile);
     }
 
+    public static bool ExportSky(string inBlendFile, string outGlbFile)
+    {
+        // import mesh
+        inBlendFile = Path.GetFullPath(inBlendFile).Replace("\\", "/");
+        outGlbFile = Path.GetFullPath(outGlbFile).Replace("\\", "/");
+
+        // check the file we want to import exists
+        // and that the out file doesn't exist, or overwrite existing
+        if (File.Exists(inBlendFile))
+        {
+            return RunBlender("export-sky.py", $"\"{inBlendFile}\" \"{outGlbFile}\"");
+        }
+
+        return false;
+    }
+
     public static bool PrepareFileForShrubConvert(string inFile, string outGlbFile, string objectsToSelect)
     {
         inFile = Path.GetFullPath(inFile).Replace("\\", "/");
@@ -115,7 +131,7 @@ public static class BlenderHelper
         return false;
     }
 
-    public static bool ImportMesh(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false)
+    public static bool ImportMesh(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false, bool fixUvs = false)
     {
         var extension = Path.GetExtension(meshFile);
 
@@ -131,10 +147,10 @@ public static class BlenderHelper
             {
                 case ".dae":
                     File.WriteAllText(meshFile, File.ReadAllText(meshFile).Replace("mat_", ""));
-                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")}");
+                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")} {(fixUvs ? "1" : "0")}");
                     break;
                 default:
-                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")}");
+                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")} {(fixUvs ? "1" : "0")}");
                     break;
             }
 
@@ -152,7 +168,7 @@ public static class BlenderHelper
         return false;
     }
 
-    public static bool ImportMeshAsBlend(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false)
+    public static bool ImportMeshAsBlend(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false, bool fixUvs = false)
     {
         var extension = Path.GetExtension(meshFile);
 
@@ -168,10 +184,10 @@ public static class BlenderHelper
             {
                 case ".dae":
                     File.WriteAllText(meshFile, File.ReadAllText(meshFile).Replace("mat_", ""));
-                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")}");
+                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")} {(fixUvs ? "1" : "0")}");
                     break;
                 default:
-                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")}");
+                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")} {(fixUvs ? "1" : "0")}");
                     break;
             }
 
@@ -188,7 +204,7 @@ public static class BlenderHelper
         return false;
     }
 
-    public static bool ImportMeshAsGlb(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false)
+    public static bool ImportMeshAsGlb(string meshFile, string outDir, string name, bool overwrite, out string outMeshFile, bool fixNormals = false, bool fixUvs = false)
     {
         var extension = Path.GetExtension(meshFile);
 
@@ -204,10 +220,10 @@ public static class BlenderHelper
             {
                 case ".dae":
                     File.WriteAllText(meshFile, File.ReadAllText(meshFile).Replace("mat_", ""));
-                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")}");
+                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")} {(fixUvs ? "1" : "0")}");
                     break;
                 default:
-                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")}");
+                    RunBlender("convert-mesh.py", $"\"{meshFile}\" \"{outMeshFile}\" {(fixNormals ? "1" : "0")} {(fixUvs ? "1" : "0")}");
                     break;
             }
 

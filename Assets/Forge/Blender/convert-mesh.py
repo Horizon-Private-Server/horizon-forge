@@ -83,6 +83,7 @@ print(argv)
 in_filepath = argv[0]
 out_filepath = argv[1]
 fix_normals = argv[2] == "1" if argv is not None and len(argv) > 2 else False
+fix_uvs = argv[3] == "1" if argv is not None and len(argv) > 3 else False
 ext = os.path.splitext(in_filepath)[1]
 
 # reset scene
@@ -159,7 +160,7 @@ if fix_normals:
     bpy.ops.object.mode_set(mode='OBJECT')
 
 # fix uvs
-if True:
+if fix_uvs:
     all_objects = [x for x in C.scene.objects]
     for obj in all_objects:
         me = obj.data

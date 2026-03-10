@@ -37,6 +37,7 @@ public class BuildWindow : EditorWindow
 
     // rebuild
     DropdownField dropdownBuildCode;
+    Toggle toggleRebuildSky;
     Toggle toggleRebuildCollision;
     Toggle toggleRebuildTfrags;
     Toggle toggleRebuildTies;
@@ -102,6 +103,7 @@ public class BuildWindow : EditorWindow
         root.BuildPadding();
 
         CreateGUI_Dropdown(ref dropdownBuildCode, "Custom Code", new List<string>() { "Off", "Release", "Debug" }, 1);
+        CreateGUI_Toggle(ref toggleRebuildSky, "Sky", true);
         CreateGUI_Toggle(ref toggleRebuildCollision, "Collision", true);
         CreateGUI_Toggle(ref toggleRebuildCuboidsSplinesAreas, "Cuboids/Splines/Areas/Cameras/Ambient Sounds", true);
         CreateGUI_Toggle(ref toggleRebuildDZO, "DZO", true);
@@ -118,10 +120,11 @@ public class BuildWindow : EditorWindow
         root.Add(toggleRebuildDZO);
         root.Add(toggleRebuildMobys);
         root.Add(toggleRebuildShrubs);
+        root.Add(toggleRebuildSky);
+        root.Add(toggleRebuildSprites);
         root.Add(toggleRebuildTfrags);
         root.Add(toggleRebuildTies);
         root.Add(toggleRebuildLighting);
-        root.Add(toggleRebuildSprites);
     }
 
     void CreateGUI_Pack(VisualElement root)
@@ -340,6 +343,7 @@ public class BuildWindow : EditorWindow
                     // we must always keep the build folder's code up-to-date
                     await ForgeBuilder.RebuildCode(ctx, resourcesFolder, binFolder, buildCodeGen: forceRebuildAll || dropdownBuildCode.index > 0, codeGenBuildDebug: dropdownBuildCode.index == 2); if (ctx.Cancel) return false;
 
+                    if (forceRebuildAll || toggleRebuildSky.value) ForgeBuilder.RebuildSky(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (forceRebuildAll || toggleRebuildCollision.value) await ForgeBuilder.RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (forceRebuildAll || toggleRebuildTfrags.value) ForgeBuilder.RebuildTfrags(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     if (forceRebuildAll || toggleRebuildTies.value) ForgeBuilder.RebuildTies(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;

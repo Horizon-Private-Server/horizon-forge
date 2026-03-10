@@ -265,6 +265,7 @@ public static class ForgeBuilder
                 else
                 {
                     await RebuildCode(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
+                    RebuildSky(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     await RebuildCollision(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildTfrags(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
                     RebuildTies(ctx, resourcesFolder, binFolder); if (ctx.Cancel) return false;
@@ -571,9 +572,11 @@ public static class ForgeBuilder
         // export as glb
         // there is a bug in blender 4.1 that removes vertex color alpha when exporting to glb
         // the bug is fixed in 4.2 (will be released July 2024)
-        if (false && !BlenderHelper.ImportMeshAsGlb(skyBlendFile, skyBinFolder, "mesh", true, out var outSkyMeshFile))
+        var skyGlbFile = Path.Combine(skyBinFolder, "mesh.glb");
+        if (!BlenderHelper.ExportSky(skyBlendFile, skyGlbFile))
         {
             Debug.LogError($"Failed to export sky blend as gltf {skyBlendFile}");
+            ctx.Cancel = true;
             return;
         }
 
@@ -592,6 +595,8 @@ public static class ForgeBuilder
             if (matToTex.ContainsKey(matName)) continue;
 
             var tex = mat.GetTexture("_MainTex") as Texture2D;
+            if (tex is null) continue;
+
             var outTexFileName = $"{texIdx++}.png";
             var outTexPath = Path.Combine(skyBinFolder, outTexFileName);
             UnityHelper.SaveTexture(tex, outTexPath);
@@ -651,13 +656,17 @@ public static class ForgeBuilder
                     var mat = materials[i];
                     var matName = mat.name.Substring(4);
                     var tex = matToTex.GetValueOrDefault(matName);
+                    var matId = matName == "gouraud" ? matName : i.ToString();
 
-                    writer.WriteLine($"\t\tMaterial {i} {{");
+                    writer.WriteLine($"\t\tMaterial {matId} {{");
                     writer.WriteLine($"\t\t\tname: \"{matName}\"");
-                    writer.WriteLine($"");
-                    writer.WriteLine("\t\t\tTexture diffuse {");
-                    writer.WriteLine($"\t\t\t\tsrc: \"{tex}\"");
-                    writer.WriteLine("\t\t\t}");
+                    if (tex != null)
+                    {
+                        writer.WriteLine($"");
+                        writer.WriteLine("\t\t\tTexture diffuse {");
+                        writer.WriteLine($"\t\t\t\tsrc: \"{tex}\"");
+                        writer.WriteLine("\t\t\t}");
+                    }
                     writer.WriteLine("\t\t}");
                 }
                 writer.WriteLine("\t}");
@@ -685,6 +694,7 @@ public static class ForgeBuilder
         if (!WrenchHelper.ConvertToSky(skyBinFolder, skyBinFile, ctx.RacVersion))
         {
             Debug.LogError($"Failed to pack sky.");
+            ctx.Cancel = true;
             return;
         }
     }
