@@ -2616,7 +2616,7 @@ public class LevelImporterWindow : EditorWindow
             AssetDatabase.StopAssetEditing();
         }
 
-        BlenderHelper.ImportMesh(terrainOutColladaFile, terrainMapResourcesFolder, "tfrags", overwrite: true, out var outMeshFile, fixNormals: false);
+        BlenderHelper.ImportMesh(terrainOutColladaFile, terrainMapResourcesFolder, "tfrags", overwrite: true, out var outMeshFile, fixNormals: false, fixUvs: true);
         AssetDatabase.ImportAsset(UnityHelper.GetProjectRelativePath(outMeshFile));
         SetModelImportSettings(outMeshFile, addCollider: false, remapMaterials: true);
 
