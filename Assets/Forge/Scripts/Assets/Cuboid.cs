@@ -222,10 +222,72 @@ public class Cuboid : RenderSelectionBase
 
     public void Write(BinaryWriter writer)
     {
+        Write(writer, 0);
+    }
+
+    public void Write(BinaryWriter writer, int racVersion)
+    {
         var worldMatrix = this.transform.localToWorldMatrix; //Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.lossyScale);
         var trs = worldMatrix.SwizzleXZY();
         var inverse = worldMatrix.inverse.SwizzleXZY();
         var offset = writer.BaseStream.Position;
+
+        // UYA: export the prefab mesh transform (visual) so the bin matches the editor view.
+        if (racVersion == RCVER.UYA && (CuboidType.HasFlag(CuboidMaskType.HillCircle) || CuboidType.HasFlag(CuboidMaskType.HillSquare)))
+        {
+            Transform exportTf = null;
+            if (assetInstance)
+            {
+                var meshFilter = assetInstance.GetComponentInChildren<MeshFilter>();
+                exportTf = meshFilter ? meshFilter.transform : assetInstance.transform;
+            }
+
+            if (exportTf)
+            {
+                Matrix4x4 m = exportTf.localToWorldMatrix;
+                Vector3 upDir = exportTf.up;
+                float offsetY = 0f;
+                // Remove baked prefab scale; for circle, add a 2x boost on X/Z.
+                if (CuboidType.HasFlag(CuboidMaskType.HillCircle))
+                {
+                    var invScale = Matrix4x4.Scale(new Vector3(1f / 2.828427f, 1f, 1f / 2.828427f));
+                    var boost = Matrix4x4.Scale(new Vector3(1.4f, 1f, 1.4f)); // temper circle size slightly
+                    m = m * invScale * boost;
+                    offsetY = 0.5f; // parent 0.2 + child 0.3 baked into prefab
+                }
+                else if (CuboidType.HasFlag(CuboidMaskType.HillSquare))
+                {
+                    var invScale = Matrix4x4.Scale(new Vector3(0.5f, 1f / 3f, 0.5f));
+                    m = m * invScale;
+                    offsetY = 1.2f * (1f / 3f); // scale baked offset by inverse Y
+                }
+
+                // Remove baked vertical offset.
+                if (offsetY != 0f)
+                {
+                    var pos = new Vector3(m.m30, m.m31, m.m32);
+                    pos -= upDir * offsetY;
+                    m.m30 = pos.x; m.m31 = pos.y; m.m32 = pos.z;
+                }
+
+                m = m.SwizzleXZY();
+                Matrix4x4 inv = m.inverse;
+
+                writer.BaseStream.Position = offset;
+                for (int i = 0; i < 16; ++i)
+                    writer.Write(m[i]);
+                for (int i = 0; i < 12; ++i)
+                    writer.Write(inv[i]);
+
+                var iEulerAdj = -MathHelper.WrapEuler((exportTf.rotation * Quaternion.Euler(0, -90, 0)).eulerAngles).SwizzleXZY();
+                writer.Write(iEulerAdj.x * Mathf.Deg2Rad);
+                writer.Write(iEulerAdj.y * Mathf.Deg2Rad);
+                writer.Write(iEulerAdj.z * Mathf.Deg2Rad);
+                writer.Write(0f);
+                return;
+            }
+            // If no prefab/mesh found, fall through to default.
+        }
 
         for (int i = 0; i < 16; ++i)
             writer.Write(trs[i]);
