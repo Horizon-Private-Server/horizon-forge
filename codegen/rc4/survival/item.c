@@ -138,11 +138,15 @@ int itemCanConsume(Player *player, int itemIdx)
 	if (itemIdx < 0 || itemIdx >= MapConfig.ItemDefCount)
 		return 0;
 
-	// SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
 	if (playerGetItemCount(player, itemIdx) <= 0)
 		return 0;
 
 	if (itemCooldownTicks[player->PlayerId][itemIdx] > 0)
+		return 0;
+
+	// prevent consumption of manual if dead
+	SurvivalItemDef_t *item = &MapConfig.ItemDefs[itemIdx];
+	if (item->Type == SURVIVAL_ITEM_CONSUMABLE_MANUAL && playerIsDead(player))
 		return 0;
 
 	return 1;
