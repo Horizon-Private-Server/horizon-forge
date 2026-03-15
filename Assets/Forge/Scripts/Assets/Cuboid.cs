@@ -9,439 +9,390 @@ using UnityEngine;
 [Obsolete]
 public enum CuboidType
 {
-    None,
-    Player,
-    HillSquare,
-    HillCircle,
-    Camera,
+	None,
+	Player,
+	HillSquare,
+	HillCircle,
+	Camera,
 }
 
 [Obsolete]
 public enum CuboidSubType
 {
-    Default,
-    BlueFlagSpawn,
-    RedFlagSpawn,
-    GreenFlagSpawn,
-    OrangeFlagSpawn,
+	Default,
+	BlueFlagSpawn,
+	RedFlagSpawn,
+	GreenFlagSpawn,
+	OrangeFlagSpawn,
 }
 
 [Serializable, Flags]
 public enum CuboidMaskType
 {
-    None = 0,
-    Player = 1 << 0,
-    BlueFlagSpawn = 1 << 1,
-    RedFlagSpawn = 1 << 2,
-    GreenFlagSpawn = 1 << 3,
-    OrangeFlagSpawn = 1 << 4,
-    HillSquare = 1 << 5,
-    HillCircle = 1 << 6,
-    Camera = 1 << 7,
+	None = 0,
+	Player = 1 << 0,
+	BlueFlagSpawn = 1 << 1,
+	RedFlagSpawn = 1 << 2,
+	GreenFlagSpawn = 1 << 3,
+	OrangeFlagSpawn = 1 << 4,
+	HillSquare = 1 << 5,
+	HillCircle = 1 << 6,
+	Camera = 1 << 7,
 }
 
 [ExecuteInEditMode, SelectionBase, AddComponentMenu("")]
 public class Cuboid : RenderSelectionBase
 {
-    const int CUBOID_VERSION = 1;
+	const int CUBOID_VERSION = 1;
 
-    //[Obsolete, SerializeField, HideInInspector]
-    //private CuboidType Type;
-    //[Obsolete, SerializeField, HideInInspector]
-    //private CuboidSubType Subtype;
+	//[Obsolete, SerializeField, HideInInspector]
+	//private CuboidType Type;
+	//[Obsolete, SerializeField, HideInInspector]
+	//private CuboidSubType Subtype;
 
-    [SerializeField] public CuboidMaskType CuboidType;
-    [SerializeField, HideInInspector] private int _version = 0;
+	[SerializeField] public CuboidMaskType CuboidType;
+	[SerializeField, HideInInspector] private int _version = 0;
 
-    private bool changed = true;
-    private bool lastHidden = false;
-    private bool lastPicking = false;
-    private bool lastSelected = false;
-    private CuboidMaskType lastType = (CuboidMaskType)100;
-    private GameObject assetInstance;
+	private bool changed = true;
+	private bool lastHidden = false;
+	private bool lastPicking = false;
+	private bool lastSelected = false;
+	private CuboidMaskType lastType = (CuboidMaskType)100;
+	private GameObject assetInstance;
 
-    public Renderer[] GetRenderers() => assetInstance?.GetComponentsInChildren<Renderer>();
-    public bool IsPlayerSpawn => CuboidType.HasFlag(CuboidMaskType.Player) || CuboidType.HasFlag(CuboidMaskType.BlueFlagSpawn)
-        || CuboidType.HasFlag(CuboidMaskType.RedFlagSpawn) || CuboidType.HasFlag(CuboidMaskType.GreenFlagSpawn)
-        || CuboidType.HasFlag(CuboidMaskType.OrangeFlagSpawn);
+	public Renderer[] GetRenderers() => assetInstance?.GetComponentsInChildren<Renderer>();
+	public bool IsPlayerSpawn => CuboidType.HasFlag(CuboidMaskType.Player) || CuboidType.HasFlag(CuboidMaskType.BlueFlagSpawn)
+		|| CuboidType.HasFlag(CuboidMaskType.RedFlagSpawn) || CuboidType.HasFlag(CuboidMaskType.GreenFlagSpawn)
+		|| CuboidType.HasFlag(CuboidMaskType.OrangeFlagSpawn);
 
-    private void Start()
-    {
-        Update();
-    }
+	private void Start()
+	{
+		Update();
+	}
 
-    void Update()
-    {
-        var hidden = SceneVisibilityManager.instance.IsHidden(this.gameObject);
-        if (hidden != lastHidden)
-        {
-            changed = true;
-            lastHidden = hidden;
-        }
+	void Update()
+	{
+		var hidden = SceneVisibilityManager.instance.IsHidden(this.gameObject);
+		if (hidden != lastHidden)
+		{
+			changed = true;
+			lastHidden = hidden;
+		}
 
-        var picking = !SceneVisibilityManager.instance.IsPickingDisabled(this.gameObject);
-        if (picking != lastPicking)
-        {
-            changed = true;
-            lastPicking = picking;
-        }
+		var picking = !SceneVisibilityManager.instance.IsPickingDisabled(this.gameObject);
+		if (picking != lastPicking)
+		{
+			changed = true;
+			lastPicking = picking;
+		}
 
-        var selected = IsSelected();
-        if (selected != lastSelected)
-        {
-            changed = true;
-            lastSelected = selected;
-        }
+		var selected = IsSelected();
+		if (selected != lastSelected)
+		{
+			changed = true;
+			lastSelected = selected;
+		}
 
-        if (CuboidType != lastType)
-        {
-            changed = true;
-            if (assetInstance) DestroyImmediate(assetInstance.gameObject);
-            lastType = CuboidType;
-        }
+		if (CuboidType != lastType)
+		{
+			changed = true;
+			if (assetInstance) DestroyImmediate(assetInstance.gameObject);
+			lastType = CuboidType;
+		}
 
-        if (!assetInstance)
-        {
-            RefreshAsset();
-        }
+		if (!assetInstance)
+		{
+			RefreshAsset();
+		}
 
-        if (changed) UpdateMaterials();
-        UpdateTransform();
-    }
+		if (changed) UpdateMaterials();
+		UpdateTransform();
+	}
 
-    private bool IsSelected()
-    {
-        if (!Selection.activeGameObject) return false;
-        if (Selection.activeGameObject == this.gameObject) return true;
+	private bool IsSelected()
+	{
+		if (!Selection.activeGameObject) return false;
+		if (Selection.activeGameObject == this.gameObject) return true;
 
-        var area = Selection.activeGameObject.GetComponent<Area>();
-        if (area && area.Cuboids.Contains(this)) return true;
+		var area = Selection.activeGameObject.GetComponent<Area>();
+		if (area && area.Cuboids.Contains(this)) return true;
 
-        return false;
-    }
+		return false;
+	}
 
-    private void OnValidate()
-    {
-        Upgrade();
-        UpdateTransform();
-        UpdateMaterials();
-    }
+	private void OnValidate()
+	{
+		Upgrade();
+		UpdateTransform();
+		UpdateMaterials();
+	}
 
-    private void UpdateTransform()
-    {
-        if (assetInstance)
-        {
-            if (CuboidType.HasFlag(CuboidMaskType.HillCircle))
-            {
-                var scale = Vector3.one;
-                scale.x = this.transform.localScale.z / this.transform.localScale.x;
-                assetInstance.transform.localScale = scale;
-            }
-            else
-            {
-                assetInstance.transform.localScale = Vector3.one;
-            }
-        }
+	private void UpdateTransform()
+	{
+		if (assetInstance)
+		{
+			if (CuboidType.HasFlag(CuboidMaskType.HillCircle))
+			{
+				var scale = Vector3.one;
+				scale.x = this.transform.localScale.z / this.transform.localScale.x;
+				assetInstance.transform.localScale = scale;
+			}
+			else
+			{
+				assetInstance.transform.localScale = Vector3.one;
+			}
+		}
 
-    }
+	}
 
-    private void UpdateMaterials()
-    {
-        var renderers = GetComponentsInChildren<Renderer>();
-        var mpb = new MaterialPropertyBlock();
+	private void UpdateMaterials()
+	{
+		var renderers = GetComponentsInChildren<Renderer>();
+		var mpb = new MaterialPropertyBlock();
 
-        foreach (var renderer in renderers)
-        {
-            renderer.GetPropertyBlock(mpb);
-            mpb.SetInteger("_Selected", lastSelected ? 1 : 0);
-            mpb.SetInteger("_Faded2", lastHidden ? 1 : 0);
-            mpb.SetInteger("_Picking", lastPicking ? 1 : 0);
-            mpb.SetInteger("_WorldLightIndex", -1);
-            renderer.SetPropertyBlock(mpb);
+		foreach (var renderer in renderers)
+		{
+			renderer.GetPropertyBlock(mpb);
+			mpb.SetInteger("_Selected", lastSelected ? 1 : 0);
+			mpb.SetInteger("_Faded2", lastHidden ? 1 : 0);
+			mpb.SetInteger("_Picking", lastPicking ? 1 : 0);
+			mpb.SetInteger("_WorldLightIndex", -1);
+			renderer.SetPropertyBlock(mpb);
 
-            renderer.allowOcclusionWhenDynamic = false;
-        }
+			renderer.allowOcclusionWhenDynamic = false;
+		}
 
-        changed = false;
-    }
+		changed = false;
+	}
 
-    public void RefreshAsset()
-    {
-        // destroy all children
-        while (transform.childCount > 0)
-            DestroyImmediate(transform.GetChild(0).gameObject);
+	public void RefreshAsset()
+	{
+		// destroy all children
+		while (transform.childCount > 0)
+			DestroyImmediate(transform.GetChild(0).gameObject);
 
-        // instantiate
-        var prefab = UnityHelper.GetCuboidPrefab(CuboidType);
-        if (prefab)
-        {
-            GameObject go = null;
-            try
-            {
-                go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-                if (go)
-                {
-                    assetInstance = go;
-                    go.transform.SetParent(this.transform, false);
+		// instantiate
+		var prefab = UnityHelper.GetCuboidPrefab(CuboidType);
+		if (prefab)
+		{
+			GameObject go = null;
+			try
+			{
+				go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+				if (go)
+				{
+					assetInstance = go;
+					go.transform.SetParent(this.transform, false);
 
-                    UnityHelper.RecurseHierarchy(go.transform, (t) =>
-                    {
-                        t.gameObject.layer = gameObject.layer;
-                        t.gameObject.hideFlags = HideFlags.DontSave | HideFlags.NotEditable | HideFlags.HideInInspector | HideFlags.HideInHierarchy;
-                    });
+					UnityHelper.RecurseHierarchy(go.transform, (t) =>
+					{
+						t.gameObject.layer = gameObject.layer;
+						t.gameObject.hideFlags = HideFlags.DontSave | HideFlags.NotEditable | HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+					});
 
-                    UpdateMaterials();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError(ex);
-                if (go) DestroyImmediate(go);
-            }
-        }
-    }
+					UpdateMaterials();
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError(ex);
+				if (go) DestroyImmediate(go);
+			}
+		}
+	}
 
-    #region Binary
+	#region Binary
 
-    public void Read(BinaryReader reader)
-    {
-        var worldMatrix = Matrix4x4.identity;
-        for (int i = 0; i < 16; ++i)
-            worldMatrix[i] = reader.ReadSingle();
+	public void Read(BinaryReader reader)
+	{
+		var worldMatrix = Matrix4x4.identity;
+		for (int i = 0; i < 16; ++i)
+			worldMatrix[i] = reader.ReadSingle();
 
-        for (int i = 0; i < 12; ++i)
-            reader.ReadSingle();
+		for (int i = 0; i < 12; ++i)
+			reader.ReadSingle();
 
-        worldMatrix = worldMatrix.SwizzleXZY();
-        worldMatrix.GetReflectionMatrix(out var pos, out var rot, out var scale, out var reflection);
+		worldMatrix = worldMatrix.SwizzleXZY();
+		worldMatrix.GetReflectionMatrix(out var pos, out var rot, out var scale, out var reflection);
 
-        this.transform.position = pos;
-        this.transform.rotation = rot;
-        this.transform.localScale = scale;
-    }
+		this.transform.position = pos;
+		this.transform.rotation = rot;
+		this.transform.localScale = scale;
+	}
 
-    public void Write(BinaryWriter writer)
-    {
-        Write(writer, 0);
-    }
+	public void Write(BinaryWriter writer, int racVersion)
+	{
+		var worldMatrix = this.transform.localToWorldMatrix;
 
-    public void Write(BinaryWriter writer, int racVersion)
-    {
-        var worldMatrix = this.transform.localToWorldMatrix; //Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.lossyScale);
-        var trs = worldMatrix.SwizzleXZY();
-        var inverse = worldMatrix.inverse.SwizzleXZY();
-        var offset = writer.BaseStream.Position;
+		if (racVersion == RCVER.UYA && CuboidType.HasFlag(CuboidMaskType.HillCircle))
+		{
+			// temper circle size slightly
+			// ~ root2
+			worldMatrix *= Matrix4x4.Scale(new Vector3(1.4f, 1f, 1.4f));
+		}
 
-        // UYA: export the prefab mesh transform (visual) so the bin matches the editor view.
-        if (racVersion == RCVER.UYA && (CuboidType.HasFlag(CuboidMaskType.HillCircle) || CuboidType.HasFlag(CuboidMaskType.HillSquare)))
-        {
-            Transform exportTf = null;
-            if (assetInstance)
-            {
-                var meshFilter = assetInstance.GetComponentInChildren<MeshFilter>();
-                exportTf = meshFilter ? meshFilter.transform : assetInstance.transform;
-            }
+		var trs = worldMatrix.SwizzleXZY();
+		var inverse = worldMatrix.inverse.SwizzleXZY();
+		var offset = writer.BaseStream.Position;
 
-            if (exportTf)
-            {
-                Matrix4x4 m = exportTf.localToWorldMatrix;
-                Vector3 upDir = exportTf.up;
-                float offsetY = 0f;
-                // Remove baked prefab scale; for circle, add a 2x boost on X/Z.
-                if (CuboidType.HasFlag(CuboidMaskType.HillCircle))
-                {
-                    var invScale = Matrix4x4.Scale(new Vector3(1f / 2.828427f, 1f, 1f / 2.828427f));
-                    var boost = Matrix4x4.Scale(new Vector3(1.4f, 1f, 1.4f)); // temper circle size slightly
-                    m = m * invScale * boost;
-                    offsetY = 0.5f; // parent 0.2 + child 0.3 baked into prefab
-                }
-                else if (CuboidType.HasFlag(CuboidMaskType.HillSquare))
-                {
-                    var invScale = Matrix4x4.Scale(new Vector3(0.5f, 1f / 3f, 0.5f));
-                    m = m * invScale;
-                    offsetY = 1.2f * (1f / 3f); // scale baked offset by inverse Y
-                }
+		// cuboids written as l2w (0x40) and w2l (0x30, no translation)
+		for (int i = 0; i < 16; ++i)
+			writer.Write(trs[i]);
+		for (int i = 0; i < 12; ++i)
+			writer.Write(inverse[i]);
 
-                // Remove baked vertical offset.
-                if (offsetY != 0f)
-                {
-                    var pos = new Vector3(m.m30, m.m31, m.m32);
-                    pos -= upDir * offsetY;
-                    m.m30 = pos.x; m.m31 = pos.y; m.m32 = pos.z;
-                }
+		// cuboids store euler angles in last row of inverse matrix
+		var iEuler = -MathHelper.WrapEuler((this.transform.rotation * Quaternion.Euler(0, -90, 0)).eulerAngles).SwizzleXZY();
+		writer.Write(iEuler.x * Mathf.Deg2Rad);
+		writer.Write(iEuler.y * Mathf.Deg2Rad);
+		writer.Write(iEuler.z * Mathf.Deg2Rad);
+		writer.Write(0f);
 
-                m = m.SwizzleXZY();
-                Matrix4x4 inv = m.inverse;
+		if (racVersion == RCVER.DL && CuboidType.HasFlag(CuboidMaskType.HillCircle))
+		{
+			// dl denotes circle hill as having height vector magnitude > 1
+			writer.BaseStream.Position = offset + 0x20;
+			var v = new Vector3(trs[8], trs[9], trs[10]).normalized * 2;
+			writer.Write(v.x);
+			writer.Write(v.y);
+			writer.Write(v.z);
+			writer.BaseStream.Position = offset + 0x80;
+		}
+		else if (racVersion == RCVER.DL && CuboidType.HasFlag(CuboidMaskType.HillSquare))
+		{
+			// dl denotes rectangle hill as having height vector magnitude = 1
+			writer.BaseStream.Position = offset + 0x20;
+			var v = new Vector3(trs[8], trs[9], trs[10]).normalized;
+			writer.Write(v.x);
+			writer.Write(v.y);
+			writer.Write(v.z);
+			writer.BaseStream.Position = offset + 0x80;
+		}
+		else if (CuboidType.HasFlag(CuboidMaskType.Player))
+		{
+			// don't store euler angles for pitch and roll
+			writer.BaseStream.Position = offset + 0x70;
+			writer.Write(0f);
+			writer.Write(0f);
+			writer.BaseStream.Position = offset + 0x80;
+		}
+	}
 
-                writer.BaseStream.Position = offset;
-                for (int i = 0; i < 16; ++i)
-                    writer.Write(m[i]);
-                for (int i = 0; i < 12; ++i)
-                    writer.Write(inv[i]);
+	#endregion
 
-                var iEulerAdj = -MathHelper.WrapEuler((exportTf.rotation * Quaternion.Euler(0, -90, 0)).eulerAngles).SwizzleXZY();
-                writer.Write(iEulerAdj.x * Mathf.Deg2Rad);
-                writer.Write(iEulerAdj.y * Mathf.Deg2Rad);
-                writer.Write(iEulerAdj.z * Mathf.Deg2Rad);
-                writer.Write(0f);
-                return;
-            }
-            // If no prefab/mesh found, fall through to default.
-        }
+	#region Occlusion Bake
 
-        for (int i = 0; i < 16; ++i)
-            writer.Write(trs[i]);
-        for (int i = 0; i < 12; ++i)
-            writer.Write(inverse[i]);
+	public void OnPreBake(Color32 uidColor)
+	{
+		var mpb = new MaterialPropertyBlock();
+		var renderers = GetRenderers();
+		if (renderers != null)
+		{
+			foreach (var renderer in renderers)
+			{
+				renderer.GetPropertyBlock(mpb);
 
-        var iEuler = -MathHelper.WrapEuler((this.transform.rotation * Quaternion.Euler(0, -90, 0)).eulerAngles).SwizzleXZY();
-        writer.Write(iEuler.x * Mathf.Deg2Rad);
-        writer.Write(iEuler.y * Mathf.Deg2Rad);
-        writer.Write(iEuler.z * Mathf.Deg2Rad);
-        writer.Write(0f);
+				mpb.SetColor("_IdColor", uidColor);
+				//mpb.SetInteger("_Id", OcclusionId);
+				//mpb.SetFloat("_DoubleSidedEnable", 1);
+				renderer.SetPropertyBlock(mpb);
+			}
+		}
+	}
 
-        if (CuboidType.HasFlag(CuboidMaskType.HillCircle))
-        {
-            writer.BaseStream.Position = offset + 0x20;
-            var v = new Vector3(trs[8], trs[9], trs[10]).normalized * 2;
-            writer.Write(v.x);
-            writer.Write(v.y);
-            writer.Write(v.z);
-            writer.BaseStream.Position = offset + 0x80;
-        }
-        else if (CuboidType.HasFlag(CuboidMaskType.HillSquare))
-        {
-            writer.BaseStream.Position = offset + 0x20;
-            var v = new Vector3(trs[8], trs[9], trs[10]).normalized;
-            writer.Write(v.x);
-            writer.Write(v.y);
-            writer.Write(v.z);
-            writer.BaseStream.Position = offset + 0x80;
-        }
-        else if (CuboidType.HasFlag(CuboidMaskType.Player))
-        {
-            writer.BaseStream.Position = offset + 0x70;
-            writer.Write(0f);
-            writer.Write(0f);
-            writer.BaseStream.Position = offset + 0x80;
-        }
-    }
+	public void OnPostBake()
+	{
 
-    #endregion
+	}
 
-    #region Occlusion Bake
-
-    public void OnPreBake(Color32 uidColor)
-    {
-        var mpb = new MaterialPropertyBlock();
-        var renderers = GetRenderers();
-        if (renderers != null)
-        {
-            foreach (var renderer in renderers)
-            {
-                renderer.GetPropertyBlock(mpb);
-
-                mpb.SetColor("_IdColor", uidColor);
-                //mpb.SetInteger("_Id", OcclusionId);
-                //mpb.SetFloat("_DoubleSidedEnable", 1);
-                renderer.SetPropertyBlock(mpb);
-            }
-        }
-    }
-
-    public void OnPostBake()
-    {
-
-    }
-
-    #endregion
+	#endregion
 
 
-    #region Versioning
+	#region Versioning
 
-    public void InitializeVersion()
-    {
-        _version = CUBOID_VERSION;
-    }
+	public void InitializeVersion()
+	{
+		_version = CUBOID_VERSION;
+	}
 
-    private void Upgrade()
-    {
-        // wait for import to finish before upgrading
-        if (LevelImporterWindow.IsImporting) return;
+	private void Upgrade()
+	{
+		// wait for import to finish before upgrading
+		if (LevelImporterWindow.IsImporting) return;
 
-        // upgrade
-        if (_version < CUBOID_VERSION)
-        {
-            while (_version < CUBOID_VERSION)
-            {
-                RunMigration(_version + 1);
-                ++_version;
-            }
+		// upgrade
+		if (_version < CUBOID_VERSION)
+		{
+			while (_version < CUBOID_VERSION)
+			{
+				RunMigration(_version + 1);
+				++_version;
+			}
 
-            Debug.Log($"Cuboid upgraded to v{_version}");
-            UnityHelper.MarkActiveSceneDirty();
-        }
-        else if (_version > CUBOID_VERSION)
-        {
-            _version = CUBOID_VERSION;
-        }
-    }
+			Debug.Log($"Cuboid upgraded to v{_version}");
+			UnityHelper.MarkActiveSceneDirty();
+		}
+		else if (_version > CUBOID_VERSION)
+		{
+			_version = CUBOID_VERSION;
+		}
+	}
 
-    private void RunMigration(int version)
-    {
-        switch (version)
-        {
-            case 1: // CONVERT CUBOIDTYPE + CUBOIDSUBTYPE TO CUBOIDMASKTYPE
-                {
-                    //if (Type == global::CuboidType.Player)
-                    //{
-                    //    CuboidType |= CuboidMaskType.Player;
+	private void RunMigration(int version)
+	{
+		switch (version)
+		{
+			case 1: // CONVERT CUBOIDTYPE + CUBOIDSUBTYPE TO CUBOIDMASKTYPE
+				{
+					//if (Type == global::CuboidType.Player)
+					//{
+					//    CuboidType |= CuboidMaskType.Player;
 
-                    //    switch (Subtype)
-                    //    {
-                    //        case CuboidSubType.BlueFlagSpawn: CuboidType |= CuboidMaskType.BlueFlagSpawn; break;
-                    //        case CuboidSubType.RedFlagSpawn: CuboidType |= CuboidMaskType.RedFlagSpawn; break;
-                    //        case CuboidSubType.GreenFlagSpawn: CuboidType |= CuboidMaskType.GreenFlagSpawn; break;
-                    //        case CuboidSubType.OrangeFlagSpawn: CuboidType |= CuboidMaskType.OrangeFlagSpawn; break;
-                    //    }
-                    //}
-                    //else if (Type == global::CuboidType.HillSquare)
-                    //{
-                    //    CuboidType |= CuboidMaskType.HillSquare;
-                    //}
-                    //else if (Type == global::CuboidType.HillCircle)
-                    //{
-                    //    CuboidType |= CuboidMaskType.HillCircle;
-                    //}
-                    //else if (Type == global::CuboidType.Camera)
-                    //{
-                    //    CuboidType |= CuboidMaskType.Camera;
-                    //}
-                    break;
-                }
-        }
-    }
+					//    switch (Subtype)
+					//    {
+					//        case CuboidSubType.BlueFlagSpawn: CuboidType |= CuboidMaskType.BlueFlagSpawn; break;
+					//        case CuboidSubType.RedFlagSpawn: CuboidType |= CuboidMaskType.RedFlagSpawn; break;
+					//        case CuboidSubType.GreenFlagSpawn: CuboidType |= CuboidMaskType.GreenFlagSpawn; break;
+					//        case CuboidSubType.OrangeFlagSpawn: CuboidType |= CuboidMaskType.OrangeFlagSpawn; break;
+					//    }
+					//}
+					//else if (Type == global::CuboidType.HillSquare)
+					//{
+					//    CuboidType |= CuboidMaskType.HillSquare;
+					//}
+					//else if (Type == global::CuboidType.HillCircle)
+					//{
+					//    CuboidType |= CuboidMaskType.HillCircle;
+					//}
+					//else if (Type == global::CuboidType.Camera)
+					//{
+					//    CuboidType |= CuboidMaskType.Camera;
+					//}
+					break;
+				}
+		}
+	}
 
-    #endregion
+	#endregion
 
-    public bool IsInCuboid(Vector3 position)
-    {
-        var dt = this.transform.worldToLocalMatrix.MultiplyPoint(position);
-        var size = 1f;
-        if (dt.x < size && dt.x > -size && dt.y < size && dt.y > -size && dt.z < size && dt.z > -size)
-            return true;
+	public bool IsInCuboid(Vector3 position)
+	{
+		var dt = this.transform.worldToLocalMatrix.MultiplyPoint(position);
+		var size = 1f;
+		if (dt.x < size && dt.x > -size && dt.y < size && dt.y > -size && dt.z < size && dt.z > -size)
+			return true;
 
-        return false;
-    }
+		return false;
+	}
 
 
-    [MenuItem("GameObject/Forge/Misc/Cuboid", priority = 10)]
-    public static void CreateNew()
-    {
-        var go = new GameObject("Cuboid");
-        var cuboid = go.AddComponent<Cuboid>();
-        cuboid._version = CUBOID_VERSION;
-        UnityHelper.OnAfterCreateGameObject(go);
-    }
+	[MenuItem("GameObject/Forge/Misc/Cuboid", priority = 10)]
+	public static void CreateNew()
+	{
+		var go = new GameObject("Cuboid");
+		var cuboid = go.AddComponent<Cuboid>();
+		cuboid._version = CUBOID_VERSION;
+		UnityHelper.OnAfterCreateGameObject(go);
+	}
 
 }
