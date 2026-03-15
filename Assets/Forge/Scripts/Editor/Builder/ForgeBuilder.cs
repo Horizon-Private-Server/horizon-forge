@@ -1662,7 +1662,7 @@ public static class ForgeBuilder
             {
                 using (var writer = new BinaryWriter(fs))
                 {
-                    cuboid.Write(writer);
+                    cuboid.Write(writer, ctx.RacVersion);
                 }
             }
 
