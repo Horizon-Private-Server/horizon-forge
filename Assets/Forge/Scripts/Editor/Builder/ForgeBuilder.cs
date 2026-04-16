@@ -18,15 +18,6 @@ using UnityEngine.UIElements;
 
 public static class ForgeBuilder
 {
-    static ForgeBuilder()
-    {
-        var culture = CultureInfo.InvariantCulture;
-        CultureInfo.DefaultThreadCurrentCulture = culture;
-        CultureInfo.DefaultThreadCurrentUICulture = culture;
-        Thread.CurrentThread.CurrentCulture = culture;
-        Thread.CurrentThread.CurrentUICulture = culture;
-    }
-
     static readonly (int RacVersion, GameRegion Region)[] BUILD_VERSIONS = new (int RacVersion, GameRegion Region)[]
     {
         (RCVER.DL, GameRegion.NTSC),
@@ -648,8 +639,8 @@ public static class ForgeBuilder
 
                     writer.WriteLine($"\t\tSkyShell {i} {{");
                     writer.WriteLine($"\t\t\tbloom: {(layer.Bloom ? "true" : "false")}");
-                    writer.WriteLine($"\t\t\tstarting_rotation: [{euler.y:G9} {euler.x:G9} {euler.z:G9}]");
-                    writer.WriteLine($"\t\t\tangular_velocity: [{angvel.y:G9} {angvel.x:G9} {angvel.z:G9}]");
+                    writer.WriteLine($"\t\t\tstarting_rotation: [{euler.y.ToInvariantCulture("G9")} {euler.x.ToInvariantCulture("G9")} {euler.z.ToInvariantCulture("G9")}]");
+                    writer.WriteLine($"\t\t\tangular_velocity: [{angvel.y.ToInvariantCulture("G9")} {angvel.x.ToInvariantCulture("G9")} {angvel.z.ToInvariantCulture("G9")}]");
                     writer.WriteLine($"");
                     writer.WriteLine("\t\t\tMesh mesh {");
                     writer.WriteLine($"\t\t\t\tname: \"{mesh.name}\"");
