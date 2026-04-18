@@ -638,8 +638,8 @@ public static class ForgeBuilder
 
                     writer.WriteLine($"\t\tSkyShell {i} {{");
                     writer.WriteLine($"\t\t\tbloom: {(layer.Bloom ? "true" : "false")}");
-                    writer.WriteLine($"\t\t\tstarting_rotation: [{euler.y} {euler.x} {euler.z}]");
-                    writer.WriteLine($"\t\t\tangular_velocity: [{angvel.y} {angvel.x} {angvel.z}]");
+                    writer.WriteLine($"\t\t\tstarting_rotation: [{euler.y.ToInvariantCulture("G9")} {euler.x.ToInvariantCulture("G9")} {euler.z.ToInvariantCulture("G9")}]");
+                    writer.WriteLine($"\t\t\tangular_velocity: [{angvel.y.ToInvariantCulture("G9")} {angvel.x.ToInvariantCulture("G9")} {angvel.z.ToInvariantCulture("G9")}]");
                     writer.WriteLine($"");
                     writer.WriteLine("\t\t\tMesh mesh {");
                     writer.WriteLine($"\t\t\t\tname: \"{mesh.name}\"");
