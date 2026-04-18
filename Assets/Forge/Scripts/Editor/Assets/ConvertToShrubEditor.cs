@@ -11,6 +11,8 @@ public class ConvertToShrubEditor : Editor
     private MapConfig m_MapConfig;
     private SerializedProperty m_ShrubsProperty;
     private SerializedProperty m_MaterialsProperty;
+    private GameObject m_LastMergedParent;
+    private int m_LastMergedMatchCount;
 
     private void OnEnable()
     {
@@ -32,11 +34,14 @@ public class ConvertToShrubEditor : Editor
         base.OnInspectorGUI();
 
         // render materials
-        if (targets.Length == 1)
+        if (targets.Length == 1 && m_ShrubsProperty != null)
         {
             var shrub = target as ConvertToShrub;
             if (shrub.GetGeometry(out var parentGo))
             {
+                var matchedMaterials = new List<SerializedProperty>();
+
+                m_ShrubsProperty.serializedObject.Update();
                 for (int i = 0; i < m_ShrubsProperty.arraySize; ++i)
                 {
                     var elem = m_ShrubsProperty.GetArrayElementAtIndex(i);
@@ -45,13 +50,47 @@ public class ConvertToShrubEditor : Editor
                         var parentProperty = elem.FindPropertyRelative("Parent");
                         if (parentProperty != null && parentProperty.objectReferenceValue && (parentProperty.objectReferenceValue == parentGo || PrefabUtility.GetOriginalSourceRootWhereGameObjectIsAdded(parentProperty.objectReferenceValue as GameObject) == parentGo))
                         {
-                            m_ShrubsProperty.serializedObject.Update();
                             var materialsProperty = elem.FindPropertyRelative("Materials");
-                            EditorGUILayout.PropertyField(materialsProperty);
-                            m_ShrubsProperty.serializedObject.ApplyModifiedProperties();
-                            break;
+                            if (materialsProperty != null)
+                                matchedMaterials.Add(materialsProperty);
                         }
                     }
+                }
+
+                if (matchedMaterials.Count > 0)
+                {
+                    var primaryMaterials = matchedMaterials[0];
+                    var needsInitialMerge = m_LastMergedParent != parentGo || m_LastMergedMatchCount != matchedMaterials.Count;
+
+                    if (needsInitialMerge)
+                    {
+                        for (int i = 1; i < matchedMaterials.Count; ++i)
+                            MergeMaterialsByName(primaryMaterials, matchedMaterials[i]);
+
+                        for (int i = 1; i < matchedMaterials.Count; ++i)
+                            CopyMaterials(primaryMaterials, matchedMaterials[i]);
+                    }
+
+                    EditorGUI.BeginChangeCheck();
+                    EditorGUILayout.PropertyField(primaryMaterials, includeChildren: true);
+                    var changed = EditorGUI.EndChangeCheck();
+
+                    if (changed)
+                    {
+                        for (int i = 1; i < matchedMaterials.Count; ++i)
+                            CopyMaterials(primaryMaterials, matchedMaterials[i]);
+                    }
+
+                    if (needsInitialMerge || changed)
+                        m_ShrubsProperty.serializedObject.ApplyModifiedProperties();
+
+                    m_LastMergedParent = parentGo;
+                    m_LastMergedMatchCount = matchedMaterials.Count;
+                }
+                else
+                {
+                    m_LastMergedParent = null;
+                    m_LastMergedMatchCount = 0;
                 }
             }
         }
@@ -106,6 +145,8 @@ public class ConvertToShrubEditor : Editor
 
         if (!invalid.Any() && m_MapConfig)
         {
+            var selectedParents = GetSelectedParents();
+
             GUILayout.Space(20);
 
             // bulk remove alpha
@@ -116,8 +157,13 @@ public class ConvertToShrubEditor : Editor
                 if (db)
                 {
                     foreach (var shrub in db.Shrubs)
+                    {
+                        if (!selectedParents.Any(selectedParent => IsParentMatch(shrub.Parent, selectedParent)))
+                            continue;
+
                         foreach (var material in shrub.Materials)
                             material.RemoveAlpha = true;
+                    }
                 }
             }
             if (GUILayout.Button("Bulk Alpha: Toggle On"))
@@ -126,8 +172,13 @@ public class ConvertToShrubEditor : Editor
                 if (db)
                 {
                     foreach (var shrub in db.Shrubs)
+                    {
+                        if (!selectedParents.Any(selectedParent => IsParentMatch(shrub.Parent, selectedParent)))
+                            continue;
+
                         foreach (var material in shrub.Materials)
                             material.RemoveAlpha = false;
+                    }
                 }
             }
             GUILayout.EndHorizontal();
@@ -140,8 +191,13 @@ public class ConvertToShrubEditor : Editor
                 if (db)
                 {
                     foreach (var shrub in db.Shrubs)
+                    {
+                        if (!selectedParents.Any(selectedParent => IsParentMatch(shrub.Parent, selectedParent)))
+                            continue;
+
                         foreach (var material in shrub.Materials)
                             material.MaxTextureSize = m_BulkTextureSize;
+                    }
                 }
             }
             m_BulkTextureSize = (TextureSize)EditorGUILayout.EnumPopup(m_BulkTextureSize);
@@ -171,5 +227,80 @@ public class ConvertToShrubEditor : Editor
 
         //    terrain.ToMesh(mesh.gameObject);
         //}
+    }
+
+    private static void MergeMaterialsByName(SerializedProperty destination, SerializedProperty source)
+    {
+        if (destination == null || source == null)
+            return;
+
+        var existingNames = new HashSet<string>();
+        for (int i = 0; i < destination.arraySize; ++i)
+        {
+            var material = destination.GetArrayElementAtIndex(i);
+            var materialName = material.FindPropertyRelative("Name")?.stringValue;
+            if (!string.IsNullOrEmpty(materialName))
+                existingNames.Add(materialName);
+        }
+
+        for (int i = 0; i < source.arraySize; ++i)
+        {
+            var srcMaterial = source.GetArrayElementAtIndex(i);
+            var srcName = srcMaterial.FindPropertyRelative("Name")?.stringValue;
+
+            if (!string.IsNullOrEmpty(srcName) && existingNames.Contains(srcName))
+                continue;
+
+            destination.InsertArrayElementAtIndex(destination.arraySize);
+            var dstMaterial = destination.GetArrayElementAtIndex(destination.arraySize - 1);
+            CopyMaterial(srcMaterial, dstMaterial);
+
+            if (!string.IsNullOrEmpty(srcName))
+                existingNames.Add(srcName);
+        }
+    }
+
+    private static void CopyMaterials(SerializedProperty source, SerializedProperty destination)
+    {
+        if (source == null || destination == null)
+            return;
+
+        destination.arraySize = source.arraySize;
+        for (int i = 0; i < source.arraySize; ++i)
+            CopyMaterial(source.GetArrayElementAtIndex(i), destination.GetArrayElementAtIndex(i));
+    }
+
+    private static void CopyMaterial(SerializedProperty source, SerializedProperty destination)
+    {
+        if (source == null || destination == null)
+            return;
+
+        destination.FindPropertyRelative("Name").stringValue = source.FindPropertyRelative("Name").stringValue;
+        destination.FindPropertyRelative("MaxTextureSize").enumValueIndex = source.FindPropertyRelative("MaxTextureSize").enumValueIndex;
+        destination.FindPropertyRelative("TintColor").colorValue = source.FindPropertyRelative("TintColor").colorValue;
+        destination.FindPropertyRelative("CorrectForAlphaBloom").boolValue = source.FindPropertyRelative("CorrectForAlphaBloom").boolValue;
+        destination.FindPropertyRelative("RemoveAlpha").boolValue = source.FindPropertyRelative("RemoveAlpha").boolValue;
+        destination.FindPropertyRelative("TextureOverride").objectReferenceValue = source.FindPropertyRelative("TextureOverride").objectReferenceValue;
+    }
+
+    private HashSet<GameObject> GetSelectedParents()
+    {
+        var selectedParents = new HashSet<GameObject>();
+        foreach (var targetObject in targets)
+        {
+            var shrub = targetObject as ConvertToShrub;
+            if (shrub != null && shrub.GetGeometry(out var parentGo) && parentGo)
+                selectedParents.Add(parentGo);
+        }
+
+        return selectedParents;
+    }
+
+    private static bool IsParentMatch(GameObject shrubParent, GameObject selectedParent)
+    {
+        if (!shrubParent || !selectedParent)
+            return false;
+
+        return shrubParent == selectedParent || PrefabUtility.GetOriginalSourceRootWhereGameObjectIsAdded(shrubParent) == selectedParent;
     }
 }
