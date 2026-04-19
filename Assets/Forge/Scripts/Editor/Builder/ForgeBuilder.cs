@@ -599,7 +599,8 @@ public static class ForgeBuilder
 
             var outTexFileName = $"{texIdx++}.png";
             var outTexPath = Path.Combine(skyBinFolder, outTexFileName);
-            UnityHelper.SaveTexture(tex, outTexPath);
+            UnityHelper.SaveTexture(tex, outTexPath, tint: mat.color);
+			PackerHelper.QuantizePng(outTexPath, outTexPath);
             matToTex.Add(matName, outTexFileName);
         }
 
@@ -611,6 +612,7 @@ public static class ForgeBuilder
             var outTexFileName = $"{texIdx++}.png";
             var outTexPath = Path.Combine(skyBinFolder, outTexFileName);
             UnityHelper.SaveTexture(tex, outTexPath);
+			PackerHelper.QuantizePng(outTexPath, outTexPath);
             fxTextures.Add(outTexFileName);
         }
 
