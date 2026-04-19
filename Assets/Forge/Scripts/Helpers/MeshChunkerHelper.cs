@@ -345,11 +345,25 @@ public static class MeshChunkerHelper
 			else           right.Add(g);
 		}
 
-		// Degenerate: one side is empty — stop recursing.
+		// Degenerate: one side is empty (e.g. all centroids share the same coordinate,
+		// which is common in flat/planar quad grids).  Fall back to a guaranteed 50/50
+		// split using the already-sorted centroids list so we always make progress.
 		if (left.Count == 0 || right.Count == 0)
 		{
-			results.Add(groups);
-			return;
+			// Single group — cannot split further; accept as-is even if oversized.
+			if (groups.Count <= 1)
+			{
+				results.Add(groups);
+				return;
+			}
+
+			int half = centroids.Count / 2;
+			left  = new List<TriGroup>(half);
+			right = new List<TriGroup>(centroids.Count - half);
+			for (int i = 0; i < half; i++)
+				left.Add(centroids[i].g);
+			for (int i = half; i < centroids.Count; i++)
+				right.Add(centroids[i].g);
 		}
 
 		ComplexitySplitGroups(obj, left,  options, results);
