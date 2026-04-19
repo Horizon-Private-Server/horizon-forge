@@ -394,14 +394,14 @@ public static class TfragHelper
             msphere_ofs = 0x410,
             light_ofs = 0x3B0,
             light_vert_start_off = 0x278,
-            dir_lights_one = -1,
+            dir_lights_one = 0xFF,
             dir_lights_upd = 0,
             point_lights = 0xFFFF,
             cube_ofs = 0x450,
             occl_index = 0,
             vert_cnt = 9,
             tri_cnt = 8,
-            mip_dist = short.MinValue
+            mip_dist = 0x8000
         };
 
         GenerateTfrag(4, 9, GENERATE_TFRAG_DATA_2X2_STRIPOFS, GENERATE_TFRAG_DATA_2X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
@@ -444,14 +444,14 @@ public static class TfragHelper
             msphere_ofs = 0x2C0,
             light_ofs = 0x280,
             light_vert_start_off = 0x188,
-            dir_lights_one = -1,
+            dir_lights_one = 0xFF,
             dir_lights_upd = 0,
             point_lights = 0xFFFF,
             cube_ofs = 0x2E0,
             occl_index = 0,
             vert_cnt = 6,
             tri_cnt = 4,
-            mip_dist = short.MinValue
+            mip_dist = 0x8000
         };
 
         GenerateTfrag(2, 6, GENERATE_TFRAG_DATA_1X2_STRIPOFS, GENERATE_TFRAG_DATA_1X2_LODOFS, vertices, normals, colors, uvs, quads, quadTextures, textureClamps, header, data, out def);
@@ -912,131 +912,4 @@ public static class TfragHelper
 
     #endregion
 
-}
-
-public struct TfragHeader
-{
-    public Vector4 bSphere;
-    public uint pData;
-    public ushort lod_2_ofs;
-    public ushort shared_ofs;
-    public ushort lod_1_ofs;
-    public ushort lod_0_ofs;
-    public ushort tex_ofs;
-    public ushort rgba_ofs;
-    public sbyte common_size;
-    public sbyte lod_2_size;
-    public sbyte lod_1_size;
-    public sbyte lod_0_size;
-    public sbyte lod_2_rgba_cnt;
-    public sbyte lod_1_rgba_cnt;
-    public sbyte lod_0_rgba_cnt;
-    public bool base_only;
-    public sbyte tex_cnt;
-    public sbyte rgba_size;
-    public sbyte rgba_verts_loc;
-    public sbyte occl_index_stash;
-    public byte msphere_cnt;
-    public byte flags;
-    public short msphere_ofs;
-    public short light_ofs;
-    public short light_vert_start_off;
-    public sbyte dir_lights_one;
-    public sbyte dir_lights_upd;
-    public ushort point_lights;
-    public short cube_ofs;
-    public short occl_index;
-    public byte vert_cnt;
-    public sbyte tri_cnt;
-    public short mip_dist;
-
-    public void Write(BinaryWriter writer)
-    {
-        writer.Write(bSphere.x * 1024f);
-        writer.Write(bSphere.z * 1024f);
-        writer.Write(bSphere.y * 1024f);
-        writer.Write(bSphere.w * 1024f);
-        writer.Write(pData);
-        writer.Write(lod_2_ofs);
-        writer.Write(shared_ofs);
-        writer.Write(lod_1_ofs);
-        writer.Write(lod_0_ofs);
-        writer.Write(tex_ofs);
-        writer.Write(rgba_ofs);
-        writer.Write(common_size);
-        writer.Write(lod_2_size);
-        writer.Write(lod_1_size);
-        writer.Write(lod_0_size);
-        writer.Write(lod_2_rgba_cnt);
-        writer.Write(lod_1_rgba_cnt);
-        writer.Write(lod_0_rgba_cnt);
-        writer.Write(base_only);
-        writer.Write(tex_cnt);
-        writer.Write(rgba_size);
-        writer.Write(rgba_verts_loc);
-        writer.Write(occl_index_stash);
-        writer.Write(msphere_cnt);
-        writer.Write(flags);
-        writer.Write(msphere_ofs);
-        writer.Write(light_ofs);
-        writer.Write(light_vert_start_off);
-        writer.Write(dir_lights_one);
-        writer.Write(dir_lights_upd);
-        writer.Write(point_lights);
-        writer.Write(cube_ofs);
-        writer.Write(occl_index);
-        writer.Write(vert_cnt);
-        writer.Write(tri_cnt);
-        writer.Write(mip_dist);
-    }
-
-    public void Read(BinaryReader reader)
-    {
-        bSphere.x = reader.ReadSingle() / 1024f;
-        bSphere.z = reader.ReadSingle() / 1024f;
-        bSphere.y = reader.ReadSingle() / 1024f;
-        bSphere.w = reader.ReadSingle() / 1024f;
-        pData = reader.ReadUInt32();
-        lod_2_ofs = reader.ReadUInt16();
-        shared_ofs = reader.ReadUInt16();
-        lod_1_ofs = reader.ReadUInt16();
-        lod_0_ofs = reader.ReadUInt16();
-        tex_ofs = reader.ReadUInt16();
-        rgba_ofs = reader.ReadUInt16();
-        common_size = reader.ReadSByte();
-        lod_2_size = reader.ReadSByte();
-        lod_1_size = reader.ReadSByte();
-        lod_0_size = reader.ReadSByte();
-        lod_2_rgba_cnt = reader.ReadSByte();
-        lod_1_rgba_cnt = reader.ReadSByte();
-        lod_0_rgba_cnt = reader.ReadSByte();
-        base_only = reader.ReadBoolean();
-        tex_cnt = reader.ReadSByte();
-        rgba_size = reader.ReadSByte();
-        rgba_verts_loc = reader.ReadSByte();
-        occl_index_stash = reader.ReadSByte();
-        msphere_cnt = reader.ReadByte();
-        flags = reader.ReadByte();
-        msphere_ofs = reader.ReadInt16();
-        light_ofs = reader.ReadInt16();
-        light_vert_start_off = reader.ReadInt16();
-        dir_lights_one = reader.ReadSByte();
-        dir_lights_upd = reader.ReadSByte();
-        point_lights = reader.ReadUInt16();
-        cube_ofs = reader.ReadInt16();
-        occl_index = reader.ReadInt16();
-        vert_cnt = reader.ReadByte();
-        tri_cnt = reader.ReadSByte();
-        mip_dist = reader.ReadInt16();
-    }
-}
-
-struct TfragVertexEx
-{
-    public Vector3 position;
-    public Vector3 normal;
-    public Color color;
-    public Vector2 uv;
-    public int parent;
-    public int baseVertexIdx;
 }

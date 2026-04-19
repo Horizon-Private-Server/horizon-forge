@@ -2249,7 +2249,7 @@ public static class UnityHelper
         AssetDatabase.ImportAsset(path);
     }
 
-    public static bool SaveTexture(Texture2D tex, string path, Color? tint = null, bool hasAlpha = true, bool forcePowerOfTwo = false, int? maxTexSize = null)
+    public static bool SaveTexture(Texture2D tex, string path, Color? tint = null, bool hasAlpha = true, bool forcePowerOfTwo = false, int? maxTexSize = null, bool forceSquareDimensions = false)
     {
         if (tex)
         {
@@ -2261,14 +2261,24 @@ public static class UnityHelper
                 {
                     if (!forcePowerOfTwo || (Mathf.ClosestPowerOfTwo(tex.width) == tex.width && Mathf.ClosestPowerOfTwo(tex.height) == tex.height))
                     {
-                        File.Copy(assetPath, path, true);
-                        return true;
+						if (!forceSquareDimensions || (tex.width == tex.height))
+						{
+							if (tint == Color.white)
+							{
+								File.Copy(assetPath, path, true);
+								return true;
+							}
+						}
                     }
                 }
             }
 
             var width = tex.width;
             var height = tex.height;
+			if (forceSquareDimensions)
+			{
+				width = height = Mathf.Max(width, height);
+			}
             if (forcePowerOfTwo)
             {
                 if (width > height && width > maxTexSize)
@@ -2325,6 +2335,50 @@ public static class UnityHelper
 
         var width = resizeWidth ?? src.width;
         var height = resizeHeight ?? src.height;
+        var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
+        rt.Create();
+        try
+        {
+            var mat = new Material(AssetDatabase.LoadAssetAtPath<Material>(Path.Combine(FolderNames.ForgeFolder, "Shaders", "TintBlit.mat")));
+            mat.SetColor("_Color", tint ?? Color.white);
+            mat.SetTexture("_In", src);
+            mat.SetFloat("_ForceAlpha", hasAlpha ? 0 : (tint.HasValue ? tint.Value.a : 1));
+            Graphics.Blit(src, rt, mat);
+
+            var oldRt = RenderTexture.active;
+            RenderTexture.active = rt;
+            var tex2 = new Texture2D(width, height, TextureFormat.ARGB32, false);
+            tex2.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            tex2.Apply();
+            RenderTexture.active = oldRt;
+
+            return tex2;
+        }
+        finally
+        {
+            if (RenderTexture.active == rt)
+                RenderTexture.active = null;
+
+            rt.Release();
+        }
+    }
+
+    public static Texture2D CloneTexture(Texture2D src, int? maxTexSize, bool hasAlpha = true, Color? tint = null)
+    {
+        if (!src) return null;
+
+		var width = src.width;
+		var height = src.height;
+
+		if (width < 16)
+			width = 16;
+		if (src.width > maxTexSize)
+			width = maxTexSize.Value;
+		if (height < 16)
+			height = 16;
+		if (src.height > maxTexSize)
+			height = maxTexSize.Value;
+
         var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
         rt.Create();
         try

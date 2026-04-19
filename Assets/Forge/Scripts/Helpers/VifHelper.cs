@@ -86,6 +86,11 @@ public static class VifHelper
 		public int Size;
 	}
 
+	public struct Strow
+	{
+		public int R0, R1, R2, R3;
+	}
+
 	public class VifCode
 	{
 		public uint Raw { get; set; }
