@@ -170,12 +170,10 @@ public static class TfragBuilder
             if (vertexField < short.MinValue || vertexField > short.MaxValue)
                 throw new OverflowException($"Tfrag vertex position index overflow: index {vertexToPositionIndex[i]} × 2 = {vertexField} is outside int16 range. Too many unique positions (max ~16383).");
 
-			CheckedToInt16(uv.x * 4096f, "uv X", $"vertex at index {i} with uv ({uv.x}, {uv.y})");
-			CheckedToInt16(uv.y * 4096f, "uv Y", $"vertex at index {i} with uv ({uv.x}, {uv.y})");
             commonVertexInfo.Add(new TfragVertexInfo
             {
-                S      = EncodeUv(uv.x),
-                T      = EncodeUv(1 - uv.y),
+                S      = CheckedEncodeUv(uv.x, "uv X", $"vertex at index {i} with uv ({uv.x}, {uv.y})"),
+                T      = CheckedEncodeUv(1 - uv.y, "uv Y", $"vertex at index {i} with uv ({uv.x}, {uv.y})"),
                 Parent = 0x1000,
                 Vertex = (short)vertexField
             });
@@ -707,7 +705,7 @@ public static class TfragBuilder
                     X      = center.x * 1024f,
                     Y      = center.y * 1024f,
                     Z      = center.z * 1024f,
-                    Radius = (ushort)Math.Clamp((int)MathF.Round(sphere.w * 1024f), 0, ushort.MaxValue),
+                    Radius = (ushort)Math.Clamp((int)MathF.Round(sphere.w * 1024f * 2f), 0, ushort.MaxValue),
                     Unk    = -1,
                     TexIdx = globalTexIdx
                 });
@@ -722,13 +720,14 @@ public static class TfragBuilder
     // -------------------------------------------------------------------------
 
     /// <summary>Encodes a single UV coordinate as <c>int16</c> (UV × 4096), clamped to short range.</summary>
-    private static short EncodeUv(float uv)
+    private static short CheckedEncodeUv(float uv, string fieldName, string context)
     {
-        float scaled = uv * 4096f;
-        if (scaled > short.MaxValue) scaled = short.MaxValue;
-        if (scaled < short.MinValue) scaled = short.MinValue;
+        float scaled = Mathf.Round(uv * 4096f);
 		if (scaled < 0) scaled *= 2f; // negative uv encoded at double scale
-        return (short)Mathf.Clamp(Mathf.Round(scaled), short.MinValue, short.MaxValue);
+        if (scaled > short.MaxValue || scaled < short.MinValue)
+			Debug.LogError(
+                $"Tfrag {fieldName} overflowed int16 range: rounded value {scaled} (from {uv}) is outside [{short.MinValue}, {short.MaxValue}]. Context: {context}");
+        return (short)Mathf.Clamp(scaled, short.MinValue, short.MaxValue);
     }
 
     // -------------------------------------------------------------------------
@@ -746,7 +745,7 @@ public static class TfragBuilder
     {
         float rounded = MathF.Round(value);
         if (rounded < short.MinValue || rounded > short.MaxValue)
-            throw new OverflowException(
+            Debug.LogError(
                 $"Tfrag {fieldName} overflowed int16 range: rounded value {rounded} (from {value}) is outside [{short.MinValue}, {short.MaxValue}]. Context: {context}");
         return (short)rounded;
     }
@@ -761,7 +760,7 @@ public static class TfragBuilder
     private static byte CheckedToByte(int value, string fieldName, string context)
     {
         if (value < byte.MinValue || value > byte.MaxValue)
-            throw new OverflowException(
+            Debug.LogError(
                 $"Tfrag {fieldName} overflowed byte range: value {value} is outside [{byte.MinValue}, {byte.MaxValue}]. Context: {context}");
         return (byte)value;
     }
