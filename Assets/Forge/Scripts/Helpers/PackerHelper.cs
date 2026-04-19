@@ -490,6 +490,11 @@ public static class PackerHelper
         return RunPacker(out _, "convert-bg", "-i", inFile, "-o", outFile, "-m", "BG_TO_PNG");
     }
 
+    public static PACKER_STATUS_CODES QuantizePng(string inFile, string outFile)
+    {
+        return RunPacker(out _, "texture", "-i", inFile, "-m", "QUANTIZE_PNG", "-o", outFile);
+    }
+
     public static PACKER_STATUS_CODES ConvertCollision(string inBinFile, string outBinFile, int fromGameVersion, int toGameVersion)
     {
         string op = null;
