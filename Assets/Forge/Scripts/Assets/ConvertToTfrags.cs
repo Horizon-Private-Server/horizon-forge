@@ -37,6 +37,8 @@ public class ConvertToTfrags : BaseAssetGenerator
 		public Texture2D TextureOverride;
 	}
 
+	public int TfragCount => GetChunkInstances().Length;
+
     #region Generate
     
     public void ValidateOrThrow()

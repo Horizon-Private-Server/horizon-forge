@@ -16,6 +16,9 @@ public class ConvertToTfragsEditor : Editor
 
     public override void OnInspectorGUI()
     {
+		EditorGUILayout.HelpBox("Tfrags generation is limited. Too many tfrags can result in rendering bugs.", MessageType.Info);
+		GUILayout.Space(20);
+
         base.OnInspectorGUI();
 
         if (this.targets != null && this.targets.Length > 1)
@@ -84,6 +87,14 @@ public class ConvertToTfragsEditor : Editor
             }
             GUILayout.EndHorizontal();
         }
+
+		// stats
+		var tfrags = this.targets.Select(x => x as ConvertToTfrags);
+		var objCount = tfrags.Count();
+		var totalTfragCount = tfrags.Sum(x => x.TfragCount);
+		var avgTfragCount = totalTfragCount / (float)objCount;
+		GUILayout.Space(20);
+		EditorGUILayout.HelpBox($"Total Selected Tfrags: {totalTfragCount}\nAverage Tfrags per Object: {avgTfragCount}", MessageType.Info);
     }
 
 }
