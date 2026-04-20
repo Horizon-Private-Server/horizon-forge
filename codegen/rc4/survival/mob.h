@@ -18,6 +18,31 @@
 
 #define MOB_MAX_OTHER_TARGETS (32)
 
+// Damage flag constants used when mobs deal damage
+#define MOB_DAMAGE_FLAG_BASE                  (0x00081801)
+#define MOB_DAMAGE_FLAG_EXPLODE_BASE          (0x00008801)
+#define MOB_DAMAGE_FLAG_FREEZE                (0x00800000)
+#define MOB_DAMAGE_FLAG_ACID                  (0x00000080)
+#define MOB_DAMAGE_FLAG_SHOCK                 (0x40)
+#define MOB_DAMAGE_FLAG_SHORT_FREEZE          (0x40000000)
+
+// Armor health thresholds (fraction of max health)
+#define MOB_ARMOR_THRESHOLD_LOW               (0.3)
+#define MOB_ARMOR_THRESHOLD_HIGH              (0.7)
+
+// Physics / movement constants
+#define MOB_TERMINAL_VELOCITY                 (-10)
+#define MOB_STUCK_CHECK_INTERVAL_TICKS        (60)
+#define MOB_STUCK_SPEED_THRESHOLD_FACTOR      (0.25)
+#define MOB_STUCK_EXPANSION_FACTOR            (0.25)
+#define MOB_CEILING_CHECK_HEIGHT              (3)
+#define MOB_GROUND_SNAP_EPSILON               (0.01)
+#define MOB_WALK_ANGLE_NEAR_TARGET_DIST       (20)
+#define MOB_KNOCKBACK_POWER_EXPONENT_BASE     (1.1)
+#define MOB_INCOMING_PROJECTILE_RADIUS        (7)
+#define MOB_HAS_VELOCITY_THRESHOLD            (0.0001)
+#define MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA    (5)
+
 enum MobAttributeType
 {
 	MOB_ATTRIBUTE_NONE = 0,
@@ -220,8 +245,8 @@ struct MobMoveVars
 	char Grounded;
 	char HitWall;
 	char IsStuck;
-	char MoveStep;
-	char LastMoveStep;
+	u8 MoveStep;
+	u8 LastMoveStep;
 	char ForceUseTargetPosition;
 	u8 UngroundedTicks;
 	u8 StuckCheckTicks;

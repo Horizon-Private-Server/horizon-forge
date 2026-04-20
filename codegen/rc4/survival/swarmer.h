@@ -17,6 +17,16 @@
 #define SWARMER_MOVE_ACCELERATION             (25)
 #define SWARMER_MOVE_AIR_ACCELERATION         (5)
 
+#define SWARMER_DEFAULT_JUMP_SPEED            (8)
+
+// AnimSeqT range defines for animation state checks
+#define SWARMER_ATTACK_HIT_FRAME_START        (5)
+#define SWARMER_ATTACK_HIT_FRAME_END          (8)
+#define SWARMER_ATTACK_ANIM_LUNGE_DURATION    (5)
+#define SWARMER_JUMP_ANIM_DURATION            (35)
+#define SWARMER_FLINCH_ANIM_AIR_DURATION      (20)
+#define SWARMER_DEATH_ANIM_COMPLETE_FRAME     (25)
+
 #define SWARMER_ANIM_ATTACK_TICKS							(30)
 #define SWARMER_TIMEBOMB_TICKS								(60 * 2)
 #define SWARMER_FLINCH_COOLDOWN_TICKS				  (60 * 7)

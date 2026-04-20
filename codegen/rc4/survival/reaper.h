@@ -18,6 +18,14 @@
 #define REAPER_MOVE_ACCELERATION (25)
 #define REAPER_MOVE_AIR_ACCELERATION (5)
 
+#define REAPER_DEFAULT_JUMP_SPEED             (8)
+
+// AnimSeqT range defines for animation state checks
+#define REAPER_ATTACK_HIT_FRAME_START         (14)
+#define REAPER_ATTACK_HIT_FRAME_END           (17)
+#define REAPER_ATTACK_EARLY_PHASE_FRAME_END   (5)
+#define REAPER_FLINCH_ANIM_DURATION           (20)
+
 #define REAPER_ANIM_ATTACK_TICKS (30)
 #define REAPER_TIMEBOMB_TICKS (60 * 2)
 #define REAPER_FLINCH_COOLDOWN_TICKS (60 * 7)

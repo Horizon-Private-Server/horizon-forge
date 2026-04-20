@@ -126,28 +126,16 @@ int leviathanGetLaserCooldownTicks(Moby *moby)
 //--------------------------------------------------------------------------
 void leviathanPreUpdate(Moby *moby)
 {
-	int i;
 	if (!moby || !moby->PVar)
 		return;
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	LeviathanMobVars_t *leviathanVars = (LeviathanMobVars_t *)pvars->AdditionalMobVarsPtr;
 
-	// decrement tickers regardless of frozen state
-	for (i = 0; i < GAME_MAX_LOCALS; ++i)
-		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+	mobDefaultPreUpdate(moby);
 
-	if (mobIsFrozen(moby))
-		return;
-
-	// decrement path target pos ticker
-	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
-	decTimerU32(&leviathanVars->AttackLaserCooldownTicks);
-
-	mobPreUpdate(moby);
+	if (!mobIsFrozen(moby))
+		decTimerU32(&leviathanVars->AttackLaserCooldownTicks);
 }
 
 //--------------------------------------------------------------------------
@@ -172,7 +160,7 @@ void leviathanPostUpdate(Moby *moby)
 
 	if (moby->AnimSeqId == LEVIATHAN_ANIM_JUMP)
 	{
-		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 35, 2));
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / LEVIATHAN_JUMP_ANIM_DURATION, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
 			animSpeed = baseSpeed;
@@ -180,7 +168,7 @@ void leviathanPostUpdate(Moby *moby)
 	}
 	else if (leviathanIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
-		animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+		animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / LEVIATHAN_FLINCH_ANIM_DURATION, 2));
 	}
 	else if (leviathanIsDying(moby))
 	{
@@ -318,8 +306,8 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	canFlinch = 1;
 #endif
 
-	int isShock = e->DamageFlags & 0x40;
-	int isShortFreeze = e->DamageFlags & 0x40000000;
+	int isShock = e->DamageFlags & MOB_DAMAGE_FLAG_SHOCK;
+	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0)
@@ -329,47 +317,14 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 		pvars->MobVars.LastHitByOClass = e->SourceOClass;
 	}
 
-	// knockback
-	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
-	{
-		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
-	}
+	float damageRatio = damage / pvars->MobVars.Config.Health;
+	float powerFactor = LEVIATHAN_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+	float probability = clamp((damageRatio * LEVIATHAN_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, LEVIATHAN_ACTION_FLINCH, LEVIATHAN_ACTION_BIG_FLINCH);
 
-	// flinch
+	// auto aggro (owner-only)
 	if (mobAmIOwner(moby))
 	{
-		float damageRatio = damage / pvars->MobVars.Config.Health;
-		float powerFactor = LEVIATHAN_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-		float probability = clamp((damageRatio * LEVIATHAN_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-
-#if ALWAYS_FLINCH
-		probability = 2;
-		powerFactor = 2;
-#endif
-
-		if (canFlinch)
-		{
-			if (e->Knockback.Force)
-			{
-				mobSetAction(moby, LEVIATHAN_ACTION_BIG_FLINCH);
-			}
-			else if (isShock)
-			{
-				mobSetAction(moby, LEVIATHAN_ACTION_FLINCH);
-			}
-			else if (randRange(0, 1) < probability)
-			{
-				if (randRange(0, 1) < powerFactor)
-				{
-					mobSetAction(moby, LEVIATHAN_ACTION_BIG_FLINCH);
-				}
-				else
-				{
-					mobSetAction(moby, LEVIATHAN_ACTION_FLINCH);
-				}
-			}
-		}
-
 		// auto aggro
 		if (!pvars->MobVars.Target)
 		{
@@ -399,23 +354,7 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 //--------------------------------------------------------------------------
 int leviathanOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 {
-	// we want to give each local player a cooldown on damage they can apply to leviathan
-	if (!e->PlayerDamager)
-		return 1;
-	if (!e->PlayerDamager->IsLocal)
-		return 1;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// only accept local damage when timer is 0
-	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
-	if (timer == 0)
-	{
-		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
-		return 1;
-	}
-
-	return 0;
+	return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -810,7 +749,7 @@ void leviathanDoAction(Moby *moby)
 			float jumpSpeed = pvars->MobVars.MoveVars.QueueJumpSpeed;
 			if (jumpSpeed <= 0)
 			{
-				jumpSpeed = 8; // clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
+				jumpSpeed = LEVIATHAN_DEFAULT_JUMP_SPEED; // clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
 			}
 
 			vector_write(pvars->MobVars.MoveVars.Velocity, 0);
@@ -872,21 +811,21 @@ void leviathanDoAction(Moby *moby)
 	case LEVIATHAN_ACTION_ATTACK_STAB:
 	{
 		int attackAnimId = LEVIATHAN_ANIM_SWING;
-		float attackAnimHitStart = 15;
-		float attackAnimHitEnd = 18;
+		float attackAnimHitStart = LEVIATHAN_SWING_ATTACK_HIT_FRAME_START;
+		float attackAnimHitEnd = LEVIATHAN_SWING_ATTACK_HIT_FRAME_END;
 		float damage = pvars->MobVars.Config.Damage;
 
 		if (pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_STAB)
 		{
 			attackAnimId = LEVIATHAN_ANIM_STAB_DOWN;
-			attackAnimHitStart = 4.5;
-			attackAnimHitEnd = 6;
+			attackAnimHitStart = LEVIATHAN_STAB_ATTACK_HIT_FRAME_START;
+			attackAnimHitEnd = LEVIATHAN_STAB_ATTACK_HIT_FRAME_END;
 			damage *= 1.5; // more damage
 		}
 
 		mobTransAnim(moby, attackAnimId, 0);
 		int swingAttackReady = moby->AnimSeqId == attackAnimId && moby->AnimSeqT >= attackAnimHitStart && moby->AnimSeqT < attackAnimHitEnd;
-		u32 damageFlags = 0x00081801;
+		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
 
 		if (!isInAirFromFlinching)
 		{
@@ -991,7 +930,7 @@ void leviathanDoAction(Moby *moby)
 					colorBeam = 0x8010C020;
 					colorGlow = 0x5020FF20;
 				}
-				laserbeamSet(laserbeamMoby, &mtxTailHead[12], leviathanVars->LaserbeamDirection, 100, width, damage, 0x00081801, colorBeam, colorGlow, 0x00ff00, 0x00ff00, 0x45, 0x0E);
+				laserbeamSet(laserbeamMoby, &mtxTailHead[12], leviathanVars->LaserbeamDirection, 100, width, damage, MOB_DAMAGE_FLAG_BASE, colorBeam, colorGlow, 0x00ff00, 0x00ff00, 0x45, 0x0E);
 			}
 
 			// check for laser hit target

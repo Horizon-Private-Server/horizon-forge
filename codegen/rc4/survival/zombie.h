@@ -17,6 +17,16 @@
 #define ZOMBIE_MOVE_ACCELERATION              (25)
 #define ZOMBIE_MOVE_AIR_ACCELERATION          (5)
 
+#define ZOMBIE_DEFAULT_JUMP_SPEED             (8)
+
+// AnimSeqT range defines for animation state checks
+#define ZOMBIE_ATTACK_HIT_FRAME_START         (11)
+#define ZOMBIE_ATTACK_HIT_FRAME_END           (12)
+#define ZOMBIE_JUMP_ANIM_DURATION              (35)
+#define ZOMBIE_FLINCH_ANIM_DURATION            (20)
+#define ZOMBIE_CROUCH_ANIM_MIN_T_FOR_EXPLOSION (3)
+#define ZOMBIE_SLAP_ANIM_LUNGE_DURATION       (5)
+
 #define ZOMBIE_ANIM_ATTACK_TICKS							(30)
 #define ZOMBIE_TIMEBOMB_TICKS									(60 * 2)
 #define ZOMBIE_FLINCH_COOLDOWN_TICKS					(60 * 7)

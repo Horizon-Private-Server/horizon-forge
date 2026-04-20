@@ -64,26 +64,7 @@ struct MobVTable TremorVTable = {
 //--------------------------------------------------------------------------
 void tremorPreUpdate(Moby *moby)
 {
-	int i;
-	if (!moby || !moby->PVar)
-		return;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// decrement tickers regardless of frozen state
-	for (i = 0; i < GAME_MAX_LOCALS; ++i)
-		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
-
-	if (mobIsFrozen(moby))
-		return;
-
-	// decrement path target pos ticker
-	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
-
-	mobPreUpdate(moby);
+	mobDefaultPreUpdate(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -99,7 +80,7 @@ void tremorPostUpdate(Moby *moby)
 	float animSpeed = 0.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
 	if (moby->AnimSeqId == TREMOR_ANIM_JUMP)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 21, 2));
+		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / TREMOR_JUMP_ANIM_DURATION, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
 			animSpeed = 0.5;
@@ -107,7 +88,7 @@ void tremorPostUpdate(Moby *moby)
 	}
 	else if (tremorIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / TREMOR_FLINCH_ANIM_AIR_DURATION, 2));
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == TREMOR_ACTION_WALK))
@@ -208,8 +189,8 @@ void tremorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	canFlinch = 1;
 #endif
 
-	int isShock = e->DamageFlags & 0x40;
-	int isShortFreeze = e->DamageFlags & 0x40000000;
+	int isShock = e->DamageFlags & MOB_DAMAGE_FLAG_SHOCK;
+	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0)
@@ -219,47 +200,10 @@ void tremorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 		pvars->MobVars.LastHitByOClass = e->SourceOClass;
 	}
 
-	// knockback
-	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
-	{
-		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
-	}
-
-	// flinch
-	if (mobAmIOwner(moby))
-	{
-		float damageRatio = damage / pvars->MobVars.Config.Health;
-		float powerFactor = TREMOR_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-		float probability = clamp((damageRatio * TREMOR_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-
-#if ALWAYS_FLINCH
-		probability = 2;
-		powerFactor = 2;
-#endif
-
-		if (canFlinch)
-		{
-			if (e->Knockback.Force)
-			{
-				mobSetAction(moby, TREMOR_ACTION_BIG_FLINCH);
-			}
-			else if (isShock)
-			{
-				mobSetAction(moby, TREMOR_ACTION_FLINCH);
-			}
-			else if (randRange(0, 1) < probability)
-			{
-				if (randRange(0, 1) < powerFactor)
-				{
-					mobSetAction(moby, TREMOR_ACTION_BIG_FLINCH);
-				}
-				else
-				{
-					mobSetAction(moby, TREMOR_ACTION_FLINCH);
-				}
-			}
-		}
-	}
+	float damageRatio = damage / pvars->MobVars.Config.Health;
+	float powerFactor = TREMOR_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+	float probability = clamp((damageRatio * TREMOR_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, TREMOR_ACTION_FLINCH, TREMOR_ACTION_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -272,23 +216,7 @@ void tremorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 //--------------------------------------------------------------------------
 int tremorOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 {
-	// we want to give each local player a cooldown on damage they can apply to tremor
-	if (!e->PlayerDamager)
-		return 1;
-	if (!e->PlayerDamager->IsLocal)
-		return 1;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// only accept local damage when timer is 0
-	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
-	if (timer == 0)
-	{
-		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
-		return 1;
-	}
-
-	return 0;
+	return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -452,7 +380,7 @@ void tremorDoAction(Moby *moby)
 			float jumpSpeed = pvars->MobVars.MoveVars.QueueJumpSpeed;
 			if (jumpSpeed <= 0 && target)
 			{
-				jumpSpeed = 5; // clamp(2 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 2, 3, 15);
+				jumpSpeed = TREMOR_DEFAULT_JUMP_SPEED;
 			}
 
 			vector_write(pvars->MobVars.MoveVars.Velocity, 0);
@@ -508,7 +436,7 @@ void tremorDoAction(Moby *moby)
 	{
 		mobTransAnimLerp(moby, TREMOR_ANIM_FLINCH_BACK_FLIP_FALL, 5, 0);
 
-		if (moby->AnimSeqId == TREMOR_ANIM_FLINCH_BACK_FLIP_FALL && moby->AnimSeqT > 15)
+		if (moby->AnimSeqId == TREMOR_ANIM_FLINCH_BACK_FLIP_FALL && moby->AnimSeqT > TREMOR_FLINCH_ANIM_BACK_FLIP_FALL_DESTROY_FRAME)
 		{
 			pvars->MobVars.Destroy = 1;
 		}
@@ -522,8 +450,8 @@ void tremorDoAction(Moby *moby)
 		mobTransAnim(moby, attack1AnimId, 0);
 
 		float speedMult = 0; // (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 4) ? (difficulty * 2) : 1;
-		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 4 && moby->AnimSeqT < 8;
-		u32 damageFlags = 0x00081801;
+		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= TREMOR_ATTACK_HIT_FRAME_START && moby->AnimSeqT < TREMOR_ATTACK_HIT_FRAME_END;
+		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
 
 		if (!isInAirFromFlinching)
 		{
@@ -541,16 +469,8 @@ void tremorDoAction(Moby *moby)
 		// attribute damage
 		switch (pvars->MobVars.Config.MobAttribute)
 		{
-		case MOB_ATTRIBUTE_FREEZE:
-		{
-			damageFlags |= 0x00800000;
-			break;
-		}
-		case MOB_ATTRIBUTE_ACID:
-		{
-			damageFlags |= 0x00000080;
-			break;
-		}
+		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
+		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)

@@ -68,26 +68,7 @@ struct MobVTable SwarmerVTable = {
 //--------------------------------------------------------------------------
 void swarmerPreUpdate(Moby *moby)
 {
-	int i;
-	if (!moby || !moby->PVar)
-		return;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// decrement tickers regardless of frozen state
-	for (i = 0; i < GAME_MAX_LOCALS; ++i)
-		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
-
-	if (mobIsFrozen(moby))
-		return;
-
-	// decrement path target pos ticker
-	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
-
-	mobPreUpdate(moby);
+	mobDefaultPreUpdate(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -103,7 +84,7 @@ void swarmerPostUpdate(Moby *moby)
 	float animSpeed = (0.9 / scale) * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) * (SWARMER_BASE_COLL_RADIUS / pvars->MobVars.Config.CollRadius);
 	if (moby->AnimSeqId == SWARMER_ANIM_JUMP)
 	{
-		animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / 35, 2));
+		animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / SWARMER_JUMP_ANIM_DURATION, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
 			animSpeed = 0.9;
@@ -119,7 +100,7 @@ void swarmerPostUpdate(Moby *moby)
 	}
 	else if (swarmerIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / SWARMER_FLINCH_ANIM_AIR_DURATION, 2));
 	}
 
 	if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND)
@@ -225,8 +206,8 @@ void swarmerOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	canFlinch = 1;
 #endif
 
-	int isShock = e->DamageFlags & 0x40;
-	int isShortFreeze = e->DamageFlags & 0x40000000;
+	int isShock = e->DamageFlags & MOB_DAMAGE_FLAG_SHOCK;
+	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0)
@@ -236,50 +217,14 @@ void swarmerOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 		pvars->MobVars.LastHitByOClass = e->SourceOClass;
 	}
 
-	// knockback
 	// swarmers always have knockback
 	if (e->Knockback.Power < 3)
 		e->Knockback.Power = 3;
-	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
-	{
-		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
-	}
 
-	// flinch
-	if (mobAmIOwner(moby))
-	{
-		float damageRatio = damage / pvars->MobVars.Config.Health;
-		float powerFactor = SWARMER_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-		float probability = clamp((damageRatio * SWARMER_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-
-#if ALWAYS_FLINCH
-		probability = 2;
-		powerFactor = 2;
-#endif
-
-		if (canFlinch)
-		{
-			if (e->Knockback.Force)
-			{
-				mobSetAction(moby, SWARMER_ACTION_BIG_FLINCH);
-			}
-			else if (isShock)
-			{
-				mobSetAction(moby, SWARMER_ACTION_FLINCH);
-			}
-			else if (randRange(0, 1) < probability)
-			{
-				if (randRange(0, 1) < powerFactor)
-				{
-					mobSetAction(moby, SWARMER_ACTION_BIG_FLINCH);
-				}
-				else
-				{
-					mobSetAction(moby, SWARMER_ACTION_FLINCH);
-				}
-			}
-		}
-	}
+	float damageRatio = damage / pvars->MobVars.Config.Health;
+	float powerFactor = SWARMER_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+	float probability = clamp((damageRatio * SWARMER_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, SWARMER_ACTION_FLINCH, SWARMER_ACTION_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -292,23 +237,7 @@ void swarmerOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 //--------------------------------------------------------------------------
 int swarmerOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 {
-	// we want to give each local player a cooldown on damage they can apply to swarmer
-	if (!e->PlayerDamager)
-		return 1;
-	if (!e->PlayerDamager->IsLocal)
-		return 1;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// only accept local damage when timer is 0
-	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
-	if (timer == 0)
-	{
-		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
-		return 1;
-	}
-
-	return 0;
+	return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -517,7 +446,7 @@ void swarmerDoAction(Moby *moby)
 			float jumpSpeed = pvars->MobVars.MoveVars.QueueJumpSpeed;
 			if (jumpSpeed <= 0 && target)
 			{
-				jumpSpeed = 8; // clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
+				jumpSpeed = SWARMER_DEFAULT_JUMP_SPEED;
 			}
 
 			// DPRINTF("jump %f\n", jumpSpeed);
@@ -622,7 +551,7 @@ void swarmerDoAction(Moby *moby)
 		}
 
 		mobTransAnimLerp(moby, SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND, 5, 0);
-		if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND && moby->AnimSeqT > 25)
+		if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND && moby->AnimSeqT > SWARMER_DEATH_ANIM_COMPLETE_FRAME)
 		{
 			pvars->MobVars.Destroy = 1;
 		}
@@ -635,10 +564,10 @@ void swarmerDoAction(Moby *moby)
 		int attack1AnimId = SWARMER_ANIM_JUMP_FORWARD_BITE;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		float speedCurve = powf(clamp(5 - moby->AnimSeqT, 1, 2.25), 2);
-		float speedMult = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? speedCurve : 1;
-		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 5 && moby->AnimSeqT < 8;
-		u32 damageFlags = 0x00081801;
+		float speedCurve = powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2);
+		float speedMult = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < SWARMER_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 1;
+		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWARMER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWARMER_ATTACK_HIT_FRAME_END;
+		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
 
 		if (speedMult < 1)
 			speedMult = 1;
@@ -659,16 +588,8 @@ void swarmerDoAction(Moby *moby)
 		// attribute damage
 		switch (pvars->MobVars.Config.MobAttribute)
 		{
-		case MOB_ATTRIBUTE_FREEZE:
-		{
-			damageFlags |= 0x00800000;
-			break;
-		}
-		case MOB_ATTRIBUTE_ACID:
-		{
-			damageFlags |= 0x00000080;
-			break;
-		}
+		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
+		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)

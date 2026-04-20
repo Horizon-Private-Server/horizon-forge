@@ -65,26 +65,7 @@ struct MobVTable ReaperVTable = {
 //--------------------------------------------------------------------------
 void reaperPreUpdate(Moby *moby)
 {
-	int i;
-	if (!moby || !moby->PVar)
-		return;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// decrement tickers regardless of frozen state
-	for (i = 0; i < GAME_MAX_LOCALS; ++i)
-		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
-
-	if (mobIsFrozen(moby))
-		return;
-
-	// decrement path target pos ticker
-	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
-
-	mobPreUpdate(moby);
+	mobDefaultPreUpdate(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -100,7 +81,7 @@ void reaperPostUpdate(Moby *moby)
 	float animSpeed = 1.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
 	if (reaperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / REAPER_FLINCH_ANIM_DURATION, 2));
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == REAPER_ACTION_WALK))
@@ -208,8 +189,8 @@ void reaperOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	canFlinch = 1;
 #endif
 
-	int isShock = e->DamageFlags & 0x40;
-	int isShortFreeze = e->DamageFlags & 0x40000000;
+	int isShock = e->DamageFlags & MOB_DAMAGE_FLAG_SHOCK;
+	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0)
@@ -217,12 +198,6 @@ void reaperOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 		reaperForceLocalAction(moby, REAPER_ACTION_DIE);
 		pvars->MobVars.LastHitBy = e->SourceUID;
 		pvars->MobVars.LastHitByOClass = e->SourceOClass;
-	}
-
-	// knockback
-	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
-	{
-		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
 	}
 
 	// trigger aggro
@@ -235,42 +210,11 @@ void reaperOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 		DPRINTF("aggro triggered by %d\n", sourcePlayer->PlayerId);
 	}
 
-	// flinch
-	if (mobAmIOwner(moby))
-	{
-		float damageRatio = damage / pvars->MobVars.Config.Health;
-		float pFactor = reaperVars->AggroTriggered ? 0.5 : 1;
-		float powerFactor = REAPER_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-		float probability = (pFactor * damageRatio * REAPER_FLINCH_PROBABILITY) + powerFactor;
-
-#if ALWAYS_FLINCH
-		probability = 2;
-		powerFactor = 2;
-#endif
-
-		if (canFlinch)
-		{
-			if (e->Knockback.Force)
-			{
-				mobSetAction(moby, REAPER_ACTION_BIG_FLINCH);
-			}
-			else if (isShock)
-			{
-				mobSetAction(moby, REAPER_ACTION_FLINCH);
-			}
-			else if (randRange(0, 1) < probability)
-			{
-				if (randRange(0, 1) < powerFactor)
-				{
-					mobSetAction(moby, REAPER_ACTION_BIG_FLINCH);
-				}
-				else
-				{
-					mobSetAction(moby, REAPER_ACTION_FLINCH);
-				}
-			}
-		}
-	}
+	float damageRatio = damage / pvars->MobVars.Config.Health;
+	float pFactor = reaperVars->AggroTriggered ? 0.5 : 1;
+	float powerFactor = REAPER_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+	float probability = (pFactor * damageRatio * REAPER_FLINCH_PROBABILITY) + powerFactor;
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, REAPER_ACTION_FLINCH, REAPER_ACTION_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -283,23 +227,7 @@ void reaperOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 //--------------------------------------------------------------------------
 int reaperOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 {
-	// we want to give each local player a cooldown on damage they can apply to reaper
-	if (!e->PlayerDamager)
-		return 1;
-	if (!e->PlayerDamager->IsLocal)
-		return 1;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// only accept local damage when timer is 0
-	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
-	if (timer == 0)
-	{
-		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
-		return 1;
-	}
-
-	return 0;
+	return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -525,7 +453,7 @@ void reaperDoAction(Moby *moby)
 			float jumpSpeed = pvars->MobVars.MoveVars.QueueJumpSpeed;
 			if (jumpSpeed <= 0 && target)
 			{
-				jumpSpeed = 8; // clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
+				jumpSpeed = REAPER_DEFAULT_JUMP_SPEED;
 			}
 
 			// DPRINTF("jump %f\n", jumpSpeed);
@@ -648,9 +576,9 @@ void reaperDoAction(Moby *moby)
 		int attack1AnimId = REAPER_ANIM_SWING;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1, 1, 5);
-		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 14 && moby->AnimSeqT < 17;
-		u32 damageFlags = 0x00081801;
+		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < REAPER_ATTACK_EARLY_PHASE_FRAME_END) ? (difficulty * 2) : 1, 1, 5);
+		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REAPER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REAPER_ATTACK_HIT_FRAME_END;
+		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
 
 		if (target)
 		{
@@ -664,16 +592,8 @@ void reaperDoAction(Moby *moby)
 		// attribute damage
 		switch (pvars->MobVars.Config.MobAttribute)
 		{
-		case MOB_ATTRIBUTE_FREEZE:
-		{
-			damageFlags |= 0x00800000;
-			break;
-		}
-		case MOB_ATTRIBUTE_ACID:
-		{
-			damageFlags |= 0x00000080;
-			break;
-		}
+		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
+		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)
@@ -788,9 +708,9 @@ short reaperGetArmor(Moby *moby)
 	float t = pvars->MobVars.Health / pvars->MobVars.Config.MaxHealth;
 	int bangles = pvars->MobVars.Config.Bangles;
 
-	if (t < 0.3)
+	if (t < MOB_ARMOR_THRESHOLD_LOW)
 		return 0x0000;
-	else if (t < 0.7)
+	else if (t < MOB_ARMOR_THRESHOLD_HIGH)
 		return bangles & 0x1f; // remove torso bangle
 
 	return bangles;

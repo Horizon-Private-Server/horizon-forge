@@ -44,6 +44,24 @@
 #define REACTOR_MOVE_ACCELERATION               (25)
 #define REACTOR_MOVE_AIR_ACCELERATION           (5)
 
+#define REACTOR_DEFAULT_JUMP_SPEED                            (8)
+
+// AnimSeqT range defines for animation state checks
+#define REACTOR_SWING_ATTACK_HIT_FRAME_START                  (14)
+#define REACTOR_SWING_ATTACK_HIT_FRAME_END                    (18)
+#define REACTOR_SWING_ATTACK_SPEED_CURVE_MAX                  (16)
+#define REACTOR_CHARGE_ATTACK_SOUND_FRAME                     (6)
+#define REACTOR_CHARGE_ATTACK_HIT_FRAME_START                 (7)
+#define REACTOR_CHARGE_ATTACK_HIT_FRAME_END                   (13)
+#define REACTOR_CHARGE_ATTACK_SWING_HIT_FRAME_START           (13)
+#define REACTOR_CHARGE_ATTACK_SWING_HIT_FRAME_END             (19)
+#define REACTOR_TRAILSHOT_FIRE_FRAME                          (10)
+#define REACTOR_TRAILSHOT_ANIM_EARLY_TRANSITION               (15)
+#define REACTOR_SMASH_HIT_FRAME                               (16)
+#define REACTOR_FLINCH_ANIM_MAX_FRAME                         (20)
+#define REACTOR_RUN_ANIM_EARLY_TRANSITION_FRAME               (4)
+#define REACTOR_DIE_ANIM_COMPLETE_FRAME                       (124)
+
 #define REACTOR_ANIM_ATTACK_TICKS							  (30)
 #define REACTOR_TIMEBOMB_TICKS									(60 * 2)
 #define REACTOR_FLINCH_COOLDOWN_TICKS					  (60 * 7)

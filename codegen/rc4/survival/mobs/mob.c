@@ -242,7 +242,7 @@ void mobGetKnockbackVelocity(Moby *moby, VECTOR out)
 
 	// compute
 	float slerpFactor = powf(100, pvars->MobVars.Knockback.Ticks / (float)PLAYER_KNOCKBACK_BASE_TICKS) / 100;
-	float power = PLAYER_KNOCKBACK_BASE_POWER * powf(1.1, pvars->MobVars.Knockback.Power) * slerpFactor;
+	float power = PLAYER_KNOCKBACK_BASE_POWER * powf(MOB_KNOCKBACK_POWER_EXPONENT_BASE, pvars->MobVars.Knockback.Power) * slerpFactor;
 	vector_fromyaw(out, pvars->MobVars.Knockback.Angle / 1000.0);
 	out[2] = 1;
 	vector_normalize(out, out);
@@ -406,7 +406,7 @@ int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radiu
 	int result = 0;
 	float t = 0;
 	// float sqrRadius = radius * radius;
-	float firstPassRadius = 5 + radius;
+	float firstPassRadius = MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius;
 	float firstPassSqrRadius = powf(firstPassRadius, 2);
 
 	// get total distance to travel
@@ -454,7 +454,7 @@ int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radiu
 				}
 			}
 		}
-		else if (CollMobysSphere_Fix(p, COLLISION_FLAG_IGNORE_NONE, moby, NULL, 5 + radius) > 0)
+		else if (CollMobysSphere_Fix(p, COLLISION_FLAG_IGNORE_NONE, moby, NULL, MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius) > 0)
 		{
 			Moby **hitMobies = CollMobysSphere_Fix_GetHitMobies();
 			Moby *hitMoby;
@@ -480,8 +480,8 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 	int i;
 	int result = 0;
 	// float sqrRadius = radius * radius;
-	float firstPassRadius = 5 + radius;
-	float firstPassSqrRadius = powf(5 + radius, 2);
+	float firstPassRadius = MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius;
+	float firstPassSqrRadius = powf(MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius, 2);
 
 	// get position of right spike joint
 	mobyGetJointMatrix(moby, jointId, jointMtx);
@@ -524,7 +524,7 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 			}
 		}
 	}
-	else if (CollMobysSphere_Fix(p, COLLISION_FLAG_IGNORE_NONE, moby, NULL, 5 + radius) > 0)
+	else if (CollMobysSphere_Fix(p, COLLISION_FLAG_IGNORE_NONE, moby, NULL, MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius) > 0)
 	{
 		Moby **hitMobies = CollMobysSphere_Fix_GetHitMobies();
 		Moby *hitMoby;
@@ -629,8 +629,8 @@ int mobIsProjectileComing(Moby *moby)
 			{
 				// projectile is within 5 units
 				vector_subtract(t, moby->Position, m->Position);
-				if (vector_sqrmag(t) < (7 * 7))
-					return 1;
+			if (vector_sqrmag(t) < (MOB_INCOMING_PROJECTILE_RADIUS * MOB_INCOMING_PROJECTILE_RADIUS))
+				return 1;
 				break;
 			}
 			}
@@ -645,7 +645,112 @@ int mobHasVelocity(struct MobPVar *pvars)
 {
 	VECTOR t;
 	vector_projectonhorizontal(t, pvars->MobVars.MoveVars.Velocity);
-	return vector_sqrmag(t) >= 0.0001;
+	return vector_sqrmag(t) >= MOB_HAS_VELOCITY_THRESHOLD;
+}
+
+//--------------------------------------------------------------------------
+// Shared PreUpdate logic common to all mobs:
+//   - decrements local-player hit-inv timers (always, even while frozen)
+//   - returns early if frozen
+//   - decrements path tickers
+//   - calls mobPreUpdate
+void mobDefaultPreUpdate(Moby *moby)
+{
+	int i;
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+
+	// decrement tickers regardless of frozen state
+	for (i = 0; i < GAME_MAX_LOCALS; ++i)
+		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
+
+	if (mobIsFrozen(moby))
+		return;
+
+	// decrement path target pos tickers
+	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
+
+	mobPreUpdate(moby);
+}
+
+//--------------------------------------------------------------------------
+// Shared OnLocalDamage logic common to all mobs:
+// Enforces a per-local-player hit invincibility cooldown.
+// Returns 1 to accept the damage, 0 to reject it.
+int mobDefaultOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
+{
+	if (!e->PlayerDamager)
+		return 1;
+	if (!e->PlayerDamager->IsLocal)
+		return 1;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+
+	// only accept local damage when timer is 0
+	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+	if (timer == 0)
+	{
+		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+		return 1;
+	}
+
+	return 0;
+}
+
+//--------------------------------------------------------------------------
+// Shared flinch decision logic used in OnDamage handlers.
+// Applies knockback, then decides whether to trigger a flinch or big-flinch
+// action based on knockback force, shock flag, and a probability roll.
+// canFlinch    : whether the mob is currently eligible to flinch
+// isShock      : non-zero if the hit has the shock damage flag
+// probability  : total probability [0,1] of triggering a flinch
+// powerFactor  : probability [0,1] of escalating to big flinch
+// flinchAction : action id for the normal flinch
+// bigFlinchAction : action id for the big flinch
+void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchAction, int bigFlinchAction)
+{
+	// knockback
+	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
+	{
+		struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
+	}
+
+	if (!mobAmIOwner(moby))
+		return;
+
+#if ALWAYS_FLINCH
+	probability = 2;
+	powerFactor = 2;
+#endif
+
+	if (canFlinch)
+	{
+		if (e->Knockback.Force)
+		{
+			mobSetAction(moby, bigFlinchAction);
+		}
+		else if (isShock)
+		{
+			mobSetAction(moby, flinchAction);
+		}
+		else if (randRange(0, 1) < probability)
+		{
+			if (randRange(0, 1) < powerFactor)
+			{
+				mobSetAction(moby, bigFlinchAction);
+			}
+			else
+			{
+				mobSetAction(moby, flinchAction);
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -676,9 +781,11 @@ int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to)
 	VECTOR hitTo, hitFrom;
 	VECTOR hitToEx, hitNormal, hitToExBack;
 	VECTOR up = {0, 0, 0, 0};
-	float collRadius = pvars->MobVars.Config.CollRadius;
 	if (!pvars)
 		return 0;
+
+  // get configured collision radius
+  float collRadius = pvars->MobVars.Config.CollRadius;
 
 	// get if we should check for collisions with all colliders
 	// we have to alternate because when many mobs are in one space
@@ -709,7 +816,7 @@ int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to)
 	// move to further out to factor in the radius of the mob
 	vector_normalize(hitToEx, delta);
 	vector_scale(hitToExBack, hitToEx, collRadius);
-	vector_scale(hitToEx, hitToEx, collRadius * (1 + 0.25 * pvars->MobVars.MoveVars.StuckCounter));
+	vector_scale(hitToEx, hitToEx, collRadius * (1 + MOB_STUCK_EXPANSION_FACTOR * pvars->MobVars.MoveVars.StuckCounter));
 	vector_add(hitTo, hitTo, hitToEx);
 	vector_subtract(hitFrom, hitFrom, hitToExBack);
 
@@ -812,6 +919,10 @@ void mobMove(Moby *moby)
 	u8 moveSkipTicks = decTimerU8(&pvars->MobVars.MoveVars.MoveSkipTicks);
 	u8 slowTicks = decTimerU8(&pvars->MobVars.SlowTicks);
 
+  // if LastMoveStep hasn't been initialized yet default to current move step
+  if (moveStep == 0 && pvars->MobVars.MoveVars.MoveStep > 0)
+    moveStep = pvars->MobVars.MoveVars.MoveStep;
+
 #if DEBUG_MOVE
 	VECTOR up = {0, 0, 1, 0};
 	if (pvars->MobVars.Target)
@@ -836,7 +947,7 @@ void mobMove(Moby *moby)
 
 		// reset move step
 		moveStep = pvars->MobVars.MoveVars.MoveStep;
-		int rotatingDt = fabsf((mobMoveCheckCollideWithOtherMobsRotatingIndex - pvars->MobVars.Order) % MAX_MOBS_ALIVE) < 15;
+		int rotatingDt = WRAP_DISTANCE(mobMoveCheckCollideWithOtherMobsRotatingIndex - pvars->MobVars.Order, MAX_MOBS_ALIVE) < 15;
 		if (!isOwner || !rotatingDt)
 			moveStep = MOB_MOVE_SKIP_TICKS_LOWPRIORITY;
 
@@ -845,6 +956,7 @@ void mobMove(Moby *moby)
 #endif
 
 		// move next position to last position
+    // if first tick, NextPosition is initialized to spawn position in mode
 		vector_copy(moby->Position, pvars->MobVars.MoveVars.NextPosition);
 		vector_copy(pvars->MobVars.MoveVars.LastPosition, pvars->MobVars.MoveVars.NextPosition);
 
@@ -920,7 +1032,7 @@ void mobMove(Moby *moby)
 
 					// force position to above ground
 					vector_copy(nextPos, CollLine_Fix_GetHitPosition());
-					nextPos[2] += 0.01;
+					nextPos[2] += MOB_GROUND_SNAP_EPSILON;
 
 #if DEBUG_MOVE
 					vector_copy(MoveCheckDown, CollLine_Fix_GetHitPosition());
@@ -935,7 +1047,7 @@ void mobMove(Moby *moby)
 				vector_copy(groundCheckFrom, nextPos);
 				groundCheckFrom[2] = moby->Position[2];
 				vector_copy(groundCheckTo, nextPos);
-				groundCheckTo[2] += 3;
+				groundCheckTo[2] += MOB_CEILING_CHECK_HEIGHT;
 				// groundCheckTo[2] += ZOMBIE_BASE_STEP_HEIGHT;
 				if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
 				{
@@ -966,16 +1078,16 @@ void mobMove(Moby *moby)
 		}
 
 		// add gravity to velocity with clamp on downwards speed
-		pvars->MobVars.MoveVars.Velocity[2] -= GRAVITY_MAGNITUDE * MATH_DT * (float)moveStep;
-		if (pvars->MobVars.MoveVars.Velocity[2] < -10 * MATH_DT)
-			pvars->MobVars.MoveVars.Velocity[2] = -10 * MATH_DT;
+	pvars->MobVars.MoveVars.Velocity[2] -= GRAVITY_MAGNITUDE * MATH_DT * (float)moveStep;
+	if (pvars->MobVars.MoveVars.Velocity[2] < MOB_TERMINAL_VELOCITY * MATH_DT)
+		pvars->MobVars.MoveVars.Velocity[2] = MOB_TERMINAL_VELOCITY * MATH_DT;
 
 		// check if stuck by seeing if the sum horizontal delta position over the last second
 		// is less than 1 in magnitude
 		if (!stuckCheckTicks)
 		{
-			pvars->MobVars.MoveVars.StuckCheckTicks = 60;
-			pvars->MobVars.MoveVars.IsStuck = /* pvars->MobVars.MoveVars.HitWall && */ vector_length(pvars->MobVars.MoveVars.SumPositionDelta) < (pvars->MobVars.MoveVars.SumSpeedOver * 0.25);
+		pvars->MobVars.MoveVars.StuckCheckTicks = MOB_STUCK_CHECK_INTERVAL_TICKS;
+		pvars->MobVars.MoveVars.IsStuck = /* pvars->MobVars.MoveVars.HitWall && */ vector_length(pvars->MobVars.MoveVars.SumPositionDelta) < (pvars->MobVars.MoveVars.SumSpeedOver * MOB_STUCK_SPEED_THRESHOLD_FACTOR);
 			// pvars->MobVars.MoveVars.IsStuck = 0;
 			if (!pvars->MobVars.MoveVars.IsStuck)
 			{
@@ -1078,7 +1190,7 @@ float mobGetCurrentWalkAngle(Moby *moby)
 	// we're near the target
 	// and we're walking towards the target
 	// walk at an angle
-	if (target && vector_sqrdistance(target->Position, moby->Position) < (20 * 20) && vector_sqrdistance(pvars->MobVars.MoveVars.LastTargetPos, target->Position) < 1)
+	if (target && vector_sqrdistance(target->Position, moby->Position) < (MOB_WALK_ANGLE_NEAR_TARGET_DIST * MOB_WALK_ANGLE_NEAR_TARGET_DIST) && vector_sqrdistance(pvars->MobVars.MoveVars.LastTargetPos, target->Position) < 1)
 	{
 		dir = ((u8)pvars->MobVars.DynamicRandom % 3) - 1;
 	}

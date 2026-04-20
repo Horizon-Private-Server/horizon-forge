@@ -65,26 +65,7 @@ struct MobVTable ZombieVTable = {
 //--------------------------------------------------------------------------
 void zombiePreUpdate(Moby *moby)
 {
-	int i;
-	if (!moby || !moby->PVar)
-		return;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// decrement tickers regardless of frozen state
-	for (i = 0; i < GAME_MAX_LOCALS; ++i)
-		decTimerU16(&pvars->MobVars.LocalPlayerDamageHitInvTimer[i]);
-
-	if (mobIsFrozen(moby))
-		return;
-
-	// decrement path target pos ticker
-	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
-	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
-
-	mobPreUpdate(moby);
+	mobDefaultPreUpdate(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -100,7 +81,7 @@ void zombiePostUpdate(Moby *moby)
 	float animSpeed = 0.9 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
 	if (moby->AnimSeqId == ZOMBIE_ANIM_JUMP)
 	{
-		animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / 35, 2));
+		animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / ZOMBIE_JUMP_ANIM_DURATION, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
 			animSpeed = 0.9;
@@ -108,7 +89,7 @@ void zombiePostUpdate(Moby *moby)
 	}
 	else if (zombieIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
+		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / ZOMBIE_FLINCH_ANIM_DURATION, 2));
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == ZOMBIE_ACTION_WALK))
@@ -215,13 +196,13 @@ void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	canFlinch = 1;
 #endif
 
-	int isShock = e->DamageFlags & 0x40;
-	int isShortFreeze = e->DamageFlags & 0x40000000;
+	int isShock = e->DamageFlags & MOB_DAMAGE_FLAG_SHOCK;
+	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0)
 	{
-		if (pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB && moby->AnimSeqId == ZOMBIE_ANIM_CROUCH && moby->AnimSeqT > 3)
+		if (pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB && moby->AnimSeqId == ZOMBIE_ANIM_CROUCH && moby->AnimSeqT > ZOMBIE_CROUCH_ANIM_MIN_T_FOR_EXPLOSION)
 		{
 			// explode
 			// zombieForceLocalAction(moby, ZOMBIE_ACTION_TIME_BOMB_EXPLODE);
@@ -236,47 +217,10 @@ void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 		pvars->MobVars.LastHitByOClass = e->SourceOClass;
 	}
 
-	// knockback
-	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
-	{
-		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
-	}
-
-	// flinch
-	if (mobAmIOwner(moby))
-	{
-		float damageRatio = damage / pvars->MobVars.Config.Health;
-		float powerFactor = ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
-		float probability = clamp((damageRatio * ZOMBIE_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-
-#if ALWAYS_FLINCH
-		probability = 2;
-		powerFactor = 2;
-#endif
-
-		if (canFlinch)
-		{
-			if (e->Knockback.Force)
-			{
-				mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
-			}
-			else if (isShock)
-			{
-				mobSetAction(moby, ZOMBIE_ACTION_FLINCH);
-			}
-			else if (randRange(0, 1) < probability)
-			{
-				if (randRange(0, 1) < powerFactor)
-				{
-					mobSetAction(moby, ZOMBIE_ACTION_BIG_FLINCH);
-				}
-				else
-				{
-					mobSetAction(moby, ZOMBIE_ACTION_FLINCH);
-				}
-			}
-		}
-	}
+	float damageRatio = damage / pvars->MobVars.Config.Health;
+	float powerFactor = ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
+	float probability = clamp((damageRatio * ZOMBIE_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, ZOMBIE_ACTION_FLINCH, ZOMBIE_ACTION_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -289,23 +233,7 @@ void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 //--------------------------------------------------------------------------
 int zombieOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 {
-	// we want to give each local player a cooldown on damage they can apply to zombie
-	if (!e->PlayerDamager)
-		return 1;
-	if (!e->PlayerDamager->IsLocal)
-		return 1;
-
-	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-
-	// only accept local damage when timer is 0
-	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
-	if (timer == 0)
-	{
-		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
-		return 1;
-	}
-
-	return 0;
+	return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -504,7 +432,7 @@ void zombieDoAction(Moby *moby)
 			float jumpSpeed = pvars->MobVars.MoveVars.QueueJumpSpeed;
 			if (jumpSpeed <= 0 && target)
 			{
-				jumpSpeed = 8; // clamp(0 + (target->Position[2] - moby->Position[2]) * fabsf(pvars->MobVars.MoveVars.WallSlope) * 1, 3, 15);
+				jumpSpeed = ZOMBIE_DEFAULT_JUMP_SPEED;
 			}
 
 			pvars->MobVars.MoveVars.Velocity[2] = jumpSpeed * MATH_DT;
@@ -607,9 +535,9 @@ void zombieDoAction(Moby *moby)
 		int attack1AnimId = ZOMBIE_ANIM_SLAP;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1, 1, 5);
-		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 11 && moby->AnimSeqT < 12;
-		u32 damageFlags = 0x00081801;
+		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < ZOMBIE_SLAP_ANIM_LUNGE_DURATION) ? (difficulty * 2) : 1, 1, 5);
+		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= ZOMBIE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < ZOMBIE_ATTACK_HIT_FRAME_END;
+		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
 
 		if (!isInAirFromFlinching)
 		{
@@ -627,16 +555,8 @@ void zombieDoAction(Moby *moby)
 		// attribute damage
 		switch (pvars->MobVars.Config.MobAttribute)
 		{
-		case MOB_ATTRIBUTE_FREEZE:
-		{
-			damageFlags |= 0x00800000;
-			break;
-		}
-		case MOB_ATTRIBUTE_ACID:
-		{
-			damageFlags |= 0x00000080;
-			break;
-		}
+		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
+		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)
@@ -709,24 +629,14 @@ void zombieForceLocalAction(Moby *moby, int action)
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 
-		u32 damageFlags = 0x00008801;
+		u32 damageFlags = MOB_DAMAGE_FLAG_EXPLODE_BASE;
 		u32 color = 0x403064FF;
 
 		// attribute damage
 		switch (pvars->MobVars.Config.MobAttribute)
 		{
-		case MOB_ATTRIBUTE_FREEZE:
-		{
-			color = 0x40FF6430;
-			damageFlags |= 0x00800000;
-			break;
-		}
-		case MOB_ATTRIBUTE_ACID:
-		{
-			color = 0x4064FF30;
-			damageFlags |= 0x00000080;
-			break;
-		}
+		case MOB_ATTRIBUTE_FREEZE: color = 0x40FF6430; damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
+		case MOB_ATTRIBUTE_ACID:   color = 0x4064FF30; damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		mobyPlaySoundByClass(0, 0, mobySpawnExplosion(vector_read(moby->Position), 0, 0, 0, 0, 16, 0, 16, 0, 1, 0, 0, 0, 0, 0, 0, color, color, color, color, color, color, color, color, color, 0, 0, 0, 0, ZOMBIE_EXPLODE_HIT_RADIUS / 2.5, 0, 0, 0), MOBY_ID_ARBITER_ROCKET0);
@@ -769,9 +679,9 @@ short zombieGetArmor(Moby *moby)
 	float t = pvars->MobVars.Health / pvars->MobVars.Config.MaxHealth;
 	int bangles = pvars->MobVars.Config.Bangles;
 
-	if (t < 0.3)
+	if (t < MOB_ARMOR_THRESHOLD_LOW)
 		return 0x0000;
-	else if (t < 0.7)
+	else if (t < MOB_ARMOR_THRESHOLD_HIGH)
 		return bangles & 0x1f; // remove torso bangle
 
 	return bangles;

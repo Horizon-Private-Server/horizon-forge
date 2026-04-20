@@ -54,5 +54,8 @@ int mobIsProjectileComing(Moby* moby);
 float mobGetCurrentWalkAngle(Moby* moby);
 float mobGetScaleMultiplier(Moby* moby);
 Moby* mobGetNextTarget(Moby* moby, float keepCurrentTargetFactor);
+void mobDefaultPreUpdate(Moby *moby);
+int mobDefaultOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
+void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchAction, int bigFlinchAction);
 
 #endif // SURVIVAL_MAP_SHARED_H

@@ -16,6 +16,15 @@
 #define TREMOR_MOVE_ACCELERATION              (40)
 #define TREMOR_MOVE_AIR_ACCELERATION          (20)
 
+#define TREMOR_DEFAULT_JUMP_SPEED             (5)
+
+// AnimSeqT range defines for animation state checks
+#define TREMOR_ATTACK_HIT_FRAME_START         (4)
+#define TREMOR_ATTACK_HIT_FRAME_END           (8)
+#define TREMOR_JUMP_ANIM_DURATION             (21)
+#define TREMOR_FLINCH_ANIM_AIR_DURATION       (20)
+#define TREMOR_FLINCH_ANIM_BACK_FLIP_FALL_DESTROY_FRAME (15)
+
 #define TREMOR_ANIM_ATTACK_TICKS							(30)
 #define TREMOR_FLINCH_COOLDOWN_TICKS					(60 * 7)
 #define TREMOR_KNOCKBACK_MULTIPLIER				    (1.5)
