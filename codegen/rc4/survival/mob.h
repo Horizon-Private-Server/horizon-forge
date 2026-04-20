@@ -12,6 +12,7 @@
 #include "reactor.h"
 #include "tremor.h"
 #include "swarmer.h"
+#include "swamper.h"
 #include "reaper.h"
 #include "leviathan.h"
 #include "game.h"

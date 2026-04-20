@@ -57,6 +57,10 @@ extern int aaa;
 #include "swarmer.c"
 #endif
 
+#if MOB_SWAMPER
+#include "swamper.c"
+#endif
+
 #if MOB_REAPER
 #include "reaper.c"
 #endif
