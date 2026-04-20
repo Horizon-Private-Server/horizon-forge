@@ -98,7 +98,7 @@ public class SurvivalMobDef : MonoBehaviour
         sb.AppendLine($"\t\t\t.Health = {(Health.HasOverride ? Health.OverrideValue : defaults.Health).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.MaxHealth = {(HealthMax.HasOverride ? HealthMax.OverrideValue : defaults.HealthMax).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.HealthScale = {(HealthScale.HasOverride ? HealthScale.OverrideValue : defaults.HealthScale).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius * SizeMultiplier).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius + (SizeMultiplier * defaults.CollRadius)).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.HitRadius = {(defaults.HitRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.CollRadius = {(defaults.CollRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
