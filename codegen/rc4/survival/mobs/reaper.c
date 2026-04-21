@@ -577,7 +577,7 @@ void reaperDoAction(Moby *moby)
 
 		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < REAPER_ATTACK_EARLY_PHASE_FRAME_END) ? (difficulty * 2) : 1, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REAPER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REAPER_ATTACK_HIT_FRAME_END;
-		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (target)
 		{
@@ -586,13 +586,6 @@ void reaperDoAction(Moby *moby)
 		else
 		{
 			mobStand(moby);
-		}
-
-		// attribute damage
-		switch (pvars->MobVars.Config.MobAttribute)
-		{
-		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
-		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)

@@ -566,7 +566,7 @@ void swarmerDoAction(Moby *moby)
 		float speedCurve = powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2);
 		float speedMult = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < SWARMER_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 1;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWARMER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWARMER_ATTACK_HIT_FRAME_END;
-		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (speedMult < 1)
 			speedMult = 1;
@@ -582,13 +582,6 @@ void swarmerDoAction(Moby *moby)
 				// stand
 				mobStand(moby);
 			}
-		}
-
-		// attribute damage
-		switch (pvars->MobVars.Config.MobAttribute)
-		{
-		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
-		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)

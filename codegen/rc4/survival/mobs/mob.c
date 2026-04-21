@@ -141,6 +141,22 @@ float mobGetScaleMultiplier(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
+u32 mobGetDamageFlags(Moby *moby, u32 damageFlags)
+{
+  if (!moby) return 0;
+  
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+
+	switch (pvars->MobVars.Config.MobAttribute)
+	{
+	case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
+	case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
+	}
+
+	return damageFlags;
+}
+
+//--------------------------------------------------------------------------
 GuberEvent *mobCreateEvent(Moby *moby, u32 eventType)
 {
 	GuberEvent *event = NULL;
@@ -375,17 +391,26 @@ int mobDoDamageTryHit(Moby *moby, Moby *hitMoby, VECTOR jointPosition, int isAoE
 	vector_subtract(mobToJoint, jointPosition, moby->Position);
 	vector_subtract(jointToHitMoby, hitMobyCenter, jointPosition);
 
-	// ignore if hit behind
-	if (!isAoE && vector_innerproduct(mobToHitMoby, mobToJoint) < 0)
-		return 0;
+  if (isAoE)
+  {
+    // ensure target is in radius of AoE
+    if (vector_length(jointToHitMoby) > (hitMobyCollRadius + hitRadius))
+      return 0;
+  }
+  else
+  {
+	  // ignore if hit behind
+    if (vector_innerproduct(mobToHitMoby, mobToJoint) < 0)
+      return 0;
 
-	// clamp within arbitrary vertical limit
-	if (!isAoE && fabsf(jointToHitMoby[2]) > hitHeight)
-		return 0;
+    // clamp within arbitrary vertical limit
+    if (fabsf(jointToHitMoby[2]) > hitHeight)
+      return 0;
 
-	// ignore if past attack radius
-	if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_length(jointToHitMoby) > (hitMobyCollRadius + hitRadius))
-		return 0;
+    // ignore if past attack radius
+    if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_length(jointToHitMoby) > (hitMobyCollRadius + hitRadius))
+      return 0;
+  }
 
 	vector_write(in.Momentum, 0);
 	in.Damager = moby;
@@ -415,6 +440,13 @@ int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radiu
 	// get total distance to travel
 	vector_subtract(delta, to, from);
 	float len = vector_length(delta);
+
+  // if no length just run once at start position
+  if (len == 0)
+  {
+    len = 1;
+    step = 1;
+  }
 
 	for (t = 0; t < len; t += step)
 	{
@@ -486,9 +518,16 @@ int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int fri
 	float firstPassRadius = MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius;
 	float firstPassSqrRadius = powf(MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA + radius, 2);
 
-	// get position of right spike joint
-	mobyGetJointMatrix(moby, jointId, jointMtx);
-	vector_copy(p, &jointMtx[12]);
+	// get position of joint or moby position
+  if (jointId < 0)
+  {
+    vector_copy(p, moby->Position);
+  }
+  else
+  {
+	  mobyGetJointMatrix(moby, jointId, jointMtx);
+	  vector_copy(p, &jointMtx[12]);
+  }
 
 	// if no friendly fire just check hit on players
 	// otherwise check all mobys
@@ -1147,7 +1186,6 @@ float mobTurnTowards(Moby *moby, VECTOR towards, float turnSpeed)
 		return 0;
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	// float turnSpeed = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_TURN_RADIANS_PER_SEC : ZOMBIE_TURN_AIR_RADIANS_PER_SEC;
 	float radians = turnSpeed * pvars->MobVars.Config.Speed * MATH_DT;
 
 	vector_subtract(delta, towards, moby->Position);
@@ -1180,6 +1218,23 @@ float mobTurnTowardsPredictive(Moby *moby, Moby *target, float turnSpeed, float 
 	}
 
 	return mobTurnTowards(moby, pos, turnSpeed);
+}
+
+//--------------------------------------------------------------------------
+float mobTurnTowardsPredictiveWithSpeed(Moby *moby, Moby *target, float turnSpeed, float speed)
+{
+	if (!moby || !target)
+		return 0;
+
+	// Calculate distance between moby and target
+	float distance = mobGetDistanceToTarget(moby, target);
+	
+	// Calculate predictFactor from distance and speed
+	// predictFactor = distance / speed (in game units per frame)
+	float predictFactor = speed > 0 ? distance / speed : 0;
+
+	// Call the existing predictive turn function with calculated predictFactor
+	return mobTurnTowardsPredictive(moby, target, turnSpeed, predictFactor);
 }
 
 //--------------------------------------------------------------------------

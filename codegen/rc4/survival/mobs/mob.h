@@ -29,6 +29,7 @@
 
 // Armor health thresholds (fraction of max health)
 #define MOB_ARMOR_THRESHOLD_LOW               (0.3)
+#define MOB_ARMOR_THRESHOLD_MID               (0.5)
 #define MOB_ARMOR_THRESHOLD_HIGH              (0.7)
 
 // Physics / movement constants
@@ -498,6 +499,7 @@ void mobJumpTowards(Moby* moby, VECTOR targetPosition);
 int mobHitWallShouldJump(Moby* moby, float maxSlope);
 float mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed);
 float mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float predictFactor);
+float mobTurnTowardsPredictiveWithSpeed(Moby* moby, Moby* target, float turnSpeed, float speed);
 void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float yaw, float speed, float acceleration);
 void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
 void mobGetVelocityToTargetSimple(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
@@ -511,5 +513,6 @@ Moby* mobGetNextTarget(Moby* moby, float keepCurrentTargetFactor);
 void mobDefaultPreUpdate(Moby *moby);
 int mobDefaultOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
 void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchAction, int bigFlinchAction);
+u32 mobGetDamageFlags(Moby *moby, u32 damageFlags);
 
 #endif // SURVIVAL_MOB_H

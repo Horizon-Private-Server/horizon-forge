@@ -536,7 +536,7 @@ void zombieDoAction(Moby *moby)
 
 		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < ZOMBIE_SLAP_ANIM_LUNGE_DURATION) ? (difficulty * 2) : 1, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= ZOMBIE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < ZOMBIE_ATTACK_HIT_FRAME_END;
-		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
 		{
@@ -549,13 +549,6 @@ void zombieDoAction(Moby *moby)
 				// stand
 				mobStand(moby);
 			}
-		}
-
-		// attribute damage
-		switch (pvars->MobVars.Config.MobAttribute)
-		{
-		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
-		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)
@@ -627,16 +620,8 @@ void zombieForceLocalAction(Moby *moby, int action)
 	case ZOMBIE_ACTION_TIME_BOMB_EXPLODE:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
-
-		u32 damageFlags = MOB_DAMAGE_FLAG_EXPLODE_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_EXPLODE_BASE);
 		u32 color = 0x403064FF;
-
-		// attribute damage
-		switch (pvars->MobVars.Config.MobAttribute)
-		{
-		case MOB_ATTRIBUTE_FREEZE: color = 0x40FF6430; damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
-		case MOB_ATTRIBUTE_ACID:   color = 0x4064FF30; damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
-		}
 
 		mobyPlaySoundByClass(0, 0, mobySpawnExplosion(vector_read(moby->Position), 0, 0, 0, 0, 16, 0, 16, 0, 1, 0, 0, 0, 0, 0, 0, color, color, color, color, color, color, color, color, color, 0, 0, 0, 0, ZOMBIE_EXPLODE_HIT_RADIUS / 2.5, 0, 0, 0), MOBY_ID_ARBITER_ROCKET0);
 		mobDoDamage(moby, ZOMBIE_EXPLODE_HIT_RADIUS, pvars->MobVars.Config.Damage, damageFlags, 1, ZOMBIE_SUBSKELETON_JOINT_HIPS, 1, 1);

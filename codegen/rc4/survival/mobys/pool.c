@@ -41,7 +41,7 @@ PoolGroup_t poolGroups[] = {
 		{.MobyOClass = 0x13A1, .PoolSize = 16},
 		{.MobyOClass = 0x0070, .PoolSize = 8},
 		{.MobyOClass = 0x007A, .PoolSize = 8},
-		{.MobyOClass = 0x20E2, .PoolSize = 8},
+		{.MobyOClass = 0x20E2, .PoolSize = 16},
 		{.MobyOClass = 0x1F8C, .PoolSize = 8},
 		{.MobyOClass = 0x20B8, .PoolSize = 8},
 };

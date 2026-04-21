@@ -480,7 +480,7 @@ void swamperDoAction(Moby *moby)
     float speedCurve = powf(clamp((1.5-t) * 1.5, 0, 1.5), 2);
     float speedMult = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < SWAMPER_BITE_LUNGE_FRAME_START || moby->AnimSeqT > SWAMPER_BITE_LUNGE_FRAME_END)) ? 0 : speedCurve;
     int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWAMPER_BITE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWAMPER_BITE_ATTACK_HIT_FRAME_END;
-		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
 		{

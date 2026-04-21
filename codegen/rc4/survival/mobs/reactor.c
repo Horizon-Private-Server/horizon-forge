@@ -601,7 +601,7 @@ void reactorDoAction(Moby *moby)
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
 	Moby *target = pvars->MobVars.Target;
 	VECTOR t;
-	u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+	u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 	int walkBackwards = 0;
 	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? REACTOR_TURN_RADIANS_PER_SEC : REACTOR_TURN_AIR_RADIANS_PER_SEC;
@@ -617,13 +617,6 @@ void reactorDoAction(Moby *moby)
 
 	// reset anim speed add
 	reactorVars->AnimSpeedAdditive = 0;
-
-	// attribute damage
-	switch (pvars->MobVars.Config.MobAttribute)
-	{
-	case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
-	case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
-	}
 
 	//
 	switch (pvars->MobVars.Action)

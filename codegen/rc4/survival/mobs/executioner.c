@@ -586,7 +586,7 @@ void executionerDoAction(Moby *moby)
 
 		float speedMult = 0; // (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= EXECUTIONER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < EXECUTIONER_ATTACK_HIT_FRAME_END;
-		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
 		{
@@ -598,13 +598,6 @@ void executionerDoAction(Moby *moby)
 			{
 				mobStand(moby);
 			}
-		}
-
-		// attribute damage
-		switch (pvars->MobVars.Config.MobAttribute)
-		{
-		case MOB_ATTRIBUTE_FREEZE: damageFlags |= MOB_DAMAGE_FLAG_FREEZE; break;
-		case MOB_ATTRIBUTE_ACID:   damageFlags |= MOB_DAMAGE_FLAG_ACID;   break;
 		}
 
 		if (swingAttackReady && damageFlags)

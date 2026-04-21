@@ -824,7 +824,7 @@ void leviathanDoAction(Moby *moby)
 
 		mobTransAnim(moby, attackAnimId, 0);
 		int swingAttackReady = moby->AnimSeqId == attackAnimId && moby->AnimSeqT >= attackAnimHitStart && moby->AnimSeqT < attackAnimHitEnd;
-		u32 damageFlags = MOB_DAMAGE_FLAG_BASE;
+		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
 		{

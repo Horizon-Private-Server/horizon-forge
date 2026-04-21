@@ -369,7 +369,21 @@ MonoBehaviour:
       - OClass: 9427
         SourceMapId: 5
         SourceMissionId: -1
+    - Name: Armored
+      OClass: 9427
+      Bangles: 63
+      SpriteTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
+      Dependencies:
+      - OClass: 9427
+        SourceMapId: 5
+        SourceMissionId: -1
     Behaviors:
+    - Melee
+    - Ranged
     - Normal
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
@@ -387,7 +401,7 @@ MonoBehaviour:
     HealthScale: 1
     TurnSpeed: 1
     AttackRadius: 4
-    RangedAttackDistance: 50
+    RangedAttackDistance: 40
     HitRadius: 1
     CollRadius: 1
     ReactionDelaySeconds: 0.25

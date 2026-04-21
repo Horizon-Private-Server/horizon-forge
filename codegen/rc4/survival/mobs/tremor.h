@@ -21,11 +21,21 @@
 // AnimSeqT range defines for animation state checks
 #define TREMOR_ATTACK_HIT_FRAME_START         (4)
 #define TREMOR_ATTACK_HIT_FRAME_END           (8)
+#define TREMOR_ATTACK_QUAKE_SPAWN_FRAME_START (12)
 #define TREMOR_JUMP_ANIM_DURATION             (21)
 #define TREMOR_FLINCH_ANIM_AIR_DURATION       (20)
 #define TREMOR_FLINCH_ANIM_BACK_FLIP_FALL_DESTROY_FRAME (15)
 
+#define TREMOR_QUAKE_DURATION_TICKS           (1.5 * TPS)
+#define TREMOR_QUAKE_HIT_RADIUS               (1.25)
+#define TREMOR_QUAKE_SPEED                    (30.0 * MATH_DT)
+#define TREMOR_QUAKE_TURN_RADIANS_PER_SEC     ((90.0 / 9.0) * MATH_DEG2RAD)
+#define TREMOR_QUAKE_FIRE_AT_MAX_TURN_ANGLE   (30 * MATH_DEG2RAD)
+#define TREMOR_QUAKE_COOLDOWN_TICKS_MIN       (3 * TPS)
+#define TREMOR_QUAKE_COOLDOWN_TICKS_MAX       (40 * TPS)
+
 #define TREMOR_ANIM_ATTACK_TICKS							(30)
+#define TREMOR_ANIM_ATTACK_QUAKE_TICKS				(3 * TPS)
 #define TREMOR_FLINCH_COOLDOWN_TICKS					(60 * 7)
 #define TREMOR_KNOCKBACK_MULTIPLIER				    (1.5)
 #define TREMOR_ACTION_COOLDOWN_TICKS					(30)
@@ -102,6 +112,7 @@ enum TremorAction
 	TREMOR_ACTION_LOOK_AT_TARGET,
   TREMOR_ACTION_DIE,
 	TREMOR_ACTION_ATTACK,
+	TREMOR_ACTION_ATTACK_GROUND_QUAKE,
 };
 
 enum TremorSubskeletonJoints
@@ -110,6 +121,29 @@ enum TremorSubskeletonJoints
   TREMOR_SUBSKELETON_JOINT_RIGHT_SHOULDER = 1,
   TREMOR_SUBSKELETON_JOINT_RIGHT_UPPER_LEG = 2,
   TREMOR_SUBSKELETON_JOINT_RIGHT_FOOT = 3,
+};
+
+enum TremorBehaviors
+{
+	TREMOR_BEHAVIOR_MELEE = 0,
+	TREMOR_BEHAVIOR_RANGED = 1,
+	TREMOR_BEHAVIOR_NORMAL = 2,
+};
+
+typedef struct TremorMobVars
+{
+  Moby* QuakeMoby;
+	u32 AttackQuakeCooldownTicks;
+} TremorMobVars_t;
+
+struct TremorQuakePVars
+{
+  char UNK_00[0x10];
+  int bEnabled;
+  int LifeTicks;
+  char UNK_18[4];
+  Moby* CreatorMob;
+  char UNK_20[0x20];
 };
 
 struct MobConfig;
