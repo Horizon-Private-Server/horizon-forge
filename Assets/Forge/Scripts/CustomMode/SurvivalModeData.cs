@@ -224,27 +224,26 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/survival.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/survival_items.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/items/survival_items.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/items/item.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/items/stackables.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gambits.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/store.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/item.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
-
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/upgrade.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/drop.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammosupply.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pool.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/demonbell.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bankbox.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mysterybox.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/utils.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/store.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/vendor.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/ammodrop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/upgrade.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/drop.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/ammosupply.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/pool.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/demonbell.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/bankbox.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobys/mysterybox.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/stackables.o");
 
         if (HidePrestigeMachineEvery25Rounds) state.LDFlags.Add("-DSHOW_PRESTIGE_EVERY_25");
         if (RandomizeWeaponPickupsAtStart) state.LDFlags.Add("-DRANDOMIZE_WEAPONS_AT_START");
@@ -289,7 +288,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"maputils.h\"");
         state.Includes.Add("#include \"mobs/mob.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
-        state.Includes.Add("#include \"store.h\"");
+        state.Includes.Add("#include \"mobys/store.h\"");
 
         // 
         state.Declarations.Add("void interopInit(void);");
@@ -426,9 +425,9 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("#include <libdl/utils.h>");
         sb.AppendLine("#include \"config.h\"");
         sb.AppendLine("#include \"game.h\"");
-        sb.AppendLine("#include \"upgrade.h\"");
-        sb.AppendLine("#include \"item.h\"");
-        sb.AppendLine("#include \"store.h\"");
+        sb.AppendLine("#include \"mobys/upgrade.h\"");
+        sb.AppendLine("#include \"mobys/store.h\"");
+        sb.AppendLine("#include \"items/item.h\"");
         sb.AppendLine("#include \"mobs/mob.h\"");
         sb.AppendLine();
 

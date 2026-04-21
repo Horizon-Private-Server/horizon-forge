@@ -6,10 +6,10 @@
 #include <libdl/string.h>
 #include <libdl/hud.h>
 #include <libdl/player.h>
-#include "item.h"
+#include "items/item.h"
 #include "game.h"
 #include "maputils.h"
-#include "survival_items.h"
+#include "items/survival_items.h"
 
 #if GATE
 #include "gate.h"

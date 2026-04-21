@@ -28,7 +28,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
-#include "bankbox.h"
+#include "mobys/bankbox.h"
 #include "game.h"
 #include "gate.h"
 #include "messageid.h"

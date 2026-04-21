@@ -29,7 +29,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
-#include "pool.h"
+#include "mobys/pool.h"
 #include "mobs/mob.h"
 
 extern struct SurvivalMapConfig MapConfig;

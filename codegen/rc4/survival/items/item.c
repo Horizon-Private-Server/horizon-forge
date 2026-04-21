@@ -4,7 +4,7 @@
 #include <libdl/ui.h>
 #include <libdl/game.h>
 #include <libdl/string.h>
-#include "item.h"
+#include "items/item.h"
 #include "utils.h"
 #include "window.h"
 #include "maputils.h"

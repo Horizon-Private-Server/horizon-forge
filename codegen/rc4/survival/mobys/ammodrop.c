@@ -32,7 +32,7 @@
 #include <libdl/random.h>
 #include "maputils.h"
 #include "mobs/mob.h"
-#include "ammodrop.h"
+#include "mobys/ammodrop.h"
 #include "game.h"
 
 Moby *ammoDropMobyList[MAX_MOB_AMMO_DROPS];

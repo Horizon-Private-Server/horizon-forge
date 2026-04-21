@@ -4,8 +4,8 @@
 #include <libdl/stdio.h>
 #include <libdl/string.h>
 #include "mobs/mob.h"
-#include "store.h"
-#include "vendor.h"
+#include "mobys/store.h"
+#include "mobys/vendor.h"
 
 extern SurvivalBakedConfig_t bakedConfig;
 extern char MysteryBoxRespawnImmediately;

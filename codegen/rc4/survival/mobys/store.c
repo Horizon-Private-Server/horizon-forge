@@ -30,7 +30,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
-#include "store.h"
+#include "mobys/store.h"
 #include "window.h"
 #include "game.h"
 #include "gate.h"
