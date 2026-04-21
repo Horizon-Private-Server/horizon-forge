@@ -32,7 +32,7 @@
 #include <libdl/utils.h>
 #include <libdl/random.h>
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "maputils.h"
 #include "gate.h"
 

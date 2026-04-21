@@ -8,11 +8,10 @@
 #include <libdl/color.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "pathfind.h"
 #include "maputils.h"
 #include "utils.h"
-#include "shared.h"
 
 void reaperPreUpdate(Moby *moby);
 void reaperPostUpdate(Moby *moby);

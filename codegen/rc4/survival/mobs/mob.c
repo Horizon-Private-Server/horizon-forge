@@ -20,12 +20,11 @@
 #include <libdl/collision.h>
 #include <libdl/utils.h>
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "utils.h"
 #include "gate.h"
 #include "dummy.h"
 #include "maputils.h"
-#include "shared.h"
 #include "pathfind.h"
 #include "messageid.h"
 

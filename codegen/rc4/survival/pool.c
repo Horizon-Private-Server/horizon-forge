@@ -30,7 +30,7 @@
 #include <libdl/color.h>
 #include <libdl/utils.h>
 #include "pool.h"
-#include "shared.h"
+#include "mobs/mob.h"
 
 extern struct SurvivalMapConfig MapConfig;
 

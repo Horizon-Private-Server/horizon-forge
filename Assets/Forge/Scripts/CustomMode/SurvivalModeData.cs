@@ -287,8 +287,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.Includes.Add("#include \"game.h\"");
         state.Includes.Add("#include \"maputils.h\"");
-        state.Includes.Add("#include \"mob.h\"");
-        state.Includes.Add("#include \"shared.h\"");
+        state.Includes.Add("#include \"mobs/mob.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
         state.Includes.Add("#include \"store.h\"");
 
@@ -430,7 +429,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("#include \"upgrade.h\"");
         sb.AppendLine("#include \"item.h\"");
         sb.AppendLine("#include \"store.h\"");
-        sb.AppendLine("#include \"mob.h\"");
+        sb.AppendLine("#include \"mobs/mob.h\"");
         sb.AppendLine();
 
         // forward declarations

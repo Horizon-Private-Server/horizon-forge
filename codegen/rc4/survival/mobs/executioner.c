@@ -8,10 +8,9 @@
 #include <libdl/color.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "utils.h"
 #include "maputils.h"
-#include "shared.h"
 
 void executionerPreUpdate(Moby *moby);
 void executionerPostUpdate(Moby *moby);

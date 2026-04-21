@@ -11,7 +11,7 @@
 #include "demonbell.h"
 #include "maputils.h"
 #include "utils.h"
-#include "shared.h"
+#include "mobs/mob.h"
 
 GuberEvent* demonbellCreateEvent(Moby* moby, u32 eventType);
 int demonbellCount = 0;

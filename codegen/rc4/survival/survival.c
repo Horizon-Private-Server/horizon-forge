@@ -34,7 +34,7 @@
 #include <libdl/utils.h>
 #include "messageid.h"
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "vendor.h"
 #include "config.h"
 #include "interop.h"

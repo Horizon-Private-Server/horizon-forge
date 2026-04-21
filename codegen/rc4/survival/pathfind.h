@@ -24,7 +24,7 @@
 
 #include "messageid.h"
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 
 extern struct SurvivalMapConfig MapConfig;
 

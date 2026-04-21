@@ -3,7 +3,7 @@
 #include <libdl/moby.h>
 #include <libdl/stdio.h>
 #include <libdl/string.h>
-#include "shared.h"
+#include "mobs/mob.h"
 #include "store.h"
 #include "vendor.h"
 

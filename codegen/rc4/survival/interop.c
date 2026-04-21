@@ -4,7 +4,7 @@
 #include <libdl/game.h>
 #include <libdl/random.h>
 #include <libdl/player.h>
-#include "mob.h"
+#include "mobs/mob.h"
 #include "config.h"
 #include "stackables.h"
 #include "survival_items.h"

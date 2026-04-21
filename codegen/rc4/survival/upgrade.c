@@ -10,7 +10,7 @@
 #include <libdl/string.h>
 #include "upgrade.h"
 #include "drop.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "utils.h"
 #include "game.h"
 #include "utils.h"

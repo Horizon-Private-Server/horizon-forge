@@ -8,11 +8,10 @@
 #include <libdl/color.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "laserbeam.h"
 #include "maputils.h"
 #include "pathfind.h"
-#include "shared.h"
 
 void leviathanPreUpdate(Moby *moby);
 void leviathanPostUpdate(Moby *moby);

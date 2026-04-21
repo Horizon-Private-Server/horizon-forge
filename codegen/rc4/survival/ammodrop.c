@@ -31,7 +31,7 @@
 #include <libdl/collision.h>
 #include <libdl/random.h>
 #include "maputils.h"
-#include "shared.h"
+#include "mobs/mob.h"
 #include "ammodrop.h"
 #include "game.h"
 

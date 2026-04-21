@@ -8,11 +8,10 @@
 #include <libdl/color.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "pathfind.h"
 #include "utils.h"
 #include "maputils.h"
-#include "shared.h"
 
 void zombiePreUpdate(Moby *moby);
 void zombiePostUpdate(Moby *moby);

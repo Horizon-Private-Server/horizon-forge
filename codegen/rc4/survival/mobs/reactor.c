@@ -10,10 +10,9 @@
 #include <libdl/utils.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "utils.h"
 #include "maputils.h"
-#include "shared.h"
 
 void reactorPreUpdate(Moby *moby);
 void reactorPostUpdate(Moby *moby);

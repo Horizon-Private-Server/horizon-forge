@@ -37,7 +37,7 @@
 #include "common.h"
 
 #if SURVIVAL || RAIDS
-#include "mob.h"
+#include "mobs/mob.h"
 #endif
 
 #if DEBUG
