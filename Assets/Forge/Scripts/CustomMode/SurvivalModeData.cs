@@ -1421,9 +1421,7 @@ public enum SurvivalMobAttributes
     Freeze,
     Acid,
     Ghost,
-    Explode,
-    Ranged_attack,
-    Boss
+    Boss = 6
 }
 
 [Flags]
@@ -1454,20 +1452,6 @@ public enum SurvivalBakedSpawnpointType
     MysteryBox = 3,
     DemonBell = 4,
     StackBox = 5
-};
-
-public enum SurvivalStackableItemId
-{
-    LowHealthDamageBuff = 0, // stack dmg buf
-    ExtraJump = 1, // stack +1 jump
-    ExtraShot = 2, // stack +1 shot (dmg mult)
-    Hoverboots = 3, // stack movement speed
-    AlphaModSpeed = 4, // stack +2 speed mod
-    AlphaModImpact = 5, // stack +2 impact mod
-    AlphaModArea = 6, // stack +2 area mod
-    AlphaModAmmo = 7, // stack +2 ammo mod
-    Vampire = 8, // stack +X health gain
-    ExplodingEnemies = 9, // stack +X damage per explosion
 };
 
 // DO NOT REASSIGN VALUES
@@ -1575,15 +1559,6 @@ public enum SurvivalMobSpawnType
     OnPlayer = 4,
     NearHealthbox = 8,
 };
-
-[System.Serializable]
-public class SurvivalStackableEntry
-{
-    public SurvivalStackableItemId Type;
-
-    [Min(0)]
-    public int Max;
-}
 
 [System.Serializable]
 public class SurvivalDefaultItemOverrideEntry

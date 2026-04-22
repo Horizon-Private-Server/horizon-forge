@@ -20,40 +20,38 @@
 #define MOB_MAX_OTHER_TARGETS (32)
 
 // Damage flag constants used when mobs deal damage
-#define MOB_DAMAGE_FLAG_BASE                  (0x00081801)
-#define MOB_DAMAGE_FLAG_EXPLODE_BASE          (0x00008801)
-#define MOB_DAMAGE_FLAG_FREEZE                (0x00800000)
-#define MOB_DAMAGE_FLAG_ACID                  (0x00000080)
-#define MOB_DAMAGE_FLAG_SHOCK                 (0x40)
-#define MOB_DAMAGE_FLAG_SHORT_FREEZE          (0x40000000)
+#define MOB_DAMAGE_FLAG_BASE (0x00081801)
+#define MOB_DAMAGE_FLAG_EXPLODE_BASE (0x00008801)
+#define MOB_DAMAGE_FLAG_FREEZE (0x00800000)
+#define MOB_DAMAGE_FLAG_ACID (0x00000080)
+#define MOB_DAMAGE_FLAG_SHOCK (0x40)
+#define MOB_DAMAGE_FLAG_SHORT_FREEZE (0x40000000)
 
 // Armor health thresholds (fraction of max health)
-#define MOB_ARMOR_THRESHOLD_LOW               (0.3)
-#define MOB_ARMOR_THRESHOLD_MID               (0.5)
-#define MOB_ARMOR_THRESHOLD_HIGH              (0.7)
+#define MOB_ARMOR_THRESHOLD_LOW (0.3)
+#define MOB_ARMOR_THRESHOLD_MID (0.5)
+#define MOB_ARMOR_THRESHOLD_HIGH (0.7)
 
 // Physics / movement constants
-#define MOB_TERMINAL_VELOCITY                 (-10)
-#define MOB_STUCK_CHECK_INTERVAL_TICKS        (60)
-#define MOB_STUCK_SPEED_THRESHOLD_FACTOR      (0.25)
-#define MOB_STUCK_EXPANSION_FACTOR            (0.25)
-#define MOB_CEILING_CHECK_HEIGHT              (3)
-#define MOB_GROUND_SNAP_EPSILON               (0.01)
-#define MOB_WALK_ANGLE_NEAR_TARGET_DIST       (20)
-#define MOB_KNOCKBACK_POWER_EXPONENT_BASE     (1.1)
-#define MOB_INCOMING_PROJECTILE_RADIUS        (7)
-#define MOB_HAS_VELOCITY_THRESHOLD            (0.0001)
-#define MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA    (5)
+#define MOB_TERMINAL_VELOCITY (-10)
+#define MOB_STUCK_CHECK_INTERVAL_TICKS (60)
+#define MOB_STUCK_SPEED_THRESHOLD_FACTOR (0.25)
+#define MOB_STUCK_EXPANSION_FACTOR (0.25)
+#define MOB_CEILING_CHECK_HEIGHT (3)
+#define MOB_GROUND_SNAP_EPSILON (0.01)
+#define MOB_WALK_ANGLE_NEAR_TARGET_DIST (20)
+#define MOB_KNOCKBACK_POWER_EXPONENT_BASE (1.1)
+#define MOB_INCOMING_PROJECTILE_RADIUS (7)
+#define MOB_HAS_VELOCITY_THRESHOLD (0.0001)
+#define MOB_DAMAGE_FIRST_PASS_RADIUS_EXTRA (5)
 
 enum MobAttributeType
 {
 	MOB_ATTRIBUTE_NONE = 0,
-	MOB_ATTRIBUTE_FREEZE,
-	MOB_ATTRIBUTE_ACID,
-	MOB_ATTRIBUTE_GHOST,
-	MOB_ATTRIBUTE_EXPLODE,
-	MOB_ATTRIBUTE_RANGED_ATTACK,
-	MOB_ATTRIBUTE_BOSS,
+	MOB_ATTRIBUTE_FREEZE = 1,
+	MOB_ATTRIBUTE_ACID = 2,
+	MOB_ATTRIBUTE_GHOST = 3,
+	MOB_ATTRIBUTE_BOSS = 6,
 	MOB_ATTRIBUTE_COUNT
 };
 
@@ -91,14 +89,14 @@ enum MobUnreliableMsgId
 	MOB_UNRELIABLE_MSG_ID_STATE_UPDATE
 };
 
-// 
+//
 enum MOB_DO_DAMAGE_HIT_FLAGS
 {
-  MOB_DO_DAMAGE_HIT_FLAG_NONE = 0,
-  MOB_DO_DAMAGE_HIT_FLAG_HIT_TARGET = 1,
-  MOB_DO_DAMAGE_HIT_FLAG_HIT_PLAYER = 2,
-  MOB_DO_DAMAGE_HIT_FLAG_HIT_MOB = 4,
-  MOB_DO_DAMAGE_HIT_FLAG_HIT_PLAYER_THORNS = 8,
+	MOB_DO_DAMAGE_HIT_FLAG_NONE = 0,
+	MOB_DO_DAMAGE_HIT_FLAG_HIT_TARGET = 1,
+	MOB_DO_DAMAGE_HIT_FLAG_HIT_PLAYER = 2,
+	MOB_DO_DAMAGE_HIT_FLAG_HIT_MOB = 4,
+	MOB_DO_DAMAGE_HIT_FLAG_HIT_PLAYER_THORNS = 8,
 };
 
 //
@@ -474,42 +472,42 @@ int mobCreate(int spawnParamsIdx, VECTOR position, float yaw, int spawnFromUID, 
 void mobInitialize(void);
 void mobTick(void);
 
-int mobAmIOwner(Moby* moby);
-int mobIsFrozen(Moby* moby);
-int mobGetBehavior(Moby* moby);
-void mobResetSoundTrigger(Moby* moby);
-void mobSpawnCorn(Moby* moby, int bangle);
-int mobDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire, int jointId, int reactToThorns, int isAoE);
-int mobDoSweepDamage(Moby* moby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE);
-int mobDoDamageTryHit(Moby* moby, Moby* hitMoby, VECTOR jointPosition, int isAoE, float hitRadius, int damageFlags, float amount);
-void mobSetAction(Moby* moby, int action);
-void mobTransAnimLerp(Moby* moby, int animId, int lerpFrames, float startOff);
-void mobTransAnim(Moby* moby, int animId, float startOff);
-int mobHasVelocity(struct MobPVar* pvars);
-float mobGetCurrentMoveSpeed(Moby* moby);
-void mobGetKnockbackVelocity(Moby* moby, VECTOR out);
-void mobGetTargetCenter(Moby* target, VECTOR out);
-int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby);
-void mobStand(Moby* moby);
-void mobResetMoveStep(Moby* moby);
-int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to);
-void mobMove(Moby* moby);
-void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir);
-void mobJumpTowards(Moby* moby, VECTOR targetPosition);
-int mobHitWallShouldJump(Moby* moby, float maxSlope);
-float mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed);
-float mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float predictFactor);
-float mobTurnTowardsPredictiveWithSpeed(Moby* moby, Moby* target, float turnSpeed, float speed);
-void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float yaw, float speed, float acceleration);
-void mobGetVelocityToTarget(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
-void mobGetVelocityToTargetSimple(Moby* moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
-void mobPostDrawQuad(Moby* moby, float scale, u32 color, int jointId);
-void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-void mobPreUpdate(Moby* moby);
-int mobIsProjectileComing(Moby* moby);
-float mobGetCurrentWalkAngle(Moby* moby);
-float mobGetScaleMultiplier(Moby* moby);
-Moby* mobGetNextTarget(Moby* moby, float keepCurrentTargetFactor);
+int mobAmIOwner(Moby *moby);
+int mobIsFrozen(Moby *moby);
+int mobGetBehavior(Moby *moby);
+void mobResetSoundTrigger(Moby *moby);
+void mobSpawnCorn(Moby *moby, int bangle);
+int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire, int jointId, int reactToThorns, int isAoE);
+int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE);
+int mobDoDamageTryHit(Moby *moby, Moby *hitMoby, VECTOR jointPosition, int isAoE, float hitRadius, int damageFlags, float amount);
+void mobSetAction(Moby *moby, int action);
+void mobTransAnimLerp(Moby *moby, int animId, int lerpFrames, float startOff);
+void mobTransAnim(Moby *moby, int animId, float startOff);
+int mobHasVelocity(struct MobPVar *pvars);
+float mobGetCurrentMoveSpeed(Moby *moby);
+void mobGetKnockbackVelocity(Moby *moby, VECTOR out);
+void mobGetTargetCenter(Moby *target, VECTOR out);
+int mobCanSeeMoby(Moby *moby, Moby *canSeeMoby);
+void mobStand(Moby *moby);
+void mobResetMoveStep(Moby *moby);
+int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to);
+void mobMove(Moby *moby);
+void mobMoveTowards(Moby *moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir);
+void mobJumpTowards(Moby *moby, VECTOR targetPosition);
+int mobHitWallShouldJump(Moby *moby, float maxSlope);
+float mobTurnTowards(Moby *moby, VECTOR towards, float turnSpeed);
+float mobTurnTowardsPredictive(Moby *moby, Moby *target, float turnSpeed, float predictFactor);
+float mobTurnTowardsPredictiveWithSpeed(Moby *moby, Moby *target, float turnSpeed, float speed);
+void mobGetVelocityToTargetWithDirection(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to, float yaw, float speed, float acceleration);
+void mobGetVelocityToTarget(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
+void mobGetVelocityToTargetSimple(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
+void mobPostDrawQuad(Moby *moby, float scale, u32 color, int jointId);
+void mobOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e);
+void mobPreUpdate(Moby *moby);
+int mobIsProjectileComing(Moby *moby);
+float mobGetCurrentWalkAngle(Moby *moby);
+float mobGetScaleMultiplier(Moby *moby);
+Moby *mobGetNextTarget(Moby *moby, float keepCurrentTargetFactor);
 void mobDefaultPreUpdate(Moby *moby);
 int mobDefaultOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
 void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchAction, int bigFlinchAction);

@@ -199,7 +199,7 @@ void swarmerOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float damage = e->DamageQuarters / 4.0;
 	float newHp = pvars->MobVars.Health - damage;
 
-	int canFlinch = pvars->MobVars.Action != SWARMER_ACTION_FLINCH && pvars->MobVars.Action != SWARMER_ACTION_BIG_FLINCH && pvars->MobVars.Action != SWARMER_ACTION_TIME_BOMB && pvars->MobVars.Action != SWARMER_ACTION_TIME_BOMB_EXPLODE && pvars->MobVars.FlinchCooldownTicks == 0;
+	int canFlinch = pvars->MobVars.Action != SWARMER_ACTION_FLINCH && pvars->MobVars.Action != SWARMER_ACTION_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
 
 #if ALWAYS_FLINCH
 	canFlinch = 1;
@@ -311,7 +311,7 @@ int swarmerGetPreferredAction(Moby *moby, int *delayTicks)
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return pvars->MobVars.Config.MobAttribute != MOB_ATTRIBUTE_EXPLODE ? SWARMER_ACTION_ATTACK : SWARMER_ACTION_TIME_BOMB;
+				return SWARMER_ACTION_ATTACK;
 			}
 			return SWARMER_ACTION_WALK;
 		}
@@ -683,7 +683,7 @@ short swarmerGetArmor(Moby *moby)
 int swarmerIsAttacking(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	return pvars->MobVars.Action == SWARMER_ACTION_TIME_BOMB || pvars->MobVars.Action == SWARMER_ACTION_TIME_BOMB_EXPLODE || (pvars->MobVars.Action == SWARMER_ACTION_ATTACK && !pvars->MobVars.AnimationLooped);
+	return (pvars->MobVars.Action == SWARMER_ACTION_ATTACK && !pvars->MobVars.AnimationLooped);
 }
 
 //--------------------------------------------------------------------------
