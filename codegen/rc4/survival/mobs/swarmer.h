@@ -92,6 +92,30 @@ enum SwarmerSubskeletonJoints
 	SWARMER_SUBSKELETON_JOINT_JAW = 0,
 };
 
+enum SwarmerActions
+{
+	SWARMER_ACTION_BITE,
+	SWARMER_ACTION_DODGE,
+	SWARMER_ACTION_COUNT
+};
+
+enum SwarmerActionParameters
+{
+	/* SWARMER_ACTION_BITE */
+	SWARMER_ACTION_BITE_PARAM_DAMAGE_MULTIPLIER = 0,
+	SWARMER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER = 1,
+	SWARMER_ACTION_BITE_PARAM_LUNGE_MULTIPLIER = 2,
+
+	/* SWARMER_ACTION_DODGE */
+	SWARMER_ACTION_DODGE_PARAM_VELOCITY_MULTIPLIER = 0,
+};
+
+typedef struct SwarmerMobVars
+{
+	u32 ActionCooldownTicks[SWARMER_ACTION_COUNT];
+	int ActionQueuedForTicks[SWARMER_ACTION_COUNT];
+} SwarmerMobVars_t;
+
 struct MobConfig;
 
 extern struct MobVTable SwarmerVTable;

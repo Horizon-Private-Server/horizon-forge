@@ -110,6 +110,10 @@ MonoBehaviour:
         Description: 
         ValueType: 0
         DefaultValue: 1
+      - Name: Lunge Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
     - Name: Throw Head
       Description: 
       MinCooldownSeconds: 3
@@ -222,15 +226,22 @@ MonoBehaviour:
         Description: 
         ValueType: 0
         DefaultValue: 1
-      - Name: Lunge Amount
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
       - Name: Attack Speed Multiplier
         Description: 
         ValueType: 0
         DefaultValue: 1
-      - Name: Dodge Probability Multiplier
+      - Name: Lunge Amount
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Dodge
+      Description: 
+      MinCooldownSeconds: 0.1
+      MaxCooldownSeconds: 1
+      Probability: 0.1
+      QueuedForTicks: 10
+      Parameters:
+      - Name: Dodge Velocity Multiplier
         Description: 
         ValueType: 0
         DefaultValue: 1

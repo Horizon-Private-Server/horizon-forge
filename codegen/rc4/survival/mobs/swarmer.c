@@ -39,7 +39,6 @@ int swarmerIsSpawning(struct MobPVar *pvars);
 int swarmerCanAttack(struct MobPVar *pvars);
 int swarmerGetSideFlipLeftOrRight(struct MobPVar *pvars);
 int swarmerIsFlinching(Moby *moby);
-float swarmerGetDodgeProbability(Moby *moby);
 
 struct MobVTable SwarmerVTable = {
 		.PreUpdate = &swarmerPreUpdate,
@@ -65,9 +64,35 @@ struct MobVTable SwarmerVTable = {
 };
 
 //--------------------------------------------------------------------------
+void swarmerResetActionCooldownTicks(Moby *moby, enum SwarmerActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	SwarmerMobVars_t *swarmerVars = (SwarmerMobVars_t *)pvars->AdditionalMobVarsPtr;
+	swarmerVars->ActionCooldownTicks[action] = mobGetActionCooldownTicks(moby, action);
+	swarmerVars->ActionQueuedForTicks[action] = 0;
+}
+
+//--------------------------------------------------------------------------
+int swarmerGetActionReady(Moby *moby, enum SwarmerActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	SwarmerMobVars_t *swarmerVars = (SwarmerMobVars_t *)pvars->AdditionalMobVarsPtr;
+	return swarmerVars->ActionQueuedForTicks[action] > 0;
+}
+
+//--------------------------------------------------------------------------
 void swarmerPreUpdate(Moby *moby)
 {
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	SwarmerMobVars_t *swarmerVars = (SwarmerMobVars_t *)pvars->AdditionalMobVarsPtr;
+
 	mobDefaultPreUpdate(moby);
+
+	if (!mobIsFrozen(moby))
+		mobTickActionCooldowns(moby, SWARMER_ACTION_COUNT, swarmerVars->ActionCooldownTicks, swarmerVars->ActionQueuedForTicks);
 }
 
 //--------------------------------------------------------------------------
@@ -100,6 +125,10 @@ void swarmerPostUpdate(Moby *moby)
 	else if (swarmerIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
 		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / SWARMER_FLINCH_ANIM_AIR_DURATION, 2));
+	}
+	else if (moby->AnimSeqId == SWARMER_ANIM_JUMP_FORWARD_BITE)
+	{
+		animSpeed *= mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND)
@@ -147,7 +176,7 @@ void swarmerMove(Moby *moby)
 //--------------------------------------------------------------------------
 int swarmerGetExtraDataSize(int spawnParamsIdx)
 {
-	return 0;
+	return sizeof(SwarmerMobVars_t);
 }
 
 //--------------------------------------------------------------------------
@@ -159,6 +188,7 @@ void swarmerOnSpawning(int spawnParamsIdx, VECTOR position, float *yaw, int *spa
 void swarmerOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs *e)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	memset(pvars->AdditionalMobVarsPtr, 0, sizeof(SwarmerMobVars_t));
 
 	// set scale
 	float scale = mobGetScaleMultiplier(moby);
@@ -178,6 +208,11 @@ void swarmerOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 
 	// default move step
 	pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
+
+	// initialize action cooldowns
+	int i;
+	for (i = 0; i < SWARMER_ACTION_COUNT; ++i)
+		swarmerResetActionCooldownTicks(moby, i);
 }
 
 //--------------------------------------------------------------------------
@@ -293,7 +328,7 @@ int swarmerGetPreferredState(Moby *moby, int *delayTicks)
 		return -1;
 
 	// check if a projectile is coming towards us
-	if (pvars->MobVars.MoveVars.Grounded && mobIsProjectileComing(moby) && randRange(0, 1) <= swarmerGetDodgeProbability(moby))
+	if (pvars->MobVars.MoveVars.Grounded && mobIsProjectileComing(moby) && swarmerGetActionReady(moby, SWARMER_ACTION_DODGE))
 	{
 		return SWARMER_STATE_DODGE;
 	}
@@ -305,7 +340,7 @@ int swarmerGetPreferredState(Moby *moby, int *delayTicks)
 		float dist = mobGetDistanceToTarget(moby, target);
 		float attackRadius = pvars->MobVars.Config.AttackRadius;
 
-		if (dist <= attackRadius)
+		if (dist <= attackRadius && swarmerGetActionReady(moby, SWARMER_ACTION_BITE))
 		{
 			if (swarmerCanAttack(pvars))
 			{
@@ -497,6 +532,9 @@ void swarmerDoState(Moby *moby)
 	}
 	case SWARMER_STATE_DODGE:
 	{
+		// get action params
+		float actionConfigDodgeVelocityMult = mobGetActionFloat(moby, SWARMER_ACTION_DODGE, SWARMER_ACTION_DODGE_PARAM_VELOCITY_MULTIPLIER);
+
 		if (!pvars->MobVars.CurrentStateForTicks)
 		{
 			// determine left or right flip
@@ -507,6 +545,7 @@ void swarmerDoState(Moby *moby)
 			vector_fromyaw(t, moby->Rotation[2] + (MATH_PI / 2) * dir);
 			vector_scale(t, t, pvars->MobVars.Config.Speed * 4 * MATH_DT);
 			t[2] = 4 * MATH_DT;
+			vector_scale(t, t, actionConfigDodgeVelocityMult);
 			vector_copy(pvars->MobVars.MoveVars.Velocity, t);
 			pvars->MobVars.MoveVars.Grounded = 0;
 
@@ -563,7 +602,11 @@ void swarmerDoState(Moby *moby)
 		int attack1AnimId = SWARMER_ANIM_JUMP_FORWARD_BITE;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		float speedCurve = powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2);
+		// get action params
+		float actionDamageMult = mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_LUNGE_MULTIPLIER);
+
+		float speedCurve = powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2) * lungeMult;
 		float speedMult = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < SWARMER_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 1;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWARMER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWARMER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
@@ -586,7 +629,7 @@ void swarmerDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			swarmerDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
+			swarmerDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
 		}
 		break;
 	}
@@ -731,15 +774,4 @@ int swarmerIsFlinching(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	return (moby->AnimSeqId == SWARMER_ANIM_FLINCH_SPIN_AND_STAND || moby->AnimSeqId == SWARMER_ANIM_FLINCH_SPIN_AND_STAND2) && !pvars->MobVars.AnimationLooped;
-}
-
-//--------------------------------------------------------------------------
-float swarmerGetDodgeProbability(Moby *moby)
-{
-	int roundNo = 0;
-	if (MapConfig.State)
-		roundNo = MapConfig.State->RoundNumber;
-
-	float factor = clamp(powf(roundNo / 100.0, 2), 0, 1);
-	return lerpf(0.001, 0.01, factor);
 }

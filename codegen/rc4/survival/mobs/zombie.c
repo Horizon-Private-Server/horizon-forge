@@ -150,6 +150,10 @@ void zombiePostUpdate(Moby *moby)
 	{
 		animSpeed *= 0.5;
 	}
+	else if (moby->AnimSeqId == ZOMBIE_ANIM_SLAP)
+	{
+		animSpeed *= mobGetActionFloat(moby, ZOMBIE_ACTION_MELEE, ZOMBIE_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
+	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == ZOMBIE_STATE_WALK))
 	{
@@ -631,7 +635,7 @@ void zombieDoState(Moby *moby)
 
 		// get action params
 		float actionDamageMult = mobGetActionFloat(moby, ZOMBIE_ACTION_MELEE, ZOMBIE_ACTION_MELEE_PARAM_DAMAGE_MULTIPLIER);
-		float actionSpeedMult = mobGetActionFloat(moby, ZOMBIE_ACTION_MELEE, ZOMBIE_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		float lungeMult = mobGetActionFloat(moby, ZOMBIE_ACTION_MELEE, ZOMBIE_ACTION_MELEE_PARAM_LUNGE_MULTIPLIER);
 
 		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < ZOMBIE_SLAP_ANIM_LUNGE_DURATION) ? (difficulty * 2) : 1, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= ZOMBIE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < ZOMBIE_ATTACK_HIT_FRAME_END;
@@ -641,7 +645,7 @@ void zombieDoState(Moby *moby)
 		{
 			if (target)
 			{
-				mobMoveTowards(moby, target->Position, actionSpeedMult * speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
+				mobMoveTowards(moby, target->Position, lungeMult * speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
 			}
 			else
 			{
