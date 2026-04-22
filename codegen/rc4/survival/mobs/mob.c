@@ -1388,12 +1388,33 @@ void mobGetVelocityToTargetWithDirection(Moby *moby, VECTOR velocity, VECTOR fro
 	if (targetSpeed > 0)
 	{
 		vector_subtract(fromToTarget, targetPosition, from);
+		vector_projectonhorizontal(fromToTarget, fromToTarget);
+		float distToTarget = vector_length(fromToTarget);
+
+		float min = pvars->MobVars.Config.CollRadius + targetRadius;
+
+		// Clamp velocity to prevent overshoot regardless of magnitude
+		// If current velocity would cause the mob to overshoot past the stop-band,
+		// scale it down so the next position lands exactly at min distance
+		vector_projectonhorizontal(hVelocity, velocity);
+		float speedThisFrame = vector_length(hVelocity);
+
+		if (speedThisFrame > 0 && distToTarget > min && speedThisFrame > (distToTarget - min))
+		{
+			// Would overshoot — scale velocity down
+			float scale = (distToTarget - min) / speedThisFrame;
+			vector_scale(hVelocity, hVelocity, scale);
+			vector_projectonvertical(velocity, velocity);
+			vector_add(velocity, velocity, hVelocity);
+			return;
+		}
+
+		// Original stop-band logic for fine-grained approach control
 		vector_add(next, from, velocity);
 		vector_subtract(nextToTarget, targetPosition, next);
 		vector_projectonhorizontal(nextToTarget, nextToTarget);
 		float distNextToTarget = vector_length(nextToTarget);
 
-		float min = pvars->MobVars.Config.CollRadius + targetRadius;
 		float max = min + targetRadius; //(pvars->MobVars.Config.AttackRadius + PLAYER_COLL_RADIUS) + (targetSpeed * 0.2);
 
 		// if too close to target, stop
@@ -1549,11 +1570,12 @@ void mobMoveTowards(Moby *moby, VECTOR targetPosition, float speed, float turnSp
 
 	vector_subtract(t, targetPosition, moby->Position);
 	float dist = vector_length(t);
-	if (dist < 10.0)
+	if (dist < 10.0 && fabsf(curveNearTargetDir) > 0.001)
 	{
 		mobAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * curveNearTargetDir);
 		vector_add(t, t, t2);
 	}
+
 	// vector_scale(t, t, 1 / dist);
 	vector_add(t, moby->Position, t);
 
