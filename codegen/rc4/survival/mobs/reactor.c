@@ -24,24 +24,24 @@ void reactorOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 void reactorOnDestroy(Moby *moby, int killedByPlayerId, int weaponId);
 void reactorOnDamage(Moby *moby, struct MobDamageEventArgs *e);
 int reactorOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
-void reactorOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e);
+void reactorOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e);
 int reactorOnRespawn(Moby *moby);
 void reactorOnCustomEvent(Moby *moby, GuberEvent *e);
 Moby *reactorGetNextTarget(Moby *moby);
-int reactorGetPreferredAction(Moby *moby, int *delayTicks);
-void reactorDoAction(Moby *moby);
+int reactorGetPreferredState(Moby *moby, int *delayTicks);
+void reactorDoState(Moby *moby);
 void reactorDoChargeDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
 void reactorDoSmashDamage(Moby *moby, float radius, float amount, int damageFlags);
 void reactorDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
-void reactorForceLocalAction(Moby *moby, int action);
+void reactorForceLocalState(Moby *moby, int state);
 short reactorGetArmor(Moby *moby);
 int reactorIsAttacking(Moby *moby);
-int reactorCanNonOwnerTransitionToAction(Moby *moby, int action);
-int reactorShouldForceStateUpdateOnAction(Moby *moby, int action);
+int reactorCanNonOwnerTransitionToState(Moby *moby, int state);
+int reactorShouldForceStateUpdateOnState(Moby *moby, int state);
 
 int reactorIsWalkingOrIdle(struct MobPVar *pvars);
 int reactorIsSpawning(struct MobPVar *pvars);
-int reactorCanAttack(struct MobPVar *pvars, enum ReactorAction action);
+int reactorCanAttack(struct MobPVar *pvars, enum ReactorStates state);
 int reactorIsFlinching(Moby *moby);
 void reactorFireTrailshot(Moby *moby);
 
@@ -64,18 +64,18 @@ struct MobVTable ReactorVTable = {
 		.OnDestroy = &reactorOnDestroy,
 		.OnDamage = &reactorOnDamage,
 		.OnLocalDamage = &reactorOnLocalDamage,
-		.OnStateUpdate = &reactorOnStateUpdate,
+		.OnFullStateUpdate = &reactorOnFullStateUpdate,
 		.OnRespawn = &reactorOnRespawn,
 		.OnCustomEvent = &reactorOnCustomEvent,
 		.GetNextTarget = &reactorGetNextTarget,
-		.GetPreferredAction = &reactorGetPreferredAction,
-		.ForceLocalAction = &reactorForceLocalAction,
-		.DoAction = &reactorDoAction,
+		.GetPreferredState = &reactorGetPreferredState,
+		.ForceLocalState = &reactorForceLocalState,
+		.DoState = &reactorDoState,
 		.DoDamage = &reactorDoDamage,
 		.GetArmor = &reactorGetArmor,
 		.IsAttacking = &reactorIsAttacking,
-		.CanNonOwnerTransitionToAction = &reactorCanNonOwnerTransitionToAction,
-		.ShouldForceStateUpdateOnAction = &reactorShouldForceStateUpdateOnAction,
+		.CanNonOwnerTransitionToState = &reactorCanNonOwnerTransitionToState,
+		.ShouldForceStateUpdateOnState = &reactorShouldForceStateUpdateOnState,
 };
 
 const int reactorOnSpawnDialogIds[] = {
@@ -155,22 +155,22 @@ void reactorPostUpdate(Moby *moby)
 	{
 		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
 	}
-	else if (pvars->MobVars.Action == REACTOR_ACTION_ATTACK_CHARGE)
+	else if (pvars->MobVars.State == REACTOR_STATE_ATTACK_CHARGE)
 	{
 		animSpeed = reactorVars->AnimSpeedAdditive + 0.9;
 	}
-	else if (pvars->MobVars.Action == REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL)
+	else if (pvars->MobVars.State == REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL)
 	{
 		animSpeed = reactorVars->AnimSpeedAdditive + 1.1;
 	}
-	else if (pvars->MobVars.Action == REACTOR_ACTION_ATTACK_SMASH)
+	else if (pvars->MobVars.State == REACTOR_STATE_ATTACK_SMASH)
 	{
 		animSpeed = reactorVars->AnimSpeedAdditive + 0.6;
 	}
 
 	// stop animation if frozen or not visible and just walking
 	// we do want to make sure the mob animated when attacking even if not visible
-	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == REACTOR_ACTION_WALK))
+	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == REACTOR_STATE_WALK))
 	{
 		moby->AnimSpeed = 0;
 	}
@@ -180,7 +180,7 @@ void reactorPostUpdate(Moby *moby)
 	}
 
 	// snap particle to joint
-	int showPrepShotParticle = pvars->MobVars.Action == REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL && !reactorVars->HasFiredTrailshotThisLoop;
+	int showPrepShotParticle = pvars->MobVars.State == REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL && !reactorVars->HasFiredTrailshotThisLoop;
 	if (reactorVars->PrepShotWithFireParticleMoby1)
 	{
 		mobyGetJointMatrix(moby, 3, mtx);
@@ -348,7 +348,7 @@ void reactorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
 	float damage = e->DamageQuarters / 4.0;
-	int canFlinch = pvars->MobVars.Action != REACTOR_ACTION_FLINCH && pvars->MobVars.Action != REACTOR_ACTION_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
+	int canFlinch = pvars->MobVars.State != REACTOR_STATE_FLINCH && pvars->MobVars.State != REACTOR_STATE_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
 
 #if ALWAYS_FLINCH
 	canFlinch = 1;
@@ -358,7 +358,7 @@ void reactorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// take more damage in crouch state
-	if (pvars->MobVars.Action == REACTOR_ACTION_ATTACK_CHARGE && moby->AnimSeqId == REACTOR_ANIM_KNEE_DOWN)
+	if (pvars->MobVars.State == REACTOR_STATE_ATTACK_CHARGE && moby->AnimSeqId == REACTOR_ANIM_KNEE_DOWN)
 	{
 		e->DamageQuarters *= 2;
 		damage *= 2;
@@ -368,7 +368,7 @@ void reactorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float newHp = pvars->MobVars.Health - damage;
 	if (newHp <= 0)
 	{
-		reactorForceLocalAction(moby, REACTOR_ACTION_DIE);
+		reactorForceLocalState(moby, REACTOR_STATE_DIE);
 		pvars->MobVars.LastHitBy = e->SourceUID;
 		pvars->MobVars.LastHitByOClass = e->SourceOClass;
 	}
@@ -394,7 +394,7 @@ void reactorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float damageRatio = damage / pvars->MobVars.Config.Health;
 	float powerFactor = REACTOR_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
 	float probability = clamp((damageRatio * REACTOR_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, REACTOR_ACTION_FLINCH, REACTOR_ACTION_BIG_FLINCH);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, REACTOR_STATE_FLINCH, REACTOR_STATE_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -411,9 +411,9 @@ int reactorOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 }
 
 //--------------------------------------------------------------------------
-void reactorOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e)
+void reactorOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e)
 {
-	mobOnStateUpdate(moby, e);
+	mobOnFullStateUpdate(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -485,13 +485,13 @@ Moby *reactorGetNextTarget(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int reactorGetPreferredAction(Moby *moby, int *delayTicks)
+int reactorGetPreferredState(Moby *moby, int *delayTicks)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	VECTOR mobyPosUp, targetPosUp;
 	VECTOR up = {0, 0, 0.5, 0};
 
-	// no preferred action
+	// no preferred state
 	if (reactorIsAttacking(moby))
 		return -1;
 
@@ -501,26 +501,26 @@ int reactorGetPreferredAction(Moby *moby, int *delayTicks)
 	if (reactorIsFlinching(moby))
 		return -1;
 
-	if (pvars->MobVars.Action == REACTOR_ACTION_GLOAT)
+	if (pvars->MobVars.State == REACTOR_STATE_GLOAT)
 	{
 		return -1;
 	}
 
-	if (pvars->MobVars.Action == REACTOR_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+	if (pvars->MobVars.State == REACTOR_STATE_JUMP && !pvars->MobVars.MoveVars.Grounded)
 	{
-		return REACTOR_ACTION_WALK;
+		return REACTOR_STATE_WALK;
 	}
 
 	// jump if we've hit a slope and are grounded
 	if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > REACTOR_MAX_WALKABLE_SLOPE)
 	{
-		return REACTOR_ACTION_JUMP;
+		return REACTOR_STATE_JUMP;
 	}
 
 	// jump if we've hit a jump point on the path
 	if (pvars->MobVars.MoveVars.QueueJumpSpeed)
 	{
-		return REACTOR_ACTION_JUMP;
+		return REACTOR_STATE_JUMP;
 	}
 
 	// get next target
@@ -528,10 +528,10 @@ int reactorGetPreferredAction(Moby *moby, int *delayTicks)
 	if (target)
 	{
 
-		// prevent action changing too quickly
+		// prevent state changing too quickly
 		if (pvars->MobVars.AttackCooldownTicks)
 		{
-			return REACTOR_ACTION_WALK;
+			return REACTOR_STATE_WALK;
 		}
 
 		float dist = mobGetDistanceToTarget(moby, target);
@@ -540,15 +540,15 @@ int reactorGetPreferredAction(Moby *moby, int *delayTicks)
 		// if we're on top of the target then step away
 		if (dist < (REACTOR_BASE_COLL_RADIUS))
 		{
-			return REACTOR_ACTION_WALK;
+			return REACTOR_STATE_WALK;
 		}
 
 		// near then swing
-		if (dist <= attackRadius && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SWING))
+		if (dist <= attackRadius && reactorCanAttack(pvars, REACTOR_STATE_ATTACK_SWING))
 		{
 			if (delayTicks)
 				*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-			return REACTOR_ACTION_ATTACK_SWING;
+			return REACTOR_STATE_ATTACK_SWING;
 		}
 
 		// wait to ground before we do the special attacks
@@ -560,42 +560,42 @@ int reactorGetPreferredAction(Moby *moby, int *delayTicks)
 			int targetInSight = !CollLine_Fix(mobyPosUp, targetPosUp, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL);
 			if (!targetInSight)
 			{
-				return REACTOR_ACTION_WALK;
+				return REACTOR_STATE_WALK;
 			}
 
 			// near but not for swing then charge
-			if (dist <= (REACTOR_MAX_DIST_FOR_CHARGE) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_CHARGE))
+			if (dist <= (REACTOR_MAX_DIST_FOR_CHARGE) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_STATE_ATTACK_CHARGE))
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return REACTOR_ACTION_ATTACK_CHARGE;
+				return REACTOR_STATE_ATTACK_CHARGE;
 			}
 
 			// far but in sight, shoot with trail
-			if (dist <= (REACTOR_SHOT_WITH_TRAIL_MAX_DIST) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL))
+			if (dist <= (REACTOR_SHOT_WITH_TRAIL_MAX_DIST) && rand(5) == 0 && reactorCanAttack(pvars, REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL))
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL;
+				return REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL;
 			}
 
 			// smesh
-			if (reactorCanAttack(pvars, REACTOR_ACTION_ATTACK_SMASH))
+			if (reactorCanAttack(pvars, REACTOR_STATE_ATTACK_SMASH))
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return REACTOR_ACTION_ATTACK_SMASH;
+				return REACTOR_STATE_ATTACK_SMASH;
 			}
 		}
 
-		return REACTOR_ACTION_WALK;
+		return REACTOR_STATE_WALK;
 	}
 
-	return REACTOR_ACTION_IDLE;
+	return REACTOR_STATE_IDLE;
 }
 
 //--------------------------------------------------------------------------
-void reactorDoAction(Moby *moby)
+void reactorDoState(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
@@ -606,29 +606,29 @@ void reactorDoAction(Moby *moby)
 	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? REACTOR_TURN_RADIANS_PER_SEC : REACTOR_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? REACTOR_MOVE_ACCELERATION : REACTOR_MOVE_AIR_ACCELERATION;
-	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == REACTOR_ACTION_FLINCH || pvars->MobVars.LastAction == REACTOR_ACTION_BIG_FLINCH);
+	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastState == REACTOR_STATE_FLINCH || pvars->MobVars.LastState == REACTOR_STATE_BIG_FLINCH);
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
 
 	// MATRIX *joints = (MATRIX *)moby->JointCache;
 	// static int asd = 3;
-	// printf("a:%d id:%d f:%d j:%d: ", pvars->MobVars.Action, moby->AnimSeqId, moby->AnimFlags, asd); vector_print(&joints[asd][12]); printf("\n");
+	// printf("a:%d id:%d f:%d j:%d: ", pvars->MobVars.State, moby->AnimSeqId, moby->AnimFlags, asd); vector_print(&joints[asd][12]); printf("\n");
 
 	// reset anim speed add
 	reactorVars->AnimSpeedAdditive = 0;
 
 	//
-	switch (pvars->MobVars.Action)
+	switch (pvars->MobVars.State)
 	{
-	case REACTOR_ACTION_SPAWN:
+	case REACTOR_STATE_SPAWN:
 	{
 		reactorTransAnim(moby, REACTOR_ANIM_JUMP_UP, 0);
 		mobStand(moby);
 		break;
 	}
-	case REACTOR_ACTION_FLINCH:
-	case REACTOR_ACTION_BIG_FLINCH:
+	case REACTOR_STATE_FLINCH:
+	case REACTOR_STATE_BIG_FLINCH:
 	{
 		decTimerU8(&pvars->MobVars.Knockback.Ticks);
 		int nextAnimId = moby->AnimSeqId;
@@ -648,25 +648,25 @@ void reactorDoAction(Moby *moby)
 		{
 			if (pvars->MobVars.AnimationLooped || moby->AnimSeqT > REACTOR_FLINCH_ANIM_MAX_FRAME)
 			{
-				reactorForceLocalAction(moby, REACTOR_ACTION_WALK);
+				reactorForceLocalState(moby, REACTOR_STATE_WALK);
 				goto exit;
 			}
 			break;
 		}
 		case REACTOR_ANIM_RUN:
 		{
-			if (pvars->MobVars.AnimationLooped && pvars->MobVars.CurrentActionForTicks > 0)
+			if (pvars->MobVars.AnimationLooped && pvars->MobVars.CurrentStateForTicks > 0)
 			{
-				reactorForceLocalAction(moby, REACTOR_ACTION_WALK);
+				reactorForceLocalState(moby, REACTOR_STATE_WALK);
 				goto exit;
 			}
 			break;
 		}
 		}
 
-		if (!pvars->MobVars.CurrentActionForTicks)
+		if (!pvars->MobVars.CurrentStateForTicks)
 		{
-			nextAnimId = pvars->MobVars.Action == REACTOR_ACTION_BIG_FLINCH ? REACTOR_ANIM_FLINCH_FALL_DOWN : REACTOR_ANIM_FLINCH_SMALL;
+			nextAnimId = pvars->MobVars.State == REACTOR_STATE_BIG_FLINCH ? REACTOR_ANIM_FLINCH_FALL_DOWN : REACTOR_ANIM_FLINCH_SMALL;
 		}
 
 		reactorTransAnim(moby, nextAnimId, 0);
@@ -681,30 +681,30 @@ void reactorDoAction(Moby *moby)
 		{
 			mobStand(moby);
 		}
-		else if (pvars->MobVars.CurrentActionForTicks > (1 * TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter)
+		else if (pvars->MobVars.CurrentStateForTicks > (1 * TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter)
 		{
 			mobStand(moby);
 		}
 		break;
 	}
-	case REACTOR_ACTION_IDLE:
+	case REACTOR_STATE_IDLE:
 	{
 		reactorTransAnim(moby, REACTOR_ANIM_IDLE, 0);
 		mobStand(moby);
 		break;
 	}
-	case REACTOR_ACTION_GLOAT:
+	case REACTOR_STATE_GLOAT:
 	{
 		reactorTransAnim(moby, REACTOR_ANIM_TAUNT_HANDS_UP_FOR_CROWD, 0);
 		if (pvars->MobVars.AnimationLooped)
 		{
-			reactorForceLocalAction(moby, REACTOR_ACTION_WALK);
+			reactorForceLocalState(moby, REACTOR_STATE_WALK);
 		}
 
 		mobStand(moby);
 		break;
 	}
-	case REACTOR_ACTION_JUMP:
+	case REACTOR_STATE_JUMP:
 	{
 		// move
 		if (!isInAirFromFlinching)
@@ -748,7 +748,7 @@ void reactorDoAction(Moby *moby)
 		}
 		break;
 	}
-	case REACTOR_ACTION_LOOK_AT_TARGET:
+	case REACTOR_STATE_LOOK_AT_TARGET:
 	{
 		mobStand(moby);
 		if (target)
@@ -757,7 +757,7 @@ void reactorDoAction(Moby *moby)
 		}
 		break;
 	}
-	case REACTOR_ACTION_WALK:
+	case REACTOR_STATE_WALK:
 	{
 		if (target)
 		{
@@ -810,7 +810,7 @@ void reactorDoAction(Moby *moby)
 		}
 		else if (pvars->MobVars.MoveVars.QueueJumpSpeed)
 		{
-			reactorForceLocalAction(moby, REACTOR_ACTION_JUMP);
+			reactorForceLocalState(moby, REACTOR_STATE_JUMP);
 		}
 		else if (mobHasVelocity(pvars))
 		{
@@ -822,7 +822,7 @@ void reactorDoAction(Moby *moby)
 		}
 		break;
 	}
-	case REACTOR_ACTION_DIE:
+	case REACTOR_STATE_DIE:
 	{
 		mobTransAnimLerp(moby, REACTOR_ANIM_DIE, 5, 0);
 
@@ -834,10 +834,10 @@ void reactorDoAction(Moby *moby)
 		mobStand(moby);
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SWING:
+	case REACTOR_STATE_ATTACK_SWING:
 	{
 		int attack1AnimId = REACTOR_ANIM_SWING;
-		if (pvars->MobVars.CurrentActionForTicks > 60)
+		if (pvars->MobVars.CurrentStateForTicks > 60)
 		{
 			reactorTransAnim(moby, REACTOR_ANIM_IDLE, 0);
 			if (target)
@@ -845,7 +845,7 @@ void reactorDoAction(Moby *moby)
 				mobTurnTowards(moby, target->Position, turnSpeed);
 			}
 			mobStand(moby);
-			reactorForceLocalAction(moby, REACTOR_ACTION_IDLE);
+			reactorForceLocalState(moby, REACTOR_STATE_IDLE);
 			break;
 		}
 
@@ -872,7 +872,7 @@ void reactorDoAction(Moby *moby)
 		}
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_CHARGE:
+	case REACTOR_STATE_ATTACK_CHARGE:
 	{
 		float speedMult = 0;
 		int facePlayer = 1;
@@ -952,7 +952,7 @@ void reactorDoAction(Moby *moby)
 			speedMult = 0;
 			if (pvars->MobVars.AnimationLooped)
 			{
-				reactorForceLocalAction(moby, REACTOR_ACTION_IDLE);
+				reactorForceLocalState(moby, REACTOR_STATE_IDLE);
 			}
 
 			break;
@@ -970,22 +970,22 @@ void reactorDoAction(Moby *moby)
 			{
 				reactorVars->ChargeHasPlayedSound = 1;
 			}
-		else if (moby->AnimSeqT > REACTOR_CHARGE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REACTOR_CHARGE_ATTACK_HIT_FRAME_END)
-		{
+			else if (moby->AnimSeqT > REACTOR_CHARGE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REACTOR_CHARGE_ATTACK_HIT_FRAME_END)
+			{
 
-			speedMult = REACTOR_CHARGE_SPEED;
+				speedMult = REACTOR_CHARGE_SPEED;
 				reactorVars->AnimSpeedAdditive = 0.25;
 				facePlayer = 0;
 			}
 
-		// damage during swing
-		attackCanDoChargeDamage = speedMult > 0;
-		attackCanDoSwingDamage = moby->AnimSeqT >= REACTOR_CHARGE_ATTACK_SWING_HIT_FRAME_START && moby->AnimSeqT < REACTOR_CHARGE_ATTACK_SWING_HIT_FRAME_END;
+			// damage during swing
+			attackCanDoChargeDamage = speedMult > 0;
+			attackCanDoSwingDamage = moby->AnimSeqT >= REACTOR_CHARGE_ATTACK_SWING_HIT_FRAME_START && moby->AnimSeqT < REACTOR_CHARGE_ATTACK_SWING_HIT_FRAME_END;
 
 			// exit
 			if (pvars->MobVars.AnimationLooped)
 			{
-				reactorForceLocalAction(moby, REACTOR_ACTION_IDLE);
+				reactorForceLocalState(moby, REACTOR_STATE_IDLE);
 			}
 			break;
 		}
@@ -1021,7 +1021,7 @@ void reactorDoAction(Moby *moby)
 		}
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL:
+	case REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL:
 	{
 		int nextAnimId = moby->AnimSeqId;
 
@@ -1037,20 +1037,20 @@ void reactorDoAction(Moby *moby)
 		}
 		case REACTOR_ANIM_FIRE_TWO_HAND_PULSE:
 		{
-		if (moby->AnimSeqT < REACTOR_TRAILSHOT_ANIM_EARLY_TRANSITION)
-		{
-			turnSpeed = 0;
-		}
-		else
-		{
-			turnSpeed = REACTOR_SHOT_WITH_TRAIL_TURN_RADIANS_PER_SEC * clamp((pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / 3, 1, 2);
-		}
+			if (moby->AnimSeqT < REACTOR_TRAILSHOT_ANIM_EARLY_TRANSITION)
+			{
+				turnSpeed = 0;
+			}
+			else
+			{
+				turnSpeed = REACTOR_SHOT_WITH_TRAIL_TURN_RADIANS_PER_SEC * clamp((pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / 3, 1, 2);
+			}
 
-		if (moby->AnimSeqT < REACTOR_TRAILSHOT_FIRE_FRAME && reactorVars->HasFiredTrailshotThisLoop)
-		{
-			reactorVars->HasFiredTrailshotThisLoop = 0;
-		}
-		else if (moby->AnimSeqT >= REACTOR_TRAILSHOT_FIRE_FRAME && !reactorVars->HasFiredTrailshotThisLoop)
+			if (moby->AnimSeqT < REACTOR_TRAILSHOT_FIRE_FRAME && reactorVars->HasFiredTrailshotThisLoop)
+			{
+				reactorVars->HasFiredTrailshotThisLoop = 0;
+			}
+			else if (moby->AnimSeqT >= REACTOR_TRAILSHOT_FIRE_FRAME && !reactorVars->HasFiredTrailshotThisLoop)
 			{
 				reactorVars->HasFiredTrailshotThisLoop = 1;
 				reactorFireTrailshot(moby);
@@ -1059,14 +1059,14 @@ void reactorDoAction(Moby *moby)
 			// stop after n iterations
 			if (pvars->MobVars.AnimationLooped > 3)
 			{
-				reactorForceLocalAction(moby, REACTOR_ACTION_WALK);
+				reactorForceLocalState(moby, REACTOR_STATE_WALK);
 				goto exit;
 			}
 			break;
 		}
 		}
 
-		if (!pvars->MobVars.CurrentActionForTicks)
+		if (!pvars->MobVars.CurrentStateForTicks)
 		{
 			if (rand(5) == 0)
 				reactorPlayDialog(moby, DIALOG_ID_REACTOR_DODGE_THIS);
@@ -1084,7 +1084,7 @@ void reactorDoAction(Moby *moby)
 		}
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SMASH:
+	case REACTOR_STATE_ATTACK_SMASH:
 	{
 		// transition
 		reactorTransAnim(moby, REACTOR_ANIM_JUMP_SMASH, 0);
@@ -1107,7 +1107,7 @@ void reactorDoAction(Moby *moby)
 			//
 			if (pvars->MobVars.AnimationLooped >= reactorVars->SmashTargetCount)
 			{
-				reactorForceLocalAction(moby, REACTOR_ACTION_WALK);
+				reactorForceLocalState(moby, REACTOR_STATE_WALK);
 			}
 		}
 
@@ -1118,7 +1118,7 @@ void reactorDoAction(Moby *moby)
 	}
 
 exit:;
-	pvars->MobVars.CurrentActionForTicks++;
+	pvars->MobVars.CurrentStateForTicks++;
 }
 
 //--------------------------------------------------------------------------
@@ -1209,7 +1209,7 @@ void reactorDoDamage(Moby *moby, float radius, float amount, int damageFlags, in
 }
 
 //--------------------------------------------------------------------------
-void reactorForceLocalAction(Moby *moby, int action)
+void reactorForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
@@ -1219,39 +1219,39 @@ void reactorForceLocalAction(Moby *moby, int action)
 		difficulty = MapConfig.State->Difficulty;
 
 	// from
-	switch (pvars->MobVars.Action)
+	switch (pvars->MobVars.State)
 	{
-	case REACTOR_ACTION_SPAWN:
+	case REACTOR_STATE_SPAWN:
 	{
 		// enable collision
 		moby->CollActive = 0;
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SWING:
+	case REACTOR_STATE_ATTACK_SWING:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_CHARGE:
+	case REACTOR_STATE_ATTACK_CHARGE:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		reactorVars->AttackChargeCooldownTicks = randRangeInt(REACTOR_CHARGE_ATTACK_MIN_COOLDOWN_TICKS, REACTOR_CHARGE_ATTACK_MAX_COOLDOWN_TICKS);
 		reactorVars->ChargeHasPlayedSound = 0;
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL:
+	case REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		reactorVars->AttackShotWithTrailCooldownTicks = randRangeInt(REACTOR_SHOT_WITH_TRAIL_ATTACK_MIN_COOLDOWN_TICKS, REACTOR_SHOT_WITH_TRAIL_ATTACK_MAX_COOLDOWN_TICKS);
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SMASH:
+	case REACTOR_STATE_ATTACK_SMASH:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		reactorVars->AttackSmashCooldownTicks = randRangeInt(REACTOR_SMASH_ATTACK_MIN_COOLDOWN_TICKS, REACTOR_SMASH_ATTACK_MAX_COOLDOWN_TICKS);
 		break;
 	}
-	case REACTOR_ACTION_DIE:
+	case REACTOR_STATE_DIE:
 	{
 		// can't undie
 		return;
@@ -1259,45 +1259,45 @@ void reactorForceLocalAction(Moby *moby, int action)
 	}
 
 	// to
-	switch (action)
+	switch (state)
 	{
-	case REACTOR_ACTION_SPAWN:
+	case REACTOR_STATE_SPAWN:
 	{
 		// disable collision
 		moby->CollActive = 1;
 		break;
 	}
-	case REACTOR_ACTION_WALK:
+	case REACTOR_STATE_WALK:
 	{
 
 		break;
 	}
-	case REACTOR_ACTION_DIE:
+	case REACTOR_STATE_DIE:
 	{
 
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SWING:
+	case REACTOR_STATE_ATTACK_SWING:
 	{
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_CHARGE:
+	case REACTOR_STATE_ATTACK_CHARGE:
 	{
 		reactorVars->ChargeChargeupTargetCount = REACTOR_CHARGE_ATTACK_MIN_STALL_LOOPS + ((u8)pvars->MobVars.DynamicRandom % (REACTOR_CHARGE_ATTACK_MAX_STALL_LOOPS - REACTOR_CHARGE_ATTACK_MIN_STALL_LOOPS));
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL:
+	case REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL:
 	{
 		reactorVars->HasFiredTrailshotThisLoop = 0;
 		break;
 	}
-	case REACTOR_ACTION_ATTACK_SMASH:
+	case REACTOR_STATE_ATTACK_SMASH:
 	{
 		reactorVars->SmashTargetCount = REACTOR_SMASH_ATTACK_MIN_COUNT + ((u8)pvars->MobVars.DynamicRandom % (REACTOR_SMASH_ATTACK_MAX_COUNT - REACTOR_SMASH_ATTACK_MIN_COUNT));
 		break;
 	}
-	case REACTOR_ACTION_FLINCH:
-	case REACTOR_ACTION_BIG_FLINCH:
+	case REACTOR_STATE_FLINCH:
+	case REACTOR_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = REACTOR_FLINCH_COOLDOWN_TICKS;
 		break;
@@ -1309,12 +1309,12 @@ void reactorForceLocalAction(Moby *moby, int action)
 	}
 
 	//
-	if (action != pvars->MobVars.Action)
-		pvars->MobVars.CurrentActionForTicks = 0;
+	if (state != pvars->MobVars.State)
+		pvars->MobVars.CurrentStateForTicks = 0;
 
-	pvars->MobVars.Action = action;
-	pvars->MobVars.NextAction = -1;
-	pvars->MobVars.ActionCooldownTicks = REACTOR_ACTION_COOLDOWN_TICKS;
+	pvars->MobVars.State = state;
+	pvars->MobVars.NextState = -1;
+	pvars->MobVars.StateCooldownTicks = REACTOR_STATE_COOLDOWN_TICKS;
 }
 
 //--------------------------------------------------------------------------
@@ -1331,17 +1331,17 @@ short reactorGetArmor(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int reactorCanNonOwnerTransitionToAction(Moby *moby, int action)
+int reactorCanNonOwnerTransitionToState(Moby *moby, int state)
 {
-	// only let owner choose actions for reactor
+	// only let owner choose states for reactor
 	// since for this boss it is critical it syncs well
 	return 0;
 }
 
 //--------------------------------------------------------------------------
-int reactorShouldForceStateUpdateOnAction(Moby *moby, int action)
+int reactorShouldForceStateUpdateOnState(Moby *moby, int state)
 {
-	// always send state update whenever action changes
+	// always send state update whenever state changes
 	// uses a lot more network bandwidth but reduces desyncing
 	return 1;
 }
@@ -1349,46 +1349,46 @@ int reactorShouldForceStateUpdateOnAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int reactorIsWalkingOrIdle(struct MobPVar *pvars)
 {
-	return pvars->MobVars.Action == REACTOR_ACTION_WALK || pvars->MobVars.Action == REACTOR_ACTION_IDLE;
+	return pvars->MobVars.State == REACTOR_STATE_WALK || pvars->MobVars.State == REACTOR_STATE_IDLE;
 }
 
 //--------------------------------------------------------------------------
 int reactorIsAttacking(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	return (pvars->MobVars.Action == REACTOR_ACTION_ATTACK_SWING && !pvars->MobVars.AnimationLooped) || pvars->MobVars.Action == REACTOR_ACTION_ATTACK_CHARGE || pvars->MobVars.Action == REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL || pvars->MobVars.Action == REACTOR_ACTION_ATTACK_SMASH;
+	return (pvars->MobVars.State == REACTOR_STATE_ATTACK_SWING && !pvars->MobVars.AnimationLooped) || pvars->MobVars.State == REACTOR_STATE_ATTACK_CHARGE || pvars->MobVars.State == REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL || pvars->MobVars.State == REACTOR_STATE_ATTACK_SMASH;
 }
 
 //--------------------------------------------------------------------------
 int reactorIsSpawning(struct MobPVar *pvars)
 {
-	return pvars->MobVars.Action == REACTOR_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.State == REACTOR_STATE_SPAWN && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int reactorCanAttack(struct MobPVar *pvars, enum ReactorAction action)
+int reactorCanAttack(struct MobPVar *pvars, enum ReactorStates state)
 {
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
 	if (pvars->MobVars.AttackCooldownTicks != 0)
 		return 0;
 
-	switch (action)
+	switch (state)
 	{
-	case REACTOR_ACTION_ATTACK_SWING:
+	case REACTOR_STATE_ATTACK_SWING:
 	{
 		return 1;
 	}
-	case REACTOR_ACTION_ATTACK_CHARGE:
+	case REACTOR_STATE_ATTACK_CHARGE:
 	{
 		// charge doesn't activate until 80% health
 		return pvars->MobVars.Health <= (pvars->MobVars.Config.MaxHealth * 0.80) && reactorVars->AttackChargeCooldownTicks == 0;
 	}
-	case REACTOR_ACTION_ATTACK_SHOT_WITH_TRAIL:
+	case REACTOR_STATE_ATTACK_SHOT_WITH_TRAIL:
 	{
 		// trailshot doesn't activate until 60% health
 		return pvars->MobVars.Health <= (pvars->MobVars.Config.MaxHealth * 0.60) && reactorVars->AttackShotWithTrailCooldownTicks == 0;
 	}
-	case REACTOR_ACTION_ATTACK_SMASH:
+	case REACTOR_STATE_ATTACK_SMASH:
 	{
 		// must have less than 10 alive
 		if (MapConfig.State && MapConfig.State->MobStats.TotalAlive > 10)
@@ -1406,7 +1406,7 @@ int reactorCanAttack(struct MobPVar *pvars, enum ReactorAction action)
 int reactorIsFlinching(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	return pvars->MobVars.Action == REACTOR_ACTION_BIG_FLINCH || pvars->MobVars.Action == REACTOR_ACTION_FLINCH;
+	return pvars->MobVars.State == REACTOR_STATE_BIG_FLINCH || pvars->MobVars.State == REACTOR_STATE_FLINCH;
 	// return (moby->AnimSeqId == REACTOR_ANIM_FLINCH_SMALL || moby->AnimSeqId == REACTOR_ANIM_FLINCH_FALL_DOWN) && !pvars->MobVars.AnimationLooped;
 }
 

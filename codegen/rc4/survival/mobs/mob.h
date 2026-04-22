@@ -131,26 +131,26 @@ enum MobTargetingRules
 struct MobDamageEventArgs;
 struct MobLocalDamageEventArgs;
 struct MobSpawnEventArgs;
-struct MobStateUpdateEventArgs;
+struct MobFullStateUpdateEventArgs;
 
 typedef void (*MobGenericCallback_func)(Moby *moby);
 typedef Moby *(*MobGetNextTarget_func)(Moby *moby);
-typedef int (*MobGetPreferredAction_func)(Moby *moby, int *delayTicks);
+typedef int (*MobGetPreferredState_func)(Moby *moby, int *delayTicks);
 typedef int (*MobGetExtraDataSize_func)(int spawnParamsIdx);
 typedef void (*MobOnSpawning_func)(int spawnParamsIdx, VECTOR position, float *yaw, int *spawnFromUID, int *spawnFlags, char *random, struct MobSpawnEventArgs *args);
 typedef void (*MobOnSpawn_func)(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs *e);
 typedef void (*MobOnDestroy_func)(Moby *moby, int killedByPlayerId, int weaponId);
 typedef void (*MobOnDamage_func)(Moby *moby, struct MobDamageEventArgs *e);
 typedef int (*MobOnLocalDamage_func)(Moby *moby, struct MobLocalDamageEventArgs *e);
-typedef void (*MobOnStateUpdate_func)(Moby *moby, struct MobStateUpdateEventArgs *e);
+typedef void (*MobOnFullStateUpdate_func)(Moby *moby, struct MobFullStateUpdateEventArgs *e);
 typedef int (*MobOnRespawn_func)(Moby *moby);
 typedef void (*MobOnCustomEvent_func)(Moby *moby, GuberEvent *event);
-typedef void (*MobForceLocalAction_func)(Moby *moby, int action);
+typedef void (*MobForceLocalState_func)(Moby *moby, int state);
 typedef void (*MobDoDamage_func)(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
 typedef short (*MobGetArmor_func)(Moby *moby);
 typedef int (*MobIsAttacking_func)(Moby *moby);
-typedef int (*MobCanNonOwnerTransitionToAction_func)(Moby *moby, int action);
-typedef int (*MobShouldForceStateUpdateOnAction_func)(Moby *moby, int action);
+typedef int (*MobCanNonOwnerTransitionToState_func)(Moby *moby, int state);
+typedef int (*MobShouldForceStateUpdateOnState_func)(Moby *moby, int state);
 
 struct MobVTable
 {
@@ -164,18 +164,18 @@ struct MobVTable
 	MobOnDestroy_func OnDestroy;
 	MobOnDamage_func OnDamage;
 	MobOnLocalDamage_func OnLocalDamage;
-	MobOnStateUpdate_func OnStateUpdate;
+	MobOnFullStateUpdate_func OnFullStateUpdate;
 	MobOnRespawn_func OnRespawn;
 	MobOnCustomEvent_func OnCustomEvent;
 	MobGetNextTarget_func GetNextTarget;
-	MobGetPreferredAction_func GetPreferredAction;
-	MobForceLocalAction_func ForceLocalAction;
-	MobGenericCallback_func DoAction;
+	MobGetPreferredState_func GetPreferredState;
+	MobForceLocalState_func ForceLocalState;
+	MobGenericCallback_func DoState;
 	MobDoDamage_func DoDamage;
 	MobGetArmor_func GetArmor;
 	MobIsAttacking_func IsAttacking;
-	MobCanNonOwnerTransitionToAction_func CanNonOwnerTransitionToAction;
-	MobShouldForceStateUpdateOnAction_func ShouldForceStateUpdateOnAction;
+	MobCanNonOwnerTransitionToState_func CanNonOwnerTransitionToState;
+	MobShouldForceStateUpdateOnState_func ShouldForceStateUpdateOnState;
 };
 
 struct MobConfig
@@ -284,18 +284,18 @@ struct MobVars
 	int SpawnParamsIdx;
 	int SpawnFlags;
 	VECTOR TargetPosition;
-	int Action;
-	int NextAction;
-	int LastAction;
+	int State;
+	int NextState;
+	int LastState;
 	float Health;
 	float ClosestDist;
 	float LastSpeed;
 	Moby *Target;
 	int LastHitBy;
 	u16 LastHitByOClass;
-	u16 NextCheckActionDelayTicks;
-	u16 NextActionDelayTicks;
-	u16 ActionCooldownTicks;
+	u16 NextCheckStateDelayTicks;
+	u16 NextStateDelayTicks;
+	u16 StateCooldownTicks;
 	u16 AttackCooldownTicks;
 	u16 ScoutCooldownTicks;
 	u16 FlinchCooldownTicks;
@@ -303,11 +303,11 @@ struct MobVars
 	u16 ForcedBlipCooldownTicks;
 	u16 TimeBombTicks;
 	u16 MovingTicks;
-	u16 CurrentActionForTicks;
+	u16 CurrentStateForTicks;
 	u16 TimeLastGroundedTicks;
 	u16 LocalPlayerDamageHitInvTimer[GAME_MAX_LOCALS];
-	u8 ActionId;
-	u8 LastActionId;
+	u8 StateId;
+	u8 LastStateId;
 	u8 SlowTicks;
 	char Owner;
 	char IsTraversing;
@@ -407,24 +407,24 @@ struct MobLocalDamageEventArgs
 	Player *PlayerDamager;
 };
 
-struct MobActionUpdateEventArgs
+struct MobStateUpdateEventArgs
 {
-	int Action;
-	u8 ActionId;
+	int State;
+	u8 StateId;
 	char Random;
 };
 
-struct MobStateUpdateEventArgs
+struct MobFullStateUpdateEventArgs
 {
 	VECTOR Position;
 	int TargetUID;
-	int Action;
+	int State;
 	u8 PathStartNodeIdx;
 	u8 PathEndNodeIdx;
 	u8 PathCurrentEdgeIdx;
 	char PathHasReachedStart;
 	char PathHasReachedEnd;
-	u8 ActionId;
+	u8 StateId;
 	char Random;
 };
 
@@ -457,7 +457,7 @@ struct MobUnreliableBaseMsgArgs
 struct MobUnreliableMsgStateUpdateArgs
 {
 	struct MobUnreliableBaseMsgArgs Base;
-	struct MobStateUpdateEventArgs StateUpdate;
+	struct MobFullStateUpdateEventArgs StateUpdate;
 };
 
 GuberEvent *mobCreateEvent(Moby *moby, u32 eventType);
@@ -480,7 +480,7 @@ void mobSpawnCorn(Moby *moby, int bangle);
 int mobDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire, int jointId, int reactToThorns, int isAoE);
 int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radius, float amount, int damageFlags, int friendlyFire, int reactToThorns, int isAoE);
 int mobDoDamageTryHit(Moby *moby, Moby *hitMoby, VECTOR jointPosition, int isAoE, float hitRadius, int damageFlags, float amount);
-void mobSetAction(Moby *moby, int action);
+void mobSetState(Moby *moby, int state);
 void mobTransAnimLerp(Moby *moby, int animId, int lerpFrames, float startOff);
 void mobTransAnim(Moby *moby, int animId, float startOff);
 int mobHasVelocity(struct MobPVar *pvars);
@@ -502,7 +502,7 @@ void mobGetVelocityToTargetWithDirection(Moby *moby, VECTOR velocity, VECTOR fro
 void mobGetVelocityToTarget(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
 void mobGetVelocityToTargetSimple(Moby *moby, VECTOR velocity, VECTOR from, VECTOR to, float speed, float acceleration);
 void mobPostDrawQuad(Moby *moby, float scale, u32 color, int jointId);
-void mobOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e);
+void mobOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e);
 void mobPreUpdate(Moby *moby);
 int mobIsProjectileComing(Moby *moby);
 float mobGetCurrentWalkAngle(Moby *moby);
@@ -510,7 +510,7 @@ float mobGetScaleMultiplier(Moby *moby);
 Moby *mobGetNextTarget(Moby *moby, float keepCurrentTargetFactor);
 void mobDefaultPreUpdate(Moby *moby);
 int mobDefaultOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
-void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchAction, int bigFlinchAction);
+void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchState, int bigFlinchState);
 u32 mobGetDamageFlags(Moby *moby, u32 damageFlags);
 
 #endif // SURVIVAL_MOB_H

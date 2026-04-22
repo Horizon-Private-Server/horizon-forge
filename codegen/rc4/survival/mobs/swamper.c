@@ -24,43 +24,43 @@ void swamperOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 void swamperOnDestroy(Moby *moby, int killedByPlayerId, int weaponId);
 void swamperOnDamage(Moby *moby, struct MobDamageEventArgs *e);
 int swamperOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
-void swamperOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e);
+void swamperOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e);
 Moby *swamperGetNextTarget(Moby *moby);
-int swamperGetPreferredAction(Moby *moby, int *delayTicks);
-void swamperDoAction(Moby *moby);
+int swamperGetPreferredState(Moby *moby, int *delayTicks);
+void swamperDoState(Moby *moby);
 void swamperDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
-void swamperForceLocalAction(Moby *moby, int action);
+void swamperForceLocalState(Moby *moby, int state);
 short swamperGetArmor(Moby *moby);
 int swamperIsAttacking(Moby *moby);
-int swamperCanNonOwnerTransitionToAction(Moby *moby, int action);
-int swamperShouldForceStateUpdateOnAction(Moby *moby, int action);
+int swamperCanNonOwnerTransitionToState(Moby *moby, int state);
+int swamperShouldForceStateUpdateOnState(Moby *moby, int state);
 
 int swamperIsSpawning(struct MobPVar *pvars);
 int swamperCanAttack(struct MobPVar *pvars);
 int swamperIsFlinching(Moby *moby);
-int swamperIsDying(Moby* moby);
+int swamperIsDying(Moby *moby);
 
 struct MobVTable SwamperVTable = {
-	.PreUpdate = &swamperPreUpdate,
-	.PostUpdate = &swamperPostUpdate,
-	.PostDraw = &swamperPostDraw,
-	.Move = &swamperMove,
-	.GetExtraDataSize = &swamperGetExtraDataSize,
-	.OnSpawning = &swamperOnSpawning,
-	.OnSpawn = &swamperOnSpawn,
-	.OnDestroy = &swamperOnDestroy,
-	.OnDamage = &swamperOnDamage,
-	.OnLocalDamage = &swamperOnLocalDamage,
-	.OnStateUpdate = &swamperOnStateUpdate,
-	.GetNextTarget = &swamperGetNextTarget,
-	.GetPreferredAction = &swamperGetPreferredAction,
-	.ForceLocalAction = &swamperForceLocalAction,
-	.DoAction = &swamperDoAction,
-	.DoDamage = &swamperDoDamage,
-	.GetArmor = &swamperGetArmor,
-	.IsAttacking = &swamperIsAttacking,
-	.CanNonOwnerTransitionToAction = &swamperCanNonOwnerTransitionToAction,
-	.ShouldForceStateUpdateOnAction = &swamperShouldForceStateUpdateOnAction,
+		.PreUpdate = &swamperPreUpdate,
+		.PostUpdate = &swamperPostUpdate,
+		.PostDraw = &swamperPostDraw,
+		.Move = &swamperMove,
+		.GetExtraDataSize = &swamperGetExtraDataSize,
+		.OnSpawning = &swamperOnSpawning,
+		.OnSpawn = &swamperOnSpawn,
+		.OnDestroy = &swamperOnDestroy,
+		.OnDamage = &swamperOnDamage,
+		.OnLocalDamage = &swamperOnLocalDamage,
+		.OnFullStateUpdate = &swamperOnFullStateUpdate,
+		.GetNextTarget = &swamperGetNextTarget,
+		.GetPreferredState = &swamperGetPreferredState,
+		.ForceLocalState = &swamperForceLocalState,
+		.DoState = &swamperDoState,
+		.DoDamage = &swamperDoDamage,
+		.GetArmor = &swamperGetArmor,
+		.IsAttacking = &swamperIsAttacking,
+		.CanNonOwnerTransitionToState = &swamperCanNonOwnerTransitionToState,
+		.ShouldForceStateUpdateOnState = &swamperShouldForceStateUpdateOnState,
 };
 
 //--------------------------------------------------------------------------
@@ -79,29 +79,39 @@ void swamperPostUpdate(Moby *moby)
 	float scale = mobGetScaleMultiplier(moby);
 
 	// adjust animSpeed by speed and by animation
-  float baseSpeed = 0.9;
+	float baseSpeed = 0.9;
 	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
 	if (moby->AnimSeqId == SWAMPER_ANIM_JUMP)
 	{
-    animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / SWAMPER_JUMP_ANIM_DURATION, 2));
-    if (pvars->MobVars.MoveVars.Grounded) {
-      animSpeed = baseSpeed;
-    }
-  } else if (swamperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
-    animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / SWAMPER_FLINCH_ANIM_AIR_DURATION, 2));
-  } else if (swamperIsAttacking(moby)) {
-    animSpeed = baseSpeed * 1.5;
-  } else if (swamperIsDying(moby)) {
-    animSpeed = baseSpeed;
-  } else if (moby->AnimSeqId == SWAMPER_ANIM_WALK) {
-    animSpeed *= mobGetCurrentMoveSpeed(moby);
-  }
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / SWAMPER_JUMP_ANIM_DURATION, 2));
+		if (pvars->MobVars.MoveVars.Grounded)
+		{
+			animSpeed = baseSpeed;
+		}
+	}
+	else if (swamperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
+	{
+		animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / SWAMPER_FLINCH_ANIM_AIR_DURATION, 2));
+	}
+	else if (swamperIsAttacking(moby))
+	{
+		animSpeed = baseSpeed * 1.5;
+	}
+	else if (swamperIsDying(moby))
+	{
+		animSpeed = baseSpeed;
+	}
+	else if (moby->AnimSeqId == SWAMPER_ANIM_WALK)
+	{
+		animSpeed *= mobGetCurrentMoveSpeed(moby);
+	}
 
-  if (pvars->MobVars.Action == SWAMPER_ACTION_DIE) {
-    animSpeed = baseSpeed;
-  }
+	if (pvars->MobVars.State == SWAMPER_STATE_DIE)
+	{
+		animSpeed = baseSpeed;
+	}
 
-	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == SWAMPER_ACTION_WALK))
+	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == SWAMPER_STATE_WALK))
 	{
 		moby->AnimSpeed = 0;
 	}
@@ -183,7 +193,7 @@ void swamperOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float damage = e->DamageQuarters / 4.0;
 	float newHp = pvars->MobVars.Health - damage;
 
-	int canFlinch = pvars->MobVars.Action != SWAMPER_ACTION_FLINCH && pvars->MobVars.Action != SWAMPER_ACTION_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
+	int canFlinch = pvars->MobVars.State != SWAMPER_STATE_FLINCH && pvars->MobVars.State != SWAMPER_STATE_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
 
 #if ALWAYS_FLINCH
 	canFlinch = 1;
@@ -203,7 +213,7 @@ void swamperOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float damageRatio = damage / pvars->MobVars.Config.MaxHealth;
 	float powerFactor = SWAMPER_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
 	float probability = clamp((damageRatio * SWAMPER_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, SWAMPER_ACTION_FLINCH, SWAMPER_ACTION_BIG_FLINCH);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, SWAMPER_STATE_FLINCH, SWAMPER_STATE_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -220,9 +230,9 @@ int swamperOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 }
 
 //--------------------------------------------------------------------------
-void swamperOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e)
+void swamperOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e)
 {
-	mobOnStateUpdate(moby, e);
+	mobOnFullStateUpdate(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -232,11 +242,11 @@ Moby *swamperGetNextTarget(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int swamperGetPreferredAction(Moby *moby, int *delayTicks)
+int swamperGetPreferredState(Moby *moby, int *delayTicks)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 
-	// no preferred action
+	// no preferred state
 	if (swamperIsAttacking(moby))
 		return -1;
 
@@ -246,25 +256,25 @@ int swamperGetPreferredAction(Moby *moby, int *delayTicks)
 	if (swamperIsFlinching(moby))
 		return -1;
 
-	if (pvars->MobVars.Action == SWAMPER_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+	if (pvars->MobVars.State == SWAMPER_STATE_JUMP && !pvars->MobVars.MoveVars.Grounded)
 	{
-		return SWAMPER_ACTION_WALK;
+		return SWAMPER_STATE_WALK;
 	}
 
 	// jump if we've hit a slope and are grounded
 	if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > SWAMPER_MAX_WALKABLE_SLOPE)
 	{
-		return SWAMPER_ACTION_JUMP;
+		return SWAMPER_STATE_JUMP;
 	}
 
 	// jump if we've hit a jump point on the path
 	if (pvars->MobVars.MoveVars.QueueJumpSpeed)
 	{
-		return SWAMPER_ACTION_JUMP;
+		return SWAMPER_STATE_JUMP;
 	}
 
-	// prevent action changing too quickly
-	if (pvars->MobVars.ActionCooldownTicks)
+	// prevent state changing too quickly
+	if (pvars->MobVars.StateCooldownTicks)
 		return -1;
 
 	// get next target
@@ -280,17 +290,17 @@ int swamperGetPreferredAction(Moby *moby, int *delayTicks)
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return SWAMPER_ACTION_ATTACK;
+				return SWAMPER_STATE_ATTACK;
 			}
-			return SWAMPER_ACTION_WALK;
+			return SWAMPER_STATE_WALK;
 		}
 		else
 		{
-			return SWAMPER_ACTION_WALK;
+			return SWAMPER_STATE_WALK;
 		}
 	}
 
-	return SWAMPER_ACTION_IDLE;
+	return SWAMPER_STATE_IDLE;
 }
 
 //--------------------------------------------------------------------------
@@ -324,7 +334,7 @@ void swamperRenderPath(Moby *moby)
 #endif
 
 //--------------------------------------------------------------------------
-void swamperDoAction(Moby *moby)
+void swamperDoState(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	Moby *target = pvars->MobVars.Target;
@@ -332,7 +342,7 @@ void swamperDoAction(Moby *moby)
 	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? SWAMPER_TURN_RADIANS_PER_SEC : SWAMPER_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? SWAMPER_MOVE_ACCELERATION : SWAMPER_MOVE_AIR_ACCELERATION;
-	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == SWAMPER_ACTION_FLINCH || pvars->MobVars.LastAction == SWAMPER_ACTION_BIG_FLINCH);
+	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastState == SWAMPER_STATE_FLINCH || pvars->MobVars.LastState == SWAMPER_STATE_BIG_FLINCH);
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -341,23 +351,23 @@ void swamperDoAction(Moby *moby)
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&swamperRenderPath, moby);
 #endif
 
-	switch (pvars->MobVars.Action)
+	switch (pvars->MobVars.State)
 	{
-	case SWAMPER_ACTION_SPAWN:
+	case SWAMPER_STATE_SPAWN:
 	{
 		mobTransAnim(moby, SWAMPER_ANIM_ROAR, 0);
 		mobStand(moby);
 		break;
 	}
-	case SWAMPER_ACTION_FLINCH:
-	case SWAMPER_ACTION_BIG_FLINCH:
+	case SWAMPER_STATE_FLINCH:
+	case SWAMPER_STATE_BIG_FLINCH:
 	{
 		decTimerU8(&pvars->MobVars.Knockback.Ticks);
-		int animFlinchId = pvars->MobVars.Action == SWAMPER_ACTION_BIG_FLINCH ? SWAMPER_ANIM_FALL_BACKWARDS : SWAMPER_ANIM_JUMP_BACKWARDS;
+		int animFlinchId = pvars->MobVars.State == SWAMPER_STATE_BIG_FLINCH ? SWAMPER_ANIM_FALL_BACKWARDS : SWAMPER_ANIM_JUMP_BACKWARDS;
 
 		mobTransAnim(moby, animFlinchId, 0);
 
-		if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.Action == SWAMPER_ACTION_BIG_FLINCH)
+		if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.State == SWAMPER_STATE_BIG_FLINCH)
 		{
 			mobGetKnockbackVelocity(moby, t);
 			vector_scale(t, t, SWAMPER_KNOCKBACK_MULTIPLIER);
@@ -367,19 +377,19 @@ void swamperDoAction(Moby *moby)
 		{
 			mobStand(moby);
 		}
-		else if (pvars->MobVars.CurrentActionForTicks > (1 * TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter)
+		else if (pvars->MobVars.CurrentStateForTicks > (1 * TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter)
 		{
 			mobStand(moby);
 		}
 		break;
 	}
-	case SWAMPER_ACTION_IDLE:
+	case SWAMPER_STATE_IDLE:
 	{
 		mobTransAnim(moby, SWAMPER_ANIM_IDLE, 0);
 		mobStand(moby);
 		break;
 	}
-	case SWAMPER_ACTION_JUMP:
+	case SWAMPER_STATE_JUMP:
 	{
 		// move
 		if (!isInAirFromFlinching)
@@ -424,14 +434,14 @@ void swamperDoAction(Moby *moby)
 		}
 		break;
 	}
-	case SWAMPER_ACTION_LOOK_AT_TARGET:
+	case SWAMPER_STATE_LOOK_AT_TARGET:
 	{
 		mobStand(moby);
 		if (target)
 			mobTurnTowards(moby, target->Position, turnSpeed);
 		break;
 	}
-	case SWAMPER_ACTION_WALK:
+	case SWAMPER_STATE_WALK:
 	{
 		if (!isInAirFromFlinching)
 		{
@@ -454,7 +464,7 @@ void swamperDoAction(Moby *moby)
 		}
 		else if (pvars->MobVars.MoveVars.QueueJumpSpeed)
 		{
-			swamperForceLocalAction(moby, SWAMPER_ACTION_JUMP);
+			swamperForceLocalState(moby, SWAMPER_STATE_JUMP);
 		}
 		else if (mobHasVelocity(pvars))
 		{
@@ -466,20 +476,20 @@ void swamperDoAction(Moby *moby)
 		}
 		break;
 	}
-	case SWAMPER_ACTION_DIE:
+	case SWAMPER_STATE_DIE:
 	{
 		mobStand(moby);
 		break;
 	}
-	case SWAMPER_ACTION_ATTACK:
+	case SWAMPER_STATE_ATTACK:
 	{
 		int attack1AnimId = SWAMPER_ANIM_BITE;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-    float t = moby->AnimSeqT / SWAMPER_BITE_ANIM_DURATION;
-    float speedCurve = powf(clamp((1.5-t) * 1.5, 0, 1.5), 2);
-    float speedMult = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < SWAMPER_BITE_LUNGE_FRAME_START || moby->AnimSeqT > SWAMPER_BITE_LUNGE_FRAME_END)) ? 0 : speedCurve;
-    int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWAMPER_BITE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWAMPER_BITE_ATTACK_HIT_FRAME_END;
+		float t = moby->AnimSeqT / SWAMPER_BITE_ANIM_DURATION;
+		float speedCurve = powf(clamp((1.5 - t) * 1.5, 0, 1.5), 2);
+		float speedMult = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < SWAMPER_BITE_LUNGE_FRAME_START || moby->AnimSeqT > SWAMPER_BITE_LUNGE_FRAME_END)) ? 0 : speedCurve;
+		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWAMPER_BITE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWAMPER_BITE_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
@@ -503,7 +513,7 @@ void swamperDoAction(Moby *moby)
 	}
 	}
 
-	pvars->MobVars.CurrentActionForTicks++;
+	pvars->MobVars.CurrentStateForTicks++;
 }
 
 //--------------------------------------------------------------------------
@@ -513,7 +523,7 @@ void swamperDoDamage(Moby *moby, float radius, float amount, int damageFlags, in
 }
 
 //--------------------------------------------------------------------------
-void swamperForceLocalAction(Moby *moby, int action)
+void swamperForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	float difficulty = 1;
@@ -522,15 +532,15 @@ void swamperForceLocalAction(Moby *moby, int action)
 		difficulty = MapConfig.State->Difficulty;
 
 	// from
-	switch (pvars->MobVars.Action)
+	switch (pvars->MobVars.State)
 	{
-	case SWAMPER_ACTION_SPAWN:
+	case SWAMPER_STATE_SPAWN:
 	{
 		// enable collision
 		moby->CollActive = 0;
 		break;
 	}
-	case SWAMPER_ACTION_DIE:
+	case SWAMPER_STATE_DIE:
 	{
 		// can't undie
 		return;
@@ -538,32 +548,32 @@ void swamperForceLocalAction(Moby *moby, int action)
 	}
 
 	// to
-	switch (action)
+	switch (state)
 	{
-	case SWAMPER_ACTION_SPAWN:
+	case SWAMPER_STATE_SPAWN:
 	{
 		// disable collision
 		moby->CollActive = 1;
 		break;
 	}
-	case SWAMPER_ACTION_WALK:
+	case SWAMPER_STATE_WALK:
 	{
 
 		break;
 	}
-	case SWAMPER_ACTION_DIE:
+	case SWAMPER_STATE_DIE:
 	{
 		pvars->MobVars.Destroy = 1;
 		break;
 	}
-	case SWAMPER_ACTION_ATTACK:
+	case SWAMPER_STATE_ATTACK:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
-    mobResetMoveStep(moby); // force move step reset for accurate lunge
+		mobResetMoveStep(moby); // force move step reset for accurate lunge
 		break;
 	}
-	case SWAMPER_ACTION_FLINCH:
-	case SWAMPER_ACTION_BIG_FLINCH:
+	case SWAMPER_STATE_FLINCH:
+	case SWAMPER_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = SWAMPER_FLINCH_COOLDOWN_TICKS;
 		break;
@@ -575,12 +585,12 @@ void swamperForceLocalAction(Moby *moby, int action)
 	}
 
 	//
-	if (action != pvars->MobVars.Action)
-		pvars->MobVars.CurrentActionForTicks = 0;
+	if (state != pvars->MobVars.State)
+		pvars->MobVars.CurrentStateForTicks = 0;
 
-	pvars->MobVars.Action = action;
-	pvars->MobVars.NextAction = -1;
-	pvars->MobVars.ActionCooldownTicks = SWAMPER_ACTION_COOLDOWN_TICKS;
+	pvars->MobVars.State = state;
+	pvars->MobVars.NextState = -1;
+	pvars->MobVars.StateCooldownTicks = SWAMPER_STATE_COOLDOWN_TICKS;
 }
 
 //--------------------------------------------------------------------------
@@ -602,24 +612,24 @@ short swamperGetArmor(Moby *moby)
 int swamperIsAttacking(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	return pvars->MobVars.Action == SWAMPER_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.State == SWAMPER_STATE_ATTACK && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int swamperCanNonOwnerTransitionToAction(Moby *moby, int action)
+int swamperCanNonOwnerTransitionToState(Moby *moby, int state)
 {
-	// always let non-owners simulate an action unless its the death action
-	if (action == SWAMPER_ACTION_DIE)
+	// always let non-owners simulate an state unless its the death state
+	if (state == SWAMPER_STATE_DIE)
 		return 0;
 
 	return 1;
 }
 
 //--------------------------------------------------------------------------
-int swamperShouldForceStateUpdateOnAction(Moby *moby, int action)
+int swamperShouldForceStateUpdateOnState(Moby *moby, int state)
 {
 	// only send state updates at regular intervals, unless dying
-	if (action == SWAMPER_ACTION_DIE)
+	if (state == SWAMPER_STATE_DIE)
 		return 1;
 
 	return 0;
@@ -628,7 +638,7 @@ int swamperShouldForceStateUpdateOnAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int swamperIsSpawning(struct MobPVar *pvars)
 {
-	return pvars->MobVars.Action == SWAMPER_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.State == SWAMPER_STATE_SPAWN && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
@@ -645,8 +655,8 @@ int swamperIsFlinching(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int swamperIsDying(Moby* moby)
+int swamperIsDying(Moby *moby)
 {
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == SWAMPER_ACTION_DIE;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	return pvars->MobVars.State == SWAMPER_STATE_DIE;
 }

@@ -23,16 +23,16 @@ void zombieOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 void zombieOnDestroy(Moby *moby, int killedByPlayerId, int weaponId);
 void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e);
 int zombieOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
-void zombieOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e);
+void zombieOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e);
 Moby *zombieGetNextTarget(Moby *moby);
-int zombieGetPreferredAction(Moby *moby, int *delayTicks);
-void zombieDoAction(Moby *moby);
+int zombieGetPreferredState(Moby *moby, int *delayTicks);
+void zombieDoState(Moby *moby);
 void zombieDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
-void zombieForceLocalAction(Moby *moby, int action);
+void zombieForceLocalState(Moby *moby, int state);
 short zombieGetArmor(Moby *moby);
 int zombieIsAttacking(Moby *moby);
-int zombieCanNonOwnerTransitionToAction(Moby *moby, int action);
-int zombieShouldForceStateUpdateOnAction(Moby *moby, int action);
+int zombieCanNonOwnerTransitionToState(Moby *moby, int state);
+int zombieShouldForceStateUpdateOnState(Moby *moby, int state);
 
 int zombieIsSpawning(struct MobPVar *pvars);
 int zombieCanAttack(struct MobPVar *pvars);
@@ -50,16 +50,16 @@ struct MobVTable ZombieVTable = {
 		.OnDestroy = &zombieOnDestroy,
 		.OnDamage = &zombieOnDamage,
 		.OnLocalDamage = &zombieOnLocalDamage,
-		.OnStateUpdate = &zombieOnStateUpdate,
+		.OnFullStateUpdate = &zombieOnFullStateUpdate,
 		.GetNextTarget = &zombieGetNextTarget,
-		.GetPreferredAction = &zombieGetPreferredAction,
-		.ForceLocalAction = &zombieForceLocalAction,
-		.DoAction = &zombieDoAction,
+		.GetPreferredState = &zombieGetPreferredState,
+		.ForceLocalState = &zombieForceLocalState,
+		.DoState = &zombieDoState,
 		.DoDamage = &zombieDoDamage,
 		.GetArmor = &zombieGetArmor,
 		.IsAttacking = &zombieIsAttacking,
-		.CanNonOwnerTransitionToAction = &zombieCanNonOwnerTransitionToAction,
-		.ShouldForceStateUpdateOnAction = &zombieShouldForceStateUpdateOnAction,
+		.CanNonOwnerTransitionToState = &zombieCanNonOwnerTransitionToState,
+		.ShouldForceStateUpdateOnState = &zombieShouldForceStateUpdateOnState,
 };
 
 //--------------------------------------------------------------------------
@@ -144,7 +144,7 @@ void zombiePostUpdate(Moby *moby)
 		animSpeed *= 0.5;
 	}
 
-	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == ZOMBIE_ACTION_WALK))
+	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == ZOMBIE_STATE_WALK))
 	{
 		moby->AnimSpeed = 0;
 	}
@@ -247,7 +247,7 @@ void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float damage = e->DamageQuarters / 4.0;
 	float newHp = pvars->MobVars.Health - damage;
 
-	int canFlinch = pvars->MobVars.Action != ZOMBIE_ACTION_FLINCH && pvars->MobVars.Action != ZOMBIE_ACTION_BIG_FLINCH && pvars->MobVars.Action != ZOMBIE_ACTION_TIME_BOMB && pvars->MobVars.Action != ZOMBIE_ACTION_TIME_BOMB_EXPLODE && pvars->MobVars.FlinchCooldownTicks == 0;
+	int canFlinch = pvars->MobVars.State != ZOMBIE_STATE_FLINCH && pvars->MobVars.State != ZOMBIE_STATE_BIG_FLINCH && pvars->MobVars.State != ZOMBIE_STATE_TIME_BOMB && pvars->MobVars.State != ZOMBIE_STATE_TIME_BOMB_EXPLODE && pvars->MobVars.FlinchCooldownTicks == 0;
 
 #if ALWAYS_FLINCH
 	canFlinch = 1;
@@ -259,15 +259,15 @@ void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	// destroy
 	if (newHp <= 0)
 	{
-		if (pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB && moby->AnimSeqId == ZOMBIE_ANIM_CROUCH && moby->AnimSeqT > ZOMBIE_CROUCH_ANIM_MIN_T_FOR_EXPLOSION)
+		if (pvars->MobVars.State == ZOMBIE_STATE_TIME_BOMB && moby->AnimSeqId == ZOMBIE_ANIM_CROUCH && moby->AnimSeqT > ZOMBIE_CROUCH_ANIM_MIN_T_FOR_EXPLOSION)
 		{
 			// explode
-			// zombieForceLocalAction(moby, ZOMBIE_ACTION_TIME_BOMB_EXPLODE);
-			zombieForceLocalAction(moby, ZOMBIE_ACTION_DIE);
+			// zombieForceLocalState(moby, ZOMBIE_STATE_TIME_BOMB_EXPLODE);
+			zombieForceLocalState(moby, ZOMBIE_STATE_DIE);
 		}
 		else
 		{
-			zombieForceLocalAction(moby, ZOMBIE_ACTION_DIE);
+			zombieForceLocalState(moby, ZOMBIE_STATE_DIE);
 		}
 
 		pvars->MobVars.LastHitBy = e->SourceUID;
@@ -277,7 +277,7 @@ void zombieOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float damageRatio = damage / pvars->MobVars.Config.Health;
 	float powerFactor = ZOMBIE_FLINCH_PROBABILITY_PWR_FACTOR * e->Knockback.Power;
 	float probability = clamp((damageRatio * ZOMBIE_FLINCH_PROBABILITY) + powerFactor, 0, MOB_MAX_FLINCH_PROBABILITY);
-	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, ZOMBIE_ACTION_FLINCH, ZOMBIE_ACTION_BIG_FLINCH);
+	mobHandleFlinch(moby, e, canFlinch, isShock, probability, powerFactor, ZOMBIE_STATE_FLINCH, ZOMBIE_STATE_BIG_FLINCH);
 
 	// short freeze
 	if (isShortFreeze && pvars->MobVars.SlowTicks < MOB_SHORT_FREEZE_DURATION_TICKS)
@@ -294,9 +294,9 @@ int zombieOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 }
 
 //--------------------------------------------------------------------------
-void zombieOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e)
+void zombieOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e)
 {
-	mobOnStateUpdate(moby, e);
+	mobOnFullStateUpdate(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -306,14 +306,14 @@ Moby *zombieGetNextTarget(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int zombieGetPreferredAction(Moby *moby, int *delayTicks)
+int zombieGetPreferredState(Moby *moby, int *delayTicks)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
 	int canRanged = mobGetBehavior(moby) != ZOMBIE_BEHAVIOR_MELEE;
 	int preferRanged = mobGetBehavior(moby) == ZOMBIE_BEHAVIOR_RANGED;
 
-	// no preferred action
+	// no preferred state
 	if (zombieIsAttacking(moby))
 		return -1;
 
@@ -323,25 +323,25 @@ int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 	if (zombieIsFlinching(moby))
 		return -1;
 
-	if (pvars->MobVars.Action == ZOMBIE_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded)
+	if (pvars->MobVars.State == ZOMBIE_STATE_JUMP && !pvars->MobVars.MoveVars.Grounded)
 	{
-		return ZOMBIE_ACTION_WALK;
+		return ZOMBIE_STATE_WALK;
 	}
 
 	// jump if we've hit a slope and are grounded
 	if (pvars->MobVars.MoveVars.Grounded && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.WallSlope > ZOMBIE_MAX_WALKABLE_SLOPE)
 	{
-		return ZOMBIE_ACTION_JUMP;
+		return ZOMBIE_STATE_JUMP;
 	}
 
 	// jump if we've hit a jump point on the path
 	if (pvars->MobVars.MoveVars.QueueJumpSpeed)
 	{
-		return ZOMBIE_ACTION_JUMP;
+		return ZOMBIE_STATE_JUMP;
 	}
 
-	// prevent action changing too quickly
-	if (pvars->MobVars.ActionCooldownTicks)
+	// prevent state changing too quickly
+	if (pvars->MobVars.StateCooldownTicks)
 		return -1;
 
 	// get next target
@@ -351,10 +351,10 @@ int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 		float dist = mobGetDistanceToTarget(moby, target);
 		float attackRadius = pvars->MobVars.Config.AttackRadius;
 		float rangedAttackRadius = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
-		int isThrowAction = pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK_THROW;
+		int isThrowState = pvars->MobVars.State == ZOMBIE_STATE_ATTACK_THROW;
 
 		// ranged should stop before getting too close to target
-		int deferredAction = (preferRanged && (dist <= rangedAttackRadius * 0.9)) ? ZOMBIE_ACTION_LOOK_AT_TARGET : ZOMBIE_ACTION_WALK;
+		int deferredState = (preferRanged && (dist <= rangedAttackRadius * 0.9)) ? ZOMBIE_STATE_LOOK_AT_TARGET : ZOMBIE_STATE_WALK;
 
 		if (dist <= attackRadius)
 		{
@@ -362,11 +362,11 @@ int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return mobGetBehavior(moby) != ZOMBIE_BEHAVIOR_EXPLODE ? ZOMBIE_ACTION_ATTACK : ZOMBIE_ACTION_TIME_BOMB;
+				return mobGetBehavior(moby) != ZOMBIE_BEHAVIOR_EXPLODE ? ZOMBIE_STATE_ATTACK : ZOMBIE_STATE_TIME_BOMB;
 			}
-			return deferredAction;
+			return deferredState;
 		}
-		else if (!isThrowAction && canRanged && pvars->MobVars.MoveVars.Grounded && dist <= rangedAttackRadius && zombieVars->AttackThrowCooldownTicks == 0)
+		else if (!isThrowState && canRanged && pvars->MobVars.MoveVars.Grounded && dist <= rangedAttackRadius && zombieVars->AttackThrowCooldownTicks == 0)
 		{
 			VECTOR dt;
 			vector_subtract(dt, target->Position, moby->Position);
@@ -375,18 +375,18 @@ int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return ZOMBIE_ACTION_ATTACK_THROW;
+				return ZOMBIE_STATE_ATTACK_THROW;
 			}
 
-			return deferredAction;
+			return deferredState;
 		}
 		else
 		{
-			return deferredAction;
+			return deferredState;
 		}
 	}
 
-	return ZOMBIE_ACTION_IDLE;
+	return ZOMBIE_STATE_IDLE;
 }
 
 //--------------------------------------------------------------------------
@@ -420,7 +420,7 @@ void zombieRenderPath(Moby *moby)
 #endif
 
 //--------------------------------------------------------------------------
-void zombieDoAction(Moby *moby)
+void zombieDoState(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	Moby *target = pvars->MobVars.Target;
@@ -428,7 +428,7 @@ void zombieDoAction(Moby *moby)
 	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_TURN_RADIANS_PER_SEC : ZOMBIE_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_MOVE_ACCELERATION : ZOMBIE_MOVE_AIR_ACCELERATION;
-	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == ZOMBIE_ACTION_FLINCH || pvars->MobVars.LastAction == ZOMBIE_ACTION_BIG_FLINCH);
+	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastState == ZOMBIE_STATE_FLINCH || pvars->MobVars.LastState == ZOMBIE_STATE_BIG_FLINCH);
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -437,23 +437,23 @@ void zombieDoAction(Moby *moby)
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&zombieRenderPath, moby);
 #endif
 
-	switch (pvars->MobVars.Action)
+	switch (pvars->MobVars.State)
 	{
-	case ZOMBIE_ACTION_SPAWN:
+	case ZOMBIE_STATE_SPAWN:
 	{
 		mobTransAnim(moby, ZOMBIE_ANIM_CRAWL_OUT_OF_GROUND, 0);
 		mobStand(moby);
 		break;
 	}
-	case ZOMBIE_ACTION_FLINCH:
-	case ZOMBIE_ACTION_BIG_FLINCH:
+	case ZOMBIE_STATE_FLINCH:
+	case ZOMBIE_STATE_BIG_FLINCH:
 	{
 		decTimerU8(&pvars->MobVars.Knockback.Ticks);
-		int animFlinchId = pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH ? ZOMBIE_ANIM_BIG_FLINCH : ZOMBIE_ANIM_BIG_FLINCH;
+		int animFlinchId = pvars->MobVars.State == ZOMBIE_STATE_BIG_FLINCH ? ZOMBIE_ANIM_BIG_FLINCH : ZOMBIE_ANIM_BIG_FLINCH;
 
 		mobTransAnim(moby, animFlinchId, 0);
 
-		if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.Action == ZOMBIE_ACTION_BIG_FLINCH)
+		if (pvars->MobVars.Knockback.Ticks > 0 && pvars->MobVars.State == ZOMBIE_STATE_BIG_FLINCH)
 		{
 			mobGetKnockbackVelocity(moby, t);
 			vector_scale(t, t, ZOMBIE_KNOCKBACK_MULTIPLIER);
@@ -463,19 +463,19 @@ void zombieDoAction(Moby *moby)
 		{
 			mobStand(moby);
 		}
-		else if (pvars->MobVars.CurrentActionForTicks > (1 * TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter)
+		else if (pvars->MobVars.CurrentStateForTicks > (1 * TPS) && pvars->MobVars.MoveVars.HitWall && pvars->MobVars.MoveVars.StuckCounter)
 		{
 			mobStand(moby);
 		}
 		break;
 	}
-	case ZOMBIE_ACTION_IDLE:
+	case ZOMBIE_STATE_IDLE:
 	{
 		mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
 		mobStand(moby);
 		break;
 	}
-	case ZOMBIE_ACTION_JUMP:
+	case ZOMBIE_STATE_JUMP:
 	{
 		// move
 		if (!isInAirFromFlinching)
@@ -520,7 +520,7 @@ void zombieDoAction(Moby *moby)
 		}
 		break;
 	}
-	case ZOMBIE_ACTION_LOOK_AT_TARGET:
+	case ZOMBIE_STATE_LOOK_AT_TARGET:
 	{
 		mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
 		mobStand(moby);
@@ -528,7 +528,7 @@ void zombieDoAction(Moby *moby)
 			mobTurnTowards(moby, target->Position, turnSpeed);
 		break;
 	}
-	case ZOMBIE_ACTION_WALK:
+	case ZOMBIE_STATE_WALK:
 	{
 		if (!isInAirFromFlinching)
 		{
@@ -551,7 +551,7 @@ void zombieDoAction(Moby *moby)
 		}
 		else if (pvars->MobVars.MoveVars.QueueJumpSpeed)
 		{
-			zombieForceLocalAction(moby, ZOMBIE_ACTION_JUMP);
+			zombieForceLocalState(moby, ZOMBIE_STATE_JUMP);
 		}
 		else if (mobHasVelocity(pvars))
 		{
@@ -563,17 +563,17 @@ void zombieDoAction(Moby *moby)
 		}
 		break;
 	}
-	case ZOMBIE_ACTION_DIE:
+	case ZOMBIE_STATE_DIE:
 	{
 		mobStand(moby);
 		break;
 	}
-	case ZOMBIE_ACTION_TIME_BOMB_EXPLODE:
+	case ZOMBIE_STATE_TIME_BOMB_EXPLODE:
 	{
 
 		break;
 	}
-	case ZOMBIE_ACTION_TIME_BOMB:
+	case ZOMBIE_STATE_TIME_BOMB:
 	{
 		mobTransAnim(moby, ZOMBIE_ANIM_CROUCH, 0);
 
@@ -581,7 +581,7 @@ void zombieDoAction(Moby *moby)
 		{
 			moby->Opacity = 0x80;
 			pvars->MobVars.OpacityFlickerDirection = 0;
-			mobSetAction(moby, ZOMBIE_ACTION_TIME_BOMB_EXPLODE);
+			mobSetState(moby, ZOMBIE_STATE_TIME_BOMB_EXPLODE);
 		}
 		else
 		{
@@ -610,7 +610,7 @@ void zombieDoAction(Moby *moby)
 		}
 		break;
 	}
-	case ZOMBIE_ACTION_ATTACK:
+	case ZOMBIE_STATE_ATTACK:
 	{
 		int attack1AnimId = ZOMBIE_ANIM_SLAP;
 		mobTransAnim(moby, attack1AnimId, 0);
@@ -638,7 +638,7 @@ void zombieDoAction(Moby *moby)
 		}
 		break;
 	}
-	case ZOMBIE_ACTION_ATTACK_THROW:
+	case ZOMBIE_STATE_ATTACK_THROW:
 	{
 		int nextAnimId = moby->AnimSeqId;
 
@@ -665,7 +665,7 @@ void zombieDoAction(Moby *moby)
 		}
 
 		// begin animation sequence
-		if (!pvars->MobVars.CurrentActionForTicks)
+		if (!pvars->MobVars.CurrentStateForTicks)
 			nextAnimId = ZOMBIE_ANIM_THROW_HEAD;
 
 		// not moving in this state
@@ -677,7 +677,7 @@ void zombieDoAction(Moby *moby)
 	}
 	}
 
-	pvars->MobVars.CurrentActionForTicks++;
+	pvars->MobVars.CurrentStateForTicks++;
 }
 
 //--------------------------------------------------------------------------
@@ -910,7 +910,7 @@ void zombieDoDamage(Moby *moby, float radius, float amount, int damageFlags, int
 }
 
 //--------------------------------------------------------------------------
-void zombieForceLocalAction(Moby *moby, int action)
+void zombieForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
@@ -920,20 +920,20 @@ void zombieForceLocalAction(Moby *moby, int action)
 		difficulty = MapConfig.State->Difficulty;
 
 	// from
-	switch (pvars->MobVars.Action)
+	switch (pvars->MobVars.State)
 	{
-	case ZOMBIE_ACTION_SPAWN:
+	case ZOMBIE_STATE_SPAWN:
 	{
 		// enable collision
 		moby->CollActive = 0;
 		break;
 	}
-	case ZOMBIE_ACTION_DIE:
+	case ZOMBIE_STATE_DIE:
 	{
 		// can't undie
 		return;
 	}
-	case ZOMBIE_ACTION_ATTACK_THROW:
+	case ZOMBIE_STATE_ATTACK_THROW:
 	{
 		// reset ptr to thrown moby
 		zombieVars->ThrownMoby = NULL;
@@ -942,32 +942,32 @@ void zombieForceLocalAction(Moby *moby, int action)
 	}
 
 	// to
-	switch (action)
+	switch (state)
 	{
-	case ZOMBIE_ACTION_SPAWN:
+	case ZOMBIE_STATE_SPAWN:
 	{
 		// disable collision
 		moby->CollActive = 1;
 		break;
 	}
-	case ZOMBIE_ACTION_WALK:
+	case ZOMBIE_STATE_WALK:
 	{
 
 		break;
 	}
-	case ZOMBIE_ACTION_DIE:
+	case ZOMBIE_STATE_DIE:
 	{
 		pvars->MobVars.Destroy = 1;
 		break;
 	}
-	case ZOMBIE_ACTION_ATTACK:
-	case ZOMBIE_ACTION_ATTACK_THROW:
+	case ZOMBIE_STATE_ATTACK:
+	case ZOMBIE_STATE_ATTACK_THROW:
 	{
 		zombieVars->AttackThrowCooldownTicks = zombieGetThrowCooldownTicks(moby);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		break;
 	}
-	case ZOMBIE_ACTION_TIME_BOMB_EXPLODE:
+	case ZOMBIE_STATE_TIME_BOMB_EXPLODE:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_EXPLODE_BASE);
@@ -979,14 +979,14 @@ void zombieForceLocalAction(Moby *moby, int action)
 		pvars->MobVars.LastHitBy = -1;
 		break;
 	}
-	case ZOMBIE_ACTION_TIME_BOMB:
+	case ZOMBIE_STATE_TIME_BOMB:
 	{
 		pvars->MobVars.OpacityFlickerDirection = 4;
 		pvars->MobVars.TimeBombTicks = ZOMBIE_TIMEBOMB_TICKS;
 		break;
 	}
-	case ZOMBIE_ACTION_FLINCH:
-	case ZOMBIE_ACTION_BIG_FLINCH:
+	case ZOMBIE_STATE_FLINCH:
+	case ZOMBIE_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = ZOMBIE_FLINCH_COOLDOWN_TICKS;
 		break;
@@ -998,12 +998,12 @@ void zombieForceLocalAction(Moby *moby, int action)
 	}
 
 	//
-	if (action != pvars->MobVars.Action)
-		pvars->MobVars.CurrentActionForTicks = 0;
+	if (state != pvars->MobVars.State)
+		pvars->MobVars.CurrentStateForTicks = 0;
 
-	pvars->MobVars.Action = action;
-	pvars->MobVars.NextAction = -1;
-	pvars->MobVars.ActionCooldownTicks = ZOMBIE_ACTION_COOLDOWN_TICKS;
+	pvars->MobVars.State = state;
+	pvars->MobVars.NextState = -1;
+	pvars->MobVars.StateCooldownTicks = ZOMBIE_STATE_COOLDOWN_TICKS;
 }
 
 //--------------------------------------------------------------------------
@@ -1025,24 +1025,24 @@ short zombieGetArmor(Moby *moby)
 int zombieIsAttacking(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	return pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB || pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB_EXPLODE || (pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK && !pvars->MobVars.AnimationLooped) || (pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK_THROW && !pvars->MobVars.AnimationLooped);
+	return pvars->MobVars.State == ZOMBIE_STATE_TIME_BOMB || pvars->MobVars.State == ZOMBIE_STATE_TIME_BOMB_EXPLODE || (pvars->MobVars.State == ZOMBIE_STATE_ATTACK && !pvars->MobVars.AnimationLooped) || (pvars->MobVars.State == ZOMBIE_STATE_ATTACK_THROW && !pvars->MobVars.AnimationLooped);
 }
 
 //--------------------------------------------------------------------------
-int zombieCanNonOwnerTransitionToAction(Moby *moby, int action)
+int zombieCanNonOwnerTransitionToState(Moby *moby, int state)
 {
-	// always let non-owners simulate an action unless its the death action
-	if (action == ZOMBIE_ACTION_DIE)
+	// always let non-owners simulate an state unless its the death state
+	if (state == ZOMBIE_STATE_DIE)
 		return 0;
 
 	return 1;
 }
 
 //--------------------------------------------------------------------------
-int zombieShouldForceStateUpdateOnAction(Moby *moby, int action)
+int zombieShouldForceStateUpdateOnState(Moby *moby, int state)
 {
 	// only send state updates at regular intervals, unless dying or flinching
-	if (action == ZOMBIE_ACTION_DIE || action == ZOMBIE_ACTION_FLINCH || action == ZOMBIE_ACTION_BIG_FLINCH)
+	if (state == ZOMBIE_STATE_DIE || state == ZOMBIE_STATE_FLINCH || state == ZOMBIE_STATE_BIG_FLINCH)
 		return 1;
 
 	return 0;
@@ -1051,7 +1051,7 @@ int zombieShouldForceStateUpdateOnAction(Moby *moby, int action)
 //--------------------------------------------------------------------------
 int zombieIsSpawning(struct MobPVar *pvars)
 {
-	return pvars->MobVars.Action == ZOMBIE_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
+	return pvars->MobVars.State == ZOMBIE_STATE_SPAWN && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
