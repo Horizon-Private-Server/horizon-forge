@@ -99,8 +99,19 @@ public class SurvivalMobDefEditor : Editor
 		if (mobData == null)
 			return;
 
+		if (!string.IsNullOrEmpty(mobData.Description))
+			EditorGUILayout.HelpBox(mobData.Description, MessageType.Info);
+
 		UnityHelper.PopupField(m_VariantProperty, null, mobData.Variants.Select(x => x.Name).ToArray());
-		UnityHelper.PopupField(m_BehaviorProperty, null, mobData.Behaviors.ToArray());
+		var variantDescriptionText = mobData.Variants.ElementAtOrDefault(m_VariantProperty.intValue)?.Description;
+		if (!string.IsNullOrEmpty(variantDescriptionText))
+			EditorGUILayout.HelpBox(variantDescriptionText, MessageType.Info);
+
+		UnityHelper.PopupField(m_BehaviorProperty, null, mobData.Behaviors.Select(x => x.Name).ToArray());
+		var behaviorDescriptionText = mobData.Behaviors.ElementAtOrDefault(m_BehaviorProperty.intValue)?.Description;
+		if (!string.IsNullOrEmpty(behaviorDescriptionText))
+			EditorGUILayout.HelpBox(behaviorDescriptionText, MessageType.Info);
+
         EditorGUILayout.PropertyField(m_AttributesProperty);
 		UnityHelper.EnumOverride(m_BlipTypeProperty, null, mobData.BlipType);
 

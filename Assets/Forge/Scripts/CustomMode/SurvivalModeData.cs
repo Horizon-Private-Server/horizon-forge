@@ -448,14 +448,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine();
 
-        // wall upgrades config
-        //sb.AppendLine("//--------------------------------------------------------------------------");
-        //sb.AppendLine("struct UpgradeDef upgradeDefs[] = {");
-        //foreach (var param in Upgrades)
-        //    sb.AppendLine($"\t{param.GetDef()}");
-        //sb.AppendLine("};");
-        //sb.AppendLine();
-		
 		// special rounds config
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("struct SurvivalSpecialRoundParam specialRoundParams[] = {");
@@ -474,8 +466,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine($"\t.SpawnDistanceMultiplier = {SpawnDistanceFactor.ToInvariantCulture()},");
         sb.AppendLine($"\t.WeaponPickupCooldownMultiplier = {WeaponPickupCooldownFactor.ToInvariantCulture()},");
         sb.AppendLine($"\t.BoltRankMultiplier = {BoltRankMultiplier.ToInvariantCulture()},");
-        //sb.AppendLine($"\t.StackboxBaseCost = {StackableBaseCost},");
-        //sb.AppendLine($"\t.StackboxCostPerPerk = {StackableIncrementCost},");
         sb.AppendLine($"\t.WeaponPrestigeMax = {WeaponPrestigeMax},");
 		sb.AppendLine("\t.PrestigeCostPerLevel = {");
 		foreach(var cost in PrestigeCostPerLevel)
@@ -503,30 +493,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine("const int gambitDefsCount = COUNT_OF(gambitDefs);");
         sb.AppendLine();
-
-        // stackbox items
-        //sb.AppendLine("//--------------------------------------------------------------------------");
-        //sb.AppendLine("int StackboxItems[] = {");
-        //foreach (var item in Stackables)
-        //    sb.AppendLine($"\t{(int)item.Type},");
-        //sb.AppendLine("};");
-        //sb.AppendLine("const int StackboxItemsCount = COUNT_OF(StackboxItems);");
-        //sb.AppendLine();
-
-        //sb.AppendLine("//--------------------------------------------------------------------------");
-        //sb.AppendLine("short StackboxItemsMax[] = {");
-        //foreach (var item in Stackables)
-        //    sb.AppendLine($"\t[{(int)item.Type}] {item.Max},");
-        //sb.AppendLine("};");
-        //sb.AppendLine();
-		
-        // mysterybox items
-        //sb.AppendLine("//--------------------------------------------------------------------------");
-        //sb.AppendLine("struct MysteryBoxItemWeight MysteryBoxItemProbabilities[] = {");
-        //sb.AppendLine(GetMysteryBoxDefs(MysteryboxItems.Select(x => (x.Item, x.Probability))));
-        //sb.AppendLine("};");
-        //sb.AppendLine("const int MysteryBoxItemProbabilitiesCount = COUNT_OF(MysteryBoxItemProbabilities);");
-        //sb.AppendLine();
 
         // item defs
         sb.AppendLine("//--------------------------------------------------------------------------");
@@ -565,8 +531,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("\tMapConfig.DefaultSpawnParamsCount = COUNT_OF(defaultSpawnParams);");
         sb.AppendLine("\tMapConfig.SpecialRoundParams = specialRoundParams;");
         sb.AppendLine("\tMapConfig.SpecialRoundParamsCount = COUNT_OF(specialRoundParams);");
-		//sb.AppendLine("\tMapConfig.UpgradeDefs = upgradeDefs;");
-        //sb.AppendLine("\tMapConfig.UpgradeDefCount = COUNT_OF(upgradeDefs);");
         sb.AppendLine("\tMapConfig.ItemDefs = itemDefs;");
         sb.AppendLine("\tMapConfig.ItemDefCount = COUNT_OF(itemDefs);");
         sb.AppendLine("}");
@@ -735,29 +699,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         }
 
         return sum;
-    }
-
-    string GetMysteryBoxDefs(IEnumerable<(SurvivalMysteryboxItemId Item, float Probability)> items)
-    {
-        var sb = new StringBuilder();
-        var sortedItems = items.Where(x => x.Probability > 0).OrderBy(x => x.Probability).ToList();
-
-        // convert target probability into actual probability for our algorithm
-        // sort each item by probability ascending
-        // real probability is target probability divided by the probability the previous items weren't successful
-        var totalProbability = 1f;
-        for (int i = 0; i < sortedItems.Count; ++i)
-        {
-            var item = sortedItems[i];
-            var probability = item.Probability / totalProbability;
-            if (i == (sortedItems.Count - 1)) probability = 1; // last item is guaranteed to match roll if all others fail
-
-            sb.AppendLine($"\t{{ {(int)item.Item}, {probability.ToInvariantCulture()} }},");
-
-            totalProbability *= (1 - item.Probability);
-        }
-
-        return sb.ToString().TrimEnd();
     }
 
     string GetMobDefs(SurvivalMobDef[] mobs, SpriteDef[] spriteDefs)
@@ -1505,24 +1446,6 @@ public enum SurvivalMobBangle
     BANGLE_4000 = 0x4000,
 }
 
-public enum SurvivalMysteryboxItemId
-{
-    WeaponMod = 0,
-    ActivatePower,
-    UpgradeWeapon,
-    DreadToken,
-    InvisibilityCloak,
-    ReviveTotem,
-    InfiniteAmmo,
-    ResetGate,
-    VoxTeddyBear,
-    Quad,
-    Shield,
-    HealthTornado,
-    RandomizeWeaponPickups,
-    Count
-};
-
 public enum SurvivalBakedSpawnpointType
 {
     None = 0,
@@ -2054,13 +1977,6 @@ public class SurvivalGambit
 }
 
 [Serializable]
-public class SurvivalMysteryboxItem
-{
-    public SurvivalMysteryboxItemId Item;
-    [Range(0f, 1f)] public float Probability;
-}
-
-[Serializable]
 public class SurvivalBakedSpawnPointItem
 {
     public SurvivalBakedSpawnpointType Type;
@@ -2098,180 +2014,4 @@ public class SurvivalBakedSpawnPointItem
 
         return sb.ToString();
     }
-}
-
-[Serializable]
-public class SurvivalMobSpawnParam
-{
-    public string Name;
-    public bool Disabled;
-    public SurvivalMob Mob;
-    public int Variant;
-    public int Behavior;
-    public SurvivalMobAttributes Attributes;
-    public EnumOverride<DLBlipTypes> BlipType;
-
-    [Header("Spawn Parameters")]
-    public bool SpecialRoundOnly = false;
-    public int MinRound = 0;
-    public int MaxSpawnedAtOnce = 0;
-    public int MaxSpawnedPerRound = 0;
-    [Range(0, 1f)] public float Probability = 1;
-    public SurvivalMobSpawnType SpawnType = SurvivalMobSpawnType.Random;
-    public int CooldownTicks = 60;
-    public float CooldownOffsetPerRoundFactor = 0;
-
-    [Header("Mob Parameters")]
-    [Min(0)] public float SizeMultiplier = 1;
-    [Min(0), Tooltip("Increase or decrease turn speed.")] public float TurnSpeedMultiplier = 1;
-    [Min(0), Tooltip("For ranged attacks, how far away from the target the mob can be to fire.")] public FloatOverride RangedAttackDistance;
-    public FloatOverride Xp;
-    public FloatOverride Bolts;
-
-    [Header("Damage")]
-    public FloatOverride Damage;
-    public FloatOverride DamageMax;
-    public FloatOverride DamageScale;
-
-    [Header("Speed")]
-    public FloatOverride Speed;
-    public FloatOverride SpeedMax;
-    public FloatOverride SpeedScale;
-
-    [Header("Health")]
-    public FloatOverride Health;
-    public FloatOverride HealthMax;
-    public FloatOverride HealthScale;
-
-    [Header("Colors")]
-    public ColorNoAlphaOverride BaseColor;
-    public ColorNoAlphaOverride GlowColor;
-    public ColorNoAlphaOverride SpriteColor;
-
-    public string GetDef(SpriteDef[] spriteDefs, float? probabilityOverride = null)
-    {
-        var sb = new StringBuilder();
-
-        var mobPrefix = this.Mob.ToString().ToLower();
-        var mobConfig = SurvivalMobsScriptableObject.Load();
-        var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new SurvivalMobsScriptableObject.SurvivalMobsConfig();
-        var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
-        var spriteIdx = Array.FindIndex(spriteDefs, x => x.m_Texture == variant.SpriteTexture);
-        var bossSpriteDef = Array.Find(spriteDefs, x => (variant.ExistingBossSpriteUid > 0 && x.m_Uid == variant.ExistingBossSpriteUid && !variant.BossTexture) || x.m_Texture == variant.BossTexture);
-
-        var name = Name?.Replace("\"", "") ?? string.Empty;
-        if (name.Length >= 32)
-            name = name.Substring(0, 31);
-
-        sb.AppendLine("\t{");
-        sb.AppendLine($"\t\t.MobVTable = &{this.Mob}VTable,");
-        sb.AppendLine($"\t\t.RenderCost = {mobPrefix.ToUpper()}_RENDER_COST,");
-        sb.AppendLine($"\t\t.Scale = {SizeMultiplier.ToInvariantCulture()},");
-        sb.AppendLine($"\t\t.OClass = {variant.OClass},");
-        sb.AppendLine($"\t\t.BlipType = {(BlipType.HasOverride ? (int)BlipType.OverrideValue : (int)defaults.BlipType)},");
-        sb.AppendLine($"\t\t.MaxSpawnedAtOnce = {MaxSpawnedAtOnce},");
-        sb.AppendLine($"\t\t.MaxSpawnedPerRound = {MaxSpawnedPerRound},");
-        sb.AppendLine($"\t\t.MinRound = {Math.Clamp(MinRound, 0, int.MaxValue)},");
-        sb.AppendLine($"\t\t.CooldownTicks = {(int)CooldownTicks},");
-        sb.AppendLine($"\t\t.CooldownOffsetPerRoundFactor = {CooldownOffsetPerRoundFactor.ToInvariantCulture()},");
-        sb.AppendLine($"\t\t.Probability = {(probabilityOverride ?? Probability).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t.RangedAttackDistance = {(RangedAttackDistance.HasOverride ? RangedAttackDistance.OverrideValue : defaults.RangedAttackDistance).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t.SpawnType = {(int)SpawnType},");
-        sb.AppendLine($"\t\t.SpecialRoundOnly = {(SpecialRoundOnly ? 1 : 0)},");
-        sb.AppendLine($"\t\t.StatId = {(int)defaults.StatId},");
-        sb.AppendLine($"\t\t.BaseColor = 0x{RCHelper.GetAbgrHex(BaseColor.HasOverride ? BaseColor.OverrideValue : defaults.BaseColor, overrideAlpha: 0):X8},");
-        sb.AppendLine($"\t\t.GlowColor = 0x{RCHelper.GetAbgrHex(GlowColor.HasOverride ? GlowColor.OverrideValue : defaults.GlowColor, overrideAlpha: 0.5f):X8},");
-        sb.AppendLine($"\t\t.SpriteColor = 0x{RCHelper.GetAbgrHex(SpriteColor.HasOverride ? SpriteColor.OverrideValue : defaults.SpriteColor, overrideAlpha: 0):X8},");
-        sb.AppendLine($"\t\t.SpriteTexId = {(spriteIdx < 0 ? 127 : spriteIdx)},");
-        sb.AppendLine($"\t\t.BossTexUid = {(bossSpriteDef != null ? bossSpriteDef.m_Uid : 30130)},");
-        sb.AppendLine($"\t\t.Name = \"{name}\",");
-        sb.AppendLine($"\t\t.Config = {{");
-        sb.AppendLine($"\t\t\t.Xp = {(ushort)Math.Clamp(Xp.HasOverride ? Xp.OverrideValue : defaults.Xp, 0, ushort.MaxValue)},");
-        sb.AppendLine($"\t\t\t.Bolts = {(int)(Bolts.HasOverride ? Bolts.OverrideValue : defaults.Bolts)},");
-        sb.AppendLine($"\t\t\t.Bangles = 0x{(int)variant.Bangles:X4},");
-        sb.AppendLine($"\t\t\t.Damage = {(Damage.HasOverride ? Damage.OverrideValue : defaults.Damage).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.MaxDamage = {(DamageMax.HasOverride ? DamageMax.OverrideValue : defaults.DamageMax).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.DamageScale = {(DamageScale.HasOverride ? DamageScale.OverrideValue : defaults.DamageScale).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.Speed = {(Speed.HasOverride ? Speed.OverrideValue : defaults.Speed).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.MaxSpeed = {(SpeedMax.HasOverride ? SpeedMax.OverrideValue : defaults.SpeedMax).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.SpeedScale = {(SpeedScale.HasOverride ? SpeedScale.OverrideValue : defaults.SpeedScale).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.Health = {(Health.HasOverride ? Health.OverrideValue : defaults.Health).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.MaxHealth = {(HealthMax.HasOverride ? HealthMax.OverrideValue : defaults.HealthMax).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.HealthScale = {(HealthScale.HasOverride ? HealthScale.OverrideValue : defaults.HealthScale).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius + (SizeMultiplier * defaults.CollRadius)).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.HitRadius = {(defaults.HitRadius * SizeMultiplier).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.CollRadius = {(defaults.CollRadius * SizeMultiplier).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
-        sb.AppendLine($"\t\t\t.AttackCooldownTickCount = {(int)(defaults.AttackCooldownSeconds * 60)},");
-        sb.AppendLine($"\t\t\t.DamageCooldownTickCount = {(int)(defaults.DamageCooldownSeconds * 60)},");
-        sb.AppendLine($"\t\t\t.MobAttribute = {(int)Attributes},");
-        sb.AppendLine($"\t\t\t.Behavior = {Behavior},");
-        sb.AppendLine($"\t\t\t.SharedXp = {1},");
-        sb.AppendLine($"\t\t}}");
-        sb.AppendLine("\t},");
-
-        return sb.ToString();
-    }
-
-}
-
-[Serializable]
-public class SurvivalMobSpecialRoundParam
-{
-    public string Name;
-    public bool Disabled;
-    public int MinRound = 25;
-    public int RepeatEveryNRounds = 25;
-    public int RepeatCount = 0;
-    public float SpawnCountFactor = 1;
-    public float SpawnRateFactor = 1;
-    [Range(0, SurvivalModeData.SURVIVAL_MAX_SPAWNED_MOBS)] public int MaxSpawnedAtOnce = SurvivalModeData.SURVIVAL_MAX_SPAWNED_MOBS;
-    public bool UnlimitedPostRoundTime = false;
-    public bool DisableDrops = false;
-
-    public List<string> MobNamesToSpawn = new List<string>();
-
-    public string GetDef(SurvivalModeData survivalData)
-    {
-        var sb = new StringBuilder();
-        var enabledMobs = survivalData.GetEnabledMobs();
-
-        var maxSpawnedAtOnce = MaxSpawnedAtOnce <= 0 ? SurvivalModeData.SURVIVAL_MAX_SPAWNED_MOBS : Math.Clamp(MaxSpawnedAtOnce, 1, SurvivalModeData.SURVIVAL_MAX_SPAWNED_MOBS);
-        var name = Name?.Replace("\"", "") ?? string.Empty;
-        if (name.Length >= 32)
-            name = name.Substring(0, 31);
-
-        var spawnParamIdxs = new List<int>();
-        foreach (var item in MobNamesToSpawn)
-        {
-            var spawnParam = enabledMobs.FirstOrDefault(x => x.Name == item);
-            if (spawnParam == null)
-            {
-                Debug.LogWarning($"SpecialRound unable to find mob with name {item}");
-                continue;
-            }
-
-            spawnParamIdxs.Add(Array.IndexOf(enabledMobs, spawnParam));
-        }
-
-        sb.AppendLine("\t{");
-        sb.AppendLine($"\t\t.Name = \"{name}\",");
-        sb.AppendLine($"\t\t.MinRound = {MinRound},");
-        sb.AppendLine($"\t\t.RepeatEveryNRounds = {RepeatEveryNRounds},");
-        sb.AppendLine($"\t\t.RepeatCount = {RepeatCount},");
-        sb.AppendLine($"\t\t.UnlimitedPostRoundTime = {(UnlimitedPostRoundTime ? 1 : 0)},");
-        sb.AppendLine($"\t\t.DisableDrops = {(DisableDrops ? 1 : 0)},");
-        sb.AppendLine($"\t\t.MaxSpawnedAtOnce = {maxSpawnedAtOnce},");
-        sb.AppendLine($"\t\t.SpawnCountFactor = {SpawnCountFactor.ToInvariantCulture()},");
-        sb.AppendLine($"\t\t.SpawnRateFactor = {SpawnRateFactor.ToInvariantCulture()},");
-        sb.AppendLine($"\t\t.SpawnParamCount = {Math.Min(4, spawnParamIdxs.Count)},");
-        sb.AppendLine("\t\t.SpawnParamIds = {");
-        for (int i = 0; i < 4; ++i)
-            sb.AppendLine($"\t\t\t{(i < spawnParamIdxs.Count ? spawnParamIdxs[i] : -1)},");
-        sb.AppendLine("\t\t}");
-        sb.AppendLine("\t},");
-
-        return sb.ToString();
-    }
-
 }

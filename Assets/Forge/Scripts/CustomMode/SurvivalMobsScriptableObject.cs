@@ -28,10 +28,12 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public class SurvivalMobsConfig
     {
         [ReadOnly] public SurvivalMob Mob;
+		[Multiline]
+		public string Description;
         public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
         public SurvivalMobStatIds StatId = SurvivalMobStatIds.None;
         public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
-        public List<string> Behaviors = new List<string>();
+        public List<SurvivalMobBehavior> Behaviors = new List<SurvivalMobBehavior>();
 
         [ColorUsage(false)] public Color BaseColor = new Color(0.25f, 0.25f, 0.25f);
         [ColorUsage(false)] public Color GlowColor = new Color(0.5f, 0.5f, 0.5f);
@@ -67,6 +69,8 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public class SurvivalMobVariant
     {
         public string Name;
+		[Multiline]
+		public string Description;
         public int OClass;
         public SurvivalMobBangle Bangles;
         public Texture2D SpriteTexture;
@@ -88,6 +92,15 @@ public class SurvivalMobsScriptableObject : ScriptableObject
                 SourceMissionId = sourceMissionId
             });
         }
+    }
+
+    [Serializable]
+    public class SurvivalMobBehavior
+    {
+        public string Name;
+
+		[Multiline]
+        public string Description;
     }
 
     [Serializable]

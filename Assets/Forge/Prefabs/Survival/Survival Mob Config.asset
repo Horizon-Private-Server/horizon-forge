@@ -14,10 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Mobs:
   - Mob: 0
+    Description: 
     BlipType: 4
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8438
       Bangles: 33
       SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
@@ -30,6 +32,7 @@ MonoBehaviour:
         SourceMapId: 2
         SourceMissionId: -1
     - Name: Goggle Eyes
+      Description: 
       OClass: 8438
       Bangles: 66
       SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
@@ -42,6 +45,7 @@ MonoBehaviour:
         SourceMapId: 2
         SourceMissionId: -1
     - Name: V Chest+Head
+      Description: 
       OClass: 8438
       Bangles: 132
       SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
@@ -54,6 +58,7 @@ MonoBehaviour:
         SourceMapId: 2
         SourceMissionId: -1
     - Name: Striped Head
+      Description: 
       OClass: 8438
       Bangles: 264
       SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
@@ -66,6 +71,7 @@ MonoBehaviour:
         SourceMapId: 2
         SourceMissionId: -1
     - Name: Spike Head
+      Description: 
       OClass: 8438
       Bangles: 48
       SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
@@ -78,9 +84,13 @@ MonoBehaviour:
         SourceMapId: 2
         SourceMissionId: -1
     Behaviors:
-    - Melee
-    - Ranged
-    - Mixed
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged Only
+      Description: Gets in range of target and throws its head.
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will throw head if in range and
+        can throw its head.
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -104,10 +114,12 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0
   - Mob: 1
+    Description: 
     BlipType: 4
     StatId: 0
     Variants:
     - Name: Blue
+      Description: 
       OClass: 9877
       Bangles: 0
       SpriteTexture: {fileID: 2800000, guid: bf3381224ced89e4da7f500d0f2aa460, type: 3}
@@ -120,6 +132,7 @@ MonoBehaviour:
         SourceMapId: 6
         SourceMissionId: 1
     - Name: Orange
+      Description: 
       OClass: 8273
       Bangles: 0
       SpriteTexture: {fileID: 2800000, guid: 641ae97836734af428e8f22572539433, type: 3}
@@ -132,6 +145,7 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 14
     - Name: Desert
+      Description: 
       OClass: 9952
       Bangles: 0
       SpriteTexture: {fileID: 2800000, guid: a3b7c1ae46dcfa34c9cf02b5394a460b, type: 3}
@@ -144,7 +158,8 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 14
     Behaviors:
-    - Normal
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -168,10 +183,12 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0
   - Mob: 2
+    Description: 
     BlipType: 4
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 9215
       Bangles: 0
       SpriteTexture: {fileID: 0}
@@ -184,6 +201,7 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     - Name: Armored
+      Description: 
       OClass: 9215
       Bangles: 2
       SpriteTexture: {fileID: 0}
@@ -196,7 +214,8 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     Behaviors:
-    - Normal
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -220,10 +239,13 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0
   - Mob: 4
+    Description: Setting Attributes to Boss overrides behavior to transition between
+      an evasive ranged and aggressive melee depending on % health remaining.
     BlipType: 3
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8388
       Bangles: 7199
       SpriteTexture: {fileID: 2800000, guid: 7e0a5c193766ae143a0cc5ac7df3b35a, type: 3}
@@ -236,6 +258,7 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     - Name: King
+      Description: Armored leviathan.
       OClass: 8388
       Bangles: 8191
       SpriteTexture: {fileID: 2800000, guid: e80cc84031f88e3408c3a998561f6834, type: 3}
@@ -248,9 +271,14 @@ MonoBehaviour:
         SourceMapId: 4
         SourceMissionId: -1
     Behaviors:
-    - Mixed
-    - Melee Only
-    - Ranged Only
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will fire laser if in range and
+        cooldown conditions are met.
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged Only
+      Description: Stays at a distance from target, strafe around them, and firing
+        it's laser at them.
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -274,10 +302,12 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0
   - Mob: 6
+    Description: 
     BlipType: 3
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8353
       Bangles: 63
       SpriteTexture: {fileID: 2800000, guid: 4aa807d23356093428a7e7ef9a22292e, type: 3}
@@ -290,9 +320,13 @@ MonoBehaviour:
         SourceMapId: 6
         SourceMissionId: -1
     Behaviors:
-    - Mixed
-    - Melee
-    - Ranged
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will fire projectile if in range
+        and cooldown conditions are met.
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged Only
+      Description: Gets in range of target and fires AoE projectile.
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -316,10 +350,12 @@ MonoBehaviour:
     AttackCooldownSeconds: 7.5
     DamageCooldownSeconds: 0.1
   - Mob: 7
+    Description: 
     BlipType: 3
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 9584
       Bangles: 3
       SpriteTexture: {fileID: 2800000, guid: d4d69a07d08f02d43901aa01320a31b2, type: 3}
@@ -332,7 +368,13 @@ MonoBehaviour:
         SourceMapId: 13
         SourceMissionId: 0
     Behaviors:
-    - Normal
+    - Name: Melee Only
+      Description: 'Chases after target to deal melee damage up close.
+
+
+        Moves
+        slowly unless hit by target, then enters aggro state where it runs quickly
+        at the target and deals extra damage.'
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -356,10 +398,12 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0
   - Mob: 8
+    Description: 
     BlipType: 4
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 9427
       Bangles: 21
       SpriteTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
@@ -372,6 +416,7 @@ MonoBehaviour:
         SourceMapId: 5
         SourceMissionId: -1
     - Name: Armored
+      Description: 
       OClass: 9427
       Bangles: 63
       SpriteTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
@@ -384,9 +429,13 @@ MonoBehaviour:
         SourceMapId: 5
         SourceMissionId: -1
     Behaviors:
-    - Melee
-    - Ranged
-    - Mixed
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged
+      Description: Gets in range of target and fires quake trail at target.
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will fire quake trail if in range
+        and cooldown conditions met.
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -410,10 +459,13 @@ MonoBehaviour:
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0
   - Mob: 9
+    Description: Setting Attributes to Boss increases StartHealth by 300 per player
+      in lobby.
     BlipType: 6
     StatId: 0
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8382
       Bangles: 1
       SpriteTexture: {fileID: 2800000, guid: 901b81b8dca48b24399fd08a5d4303b1, type: 3}
@@ -426,7 +478,24 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: 16
     Behaviors:
-    - Normal
+    - Name: Default
+      Description: 'Boss behavior is determined by health remaining. Each amount
+        of health removed unlocks a new phase. Each phase adds a new attack to the
+        set of available attacks.
+
+
+
+        Phase 1 (> 80% health): Chase down target
+        and deal melee damage.
+
+        Phase 2 (> 60% health): Charge at target
+        dealing massive damage on impact.
+
+        Phase 3 (> 40% health): Fire "trailshot"
+        at target.
+
+        Phase 4 (< 40% health): Smash ground spawning minions
+        (if configured) and dealing AoE damage.'
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
