@@ -91,6 +91,56 @@ MonoBehaviour:
     - Name: Melee + Ranged
       Description: Chases target down for melee but will throw head if in range and
         can throw its head.
+    - Name: Kamikaze
+      Description: Chases after target and enters timebomb state when in range. After
+        a period of time will explode dealing massive AoE damage.
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Attack Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Throw Head
+      Description: 
+      MinCooldownSeconds: 3
+      MaxCooldownSeconds: 40
+      Probability: 1
+      QueuedForTicks: 10
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 2
+      - Name: Projectile Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Time Bomb Explode
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Duration Multiplier
+        Description: Increase or decrease timebomb "ticker" state duration. Lower
+          values means the player has less notice of the pending explosion.
+        ValueType: 0
+        DefaultValue: 1
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -160,6 +210,30 @@ MonoBehaviour:
     Behaviors:
     - Name: Melee Only
       Description: Chases after target to deal melee damage up close.
+    Actions:
+    - Name: Bite
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Lunge Amount
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Attack Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Dodge Probability Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -216,6 +290,7 @@ MonoBehaviour:
     Behaviors:
     - Name: Melee Only
       Description: Chases after target to deal melee damage up close.
+    Actions: []
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -279,6 +354,7 @@ MonoBehaviour:
     - Name: Ranged Only
       Description: Stays at a distance from target, strafe around them, and firing
         it's laser at them.
+    Actions: []
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -327,6 +403,7 @@ MonoBehaviour:
       Description: Chases after target to deal melee damage up close.
     - Name: Ranged Only
       Description: Gets in range of target and fires AoE projectile.
+    Actions: []
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -375,6 +452,7 @@ MonoBehaviour:
         Moves
         slowly unless hit by target, then enters aggro state where it runs quickly
         at the target and deals extra damage.'
+    Actions: []
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -436,6 +514,7 @@ MonoBehaviour:
     - Name: Melee + Ranged
       Description: Chases target down for melee but will fire quake trail if in range
         and cooldown conditions met.
+    Actions: []
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -496,6 +575,7 @@ MonoBehaviour:
 
         Phase 4 (< 40% health): Smash ground spawning minions
         (if configured) and dealing AoE damage.'
+    Actions: []
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}

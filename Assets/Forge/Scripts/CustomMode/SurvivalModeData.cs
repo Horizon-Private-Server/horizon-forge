@@ -21,6 +21,8 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     public const int MAX_STORES = 8;
     public const int MAX_MOBS = 16;
     public const int MAX_GAMBITS = 16;
+    public const int MAX_ACTIONS_PER_MOB = 8;
+    public const int MAX_PARAMS_PER_ACTION = 8;
 
     static readonly uint[] DEFAULT_PRESTIGE_COSTS = { 100000, 200000, 400000, 700000, 1000000 };
     static readonly uint[] DEFAULT_VENDOR_COSTS = { 8000, 12000, 20000, 40000, 60000, 90000, 150000, 220000, 350000 };
@@ -441,6 +443,14 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("extern struct SurvivalMapConfig MapConfig;");
         sb.AppendLine();
 
+		// mob action config
+        sb.AppendLine("//--------------------------------------------------------------------------");
+        sb.AppendLine($"struct MobActionConfig mobActionConfigs[][{MAX_ACTIONS_PER_MOB}] = {{");
+        sb.AppendLine(GetMobActionDefs(enabledMobs));
+        sb.AppendLine("};");
+        sb.AppendLine("const int mobActionConfigsCount = COUNT_OF(mobActionConfigs);");
+        sb.AppendLine();
+
         // mob config
         sb.AppendLine("//--------------------------------------------------------------------------");
         sb.AppendLine("struct MobSpawnParams defaultSpawnParams[] = {");
@@ -700,6 +710,23 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         return sum;
     }
+
+	string GetMobActionDefs(SurvivalMobDef[] mobs)
+	{
+        var sb = new StringBuilder();
+
+        for (int i = 0; i < mobs.Length; ++i)
+        {
+			sb.Append($"{{ /* {mobs[i].Name} */ ");
+			var def = mobs[i].GetActionDefs();
+			if (!string.IsNullOrEmpty(def))
+				sb.AppendLine();
+			sb.Append(def);
+			sb.AppendLine("},");
+        }
+
+        return sb.ToString().TrimEnd();
+	}
 
     string GetMobDefs(SurvivalMobDef[] mobs, SpriteDef[] spriteDefs)
     {

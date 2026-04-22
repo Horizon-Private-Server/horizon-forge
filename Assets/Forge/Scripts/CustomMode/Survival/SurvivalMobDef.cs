@@ -112,4 +112,50 @@ public class SurvivalMobDef : MonoBehaviour
 
         return sb.ToString();
     }
+	
+    public string GetActionDefs()
+    {
+        var sb = new StringBuilder();
+
+        var mobPrefix = this.Mob.ToString().ToLower();
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+        var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new SurvivalMobsScriptableObject.SurvivalMobsConfig();
+        var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
+        var name = gameObject.name.MaxLength(31).Escape();
+
+		for (int i = 0; i < defaults.Actions.Count; ++i)
+		{
+			var action = defaults.Actions[i];
+
+			sb.AppendLine($"\t{{ /* {action.Name} */ ");
+			sb.AppendLine($"\t\t.MinCooldownTicks = {(int)(60 * action.MinCooldownSeconds)},");
+			sb.AppendLine($"\t\t.MaxCooldownTicks = {(int)(60 * action.MaxCooldownSeconds)},");
+			sb.AppendLine($"\t\t.Probability = {action.Probability},");
+			sb.AppendLine($"\t\t.QueuedForTicks = {action.QueuedForTicks},");
+			sb.AppendLine($"\t\t.ParameterCount = {action.Parameters.Count},");
+			sb.AppendLine($"\t\t.Parameters = {{");
+			foreach (var param in action.Parameters)
+			{
+				switch (param.ValueType)
+				{
+					case SurvivalMobsScriptableObject.SurvivalMobActionParameter.InputType.Float:
+					case SurvivalMobsScriptableObject.SurvivalMobActionParameter.InputType.Probability:
+						sb.AppendLine($"\t\t\t{{ .FloatValue = {param.DefaultValue} /* {param.Name} */ }},");
+						break;
+					case SurvivalMobsScriptableObject.SurvivalMobActionParameter.InputType.Integer:
+						sb.AppendLine($"\t\t\t{{ .IntValue = {param.DefaultValue} /* {param.Name} */ }},");
+						break;
+					case SurvivalMobsScriptableObject.SurvivalMobActionParameter.InputType.Boolean:
+						var b = (bool.TryParse(param.DefaultValue, out var bValue) && bValue) || (int.TryParse(param.DefaultValue, out var iValue) && iValue != 0);
+						sb.AppendLine($"\t\t\t{{ .IntValue = {(b ? 1 : 0)} /* {param.Name} */ }},");
+						break;
+					default: throw new NotImplementedException();
+				}
+			}
+			sb.AppendLine($"\t\t}}");
+			sb.AppendLine("\t},");
+		}
+
+        return sb.ToString();
+    }
 }

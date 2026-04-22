@@ -34,6 +34,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
         public SurvivalMobStatIds StatId = SurvivalMobStatIds.None;
         public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
         public List<SurvivalMobBehavior> Behaviors = new List<SurvivalMobBehavior>();
+		public List<SurvivalMobAction> Actions = new List<SurvivalMobAction>();
 
         [ColorUsage(false)] public Color BaseColor = new Color(0.25f, 0.25f, 0.25f);
         [ColorUsage(false)] public Color GlowColor = new Color(0.5f, 0.5f, 0.5f);
@@ -101,6 +102,39 @@ public class SurvivalMobsScriptableObject : ScriptableObject
 
 		[Multiline]
         public string Description;
+    }
+
+    [Serializable]
+    public class SurvivalMobAction
+    {
+        public string Name;
+		[Multiline] public string Description;
+
+		[Header("Cooldown")]
+		[Min(0)] public float MinCooldownSeconds = 0;
+		[Min(0)] public float MaxCooldownSeconds = 1;
+		[Range(0f, 1f)] public float Probability = 1;
+		[Min(0)] public int QueuedForTicks = 0;
+
+		[Header("Parameters")]
+		public List<SurvivalMobActionParameter> Parameters = new List<SurvivalMobActionParameter>();
+    }
+
+    [Serializable]
+    public class SurvivalMobActionParameter
+    {
+		public enum InputType
+		{
+			Float,
+			Integer,
+			Boolean,
+			Probability
+		}
+
+        public string Name;
+		[Multiline] public string Description;
+		public InputType ValueType;
+		public string DefaultValue;
     }
 
     [Serializable]
