@@ -83,6 +83,8 @@ VECTOR MoveTargetLineOfSightHit;
 Moby *mobOtherTargets[MOB_MAX_OTHER_TARGETS];
 Moby *mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
 int mobMoveCheckCollideWithOtherMobsRotatingIndex = 0;
+extern struct MobActionConfig mobActionConfigs[][MOB_MAX_ACTIONS_PER_MOB];
+extern int mobActionConfigsCount;
 
 //--------------------------------------------------------------------------
 void mobRegisterTarget(Moby *moby)
@@ -128,6 +130,94 @@ int mobGetBehavior(Moby *moby)
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	return pvars->MobVars.Config.Behavior;
+}
+
+//--------------------------------------------------------------------------
+struct MobActionConfig *mobGetActionConfig(Moby *moby, int action)
+{
+	if (!moby || !moby->PVar || !MapConfig.State)
+		return NULL;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	return &mobActionConfigs[pvars->MobVars.SpawnParamsIdx][action];
+}
+
+//--------------------------------------------------------------------------
+int mobGetActionCooldownTicks(Moby *moby, int action)
+{
+	struct MobActionConfig *actionConfig = mobGetActionConfig(moby, action);
+	if (!actionConfig)
+		return 0;
+
+	return randRangeInt(actionConfig->MinCooldownTicks, actionConfig->MaxCooldownTicks);
+}
+
+//--------------------------------------------------------------------------
+void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, int *actionQueuedForTicks)
+{
+	int i;
+	for (i = 0; i < actionCount; ++i)
+	{
+		struct MobActionConfig *actionConfig = mobGetActionConfig(moby, i);
+
+		// increment and check if any queues have reached their end
+		if (actionQueuedForTicks[i] > 0)
+		{
+			if (++actionQueuedForTicks[i] > actionConfig->QueuedForTicks && actionConfig->QueuedForTicks > 0)
+			{
+				// reset
+				actionCooldowns[i] = mobGetActionCooldownTicks(moby, i);
+				actionQueuedForTicks[i] = 0;
+			}
+
+			// action is queued so no need to decrement cooldown
+			continue;
+		}
+
+		// decrement and check if cooldown is 0
+		if (decTimerU32(&actionCooldowns[i]) == 0)
+		{
+			// cooldown hit 0
+			// check if action is already queued
+			if (actionQueuedForTicks[i] == 0)
+			{
+				// action is not queued
+				// run probability check
+				float roll = randRange(0, 1);
+				int success = roll < actionConfig->Probability;
+				if (success)
+				{
+					// queue action
+					actionQueuedForTicks[i] = 1;
+				}
+				else
+				{
+					// reset action cooldown
+					actionCooldowns[i] = mobGetActionCooldownTicks(moby, i);
+				}
+			}
+		}
+	}
+}
+
+//--------------------------------------------------------------------------
+float mobGetActionFloat(Moby *moby, int action, int param)
+{
+	struct MobActionConfig *actionConfig = mobGetActionConfig(moby, action);
+	if (!actionConfig)
+		return 0;
+
+	return actionConfig->Parameters[param].FloatValue;
+}
+
+//--------------------------------------------------------------------------
+int mobGetActionInt(Moby *moby, int action, int param)
+{
+	struct MobActionConfig *actionConfig = mobGetActionConfig(moby, action);
+	if (!actionConfig)
+		return 0;
+
+	return actionConfig->Parameters[param].IntValue;
 }
 
 //--------------------------------------------------------------------------

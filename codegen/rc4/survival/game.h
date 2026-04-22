@@ -157,6 +157,8 @@ enum MobStatId
 struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobSpawnParams;
+union MobActionParameter;
+struct MobActionConfig;
 
 struct SurvivalPlayerState
 {
