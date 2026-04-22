@@ -79,7 +79,7 @@ int leviathanIsEvasive(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	if (!leviathanIsBoss(moby))
-		return 0;
+		return mobGetBehavior(moby) == LEVIATHAN_BEHAVIOR_RANGED;
 
 	float healthPerc = (pvars->MobVars.Health / pvars->MobVars.Config.Health);
 	if (healthPerc > 0.25 && healthPerc < 0.5)
