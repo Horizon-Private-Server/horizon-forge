@@ -22,10 +22,22 @@
 // AnimSeqT range defines for animation state checks
 #define ZOMBIE_ATTACK_HIT_FRAME_START         (11)
 #define ZOMBIE_ATTACK_HIT_FRAME_END           (12)
+#define ZOMBIE_ATTACK_THROW_SPAWN_FRAME_START (16)
 #define ZOMBIE_JUMP_ANIM_DURATION              (35)
 #define ZOMBIE_FLINCH_ANIM_DURATION            (20)
 #define ZOMBIE_CROUCH_ANIM_MIN_T_FOR_EXPLOSION (3)
 #define ZOMBIE_SLAP_ANIM_LUNGE_DURATION       (5)
+
+#define ZOMBIE_THROW_MOBY_OCLASS              (ZOMBIE_MOBY_OCLASS)
+#define ZOMBIE_THROW_DURATION_TICKS           (5 * TPS)
+#define ZOMBIE_THROW_HIT_RADIUS               (0.25)
+#define ZOMBIE_THROW_DAMAGE_MULT              (2.0)
+#define ZOMBIE_THROW_SPEED                    (30.0 * MATH_DT)
+#define ZOMBIE_THROW_GRAVITY                  (-10.0 * MATH_DT * MATH_DT)
+#define ZOMBIE_THROW_TURN_RADIANS_PER_SEC     ((90.0 / 6.0) * MATH_DEG2RAD)
+#define ZOMBIE_THROW_FIRE_AT_MAX_TURN_ANGLE   (30 * MATH_DEG2RAD)
+#define ZOMBIE_THROW_COOLDOWN_TICKS_MIN       (3 * TPS)
+#define ZOMBIE_THROW_COOLDOWN_TICKS_MAX       (40 * TPS)
 
 #define ZOMBIE_ANIM_ATTACK_TICKS							(30)
 #define ZOMBIE_TIMEBOMB_TICKS									(60 * 2)
@@ -115,7 +127,8 @@ enum ZombieAction
   ZOMBIE_ACTION_DIE,
 	ZOMBIE_ACTION_ATTACK,
 	ZOMBIE_ACTION_TIME_BOMB,
-  ZOMBIE_ACTION_TIME_BOMB_EXPLODE
+  ZOMBIE_ACTION_TIME_BOMB_EXPLODE,
+	ZOMBIE_ACTION_ATTACK_THROW,
 };
 
 enum ZombieSubskeletonJoints
@@ -134,6 +147,27 @@ enum ZombieSubskeletonJoints
   ZOMBIE_SUBSKELETON_JOINT_LEFT_CHEST = 11,
   ZOMBIE_SUBSKELETON_JOINT_RIGHT_CHEST = 12,
 };
+
+enum ZombieBehaviors
+{
+	ZOMBIE_BEHAVIOR_MELEE = 0,
+	ZOMBIE_BEHAVIOR_RANGED = 1,
+	ZOMBIE_BEHAVIOR_NORMAL = 2,
+};
+
+typedef struct ZombieMobVars
+{
+  Moby* ThrownMoby;
+	u32 AttackThrowCooldownTicks;
+} ZombieMobVars_t;
+
+typedef struct ZombieThrownMobyVars
+{
+  VECTOR HeadPos;
+  VECTOR Velocity;
+  int LifeTicks;
+  Moby* ThrownBy;
+} ZombieThrownMobyVars_t;
 
 struct MobConfig;
 

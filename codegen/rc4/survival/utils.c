@@ -134,7 +134,7 @@ int tryPlayerInteract(Moby *moby, Player *player, char *message, char *lowerMess
 //--------------------------------------------------------------------------
 int mobyIsMob(Moby *moby)
 {
-	if (!moby)
+	if (!moby || !moby->Guber)
 		return 0;
 
 	int i;

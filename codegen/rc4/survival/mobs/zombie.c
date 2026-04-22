@@ -37,6 +37,7 @@ int zombieShouldForceStateUpdateOnAction(Moby *moby, int action);
 int zombieIsSpawning(struct MobPVar *pvars);
 int zombieCanAttack(struct MobPVar *pvars);
 int zombieIsFlinching(Moby *moby);
+void zombieSpawnThrowMoby(Moby* moby, float speed, int jointIdx);
 
 struct MobVTable ZombieVTable = {
 		.PreUpdate = &zombiePreUpdate,
@@ -62,9 +63,57 @@ struct MobVTable ZombieVTable = {
 };
 
 //--------------------------------------------------------------------------
+int zombieGetThrowCooldownTicks(Moby *moby)
+{
+  // if ranged, trigger throw more frequently
+  if (mobGetBehavior(moby) == ZOMBIE_BEHAVIOR_RANGED)
+    return randRangeInt(ZOMBIE_THROW_COOLDOWN_TICKS_MIN, ZOMBIE_THROW_COOLDOWN_TICKS_MIN * 2);
+
+	return randRangeInt(ZOMBIE_THROW_COOLDOWN_TICKS_MIN, ZOMBIE_THROW_COOLDOWN_TICKS_MAX);
+}
+
+//--------------------------------------------------------------------------
+Moby* zombieGetThrownMoby(Moby* moby)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
+  Moby* thrownMoby = zombieVars->ThrownMoby;
+
+  if (!thrownMoby)
+    return NULL;
+
+  if (mobyIsDestroyed(thrownMoby))
+    return NULL;
+
+  if (thrownMoby->State == 1)
+    return NULL;
+
+  if (thrownMoby->OClass != ZOMBIE_THROW_MOBY_OCLASS)
+    return NULL;
+
+  ZombieThrownMobyVars_t* thrownMobyVars = (ZombieThrownMobyVars_t*)thrownMoby->PVar;
+  if (!thrownMobyVars)
+    return NULL;
+
+  if (thrownMobyVars->ThrownBy != moby)
+    return NULL;
+
+  return thrownMoby;
+}
+
+//--------------------------------------------------------------------------
 void zombiePreUpdate(Moby *moby)
 {
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
+
 	mobDefaultPreUpdate(moby);
+  
+	if (!mobIsFrozen(moby))
+		decTimerU32(&zombieVars->AttackThrowCooldownTicks);
 }
 
 //--------------------------------------------------------------------------
@@ -90,6 +139,10 @@ void zombiePostUpdate(Moby *moby)
 	{
 		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / ZOMBIE_FLINCH_ANIM_DURATION, 2));
 	}
+  else if (moby->AnimSeqId == ZOMBIE_ANIM_THROW_HEAD)
+  {
+    animSpeed *= 0.5;
+  }
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == ZOMBIE_ACTION_WALK))
 	{
@@ -131,7 +184,7 @@ void zombieMove(Moby *moby)
 //--------------------------------------------------------------------------
 int zombieGetExtraDataSize(int spawnParamsIdx)
 {
-	return 0;
+	return sizeof(ZombieMobVars_t);
 }
 
 //--------------------------------------------------------------------------
@@ -143,6 +196,8 @@ void zombieOnSpawning(int spawnParamsIdx, VECTOR position, float *yaw, int *spaw
 void zombieOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs *e)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
+	memset(pvars->AdditionalMobVarsPtr, 0, sizeof(ZombieMobVars_t));
 	float scale = mobGetScaleMultiplier(moby);
 
 	// set scale
@@ -162,6 +217,9 @@ void zombieOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 
 	// default move step
 	pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
+
+  // prevent spawning and throwing immediately
+  zombieVars->AttackThrowCooldownTicks = zombieGetThrowCooldownTicks(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -251,6 +309,9 @@ Moby *zombieGetNextTarget(Moby *moby)
 int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
+	int canRanged = mobGetBehavior(moby) != ZOMBIE_BEHAVIOR_MELEE;
+  int preferRanged = mobGetBehavior(moby) == ZOMBIE_BEHAVIOR_RANGED;
 
 	// no preferred action
 	if (zombieIsAttacking(moby))
@@ -289,8 +350,13 @@ int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 	{
 		float dist = mobGetDistanceToTarget(moby, target);
 		float attackRadius = pvars->MobVars.Config.AttackRadius;
-
-		if (dist <= attackRadius)
+	  float rangedAttackRadius = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
+	  int isThrowAction = pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK_THROW;
+    
+    // ranged should stop before getting too close to target
+    int deferredAction = (preferRanged && (dist <= rangedAttackRadius * 0.9)) ? ZOMBIE_ACTION_LOOK_AT_TARGET : ZOMBIE_ACTION_WALK;
+		
+    if (dist <= attackRadius)
 		{
 			if (zombieCanAttack(pvars))
 			{
@@ -298,11 +364,25 @@ int zombieGetPreferredAction(Moby *moby, int *delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
 				return pvars->MobVars.Config.MobAttribute != MOB_ATTRIBUTE_EXPLODE ? ZOMBIE_ACTION_ATTACK : ZOMBIE_ACTION_TIME_BOMB;
 			}
-			return ZOMBIE_ACTION_WALK;
+			return deferredAction;
 		}
+    else if (!isThrowAction && canRanged && pvars->MobVars.MoveVars.Grounded && dist <= rangedAttackRadius && zombieVars->AttackThrowCooldownTicks == 0)
+    {
+      VECTOR dt;
+	    vector_subtract(dt, target->Position, moby->Position);
+			float theta = acosf(vector_innerproduct(dt, moby->M0_03));
+      if (fabsf(theta) < ZOMBIE_THROW_FIRE_AT_MAX_TURN_ANGLE && mobCanSeeMoby(moby, target))
+      {
+        if (delayTicks)
+          *delayTicks = pvars->MobVars.Config.ReactionTickCount;
+        return ZOMBIE_ACTION_ATTACK_THROW;
+      }
+
+			return deferredAction;
+    }
 		else
 		{
-			return ZOMBIE_ACTION_WALK;
+			return deferredAction;
 		}
 	}
 
@@ -442,6 +522,7 @@ void zombieDoAction(Moby *moby)
 	}
 	case ZOMBIE_ACTION_LOOK_AT_TARGET:
 	{
+    mobTransAnim(moby, ZOMBIE_ANIM_IDLE, 0);
 		mobStand(moby);
 		if (target)
 			mobTurnTowards(moby, target->Position, turnSpeed);
@@ -557,9 +638,261 @@ void zombieDoAction(Moby *moby)
 		}
 		break;
 	}
+  case ZOMBIE_ACTION_ATTACK_THROW:
+  {
+		int nextAnimId = moby->AnimSeqId;
+
+		switch (moby->AnimSeqId)
+    {
+      case ZOMBIE_ANIM_THROW_HEAD:
+      {
+        // turn towards player
+        if (!pvars->MobVars.AnimationLooped && moby->AnimSeqT < ZOMBIE_ATTACK_THROW_SPAWN_FRAME_START)
+        {
+          // randomize thrown moby speed by 80-100%
+          float randomizedSpeed = randRange(0.8, 1.0) * ZOMBIE_THROW_SPEED;
+          mobTurnTowardsPredictiveWithSpeed(moby, target, ZOMBIE_THROW_TURN_RADIANS_PER_SEC, randomizedSpeed);
+        }
+
+        // spawn throw moby when hand is fully extended forward
+        if (!zombieGetThrownMoby(moby) && moby->AnimSeqT >= ZOMBIE_ATTACK_THROW_SPAWN_FRAME_START)
+        {
+          zombieSpawnThrowMoby(moby, ZOMBIE_THROW_SPEED, ZOMBIE_SUBSKELETON_JOINT_RIGHT_HAND);
+          nextAnimId = ZOMBIE_ANIM_IDLE;
+        }
+        break;
+      }
+    }
+    
+		// begin animation sequence
+		if (!pvars->MobVars.CurrentActionForTicks)
+			nextAnimId = ZOMBIE_ANIM_THROW_HEAD;
+
+    // not moving in this state
+		if (!isInAirFromFlinching)
+			mobStand(moby);
+
+		mobTransAnim(moby, nextAnimId, 0);
+    break;
+  }
 	}
 
 	pvars->MobVars.CurrentActionForTicks++;
+}
+
+//--------------------------------------------------------------------------
+void zombieThrowMobySpawnExplosion(Moby* moby)
+{
+  ZombieThrownMobyVars_t* pvars = (ZombieThrownMobyVars_t*)moby->PVar;
+  mobySpawnExplosion(vector_read(pvars->HeadPos)
+    , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0
+    , 0x404080, 0, NULL, NULL, 0, ZOMBIE_THROW_HIT_RADIUS, 0, 0, 0);
+}
+
+//--------------------------------------------------------------------------
+void zombieThrowMobyUpdate(Moby* moby)
+{
+  ZombieThrownMobyVars_t* pvars = (ZombieThrownMobyVars_t*)moby->PVar;
+  if (!pvars) return;
+  
+  // detect when parent dies
+  Moby* parentMoby = pvars->ThrownBy;
+  if (!parentMoby || mobyIsDestroyed(parentMoby)) {
+    mobyDestroy(moby);
+    return;
+  }
+
+  if (moby->State == 1) {
+    mobyDestroy(moby);
+    return;
+  }
+
+  // seed initial state
+  if ((moby->Triggers & 1) == 0) {
+    moby->Triggers |= 1;
+    pvars->LifeTicks = ZOMBIE_THROW_DURATION_TICKS;
+  }
+
+  // simulate
+  VECTOR startHeadPos, nextHeadPos;
+  vector_copy(startHeadPos, pvars->HeadPos);
+  vector_add(nextHeadPos, pvars->HeadPos, pvars->Velocity);
+  vector_copy(pvars->HeadPos, nextHeadPos);
+
+  // check for collision
+  // if hit anything, destroy
+  if (CollLine_Fix(startHeadPos, nextHeadPos, COLLISION_FLAG_IGNORE_DYNAMIC, pvars->ThrownBy, NULL)) {
+    vector_copy(pvars->HeadPos, CollLine_Fix_GetHitPosition());
+    zombieThrowMobySpawnExplosion(moby);
+    pvars->LifeTicks = 0;
+  }
+
+  // apply gravity to velocity
+  VECTOR gravity = {0,0,ZOMBIE_THROW_GRAVITY,0};
+  vector_add(pvars->Velocity, pvars->Velocity, gravity);
+
+  // spin
+  VECTOR angularVelocity;
+  vector_scale(angularVelocity, pvars->Velocity, 8.0f);
+  vector_add(moby->Rotation, moby->Rotation, angularVelocity);
+  vector_clampeuler(moby->Rotation, moby->Rotation);
+  mobyUpdateTransform(moby);
+
+  // update position
+  MATRIX headJointMtx;
+  VECTOR pos;
+  mobyGetJointMatrix(moby, ZOMBIE_SUBSKELETON_JOINT_HEAD, headJointMtx);
+  vector_subtract(pos, &headJointMtx[12], moby->Position);
+  vector_subtract(moby->Position, pvars->HeadPos, pos);
+
+  // damage
+  // destroy on hit
+  struct MobPVar* mobPvars = (struct MobPVar*)parentMoby->PVar;
+  u32 damageFlags = mobGetDamageFlags(parentMoby, MOB_DAMAGE_FLAG_BASE);
+  if (mobDoSweepDamage(pvars->ThrownBy, startHeadPos, pvars->HeadPos, 1, ZOMBIE_THROW_HIT_RADIUS, mobPvars->MobVars.Config.Damage * ZOMBIE_THROW_DAMAGE_MULT, damageFlags, 0, 0, 1)) {
+    zombieThrowMobySpawnExplosion(moby);
+    pvars->LifeTicks = 0;
+  }
+
+  // kill when life hits 0
+  --pvars->LifeTicks;
+  if (pvars->LifeTicks <= 0) {
+    mobySetState(moby, 1, -1);
+  }
+}
+
+//--------------------------------------------------------------------------
+void zombieGetThrowVelocity(Moby* moby, VECTOR from, VECTOR to, float speed, VECTOR out)
+{
+  // Calculate delta positions
+  float dx = to[0] - from[0];
+  float dy = to[1] - from[1];
+  float dz = to[2] - from[2];
+  
+  // Calculate horizontal distance in XY plane
+  float horizontal_dist_sq = dx*dx + dy*dy;
+  float horizontal_dist = sqrtf(horizontal_dist_sq);
+  
+  // Handle case where target is directly above/below
+  if (horizontal_dist < 0.001f) {
+    // Just throw upward towards target
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = speed;
+    return;
+  }
+  
+  // Get gravity value (negative)
+  float g = ZOMBIE_THROW_GRAVITY;
+  
+  // Solve projectile motion equations to find time of flight
+  // We solve: 0.25*g²*t⁴ - (g*dz + speed²)*t² + (horizontal_dist² + dz²) = 0
+  // This is a quadratic in u=t²
+  
+  float a = 0.25f * g * g;
+  float b = -(g * dz + speed * speed);
+  float c = horizontal_dist_sq + dz * dz;
+  
+  float discriminant = b*b - 4*a*c;
+  if (discriminant < 0) {
+    // Target unreachable with given speed, fall back to simple direction
+    vector_fromyaw(out, moby->Rotation[2]);
+    out[2] = 0.1f;
+    vector_normalize(out, out);
+    vector_scale(out, out, speed);
+    return;
+  }
+  
+  // For low arc (shorter flight time), use the smaller u value
+  float u = (-b - sqrtf(discriminant)) / (2*a);
+  
+  if (u <= 0) {
+    // Shouldn't happen if discriminant is valid, but fallback just in case
+    vector_fromyaw(out, moby->Rotation[2]);
+    out[2] = 0.1f;
+    vector_normalize(out, out);
+    vector_scale(out, out, speed);
+    return;
+  }
+  
+  float t = sqrtf(u);
+  
+  // Calculate velocity components
+  float horizontal_speed = horizontal_dist / t;
+  float vz = (dz - 0.5f * g * t * t) / t;
+  
+  // Normalize horizontal direction and scale by horizontal speed
+  float hx = (dx / horizontal_dist) * horizontal_speed;
+  float hy = (dy / horizontal_dist) * horizontal_speed;
+  
+  out[0] = hx;
+  out[1] = hy;
+  out[2] = vz;
+}
+
+//--------------------------------------------------------------------------
+void zombieSpawnThrowMoby(Moby* moby, float speed, int jointIdx)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
+
+  // get position to spawn moby from joint
+  MATRIX jointMtx;
+  VECTOR spawnAt, spawnVelocity;
+  mobyGetJointMatrix(moby, jointIdx, jointMtx);
+  vector_copy(spawnAt, &jointMtx[12]);
+
+  // get target position
+  VECTOR targetCenter;
+  mobGetTargetCenter(pvars->MobVars.Target, targetCenter);
+  zombieGetThrowVelocity(moby, spawnAt, targetCenter, speed, spawnVelocity);
+
+  // align velocity to mob forward direction
+  VECTOR spawnVelocityHorizontal;
+  vector_projectonhorizontal(spawnVelocityHorizontal, spawnVelocity);
+  float spawnVelocityHorizontalMagnitude = vector_length(spawnVelocityHorizontal);
+  vector_fromyaw(spawnVelocityHorizontal, moby->Rotation[2]);
+  vector_scale(spawnVelocityHorizontal, spawnVelocityHorizontal, spawnVelocityHorizontalMagnitude);
+  spawnVelocity[0] = spawnVelocityHorizontal[0];
+  spawnVelocity[1] = spawnVelocityHorizontal[1];
+
+  // force velocity to target based on mob yaw
+  // VECTOR spawnAtToTarget;
+  // MATRIX rotateTargetAlignYawMtx;
+  // vector_subtract(spawnAtToTarget, targetCenter, spawnAt);
+  // float distToTarget = vector_length(spawnAtToTarget);
+  // float distToTargetTheta = atan2f(spawnAtToTarget[1] / distToTarget, spawnAtToTarget[0] / distToTarget);
+  // matrix_unit(rotateTargetAlignYawMtx);
+  // matrix_rotate_z(rotateTargetAlignYawMtx, rotateTargetAlignYawMtx, clampAngle(moby->Rotation[2] - distToTargetTheta));
+  // VECTOR spawnAtToTargetAligned;
+  // vector_apply(spawnAtToTargetAligned, spawnAtToTarget, rotateTargetAlignYawMtx);
+  // vector_add(targetCenter, spawnAtToTargetAligned, spawnAt);
+
+  // find ground
+  VECTOR groundCheckFrom = {0,0,2,0};
+  VECTOR groundCheckTo = {0,0,0,0};
+  vector_add(groundCheckFrom, groundCheckFrom, spawnAt);
+  vector_add(groundCheckTo, groundCheckTo, spawnAt);
+  if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
+    vector_add(spawnAt, CollLine_Fix_GetHitPosition(), (VECTOR){0,0,0.1,0});
+
+  // spawn throw moby
+  // use custom update function to drive mob damage
+  Moby* spawnedThrownMoby = zombieVars->ThrownMoby = mobySpawn(ZOMBIE_THROW_MOBY_OCLASS, sizeof(ZombieThrownMobyVars_t));
+  if (!spawnedThrownMoby)
+    return;
+
+  ZombieThrownMobyVars_t* thrownMobyVars = (ZombieThrownMobyVars_t*)spawnedThrownMoby->PVar;
+  spawnedThrownMoby->PUpdate = &zombieThrowMobyUpdate;
+  spawnedThrownMoby->Bangles = 0x8000 | (moby->Bangles & 0x1f); // head only
+  spawnedThrownMoby->CollActive = -1; // disable collision
+  spawnedThrownMoby->AnimSpeed = 0;
+  spawnedThrownMoby->UpdateDist = -1;
+  spawnedThrownMoby->DrawDist = 64;
+  spawnedThrownMoby->ModeBits = MOBY_MODE_BIT_HAS_GLOW;
+  thrownMobyVars->ThrownBy = moby;
+  vector_copy(thrownMobyVars->HeadPos, spawnAt);
+  vector_copy(thrownMobyVars->Velocity, spawnVelocity);
 }
 
 //--------------------------------------------------------------------------
@@ -572,6 +905,7 @@ void zombieDoDamage(Moby *moby, float radius, float amount, int damageFlags, int
 void zombieForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
 	float difficulty = 1;
 
 	if (MapConfig.State)
@@ -591,6 +925,12 @@ void zombieForceLocalAction(Moby *moby, int action)
 		// can't undie
 		return;
 	}
+  case ZOMBIE_ACTION_ATTACK_THROW:
+  {
+    // reset ptr to thrown moby
+    zombieVars->ThrownMoby = NULL;
+    break;
+  }
 	}
 
 	// to
@@ -613,7 +953,9 @@ void zombieForceLocalAction(Moby *moby, int action)
 		break;
 	}
 	case ZOMBIE_ACTION_ATTACK:
+	case ZOMBIE_ACTION_ATTACK_THROW:
 	{
+		zombieVars->AttackThrowCooldownTicks = zombieGetThrowCooldownTicks(moby);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		break;
 	}
@@ -675,7 +1017,10 @@ short zombieGetArmor(Moby *moby)
 int zombieIsAttacking(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	return pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB || pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB_EXPLODE || (pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK && !pvars->MobVars.AnimationLooped);
+	return pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB
+      || pvars->MobVars.Action == ZOMBIE_ACTION_TIME_BOMB_EXPLODE
+      || (pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK && !pvars->MobVars.AnimationLooped)
+      || (pvars->MobVars.Action == ZOMBIE_ACTION_ATTACK_THROW && !pvars->MobVars.AnimationLooped);
 }
 
 //--------------------------------------------------------------------------

@@ -630,7 +630,7 @@ void tremorQuakeMobyUpdate(Moby* moby)
 	  u32 damageFlags = mobGetDamageFlags(parentMoby, MOB_DAMAGE_FLAG_BASE);
     mobDoSweepDamage(parentMoby, moby->Position, moby->Position, 1, TREMOR_QUAKE_HIT_RADIUS, mobPvars->MobVars.Config.Damage, damageFlags, 0, 0, 1);
 
-    // kill when life hit 0a
+    // kill when life hits 0
     pvars->LifeTicks--;
     if (pvars->LifeTicks <= 0)
       mobySetState(moby, 1, -1);
