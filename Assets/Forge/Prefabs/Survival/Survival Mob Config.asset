@@ -384,7 +384,52 @@ MonoBehaviour:
     - Name: Ranged Only
       Description: Stays at a distance from target, strafe around them, and firing
         it's laser at them.
-    Actions: []
+    Actions:
+    - Name: Swing Tail
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Attack Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Stab Ground
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1.5
+      - Name: Attack Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Laser Sweep
+      Description: 
+      MinCooldownSeconds: 2
+      MaxCooldownSeconds: 20
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Duration Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}

@@ -25,7 +25,7 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e);
 int leviathanOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
 void leviathanOnFullStateUpdate(Moby *moby, struct MobFullStateUpdateEventArgs *e);
 Moby *leviathanGetNextTarget(Moby *moby);
-enum LeviathanStates leviathanGetPreferredAttack(Moby *moby);
+int leviathanGetPreferredAttack(Moby *moby);
 int leviathanGetPreferredState(Moby *moby, int *delayTicks);
 void leviathanDoState(Moby *moby);
 void leviathanDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
@@ -111,15 +111,24 @@ float leviathanGetScale(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-int leviathanGetLaserCooldownTicks(Moby *moby)
+void leviathanResetActionCooldownTicks(Moby *moby, enum LeviathanActions action)
 {
-	int ticks = randRangeInt(LEVIATHAN_LASER_COOLDOWN_TICKS_MIN, LEVIATHAN_LASER_COOLDOWN_TICKS_MAX);
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	LeviathanMobVars_t *leviathanVars = (LeviathanMobVars_t *)pvars->AdditionalMobVarsPtr;
+	leviathanVars->ActionCooldownTicks[action] = mobGetActionCooldownTicks(moby, action);
+	leviathanVars->ActionQueuedForTicks[action] = 0;
 
-	// evasive so laser more often
-	if (leviathanIsEvasive(moby))
-		ticks /= 8;
+	// boss is in evasive state so laser more often
+	if (action == LEVIATHAN_ACTION_LASER && leviathanIsBoss(moby) && leviathanIsEvasive(moby))
+		leviathanVars->ActionCooldownTicks[action] >>= 3;
+}
 
-	return ticks;
+//--------------------------------------------------------------------------
+int leviathanGetActionReady(Moby *moby, enum LeviathanActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	LeviathanMobVars_t *leviathanVars = (LeviathanMobVars_t *)pvars->AdditionalMobVarsPtr;
+	return leviathanVars->ActionQueuedForTicks[action] > 0;
 }
 
 //--------------------------------------------------------------------------
@@ -134,7 +143,7 @@ void leviathanPreUpdate(Moby *moby)
 	mobDefaultPreUpdate(moby);
 
 	if (!mobIsFrozen(moby))
-		decTimerU32(&leviathanVars->AttackLaserCooldownTicks);
+		mobTickActionCooldowns(moby, LEVIATHAN_ACTION_COUNT, leviathanVars->ActionCooldownTicks, leviathanVars->ActionQueuedForTicks);
 }
 
 //--------------------------------------------------------------------------
@@ -145,13 +154,6 @@ void leviathanPostUpdate(Moby *moby)
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	// float scale = leviathanGetScale(moby);
-	LeviathanMobVars_t *leviathanVars = (LeviathanMobVars_t *)pvars->AdditionalMobVarsPtr;
-
-	//
-	if (leviathanVars->AttackLaserCooldownTicks == 0)
-	{
-		leviathanVars->AttackLaserCooldownTicks = leviathanGetLaserCooldownTicks(moby);
-	}
 
 	// adjust animSpeed by speed and by animation
 	float baseSpeed = 0.5;
@@ -182,7 +184,17 @@ void leviathanPostUpdate(Moby *moby)
 	switch (moby->AnimSeqId)
 	{
 	case LEVIATHAN_ANIM_SWING:
+	{
+		animSpeed *= (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+		animSpeed *= mobGetActionFloat(moby, LEVIATHAN_ACTION_SWING, LEVIATHAN_ACTION_SWING_PARAM_ATTACK_SPEED_MULTIPLIER);
+		break;
+	}
 	case LEVIATHAN_ANIM_STAB_DOWN:
+	{
+		animSpeed *= (pvars->MobVars.Config.Speed / MOB_BASE_SPEED);
+		animSpeed *= mobGetActionFloat(moby, LEVIATHAN_ACTION_STAB, LEVIATHAN_ACTION_STAB_PARAM_ATTACK_SPEED_MULTIPLIER);
+		break;
+	}
 	case LEVIATHAN_ANIM_WALK:
 	case LEVIATHAN_ANIM_WALK_LEFT:
 	case LEVIATHAN_ANIM_WALK_RIGHT:
@@ -255,6 +267,11 @@ void leviathanOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, 
 	// default move step
 	pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
 	vector_copy(pvars->MobVars.TargetPosition, moby->Position);
+
+	// initialize action cooldowns
+	int i;
+	for (i = 0; i < LEVIATHAN_ACTION_COUNT; ++i)
+		leviathanResetActionCooldownTicks(moby, i);
 }
 
 //--------------------------------------------------------------------------
@@ -298,7 +315,8 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	// every quarter health reset laser cooldown
 	if ((int)(newHp * 4) != (int)(pvars->MobVars.Health * 4))
 	{
-		leviathanVars->AttackLaserCooldownTicks = 1;
+		leviathanResetActionCooldownTicks(moby, LEVIATHAN_ACTION_LASER);
+		leviathanVars->ActionCooldownTicks[LEVIATHAN_ACTION_LASER] = 1;
 	}
 
 #if ALWAYS_FLINCH
@@ -402,10 +420,9 @@ void leviathanComputeLaserTargets(Moby *moby)
 }
 
 //--------------------------------------------------------------------------
-enum LeviathanStates leviathanGetPreferredAttack(Moby *moby)
+int leviathanGetPreferredAttack(Moby *moby)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	LeviathanMobVars_t *leviathanVars = (LeviathanMobVars_t *)pvars->AdditionalMobVarsPtr;
 	Moby *target = pvars->MobVars.Target;
 	int isLaserState = pvars->MobVars.State == LEVIATHAN_STATE_ATTACK_LASER || pvars->MobVars.State == LEVIATHAN_STATE_ATTACK_LASER_LOCKON;
 	if (!target)
@@ -422,7 +439,7 @@ enum LeviathanStates leviathanGetPreferredAttack(Moby *moby)
 	{
 
 		// check if moby is looking at (close to) target
-		if (distSqr <= rangedAttackRadiusSqr && leviathanVars->AttackLaserCooldownTicks == 0)
+		if (distSqr <= rangedAttackRadiusSqr && leviathanGetActionReady(moby, LEVIATHAN_ACTION_LASER))
 		{
 			float theta = acosf(vector_innerproduct(dt, moby->M0_03));
 			if (!isLaserState && fabsf(theta) < (30 * MATH_DEG2RAD))
@@ -439,11 +456,11 @@ enum LeviathanStates leviathanGetPreferredAttack(Moby *moby)
 	vector_add(inFrontPos, moby->Position, dt);
 	vector_subtract(dt, inFrontPos, target->Position);
 	float dist = vector_length(dt) - mobGetTargetRadius(target);
-	if (dist < 1)
+	if (dist < 1 && leviathanGetActionReady(moby, LEVIATHAN_ACTION_STAB))
 	{
 		return LEVIATHAN_STATE_ATTACK_STAB;
 	}
-	else if (dist < pvars->MobVars.Config.AttackRadius)
+	else if (dist < pvars->MobVars.Config.AttackRadius && leviathanGetActionReady(moby, LEVIATHAN_ACTION_SWING))
 	{
 		return LEVIATHAN_STATE_ATTACK_SWING;
 	}
@@ -813,14 +830,18 @@ void leviathanDoState(Moby *moby)
 		float attackAnimHitStart = LEVIATHAN_SWING_ATTACK_HIT_FRAME_START;
 		float attackAnimHitEnd = LEVIATHAN_SWING_ATTACK_HIT_FRAME_END;
 		float damage = pvars->MobVars.Config.Damage;
+		enum LeviathanActions action = LEVIATHAN_ACTION_SWING;
 
 		if (pvars->MobVars.State == LEVIATHAN_STATE_ATTACK_STAB)
 		{
 			attackAnimId = LEVIATHAN_ANIM_STAB_DOWN;
 			attackAnimHitStart = LEVIATHAN_STAB_ATTACK_HIT_FRAME_START;
 			attackAnimHitEnd = LEVIATHAN_STAB_ATTACK_HIT_FRAME_END;
-			damage *= 1.5; // more damage
+			action = LEVIATHAN_ACTION_STAB;
 		}
+
+		// get action params
+		float actionDamageMult = mobGetActionFloat(moby, action, action == LEVIATHAN_ACTION_SWING ? LEVIATHAN_ACTION_SWING_PARAM_DAMAGE_MULTIPLIER : LEVIATHAN_ACTION_STAB_PARAM_DAMAGE_MULTIPLIER);
 
 		mobTransAnim(moby, attackAnimId, 0);
 		int swingAttackReady = moby->AnimSeqId == attackAnimId && moby->AnimSeqT >= attackAnimHitStart && moby->AnimSeqT < attackAnimHitEnd;
@@ -838,7 +859,7 @@ void leviathanDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			leviathanDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
+			leviathanDoDamage(moby, pvars->MobVars.Config.HitRadius, damage * actionDamageMult, damageFlags, 0);
 		}
 		break;
 	}
@@ -847,6 +868,10 @@ void leviathanDoState(Moby *moby)
 	{
 		int nextAnimId = moby->AnimSeqId;
 		int isLockOn = pvars->MobVars.State == LEVIATHAN_STATE_ATTACK_LASER_LOCKON;
+
+		// get action params
+		float actionDamageMult = mobGetActionFloat(moby, LEVIATHAN_ACTION_LASER, LEVIATHAN_ACTION_LASER_PARAM_DAMAGE_MULTIPLIER);
+		float actionDurationMult = mobGetActionFloat(moby, LEVIATHAN_ACTION_LASER, LEVIATHAN_ACTION_LASER_PARAM_DURATION_MULTIPLIER);
 
 		switch (moby->AnimSeqId)
 		{
@@ -869,7 +894,7 @@ void leviathanDoState(Moby *moby)
 		case LEVIATHAN_ANIM_LASER_FIRE_ACTIVE:
 		case LEVIATHAN_ANIM_LASER_FIRE_ACTIVE_WALK:
 		{
-			float damage = pvars->MobVars.Config.Damage;
+			float damage = pvars->MobVars.Config.Damage * actionDamageMult;
 			int laserForTicks = pvars->MobVars.CurrentStateForTicks - leviathanVars->LaserAtTicks;
 
 			// save player from instant hit on laser start (annoying)
@@ -943,7 +968,8 @@ void leviathanDoState(Moby *moby)
 			}
 
 			// stop after n seconds
-			if (laserForTicks > leviathanGetLaserForTicks(moby))
+			int laserDurationTicks = leviathanGetLaserForTicks(moby) * actionDurationMult;
+			if (laserForTicks > laserDurationTicks)
 			{
 				nextAnimId = LEVIATHAN_ANIM_LASER_FIRE_EXHAUSTED;
 			}
@@ -986,8 +1012,8 @@ void leviathanDoDamage(Moby *moby, float radius, float amount, int damageFlags, 
 void leviathanForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	LeviathanMobVars_t *leviathanVars = (LeviathanMobVars_t *)pvars->AdditionalMobVarsPtr;
 	float difficulty = 1;
+	int stateCooldownTicks = LEVIATHAN_STATE_COOLDOWN_TICKS;
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -1020,6 +1046,7 @@ void leviathanForceLocalState(Moby *moby, int state)
 	{
 		// disable collision
 		moby->CollActive = 1;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case LEVIATHAN_STATE_WALK:
@@ -1033,14 +1060,32 @@ void leviathanForceLocalState(Moby *moby, int state)
 		moby->CollActive = 1;
 		break;
 	}
-	case LEVIATHAN_STATE_ATTACK_LASER:
-	case LEVIATHAN_STATE_ATTACK_LASER_LOCKON:
-	case LEVIATHAN_STATE_ATTACK_PROJECTILE:
 	case LEVIATHAN_STATE_ATTACK_SWING:
+	{
+		leviathanResetActionCooldownTicks(moby, LEVIATHAN_ACTION_SWING);
+		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
+		break;
+	}
 	case LEVIATHAN_STATE_ATTACK_STAB:
 	{
+		leviathanResetActionCooldownTicks(moby, LEVIATHAN_ACTION_STAB);
+		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
+		break;
+	}
+	case LEVIATHAN_STATE_ATTACK_LASER:
+	case LEVIATHAN_STATE_ATTACK_LASER_LOCKON:
+	{
+		leviathanResetActionCooldownTicks(moby, LEVIATHAN_ACTION_LASER);
 		leviathanComputeLaserTargets(moby);
-		leviathanVars->AttackLaserCooldownTicks = leviathanGetLaserCooldownTicks(moby);
+		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
+		break;
+	}
+	case LEVIATHAN_STATE_ATTACK_PROJECTILE:
+	{
+		leviathanComputeLaserTargets(moby);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		break;
 	}
@@ -1048,6 +1093,7 @@ void leviathanForceLocalState(Moby *moby, int state)
 	case LEVIATHAN_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = LEVIATHAN_FLINCH_COOLDOWN_TICKS;
+		stateCooldownTicks = 0;
 		break;
 	}
 	default:
@@ -1062,7 +1108,7 @@ void leviathanForceLocalState(Moby *moby, int state)
 
 	pvars->MobVars.State = state;
 	pvars->MobVars.NextState = -1;
-	pvars->MobVars.StateCooldownTicks = LEVIATHAN_STATE_COOLDOWN_TICKS;
+	pvars->MobVars.StateCooldownTicks = stateCooldownTicks;
 }
 
 //--------------------------------------------------------------------------
