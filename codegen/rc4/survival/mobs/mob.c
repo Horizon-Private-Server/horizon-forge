@@ -1007,8 +1007,27 @@ int mobMoveCheck(Moby *moby, VECTOR outputPos, VECTOR from, VECTOR to)
 		//   pvars->MobVars.MoveVars.HitWall = 0;
 		// }
 
-		vector_scale(hitDir, hitDir, hitBitangentDotDelta * vector_length(delta));
-		vector_add(outputPos, from, hitDir);
+		// Distance threshold check: if we traveled a significant distance to reach this wall,
+		// snap to the wall instead of sliding along it. This prevents large timesteps from
+		// causing sideways movement when hitting distant obstacles (like the player).
+		VECTOR fromToHit;
+		vector_subtract(fromToHit, CollLine_Fix_GetHitPosition(), hitFrom);
+		float distToHit = vector_length(fromToHit);
+		float threshold = collRadius * 2.0f;
+
+		if (distToHit > threshold)
+		{
+			// Far collision: snap to wall surface, don't slide
+			vector_normalize(hitToEx, delta);
+			vector_scale(hitToEx, hitToEx, collRadius);
+			vector_subtract(outputPos, CollLine_Fix_GetHitPosition(), hitToEx);
+		}
+		else
+		{
+			// Close collision: use wall-slide as normal
+			vector_scale(hitDir, hitDir, hitBitangentDotDelta * vector_length(delta));
+			vector_add(outputPos, from, hitDir);
+		}
 
 		// VECTOR reflectedDelta;
 		// vector_projectonhorizontal(hitToEx, hitToEx);
@@ -1267,7 +1286,7 @@ float mobTurnTowards(Moby *moby, VECTOR towards, float turnSpeed)
 {
 	VECTOR delta;
 
-	if (!moby || !moby->PVar)
+	if (!moby || !moby->PVar || fabsf(turnSpeed) < 0.001)
 		return 0;
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
@@ -1287,7 +1306,7 @@ float mobTurnTowardsPredictive(Moby *moby, Moby *target, float turnSpeed, float 
 {
 	VECTOR pos;
 
-	if (!moby || !moby->PVar)
+	if (!moby || !moby->PVar || fabsf(turnSpeed) < 0.001)
 		return 0;
 
 	// if target is player, use their velocity to predict their future position
@@ -1308,7 +1327,7 @@ float mobTurnTowardsPredictive(Moby *moby, Moby *target, float turnSpeed, float 
 //--------------------------------------------------------------------------
 float mobTurnTowardsPredictiveWithSpeed(Moby *moby, Moby *target, float turnSpeed, float speed)
 {
-	if (!moby || !target)
+	if (!moby || !target || fabsf(turnSpeed) < 0.001)
 		return 0;
 
 	// Calculate distance between moby and target
