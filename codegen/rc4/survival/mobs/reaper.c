@@ -62,9 +62,35 @@ struct MobVTable ReaperVTable = {
 };
 
 //--------------------------------------------------------------------------
+void reaperResetActionCooldownTicks(Moby *moby, enum ReaperActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ReaperMobVars_t *reaperVars = (ReaperMobVars_t *)pvars->AdditionalMobVarsPtr;
+	reaperVars->ActionCooldownTicks[action] = mobGetActionCooldownTicks(moby, action);
+	reaperVars->ActionQueuedForTicks[action] = 0;
+}
+
+//--------------------------------------------------------------------------
+int reaperGetActionReady(Moby *moby, enum ReaperActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ReaperMobVars_t *reaperVars = (ReaperMobVars_t *)pvars->AdditionalMobVarsPtr;
+	return reaperVars->ActionQueuedForTicks[action] > 0;
+}
+
+//--------------------------------------------------------------------------
 void reaperPreUpdate(Moby *moby)
 {
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	ReaperMobVars_t *reaperVars = (ReaperMobVars_t *)pvars->AdditionalMobVarsPtr;
+
 	mobDefaultPreUpdate(moby);
+
+	if (!mobIsFrozen(moby))
+		mobTickActionCooldowns(moby, REAPER_ACTION_COUNT, reaperVars->ActionCooldownTicks, reaperVars->ActionQueuedForTicks);
 }
 
 //--------------------------------------------------------------------------
@@ -77,10 +103,15 @@ void reaperPostUpdate(Moby *moby)
 	float scale = mobGetScaleMultiplier(moby);
 
 	// adjust animSpeed by speed and by animation
-	float animSpeed = 1.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
+	float baseSpeed = 1.5;
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
 	if (reaperIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
 		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / REAPER_FLINCH_ANIM_DURATION, 2));
+	}
+	else if (moby->AnimSeqId == REAPER_ANIM_SWING)
+	{
+		animSpeed = baseSpeed * mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == REAPER_STATE_WALK))
@@ -155,6 +186,11 @@ void reaperOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, cha
 
 	// default move step
 	pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
+
+	// initialize action cooldowns
+	int i;
+	for (i = 0; i < REAPER_ACTION_COUNT; ++i)
+		reaperResetActionCooldownTicks(moby, i);
 }
 
 //--------------------------------------------------------------------------
@@ -309,7 +345,7 @@ int reaperGetPreferredState(Moby *moby, int *delayTicks)
 
 		if (dist <= attackRadius)
 		{
-			if (reaperCanAttack(pvars))
+			if (reaperCanAttack(pvars) && reaperGetActionReady(moby, REAPER_ACTION_MELEE))
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
@@ -473,6 +509,9 @@ void reaperDoState(Moby *moby)
 	{
 		int nextAnimId = moby->AnimSeqId;
 
+		// get action params
+		float actionMoveSpeedMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_AGGRO_MOVE_SPEED_MULTIPLIER);
+
 		switch (moby->AnimSeqId)
 		{
 		case REAPER_ANIM_AGGRO_ROAR:
@@ -508,7 +547,7 @@ void reaperDoState(Moby *moby)
 		{
 			if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
 				pvars->MobVars.Dirty = 1; // new path, sync with other clients
-			mobMoveTowards(moby, t, pvars->MobVars.Config.Speed * 3, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
+			mobMoveTowards(moby, t, pvars->MobVars.Config.Speed * actionMoveSpeedMult, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
 		}
 		else
 		{
@@ -575,13 +614,19 @@ void reaperDoState(Moby *moby)
 		int attack1AnimId = REAPER_ANIM_SWING;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < REAPER_ATTACK_EARLY_PHASE_FRAME_END) ? (difficulty * 2) : 1, 1, 5);
+		// get action params
+		float lungeMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_LUNGE_MULTIPLIER);
+		float actionDamageMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_DAMAGE_MULTIPLIER);
+		float aggroActionDamageMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_AGGRO_DAMAGE_MULTIPLIER);
+
+		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < REAPER_ATTACK_ANIM_LUNGE_DURATION;
+		float speedMult = lungeMult * clamp(difficulty * 2, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REAPER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REAPER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
-		if (target)
+		if (target && lungeActive)
 		{
-			mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
+			mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, REAPER_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
 		}
 		else
 		{
@@ -594,7 +639,7 @@ void reaperDoState(Moby *moby)
 			reaperDoDamage(
 					moby,
 					pvars->MobVars.Config.HitRadius,
-					pvars->MobVars.Config.Damage * ((pvars->MobVars.LastState == REAPER_STATE_AGGRO) ? REAPER_AGGRO_DAMAGE_MULTIPLIER : 1),
+					pvars->MobVars.Config.Damage * ((pvars->MobVars.LastState == REAPER_STATE_AGGRO) ? aggroActionDamageMult : actionDamageMult),
 					damageFlags,
 					0);
 		}
@@ -623,6 +668,7 @@ void reaperForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	float difficulty = 1;
+	int stateCooldownTicks = REAPER_STATE_COOLDOWN_TICKS;
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -650,6 +696,7 @@ void reaperForceLocalState(Moby *moby, int state)
 	{
 		// disable collision
 		moby->CollActive = 1;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case REAPER_STATE_AGGRO:
@@ -670,12 +717,14 @@ void reaperForceLocalState(Moby *moby, int state)
 	case REAPER_STATE_ATTACK:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case REAPER_STATE_FLINCH:
 	case REAPER_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = REAPER_FLINCH_COOLDOWN_TICKS;
+		stateCooldownTicks = 0;
 		break;
 	}
 	default:
@@ -690,7 +739,7 @@ void reaperForceLocalState(Moby *moby, int state)
 
 	pvars->MobVars.State = state;
 	pvars->MobVars.NextState = -1;
-	pvars->MobVars.StateCooldownTicks = REAPER_STATE_COOLDOWN_TICKS;
+	pvars->MobVars.StateCooldownTicks = stateCooldownTicks;
 }
 
 //--------------------------------------------------------------------------
