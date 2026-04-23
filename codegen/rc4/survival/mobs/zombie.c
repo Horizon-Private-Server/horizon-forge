@@ -366,12 +366,9 @@ int zombieGetPreferredState(Moby *moby, int *delayTicks)
 		float rangedAttackRadius = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
 		int isThrowState = pvars->MobVars.State == ZOMBIE_STATE_ATTACK_THROW;
 
-		// ranged should stop before getting too close to target
-		int deferredState = (preferRanged && (dist <= rangedAttackRadius * 0.9)) ? ZOMBIE_STATE_LOOK_AT_TARGET : ZOMBIE_STATE_WALK;
-
 		// can't attack
 		if (!zombieCanAttack(pvars))
-			return deferredState;
+			return preferRanged ? ZOMBIE_STATE_LOOK_AT_TARGET : ZOMBIE_STATE_WALK;
 
 		if (preferExplode && dist <= attackRadius && zombieGetActionReady(moby, ZOMBIE_ACTION_TIME_BOMB))
 		{
@@ -385,23 +382,23 @@ int zombieGetPreferredState(Moby *moby, int *delayTicks)
 				*delayTicks = pvars->MobVars.Config.ReactionTickCount;
 			return ZOMBIE_STATE_ATTACK;
 		}
-		else if (!isThrowState && canRanged && pvars->MobVars.MoveVars.Grounded && dist <= rangedAttackRadius && zombieGetActionReady(moby, ZOMBIE_ACTION_THROW))
+		else if (!isThrowState && canRanged && pvars->MobVars.MoveVars.Grounded && dist <= rangedAttackRadius && mobCanSeeMoby(moby, target))
 		{
 			VECTOR dt;
 			vector_subtract(dt, target->Position, moby->Position);
 			float theta = acosf(vector_innerproduct(dt, moby->M0_03));
-			if (fabsf(theta) < ZOMBIE_THROW_FIRE_AT_MAX_TURN_ANGLE && mobCanSeeMoby(moby, target))
+			if (fabsf(theta) < ZOMBIE_THROW_FIRE_AT_MAX_TURN_ANGLE && zombieGetActionReady(moby, ZOMBIE_ACTION_THROW))
 			{
 				if (delayTicks)
 					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
 				return ZOMBIE_STATE_ATTACK_THROW;
 			}
 
-			return deferredState;
+			return preferRanged ? ZOMBIE_STATE_LOOK_AT_TARGET : ZOMBIE_STATE_WALK;
 		}
 		else
 		{
-			return deferredState;
+			return ZOMBIE_STATE_WALK;
 		}
 	}
 
@@ -780,7 +777,7 @@ void zombieThrowMobyUpdate(Moby *moby)
 	struct MobPVar *mobPvars = (struct MobPVar *)parentMoby->PVar;
 	float actionDamageMult = mobGetActionFloat(parentMoby, ZOMBIE_ACTION_THROW, ZOMBIE_ACTION_MELEE_THROW_PARAM_DAMAGE_MULTIPLIER);
 	u32 damageFlags = mobGetDamageFlags(parentMoby, MOB_DAMAGE_FLAG_BASE);
-	if (mobDoSweepDamage(pvars->ThrownBy, startHeadPos, pvars->HeadPos, 1, ZOMBIE_THROW_HIT_RADIUS, mobPvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0, 0, 1))
+	if (mobDoSweepDamage(pvars->ThrownBy, startHeadPos, pvars->HeadPos, ZOMBIE_THROW_HIT_RADIUS * 0.5, ZOMBIE_THROW_HIT_RADIUS, mobPvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0, 0, 1))
 	{
 		zombieThrowMobySpawnExplosion(moby);
 		pvars->LifeTicks = 0;
