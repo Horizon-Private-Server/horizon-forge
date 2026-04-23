@@ -501,7 +501,15 @@ MonoBehaviour:
       - Name: Lunge Multiplier
         Description: 
         ValueType: 0
-        DefaultValue: 1
+        DefaultValue: 3
+      - Name: Aggro Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1.5
+      - Name: Aggro Move Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 3
     - Name: Aggro
       Description: 
       MinCooldownSeconds: 0

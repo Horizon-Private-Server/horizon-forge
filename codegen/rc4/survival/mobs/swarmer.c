@@ -694,8 +694,14 @@ void swarmerForceLocalState(Moby *moby, int state)
 	}
 	case SWARMER_STATE_ATTACK:
 	{
+		swarmerResetActionCooldownTicks(moby, SWARMER_ACTION_BITE);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		stateCooldownTicks = 0;
+		break;
+	}
+	case SWARMER_STATE_DODGE:
+	{
+		swarmerResetActionCooldownTicks(moby, SWARMER_ACTION_DODGE);
 		break;
 	}
 	case SWARMER_STATE_FLINCH:

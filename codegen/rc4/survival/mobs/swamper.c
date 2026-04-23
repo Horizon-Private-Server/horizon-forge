@@ -607,6 +607,7 @@ void swamperForceLocalState(Moby *moby, int state)
 	}
 	case SWAMPER_STATE_ATTACK:
 	{
+		swamperResetActionCooldownTicks(moby, SWAMPER_ACTION_BITE);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		mobResetMoveStep(moby); // force move step reset for accurate lunge
 		stateCooldownTicks = 0;

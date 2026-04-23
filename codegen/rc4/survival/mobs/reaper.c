@@ -716,6 +716,7 @@ void reaperForceLocalState(Moby *moby, int state)
 	}
 	case REAPER_STATE_ATTACK:
 	{
+		reaperResetActionCooldownTicks(moby, REAPER_ACTION_MELEE);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		stateCooldownTicks = 0;
 		break;
