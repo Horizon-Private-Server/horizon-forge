@@ -756,7 +756,71 @@ MonoBehaviour:
 
         Phase 4 (< 40% health): Smash ground spawning minions
         (if configured) and dealing AoE damage.'
-    Actions: []
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Attack Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Lunge Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Charge
+      Description: 
+      MinCooldownSeconds: 5
+      MaxCooldownSeconds: 15
+      Probability: 0.2
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1.5
+      - Name: Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+    - Name: Trail Shot
+      Description: 
+      MinCooldownSeconds: 5
+      MaxCooldownSeconds: 20
+      Probability: 0.2
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Projectile Speed
+        Description: 
+        ValueType: 0
+        DefaultValue: 30
+    - Name: Ground Smash
+      Description: 
+      MinCooldownSeconds: 15
+      MaxCooldownSeconds: 60
+      Probability: 0.5
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: AoE Radius
+        Description: 
+        ValueType: 0
+        DefaultValue: 20
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
