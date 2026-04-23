@@ -132,18 +132,23 @@ void tremorPostUpdate(Moby *moby)
 	float scale = mobGetScaleMultiplier(moby);
 
 	// adjust animSpeed by speed and by animation
-	float animSpeed = 0.5 * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
+	float baseSpeed = 0.5;
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
 	if (moby->AnimSeqId == TREMOR_ANIM_JUMP)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / TREMOR_JUMP_ANIM_DURATION, 2));
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / TREMOR_JUMP_ANIM_DURATION, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
-			animSpeed = 0.5;
+			animSpeed = baseSpeed;
 		}
 	}
 	else if (tremorIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
 	{
-		animSpeed = 0.5 * (1 - powf(moby->AnimSeqT / TREMOR_FLINCH_ANIM_AIR_DURATION, 2));
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / TREMOR_FLINCH_ANIM_AIR_DURATION, 2));
+	}
+	else if (moby->AnimSeqId == TREMOR_ANIM_SWING)
+	{
+		animSpeed = baseSpeed * mobGetActionFloat(moby, TREMOR_ACTION_MELEE, TREMOR_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == TREMOR_STATE_WALK))
