@@ -637,15 +637,16 @@ void zombieDoState(Moby *moby)
 		float actionDamageMult = mobGetActionFloat(moby, ZOMBIE_ACTION_MELEE, ZOMBIE_ACTION_MELEE_PARAM_DAMAGE_MULTIPLIER);
 		float lungeMult = mobGetActionFloat(moby, ZOMBIE_ACTION_MELEE, ZOMBIE_ACTION_MELEE_PARAM_LUNGE_MULTIPLIER);
 
-		float speedMult = clamp((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < ZOMBIE_SLAP_ANIM_LUNGE_DURATION) ? (difficulty * 2) : 1, 1, 5);
+		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < ZOMBIE_SLAP_ANIM_LUNGE_DURATION;
+		float speedMult = lungeMult * clamp(difficulty * 2, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= ZOMBIE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < ZOMBIE_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
 		{
-			if (target)
+			if (target && lungeActive)
 			{
-				mobMoveTowards(moby, target->Position, lungeMult * speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
+				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, ZOMBIE_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
 			}
 			else
 			{
@@ -941,6 +942,7 @@ void zombieForceLocalState(Moby *moby, int state)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
 	float difficulty = 1;
+	int stateCooldownTicks = ZOMBIE_STATE_COOLDOWN_TICKS;
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -974,6 +976,7 @@ void zombieForceLocalState(Moby *moby, int state)
 	{
 		// disable collision
 		moby->CollActive = 1;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case ZOMBIE_STATE_WALK:
@@ -992,6 +995,7 @@ void zombieForceLocalState(Moby *moby, int state)
 		zombieResetActionCooldownTicks(moby, ZOMBIE_ACTION_MELEE);
 		zombieResetActionCooldownTicks(moby, ZOMBIE_ACTION_THROW);
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case ZOMBIE_STATE_TIME_BOMB_EXPLODE:
@@ -1018,6 +1022,7 @@ void zombieForceLocalState(Moby *moby, int state)
 	case ZOMBIE_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = ZOMBIE_FLINCH_COOLDOWN_TICKS;
+		stateCooldownTicks = 0;
 		break;
 	}
 	default:
@@ -1032,7 +1037,7 @@ void zombieForceLocalState(Moby *moby, int state)
 
 	pvars->MobVars.State = state;
 	pvars->MobVars.NextState = -1;
-	pvars->MobVars.StateCooldownTicks = ZOMBIE_STATE_COOLDOWN_TICKS;
+	pvars->MobVars.StateCooldownTicks = stateCooldownTicks;
 }
 
 //--------------------------------------------------------------------------

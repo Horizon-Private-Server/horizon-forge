@@ -64,9 +64,35 @@ struct MobVTable SwamperVTable = {
 };
 
 //--------------------------------------------------------------------------
+void swamperResetActionCooldownTicks(Moby *moby, enum SwamperActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	SwamperMobVars_t *swamperVars = (SwamperMobVars_t *)pvars->AdditionalMobVarsPtr;
+	swamperVars->ActionCooldownTicks[action] = mobGetActionCooldownTicks(moby, action);
+	swamperVars->ActionQueuedForTicks[action] = 0;
+}
+
+//--------------------------------------------------------------------------
+int swamperGetActionReady(Moby *moby, enum SwamperActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	SwamperMobVars_t *swamperVars = (SwamperMobVars_t *)pvars->AdditionalMobVarsPtr;
+	return swamperVars->ActionQueuedForTicks[action] > 0;
+}
+
+//--------------------------------------------------------------------------
 void swamperPreUpdate(Moby *moby)
 {
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	SwamperMobVars_t *swamperVars = (SwamperMobVars_t *)pvars->AdditionalMobVarsPtr;
+
 	mobDefaultPreUpdate(moby);
+
+	if (!mobIsFrozen(moby))
+		mobTickActionCooldowns(moby, SWAMPER_ACTION_COUNT, swamperVars->ActionCooldownTicks, swamperVars->ActionQueuedForTicks);
 }
 
 //--------------------------------------------------------------------------
@@ -95,7 +121,7 @@ void swamperPostUpdate(Moby *moby)
 	}
 	else if (swamperIsAttacking(moby))
 	{
-		animSpeed = baseSpeed * 1.5;
+		animSpeed = baseSpeed * mobGetActionFloat(moby, SWAMPER_ACTION_BITE, SWAMPER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER);
 	}
 	else if (swamperIsDying(moby))
 	{
@@ -141,7 +167,7 @@ void swamperMove(Moby *moby)
 //--------------------------------------------------------------------------
 int swamperGetExtraDataSize(int spawnParamsIdx)
 {
-	return 0;
+	return sizeof(SwamperMobVars_t);
 }
 
 //--------------------------------------------------------------------------
@@ -153,6 +179,8 @@ void swamperOnSpawning(int spawnParamsIdx, VECTOR position, float *yaw, int *spa
 void swamperOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs *e)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	memset(pvars->AdditionalMobVarsPtr, 0, sizeof(SwamperMobVars_t));
+
 	float scale = mobGetScaleMultiplier(moby);
 
 	// set scale
@@ -172,6 +200,11 @@ void swamperOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, ch
 
 	// default move step
 	pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
+
+	// initialize action cooldowns
+	int i;
+	for (i = 0; i < SWAMPER_ACTION_COUNT; ++i)
+		swamperResetActionCooldownTicks(moby, i);
 }
 
 //--------------------------------------------------------------------------
@@ -284,7 +317,7 @@ int swamperGetPreferredState(Moby *moby, int *delayTicks)
 		float dist = mobGetDistanceToTarget(moby, target);
 		float attackRadius = pvars->MobVars.Config.AttackRadius;
 
-		if (dist <= attackRadius)
+		if (dist <= attackRadius && swamperGetActionReady(moby, SWAMPER_ACTION_BITE))
 		{
 			if (swamperCanAttack(pvars))
 			{
@@ -486,8 +519,12 @@ void swamperDoState(Moby *moby)
 		int attack1AnimId = SWAMPER_ANIM_BITE;
 		mobTransAnim(moby, attack1AnimId, 0);
 
+		// get action params
+		float actionDamageMult = mobGetActionFloat(moby, SWAMPER_ACTION_BITE, SWAMPER_ACTION_BITE_PARAM_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetActionFloat(moby, SWAMPER_ACTION_BITE, SWAMPER_ACTION_BITE_PARAM_LUNGE_MULTIPLIER);
+
 		float t = moby->AnimSeqT / SWAMPER_BITE_ANIM_DURATION;
-		float speedCurve = powf(clamp((1.5 - t) * 1.5, 0, 1.5), 2);
+		float speedCurve = powf(clamp((1.5 - t) * 1.5, 0, 1.5), 2) * lungeMult;
 		float speedMult = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < SWAMPER_BITE_LUNGE_FRAME_START || moby->AnimSeqT > SWAMPER_BITE_LUNGE_FRAME_END)) ? 0 : speedCurve;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWAMPER_BITE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWAMPER_BITE_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
@@ -496,7 +533,7 @@ void swamperDoState(Moby *moby)
 		{
 			if (target)
 			{
-				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
+				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, SWAMPER_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
 			}
 			else
 			{
@@ -507,7 +544,7 @@ void swamperDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			swamperDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
+			swamperDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
 		}
 		break;
 	}
@@ -527,6 +564,7 @@ void swamperForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	float difficulty = 1;
+	int stateCooldownTicks = SWAMPER_STATE_COOLDOWN_TICKS;
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -554,6 +592,7 @@ void swamperForceLocalState(Moby *moby, int state)
 	{
 		// disable collision
 		moby->CollActive = 1;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case SWAMPER_STATE_WALK:
@@ -570,12 +609,14 @@ void swamperForceLocalState(Moby *moby, int state)
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
 		mobResetMoveStep(moby); // force move step reset for accurate lunge
+		stateCooldownTicks = 0;
 		break;
 	}
 	case SWAMPER_STATE_FLINCH:
 	case SWAMPER_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = SWAMPER_FLINCH_COOLDOWN_TICKS;
+		stateCooldownTicks = 0;
 		break;
 	}
 	default:
@@ -590,7 +631,7 @@ void swamperForceLocalState(Moby *moby, int state)
 
 	pvars->MobVars.State = state;
 	pvars->MobVars.NextState = -1;
-	pvars->MobVars.StateCooldownTicks = SWAMPER_STATE_COOLDOWN_TICKS;
+	pvars->MobVars.StateCooldownTicks = stateCooldownTicks;
 }
 
 //--------------------------------------------------------------------------

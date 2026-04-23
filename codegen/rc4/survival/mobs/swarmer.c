@@ -105,21 +105,22 @@ void swarmerPostUpdate(Moby *moby)
 	float scale = mobGetScaleMultiplier(moby);
 
 	// adjust animSpeed by speed and by animation
-	float animSpeed = (0.9 / scale) * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) * (SWARMER_BASE_COLL_RADIUS / pvars->MobVars.Config.CollRadius);
+	float baseSpeed = 0.9;
+	float animSpeed = (baseSpeed / scale) * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) * (SWARMER_BASE_COLL_RADIUS / pvars->MobVars.Config.CollRadius);
 	if (moby->AnimSeqId == SWARMER_ANIM_JUMP)
 	{
-		animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / SWARMER_JUMP_ANIM_DURATION, 2));
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / SWARMER_JUMP_ANIM_DURATION, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
-			animSpeed = 0.9;
+			animSpeed = baseSpeed;
 		}
 	}
 	else if (moby->AnimSeqId == SWARMER_ANIM_JUMP_AND_FALL)
 	{
-		// animSpeed = 0.9 * (1 - powf(moby->AnimSeqT / 15, 2));
+		// animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 15, 2));
 		if (pvars->MobVars.MoveVars.Grounded)
 		{
-			animSpeed = 0.9;
+			animSpeed = baseSpeed;
 		}
 	}
 	else if (swarmerIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
@@ -128,7 +129,7 @@ void swarmerPostUpdate(Moby *moby)
 	}
 	else if (moby->AnimSeqId == SWARMER_ANIM_JUMP_FORWARD_BITE)
 	{
-		animSpeed *= mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed = baseSpeed * mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND)
@@ -618,7 +619,7 @@ void swarmerDoState(Moby *moby)
 		{
 			if (target)
 			{
-				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
+				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, SWARMER_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
 			}
 			else
 			{
@@ -649,6 +650,7 @@ void swarmerForceLocalState(Moby *moby, int state)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	float difficulty = 1;
+	int stateCooldownTicks = SWARMER_STATE_COOLDOWN_TICKS;
 
 	if (MapConfig.State)
 		difficulty = MapConfig.State->Difficulty;
@@ -676,6 +678,7 @@ void swarmerForceLocalState(Moby *moby, int state)
 	{
 		// disable collision
 		moby->CollActive = 1;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case SWARMER_STATE_WALK:
@@ -692,12 +695,14 @@ void swarmerForceLocalState(Moby *moby, int state)
 	case SWARMER_STATE_ATTACK:
 	{
 		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
 		break;
 	}
 	case SWARMER_STATE_FLINCH:
 	case SWARMER_STATE_BIG_FLINCH:
 	{
 		pvars->MobVars.FlinchCooldownTicks = SWARMER_FLINCH_COOLDOWN_TICKS;
+		stateCooldownTicks = 0;
 		break;
 	}
 	default:
@@ -712,7 +717,7 @@ void swarmerForceLocalState(Moby *moby, int state)
 
 	pvars->MobVars.State = state;
 	pvars->MobVars.NextState = -1;
-	pvars->MobVars.StateCooldownTicks = SWARMER_STATE_COOLDOWN_TICKS;
+	pvars->MobVars.StateCooldownTicks = stateCooldownTicks;
 }
 
 //--------------------------------------------------------------------------

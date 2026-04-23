@@ -113,7 +113,7 @@ MonoBehaviour:
       - Name: Lunge Multiplier
         Description: 
         ValueType: 0
-        DefaultValue: 1
+        DefaultValue: 2
     - Name: Throw Head
       Description: 
       MinCooldownSeconds: 3
@@ -301,7 +301,26 @@ MonoBehaviour:
     Behaviors:
     - Name: Melee Only
       Description: Chases after target to deal melee damage up close.
-    Actions: []
+    Actions:
+    - Name: Bite
+      Description: 
+      MinCooldownSeconds: 0
+      MaxCooldownSeconds: 0
+      Probability: 1
+      QueuedForTicks: 0
+      Parameters:
+      - Name: Damage Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
+      - Name: Attack Speed Multiplier
+        Description: 
+        ValueType: 0
+        DefaultValue: 1.5
+      - Name: Lunge Amount
+        Description: 
+        ValueType: 0
+        DefaultValue: 1
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
