@@ -84,7 +84,7 @@ Moby *mobOtherTargets[MOB_MAX_OTHER_TARGETS];
 Moby *mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
 int mobMoveCheckCollideWithOtherMobsRotatingIndex = 0;
 extern struct MobActionConfig mobActionConfigs[][MOB_MAX_ACTIONS_PER_MOB];
-extern int mobActionConfigsCount;
+extern union MobParameter mobParameters[][MOB_MAX_PARAMS_PER_MOB];
 
 //--------------------------------------------------------------------------
 void mobRegisterTarget(Moby *moby)
@@ -153,7 +153,7 @@ int mobGetActionCooldownTicks(Moby *moby, int action)
 }
 
 //--------------------------------------------------------------------------
-void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, int *actionQueuedForTicks)
+void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, u32 *actionQueuedForTicks)
 {
 	int i;
 	for (i = 0; i < actionCount; ++i)
@@ -201,23 +201,23 @@ void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, i
 }
 
 //--------------------------------------------------------------------------
-float mobGetActionFloat(Moby *moby, int action, int param)
+float mobGetFloat(Moby *moby, int param)
 {
-	struct MobActionConfig *actionConfig = mobGetActionConfig(moby, action);
-	if (!actionConfig)
+	if (!moby || !moby->PVar || !MapConfig.State)
 		return 0;
 
-	return actionConfig->Parameters[param].FloatValue;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	return mobParameters[pvars->MobVars.SpawnParamsIdx][param].FloatValue;
 }
 
 //--------------------------------------------------------------------------
-int mobGetActionInt(Moby *moby, int action, int param)
+int mobGetInt(Moby *moby, int param)
 {
-	struct MobActionConfig *actionConfig = mobGetActionConfig(moby, action);
-	if (!actionConfig)
+	if (!moby || !moby->PVar || !MapConfig.State)
 		return 0;
 
-	return actionConfig->Parameters[param].IntValue;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	return mobParameters[pvars->MobVars.SpawnParamsIdx][param].IntValue;
 }
 
 //--------------------------------------------------------------------------
@@ -542,6 +542,10 @@ int mobDoSweepDamage(Moby *moby, VECTOR from, VECTOR to, float step, float radiu
 		len = 1;
 		step = 1;
 	}
+
+	// prevent very small step
+	if (step < 0.1)
+		step = 0.1;
 
 	for (t = 0; t < len; t += step)
 	{
@@ -1434,20 +1438,8 @@ void mobGetVelocityToTargetWithDirection(Moby *moby, VECTOR velocity, VECTOR fro
 		vector_projectonhorizontal(nextToTarget, nextToTarget);
 		float distNextToTarget = vector_length(nextToTarget);
 
-		float max = min + targetRadius; //(pvars->MobVars.Config.AttackRadius + PLAYER_COLL_RADIUS) + (targetSpeed * 0.2);
-
 		// if too close to target, stop
-		if (max > min && distNextToTarget < max && distNextToTarget > min)
-		{
-			float amt = (distNextToTarget - min) / (max - min);
-			// vector_normalize(velocity, velocity);
-			vector_projectonhorizontal(hVelocity, velocity);
-			vector_scale(hVelocity, hVelocity, sqrtf(maxf(amt, 0)));
-			vector_projectonvertical(velocity, velocity);
-			vector_add(velocity, velocity, hVelocity);
-			return;
-		}
-		else if (distNextToTarget < min)
+		if (distNextToTarget < min)
 		{
 			vector_projectonvertical(velocity, velocity);
 		}

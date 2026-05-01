@@ -19,7 +19,7 @@
 
 #define MOB_MAX_OTHER_TARGETS (32)
 #define MOB_MAX_ACTIONS_PER_MOB (8)
-#define MOB_MAX_PARAMS_PER_ACTION (8)
+#define MOB_MAX_PARAMS_PER_MOB (16)
 
 // Damage flag constants used when mobs deal damage
 #define MOB_DAMAGE_FLAG_BASE (0x00081801)
@@ -231,7 +231,7 @@ struct MobSpawnParams
 	char BlipType;
 };
 
-union MobActionParameter
+union MobParameter
 {
 	float FloatValue;
 	int IntValue;
@@ -243,8 +243,6 @@ struct MobActionConfig
 	int MaxCooldownTicks;
 	float Probability;
 	int QueuedForTicks;
-	union MobActionParameter Parameters[MOB_MAX_PARAMS_PER_ACTION];
-	int ParameterCount;
 };
 
 struct Knockback
@@ -533,8 +531,8 @@ u32 mobGetDamageFlags(Moby *moby, u32 damageFlags);
 
 struct MobActionConfig *mobGetActionConfig(Moby *moby, int action);
 int mobGetActionCooldownTicks(Moby *moby, int action);
-void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, int *actionQueuedForTicks);
-float mobGetActionFloat(Moby *moby, int action, int param);
-int mobGetActionInt(Moby *moby, int action, int param);
+void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, u32 *actionQueuedForTicks);
+float mobGetFloat(Moby *moby, int param);
+int mobGetInt(Moby *moby, int param);
 
 #endif // SURVIVAL_MOB_H

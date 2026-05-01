@@ -23,18 +23,19 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public List<SpriteDef> SurvivalMysteryBoxSprites = new List<SpriteDef>();
     public List<SpriteDef> SurvivalStackableSprites = new List<SpriteDef>();
     public List<SurvivalDefaultItem> SurvivalDefaultItems = new List<SurvivalDefaultItem>();
-    
+
     [Serializable]
     public class SurvivalMobsConfig
     {
         [ReadOnly] public SurvivalMob Mob;
-		[Multiline]
-		public string Description;
+        [Multiline]
+        public string Description;
         public DLBlipTypes BlipType = DLBlipTypes.CircleSmallDark;
         public SurvivalMobStatIds StatId = SurvivalMobStatIds.None;
         public List<SurvivalMobVariant> Variants = new List<SurvivalMobVariant>();
         public List<SurvivalMobBehavior> Behaviors = new List<SurvivalMobBehavior>();
-		public List<SurvivalMobAction> Actions = new List<SurvivalMobAction>();
+        public List<SurvivalMobAction> Actions = new List<SurvivalMobAction>();
+        public List<SurvivalMobParameter> Parameters = new List<SurvivalMobParameter>();
 
         [ColorUsage(false)] public Color BaseColor = new Color(0.25f, 0.25f, 0.25f);
         [ColorUsage(false)] public Color GlowColor = new Color(0.5f, 0.5f, 0.5f);
@@ -70,8 +71,8 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public class SurvivalMobVariant
     {
         public string Name;
-		[Multiline]
-		public string Description;
+        [Multiline]
+        public string Description;
         public int OClass;
         public SurvivalMobBangle Bangles;
         public Texture2D SpriteTexture;
@@ -100,7 +101,7 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     {
         public string Name;
 
-		[Multiline]
+        [Multiline]
         public string Description;
     }
 
@@ -108,33 +109,30 @@ public class SurvivalMobsScriptableObject : ScriptableObject
     public class SurvivalMobAction
     {
         public string Name;
-		[Multiline] public string Description;
+        [Multiline] public string Description;
 
-		[Header("Cooldown")]
-		[Min(0)] public float MinCooldownSeconds = 0;
-		[Min(0)] public float MaxCooldownSeconds = 1;
-		[Range(0f, 1f)] public float Probability = 1;
-		[Min(0)] public int QueuedForTicks = 0;
-
-		[Header("Parameters")]
-		public List<SurvivalMobActionParameter> Parameters = new List<SurvivalMobActionParameter>();
+        [Header("Cooldown")]
+        [Min(0)] public float MinCooldownSeconds = 0;
+        [Min(0)] public float MaxCooldownSeconds = 1;
+        [Range(0f, 1f)] public float Probability = 1;
+        [Min(0)] public int QueuedForTicks = 0;
     }
 
     [Serializable]
-    public class SurvivalMobActionParameter
+    public class SurvivalMobParameter
     {
-		public enum InputType
-		{
-			Float,
-			Integer,
-			Boolean,
-			Probability
-		}
+        public enum InputType
+        {
+            Float,
+            Integer,
+            Boolean,
+            Probability
+        }
 
         public string Name;
-		[Multiline] public string Description;
-		public InputType ValueType;
-		public string DefaultValue;
+        [Multiline] public string Description;
+        public InputType ValueType;
+        public string DefaultValue;
     }
 
     [Serializable]

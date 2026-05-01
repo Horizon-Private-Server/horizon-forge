@@ -111,7 +111,7 @@ void reaperPostUpdate(Moby *moby)
 	}
 	else if (moby->AnimSeqId == REAPER_ANIM_SWING)
 	{
-		animSpeed = baseSpeed * mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed = baseSpeed * mobGetFloat(moby, REAPER_PARAM_MELEE_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == REAPER_STATE_WALK))
@@ -509,8 +509,7 @@ void reaperDoState(Moby *moby)
 	{
 		int nextAnimId = moby->AnimSeqId;
 
-		// get action params
-		float actionMoveSpeedMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_AGGRO_MOVE_SPEED_MULTIPLIER);
+		float speed = pvars->MobVars.Config.Speed * mobGetFloat(moby, REAPER_PARAM_MELEE_AGGRO_MOVE_SPEED_MULTIPLIER);
 
 		switch (moby->AnimSeqId)
 		{
@@ -547,7 +546,7 @@ void reaperDoState(Moby *moby)
 		{
 			if (pathGetTargetPos(t, moby) && mobAmIOwner(moby))
 				pvars->MobVars.Dirty = 1; // new path, sync with other clients
-			mobMoveTowards(moby, t, pvars->MobVars.Config.Speed * actionMoveSpeedMult, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
+			mobMoveTowards(moby, t, speed, turnSpeed, acceleration, mobGetCurrentWalkAngle(moby));
 		}
 		else
 		{
@@ -614,19 +613,19 @@ void reaperDoState(Moby *moby)
 		int attack1AnimId = REAPER_ANIM_SWING;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		// get action params
-		float lungeMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_LUNGE_MULTIPLIER);
-		float actionDamageMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_DAMAGE_MULTIPLIER);
-		float aggroActionDamageMult = mobGetActionFloat(moby, REAPER_ACTION_MELEE, REAPER_ACTION_MELEE_PARAM_AGGRO_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetFloat(moby, REAPER_PARAM_MELEE_LUNGE_MULTIPLIER);
+		float damageMultiplier = mobGetFloat(moby, (pvars->MobVars.LastState == REAPER_STATE_AGGRO) ? REAPER_PARAM_MELEE_AGGRO_DAMAGE_MULTIPLIER : REAPER_PARAM_MELEE_DAMAGE_MULTIPLIER);
+		float damage = pvars->MobVars.Config.Damage * damageMultiplier;
 
 		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < REAPER_ATTACK_ANIM_LUNGE_DURATION;
-		float speedMult = lungeMult * clamp(difficulty * 2, 1, 5);
+		float speed = lungeMult * clamp(difficulty * 2, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REAPER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REAPER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (target && lungeActive)
 		{
-			mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, REAPER_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
+			mobTurnTowardsPredictiveWithSpeed(moby, target, REAPER_TURN_LUNGE_RADIANS_PER_SEC, speed);
+			mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
 		}
 		else
 		{
@@ -635,11 +634,10 @@ void reaperDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			// aggro does more damage
 			reaperDoDamage(
 					moby,
 					pvars->MobVars.Config.HitRadius,
-					pvars->MobVars.Config.Damage * ((pvars->MobVars.LastState == REAPER_STATE_AGGRO) ? aggroActionDamageMult : actionDamageMult),
+					damage,
 					damageFlags,
 					0);
 		}

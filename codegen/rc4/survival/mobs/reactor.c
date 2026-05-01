@@ -172,7 +172,7 @@ void reactorPostUpdate(Moby *moby)
 	}
 	else if (pvars->MobVars.State == REACTOR_STATE_ATTACK_SWING)
 	{
-		animSpeed *= mobGetActionFloat(moby, REACTOR_ACTION_SWING, REACTOR_ACTION_SWING_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed *= mobGetFloat(moby, REACTOR_PARAM_SWING_ATTACK_SPEED_MULTIPLIER);
 	}
 	else if (pvars->MobVars.State == REACTOR_STATE_ATTACK_CHARGE)
 	{
@@ -871,11 +871,10 @@ void reactorDoState(Moby *moby)
 		reactorTransAnim(moby, attack1AnimId, 0);
 		moby->AnimFlags = 0x10;
 
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, REACTOR_ACTION_SWING, REACTOR_ACTION_SWING_PARAM_DAMAGE_MULTIPLIER);
-		float actionLungeMult = mobGetActionFloat(moby, REACTOR_ACTION_SWING, REACTOR_ACTION_SWING_PARAM_LUNGE_MULTIPLIER);
+		float lungeMult = mobGetFloat(moby, REACTOR_PARAM_SWING_LUNGE_MULTIPLIER);
+		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, REACTOR_PARAM_SWING_DAMAGE_MULTIPLIER);
 
-		float speedCurve = powf(clamp((REACTOR_SWING_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT) / 2, 0, 2.5), 2) * actionLungeMult;
+		float speedCurve = powf(clamp((REACTOR_SWING_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT) / 2, 0, 2.5), 2) * lungeMult;
 		float speed = MOB_BASE_SPEED * ((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 0 && moby->AnimSeqT <= REACTOR_SWING_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 0);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REACTOR_SWING_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REACTOR_SWING_ATTACK_HIT_FRAME_END;
 
@@ -891,7 +890,7 @@ void reactorDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			reactorDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
+			reactorDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
 		}
 		break;
 	}
@@ -903,9 +902,9 @@ void reactorDoState(Moby *moby)
 		int attackCanDoChargeDamage = 0;
 		int attackCanDoSwingDamage = 0;
 
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, REACTOR_ACTION_CHARGE, REACTOR_ACTION_CHARGE_PARAM_DAMAGE_MULTIPLIER);
-		float actionSpeedMult = mobGetActionFloat(moby, REACTOR_ACTION_CHARGE, REACTOR_ACTION_CHARGE_PARAM_SPEED_MULTIPLIER);
+		float chargeDamage = pvars->MobVars.Config.Damage * mobGetFloat(moby, REACTOR_PARAM_CHARGE_DAMAGE_MULTIPLIER);
+		float swingDamage = pvars->MobVars.Config.Damage * mobGetFloat(moby, REACTOR_PARAM_SWING_DAMAGE_MULTIPLIER);
+		float chargeSpeed = mobGetFloat(moby, REACTOR_PARAM_CHARGE_SPEED);
 
 		switch (moby->AnimSeqId)
 		{
@@ -999,7 +998,7 @@ void reactorDoState(Moby *moby)
 			}
 			else if (moby->AnimSeqT > REACTOR_CHARGE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REACTOR_CHARGE_ATTACK_HIT_FRAME_END)
 			{
-				speedMult = REACTOR_CHARGE_SPEED * actionSpeedMult;
+				speedMult = chargeSpeed;
 				reactorVars->AnimSpeedAdditive = 0.25;
 				facePlayer = 0;
 			}
@@ -1039,11 +1038,11 @@ void reactorDoState(Moby *moby)
 
 		if (attackCanDoChargeDamage && damageFlags)
 		{
-			reactorDoChargeDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * 1.5 * actionDamageMult, damageFlags, 0);
+			reactorDoChargeDamage(moby, pvars->MobVars.Config.HitRadius, chargeDamage, damageFlags, 0);
 		}
 		if (attackCanDoSwingDamage && damageFlags)
 		{
-			reactorDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
+			reactorDoDamage(moby, pvars->MobVars.Config.HitRadius, swingDamage, damageFlags, 0);
 		}
 		break;
 	}
@@ -1112,9 +1111,8 @@ void reactorDoState(Moby *moby)
 	}
 	case REACTOR_STATE_ATTACK_SMASH:
 	{
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, REACTOR_ACTION_SMASH, REACTOR_ACTION_SMASH_PARAM_DAMAGE_MULTIPLIER);
-		float actionRadius = mobGetActionFloat(moby, REACTOR_ACTION_SMASH, REACTOR_ACTION_SMASH_PARAM_RADIUS);
+		float actionDamageMult = mobGetFloat(moby, REACTOR_PARAM_SMASH_DAMAGE_MULTIPLIER);
+		float actionRadius = mobGetFloat(moby, REACTOR_PARAM_SMASH_RADIUS);
 
 		// transition
 		reactorTransAnim(moby, REACTOR_ANIM_JUMP_SMASH, 0);
@@ -1553,9 +1551,8 @@ void reactorFireTrailshot(Moby *moby)
 	MATRIX mtx;
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 
-	// get action params
-	float actionDamageMult = mobGetActionFloat(moby, REACTOR_ACTION_SHOT_WITH_TRAIL, REACTOR_ACTION_SHOT_WITH_TRAIL_PARAM_DAMAGE_MULTIPLIER);
-	float actionProjectileSpeed = mobGetActionFloat(moby, REACTOR_ACTION_SHOT_WITH_TRAIL, REACTOR_ACTION_SHOT_WITH_TRAIL_PARAM_PROJECTILE_SPEED);
+	float actionDamageMult = mobGetFloat(moby, REACTOR_PARAM_SHOT_WITH_TRAIL_DAMAGE_MULTIPLIER);
+	float actionProjectileSpeed = mobGetFloat(moby, REACTOR_PARAM_SHOT_WITH_TRAIL_PROJECTILE_SPEED);
 
 	// get pos
 	vector_copy(forward, moby->M0_03);
@@ -1580,5 +1577,6 @@ void reactorFireTrailshot(Moby *moby)
 	vector_scale(vel, forward, MATH_DT * actionProjectileSpeed);
 
 	// spawn
-	trailshotSpawn(moby, pos, vel, 0x80C06020, pvars->MobVars.Config.Damage * actionDamageMult, TPS * 1.5);
+	float damage = pvars->MobVars.Config.Damage * actionDamageMult;
+	trailshotSpawn(moby, pos, vel, 0x80C06020, damage, TPS * 1.5);
 }

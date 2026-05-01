@@ -830,7 +830,7 @@ public static class UnityHelper
                     string strValue = pvarValues[path];
                     var value = (Vector2)def.FromString(strValue);
                     if (strValue == null) value = (Vector2?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-                    
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.Vector2Field(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
@@ -862,7 +862,7 @@ public static class UnityHelper
                     string strValue = pvarValues[path];
                     var value = (Color32)def.FromString(strValue);
                     if (strValue == null) value = (Color32?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-                    
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.ColorField(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
@@ -1003,7 +1003,7 @@ public static class UnityHelper
                     string strValue = pvarValues[path];
                     int value = (int)def.FromString(strValue);
                     if (strValue == null) value = (int?)def.FromBytes(pvarOverlay, pvarData, baseOffset) ?? value;
-                    
+
                     EditorGUI.BeginChangeCheck();
                     value = EditorGUILayout.IntField(new GUIContent(def.Name, def.Tooltip), value);
                     if (EditorGUI.EndChangeCheck())
@@ -1397,7 +1397,7 @@ public static class UnityHelper
                 }
 
                 draw(defOffset, name, path2);
-                
+
                 if (count > 1)
                 {
                     EditorGUILayout.BeginHorizontal();
@@ -1741,7 +1741,7 @@ public static class UnityHelper
         EnumOverride(rect, property, field, defaultValue);
     }
 
-    public static Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue)
+    public static Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue, string label = null, string tooltip = null)
     {
         // find prop
         var prop = property;
@@ -1766,7 +1766,7 @@ public static class UnityHelper
 
         // On/off toggle
         hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+        GUI.Label(labelRect, new GUIContent(label ?? prop.displayName, tooltip ?? prop.tooltip));
 
         // Draw float only if there's a value
         if (hasValueProp.boolValue)
@@ -1784,13 +1784,13 @@ public static class UnityHelper
         return position;
     }
 
-    public static void FloatOverride(SerializedProperty property, string field, float defaultValue, params GUILayoutOption[] options)
+    public static void FloatOverride(SerializedProperty property, string field, float defaultValue, string label = null, string tooltip = null, params GUILayoutOption[] options)
     {
         var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
-        FloatOverride(rect, property, field, defaultValue);
+        FloatOverride(rect, property, field, defaultValue, label: label, tooltip: tooltip);
     }
 
-    public static Rect BoolOverride(Rect position, SerializedProperty property, string field, bool defaultValue)
+    public static Rect BoolOverride(Rect position, SerializedProperty property, string field, bool defaultValue, string label = null, string tooltip = null)
     {
         // find prop
         var prop = property;
@@ -1815,7 +1815,7 @@ public static class UnityHelper
 
         // On/off toggle
         hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+        GUI.Label(labelRect, new GUIContent(label ?? prop.displayName, tooltip ?? prop.tooltip));
 
         // Draw float only if there's a value
         if (hasValueProp.boolValue)
@@ -1833,13 +1833,13 @@ public static class UnityHelper
         return position;
     }
 
-    public static void BoolOverride(SerializedProperty property, string field, bool defaultValue, params GUILayoutOption[] options)
+    public static void BoolOverride(SerializedProperty property, string field, bool defaultValue, string label = null, string tooltip = null, params GUILayoutOption[] options)
     {
         var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
-        BoolOverride(rect, property, field, defaultValue);
+        BoolOverride(rect, property, field, defaultValue, label: label, tooltip: tooltip);
     }
 
-    public static Rect Int32Override(Rect position, SerializedProperty property, string field, int defaultValue)
+    public static Rect Int32Override(Rect position, SerializedProperty property, string field, int defaultValue, string label = null, string tooltip = null)
     {
         // find prop
         var prop = property;
@@ -1864,7 +1864,7 @@ public static class UnityHelper
 
         // On/off toggle
         hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
-        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+        GUI.Label(labelRect, new GUIContent(label ?? prop.displayName, tooltip ?? prop.tooltip));
 
         // Draw float only if there's a value
         if (hasValueProp.boolValue)
@@ -1882,10 +1882,10 @@ public static class UnityHelper
         return position;
     }
 
-    public static void Int32Override(SerializedProperty property, string field, int defaultValue, params GUILayoutOption[] options)
+    public static void Int32Override(SerializedProperty property, string field, int defaultValue, string label = null, string tooltip = null, params GUILayoutOption[] options)
     {
         var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
-        Int32Override(rect, property, field, defaultValue);
+        Int32Override(rect, property, field, defaultValue, label: label, tooltip: tooltip);
     }
 
     public static Rect UInt32Override(Rect position, SerializedProperty property, string field, uint defaultValue)
@@ -2261,24 +2261,24 @@ public static class UnityHelper
                 {
                     if (!forcePowerOfTwo || (Mathf.ClosestPowerOfTwo(tex.width) == tex.width && Mathf.ClosestPowerOfTwo(tex.height) == tex.height))
                     {
-						if (!forceSquareDimensions || (tex.width == tex.height))
-						{
-							if (tint == Color.white)
-							{
-								File.Copy(assetPath, path, true);
-								return true;
-							}
-						}
+                        if (!forceSquareDimensions || (tex.width == tex.height))
+                        {
+                            if (tint == Color.white)
+                            {
+                                File.Copy(assetPath, path, true);
+                                return true;
+                            }
+                        }
                     }
                 }
             }
 
             var width = tex.width;
             var height = tex.height;
-			if (forceSquareDimensions)
-			{
-				width = height = Mathf.Max(width, height);
-			}
+            if (forceSquareDimensions)
+            {
+                width = height = Mathf.Max(width, height);
+            }
             if (forcePowerOfTwo)
             {
                 if (width > height && width > maxTexSize)
@@ -2367,17 +2367,17 @@ public static class UnityHelper
     {
         if (!src) return null;
 
-		var width = src.width;
-		var height = src.height;
+        var width = src.width;
+        var height = src.height;
 
-		if (width < 16)
-			width = 16;
-		if (src.width > maxTexSize)
-			width = maxTexSize.Value;
-		if (height < 16)
-			height = 16;
-		if (src.height > maxTexSize)
-			height = maxTexSize.Value;
+        if (width < 16)
+            width = 16;
+        if (src.width > maxTexSize)
+            width = maxTexSize.Value;
+        if (height < 16)
+            height = 16;
+        if (src.height > maxTexSize)
+            height = maxTexSize.Value;
 
         var rt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
         rt.Create();

@@ -121,7 +121,7 @@ void swamperPostUpdate(Moby *moby)
 	}
 	else if (swamperIsAttacking(moby))
 	{
-		animSpeed = baseSpeed * mobGetActionFloat(moby, SWAMPER_ACTION_BITE, SWAMPER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed = baseSpeed * mobGetFloat(moby, SWAMPER_PARAM_BITE_ATTACK_SPEED_MULTIPLIER);
 	}
 	else if (swamperIsDying(moby))
 	{
@@ -519,13 +519,12 @@ void swamperDoState(Moby *moby)
 		int attack1AnimId = SWAMPER_ANIM_BITE;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, SWAMPER_ACTION_BITE, SWAMPER_ACTION_BITE_PARAM_DAMAGE_MULTIPLIER);
-		float lungeMult = mobGetActionFloat(moby, SWAMPER_ACTION_BITE, SWAMPER_ACTION_BITE_PARAM_LUNGE_MULTIPLIER);
+		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, SWAMPER_PARAM_BITE_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetFloat(moby, SWAMPER_PARAM_BITE_LUNGE_MULTIPLIER);
 
 		float t = moby->AnimSeqT / SWAMPER_BITE_ANIM_DURATION;
-		float speedCurve = powf(clamp((1.5 - t) * 1.5, 0, 1.5), 2) * lungeMult;
-		float speedMult = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < SWAMPER_BITE_LUNGE_FRAME_START || moby->AnimSeqT > SWAMPER_BITE_LUNGE_FRAME_END)) ? 0 : speedCurve;
+		float speedCurve = pvars->MobVars.Config.Speed * powf(clamp((1.5 - t) * 1.5, 0, 1.5), 2) * lungeMult;
+		float speed = (moby->AnimSeqId == attack1AnimId && (moby->AnimSeqT < SWAMPER_BITE_LUNGE_FRAME_START || moby->AnimSeqT > SWAMPER_BITE_LUNGE_FRAME_END)) ? 0 : speedCurve;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWAMPER_BITE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWAMPER_BITE_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
@@ -533,7 +532,8 @@ void swamperDoState(Moby *moby)
 		{
 			if (target)
 			{
-				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, SWAMPER_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
+				mobTurnTowardsPredictiveWithSpeed(moby, target, SWAMPER_TURN_LUNGE_RADIANS_PER_SEC, speed);
+				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
 			}
 			else
 			{
@@ -544,7 +544,7 @@ void swamperDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			swamperDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
+			swamperDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
 		}
 		break;
 	}

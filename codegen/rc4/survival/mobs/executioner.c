@@ -118,7 +118,7 @@ void executionerPostUpdate(Moby *moby)
 	}
 	else if (moby->AnimSeqId == EXECUTIONER_ANIM_SWING)
 	{
-		animSpeed = baseSpeed * mobGetActionFloat(moby, EXECUTIONER_ACTION_MELEE, EXECUTIONER_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed = baseSpeed * mobGetFloat(moby, EXECUTIONER_PARAM_MELEE_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == EXECUTIONER_STATE_WALK))
@@ -346,7 +346,9 @@ int executionerGetPreferredState(Moby *moby, int *delayTicks)
 				// away from target
 				// check if facing
 				// and fire
-				t[2] = 0;
+				mobGetTargetCenter(target, t);
+				vector_subtract(t, t, moby->Position);
+				vector_projectonhorizontal(t, t);
 				float theta = acosf(vector_innerproduct(t, moby->M0_03));
 				if (fabsf(theta) < (30 * MATH_DEG2RAD) && executionerGetActionReady(moby, EXECUTIONER_ACTION_FIRE))
 					return EXECUTIONER_STATE_FIRE;
@@ -373,9 +375,8 @@ Moby *executionerFireShot(Moby *moby, Moby *target)
 	vector_copy(from, &m[12]);
 	vector_copy(vel, &m[0]);
 
-	// get action params
-	float actionDamageMult = mobGetActionFloat(moby, EXECUTIONER_ACTION_FIRE, EXECUTIONER_ACTION_FIRE_PARAM_DAMAGE_MULTIPLIER);
-	float actionProjectileSpeedMult = mobGetActionFloat(moby, EXECUTIONER_ACTION_FIRE, EXECUTIONER_ACTION_FIRE_PARAM_PROJECTILE_SPEED_MULTIPLIER);
+	float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, EXECUTIONER_PARAM_FIRE_DAMAGE_MULTIPLIER);
+	float projectileSpeed = MATH_DT * mobGetFloat(moby, EXECUTIONER_PARAM_FIRE_PROJECTILE_SPEED);
 
 	// move shot from forward
 	// VECTOR offset;
@@ -406,11 +407,11 @@ Moby *executionerFireShot(Moby *moby, Moby *target)
 		}
 	}
 
-	vector_scale(vel, vel, 0.5 * actionProjectileSpeedMult);
+	vector_scale(vel, vel, projectileSpeed);
 
 	// fire shot
 	float rangedAttack = MapConfig.DefaultSpawnParams[pvars->MobVars.SpawnParamsIdx].RangedAttackDistance;
-	Moby *shotMoby = ((Moby * (*)(float, float, VECTOR, VECTOR, Moby *, int, int, int, int))0x0045d598)(4, pvars->MobVars.Config.Damage * actionDamageMult, from, vel, moby, 1, 0x222124, -1, 0);
+	Moby *shotMoby = ((Moby * (*)(float, float, VECTOR, VECTOR, Moby *, int, int, int, int))0x0045d598)(4, damage, from, vel, moby, 1, 0x222124, -1, 0);
 	if (shotMoby)
 	{
 		((void (*)(Moby *, int))0x0045d758)(shotMoby, 2);														// shot type
@@ -626,9 +627,7 @@ void executionerDoState(Moby *moby)
 		int attack1AnimId = EXECUTIONER_ANIM_SWING;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, EXECUTIONER_ACTION_MELEE, EXECUTIONER_ACTION_MELEE_PARAM_DAMAGE_MULTIPLIER);
-
+		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, EXECUTIONER_PARAM_MELEE_DAMAGE_MULTIPLIER);
 		float speedMult = 0; // (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= EXECUTIONER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < EXECUTIONER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
@@ -647,7 +646,7 @@ void executionerDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			executionerDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
+			executionerDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
 		}
 		break;
 	}

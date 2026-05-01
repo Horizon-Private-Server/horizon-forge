@@ -148,7 +148,7 @@ void tremorPostUpdate(Moby *moby)
 	}
 	else if (moby->AnimSeqId == TREMOR_ANIM_SWING)
 	{
-		animSpeed = baseSpeed * mobGetActionFloat(moby, TREMOR_ACTION_MELEE, TREMOR_ACTION_MELEE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed *= mobGetFloat(moby, TREMOR_PARAM_MELEE_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.State == TREMOR_STATE_WALK))
@@ -536,19 +536,19 @@ void tremorDoState(Moby *moby)
 		int attack1AnimId = TREMOR_ANIM_SWING;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, TREMOR_ACTION_MELEE, TREMOR_ACTION_MELEE_PARAM_DAMAGE_MULTIPLIER);
-		float actionLungeMult = mobGetActionFloat(moby, TREMOR_ACTION_MELEE, TREMOR_ACTION_MELEE_PARAM_LUNGE_MULTIPLIER);
+		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, TREMOR_PARAM_MELEE_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetFloat(moby, TREMOR_PARAM_MELEE_LUNGE_MULTIPLIER);
 
 		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < TREMOR_ATTACK_ANIM_LUNGE_DURATION;
-		float speedMult = actionLungeMult * clamp(difficulty * 2, 1, 5);
+		float speed = lungeMult * clamp(difficulty * 2, 1, 5);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= TREMOR_ATTACK_HIT_FRAME_START && moby->AnimSeqT < TREMOR_ATTACK_HIT_FRAME_END;
 
 		if (!isInAirFromFlinching)
 		{
 			if (target && lungeActive)
 			{
-				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, turnSpeed, acceleration, 0);
+				mobTurnTowardsPredictiveWithSpeed(moby, target, TREMOR_TURN_LUNGE_RADIANS_PER_SEC, speed);
+				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
 			}
 			else
 			{
@@ -559,7 +559,7 @@ void tremorDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			tremorDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
+			tremorDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
 		}
 		break;
 	}
@@ -567,9 +567,7 @@ void tremorDoState(Moby *moby)
 	{
 		int nextAnimId = moby->AnimSeqId;
 
-		// get action params
-		float actionQuakeSpeedMult = mobGetActionFloat(moby, TREMOR_ACTION_GROUND_QUAKE, TREMOR_ACTION_GROUND_QUAKE_PARAM_QUAKE_SPEED_MULTIPLIER);
-		float quakeSpeed = TREMOR_QUAKE_SPEED * actionQuakeSpeedMult;
+		float quakeSpeed = MATH_DT * mobGetFloat(moby, TREMOR_PARAM_GROUND_QUAKE_QUAKE_SPEED);
 
 		switch (moby->AnimSeqId)
 		{
@@ -658,10 +656,10 @@ void tremorQuakeMobyUpdate(Moby *moby)
 		((void (*)(Moby *))0x00437298)(moby);
 
 		// damage
-		float actionDamageMult = mobGetActionFloat(parentMoby, TREMOR_ACTION_GROUND_QUAKE, TREMOR_ACTION_GROUND_QUAKE_PARAM_DAMAGE_MULTIPLIER);
 		struct MobPVar *mobPvars = (struct MobPVar *)parentMoby->PVar;
+		float damage = mobPvars->MobVars.Config.Damage * mobGetFloat(parentMoby, TREMOR_PARAM_GROUND_QUAKE_DAMAGE_MULTIPLIER);
 		u32 damageFlags = mobGetDamageFlags(parentMoby, MOB_DAMAGE_FLAG_BASE);
-		mobDoSweepDamage(parentMoby, lastPosition, moby->Position, TREMOR_QUAKE_HIT_RADIUS * 0.5, TREMOR_QUAKE_HIT_RADIUS, mobPvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0, 0, 1);
+		mobDoSweepDamage(parentMoby, lastPosition, moby->Position, TREMOR_QUAKE_HIT_RADIUS * 0.5, TREMOR_QUAKE_HIT_RADIUS, damage, damageFlags, 0, 0, 1);
 
 		// kill when life hits 0
 		pvars->LifeTicks--;

@@ -129,7 +129,7 @@ void swarmerPostUpdate(Moby *moby)
 	}
 	else if (moby->AnimSeqId == SWARMER_ANIM_JUMP_FORWARD_BITE)
 	{
-		animSpeed = baseSpeed * mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_ATTACK_SPEED_MULTIPLIER);
+		animSpeed = baseSpeed * mobGetFloat(moby, SWARMER_PARAM_BITE_ATTACK_SPEED_MULTIPLIER);
 	}
 
 	if (moby->AnimSeqId == SWARMER_ANIM_FLINCH_BACKFLIP_AND_STAND)
@@ -533,8 +533,7 @@ void swarmerDoState(Moby *moby)
 	}
 	case SWARMER_STATE_DODGE:
 	{
-		// get action params
-		float actionConfigDodgeVelocityMult = mobGetActionFloat(moby, SWARMER_ACTION_DODGE, SWARMER_ACTION_DODGE_PARAM_VELOCITY_MULTIPLIER);
+		float dodgeSpeedMult = mobGetFloat(moby, SWARMER_PARAM_DODGE_VELOCITY_MULTIPLIER);
 
 		if (!pvars->MobVars.CurrentStateForTicks)
 		{
@@ -546,7 +545,7 @@ void swarmerDoState(Moby *moby)
 			vector_fromyaw(t, moby->Rotation[2] + (MATH_PI / 2) * dir);
 			vector_scale(t, t, pvars->MobVars.Config.Speed * 4 * MATH_DT);
 			t[2] = 4 * MATH_DT;
-			vector_scale(t, t, actionConfigDodgeVelocityMult);
+			vector_scale(t, t, dodgeSpeedMult);
 			vector_copy(pvars->MobVars.MoveVars.Velocity, t);
 			pvars->MobVars.MoveVars.Grounded = 0;
 
@@ -603,23 +602,22 @@ void swarmerDoState(Moby *moby)
 		int attack1AnimId = SWARMER_ANIM_JUMP_FORWARD_BITE;
 		mobTransAnim(moby, attack1AnimId, 0);
 
-		// get action params
-		float actionDamageMult = mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_DAMAGE_MULTIPLIER);
-		float lungeMult = mobGetActionFloat(moby, SWARMER_ACTION_BITE, SWARMER_ACTION_BITE_PARAM_LUNGE_MULTIPLIER);
+		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, SWARMER_PARAM_BITE_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetFloat(moby, SWARMER_PARAM_BITE_LUNGE_MULTIPLIER);
 
-		float speedCurve = powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2) * lungeMult;
-		float speedMult = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < SWARMER_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 1;
+		float speedCurve = pvars->MobVars.Config.Speed * powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2) * lungeMult;
+		float speed = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < SWARMER_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 1;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWARMER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWARMER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
-		if (speedMult < 1)
-			speedMult = 1;
+		printf("speed:%f lunge:%f final:%f\n", pvars->MobVars.Config.Speed, lungeMult, speed);
 
 		if (!isInAirFromFlinching)
 		{
 			if (target)
 			{
-				mobMoveTowards(moby, target->Position, speedMult * pvars->MobVars.Config.Speed, SWARMER_TURN_LUNGE_RADIANS_PER_SEC, acceleration, 0);
+				mobTurnTowardsPredictiveWithSpeed(moby, target, SWARMER_TURN_LUNGE_RADIANS_PER_SEC, speed);
+				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
 			}
 			else
 			{
@@ -630,7 +628,7 @@ void swarmerDoState(Moby *moby)
 
 		if (swingAttackReady && damageFlags)
 		{
-			swarmerDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * actionDamageMult, damageFlags, 0);
+			swarmerDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
 		}
 		break;
 	}

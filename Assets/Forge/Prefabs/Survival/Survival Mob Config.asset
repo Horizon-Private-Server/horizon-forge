@@ -101,50 +101,48 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Lunge Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 2
     - Name: Throw Head
       Description: 
       MinCooldownSeconds: 3
       MaxCooldownSeconds: 40
       Probability: 1
       QueuedForTicks: 10
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 2
-      - Name: Projectile Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Time Bomb Explode
       Description: 
       MinCooldownSeconds: 0
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Duration Multiplier
-        Description: Increase or decrease timebomb "ticker" state duration. Lower
-          values means the player has less notice of the pending explosion.
-        ValueType: 0
-        DefaultValue: 1
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue: 7
+    - Name: Throw Head Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 2
+    - Name: Throw Projectile Speed
+      Description: 
+      ValueType: 0
+      DefaultValue: 30
+    - Name: Timebomb Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Timebomb Tick Duration (sec)
+      Description: Increase or decrease timebomb "ticker" state duration. Lower values
+        means the player has less time to react to the pending explosion.
+      ValueType: 0
+      DefaultValue: 2
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -221,30 +219,29 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Lunge Amount
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Dodge
       Description: 
       MinCooldownSeconds: 0.1
       MaxCooldownSeconds: 1
-      Probability: 0.1
+      Probability: 0.05
       QueuedForTicks: 10
-      Parameters:
-      - Name: Dodge Velocity Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
+    Parameters:
+    - Name: Bite Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Bite Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Bite Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue: 0.75
+    - Name: Dodge Velocity Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -308,19 +305,19 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1.5
-      - Name: Lunge Amount
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
+    Parameters:
+    - Name: Bite Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Bite Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1.5
+    - Name: Bite Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -391,45 +388,43 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Stab Ground
       Description: 
       MinCooldownSeconds: 0
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1.5
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Laser Sweep
       Description: 
       MinCooldownSeconds: 2
       MaxCooldownSeconds: 20
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Duration Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
+    Parameters:
+    - Name: Swing Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Swing Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Stab Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1.5
+    - Name: Stab Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Laser Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Laser Duration (sec)
+      Description: 
+      ValueType: 0
+      DefaultValue: 3
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -485,30 +480,29 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Fire Projectile
       Description: 
       MinCooldownSeconds: 0
       MaxCooldownSeconds: 0
       Probability: 0.01
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Projectile Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Projectile Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Projectile Speed
+      Description: 
+      ValueType: 0
+      DefaultValue: 30
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -564,42 +558,33 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Lunge Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 3
-      - Name: Aggro Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1.5
-      - Name: Aggro Move Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 3
     - Name: Aggro
       Description: 
       MinCooldownSeconds: 0
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1.5
-      - Name: Move Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 3
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue: 10
+    - Name: Aggro Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1.5
+    - Name: Aggro Move Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 3
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -668,34 +653,33 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Lunge Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 0
     - Name: Ground Quake
       Description: 
       MinCooldownSeconds: 3
       MaxCooldownSeconds: 40
       Probability: 1
       QueuedForTicks: 10
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Quake Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue: 0
+    - Name: Ground Quake Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Ground Quake Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 30
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -763,64 +747,61 @@ MonoBehaviour:
       MaxCooldownSeconds: 0
       Probability: 1
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Attack Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Lunge Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Charge
       Description: 
       MinCooldownSeconds: 5
       MaxCooldownSeconds: 15
       Probability: 0.2
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1.5
-      - Name: Speed Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
     - Name: Trail Shot
       Description: 
       MinCooldownSeconds: 5
       MaxCooldownSeconds: 20
       Probability: 0.2
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: Projectile Speed
-        Description: 
-        ValueType: 0
-        DefaultValue: 30
     - Name: Ground Smash
       Description: 
       MinCooldownSeconds: 15
       MaxCooldownSeconds: 60
       Probability: 0.5
       QueuedForTicks: 0
-      Parameters:
-      - Name: Damage Multiplier
-        Description: 
-        ValueType: 0
-        DefaultValue: 1
-      - Name: AoE Radius
-        Description: 
-        ValueType: 0
-        DefaultValue: 20
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Charge Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1.5
+    - Name: Charge Speed
+      Description: 
+      ValueType: 0
+      DefaultValue: 250
+    - Name: Trailshot Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Trailshot Projectile Speed
+      Description: 
+      ValueType: 0
+      DefaultValue: 30
+    - Name: Smash Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue: 1
+    - Name: Smash AoE Radius
+      Description: 
+      ValueType: 0
+      DefaultValue: 20
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
