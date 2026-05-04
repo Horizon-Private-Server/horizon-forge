@@ -28,7 +28,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
-#include "vendor.h"
+#include "mobys/vendor.h"
 #include "game.h"
 #include "gate.h"
 #include "messageid.h"

@@ -29,7 +29,7 @@
 #include <libdl/graphics.h>
 #include <libdl/color.h>
 #include <libdl/utils.h>
-#include "mysterybox.h"
+#include "mobys/mysterybox.h"
 #include "game.h"
 #include "gate.h"
 #include "messageid.h"

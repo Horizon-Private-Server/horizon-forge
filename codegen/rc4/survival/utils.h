@@ -9,6 +9,8 @@
 #include <libdl/sound.h>
 #include "game.h"
 
+#define WRAP_DISTANCE(value, max) (((value % max) + max) % max)
+
 extern struct SurvivalMapConfig MapConfig;
 extern struct SurvivalBakedConfig bakedConfig;
 extern char LocalPlayerStrBuffer[2][64];

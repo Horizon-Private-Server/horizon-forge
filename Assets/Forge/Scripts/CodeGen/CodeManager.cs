@@ -64,9 +64,11 @@ public class CodeManager : MonoBehaviour
         var outSrcDir = Path.Combine(outDir, FolderNames.CodeBuildSrcFolder);
         var cMainPath = Path.Combine(outSrcDir, "main.c");
 
-        // build src dir
-        if (!Directory.Exists(outIncludeDir)) Directory.CreateDirectory(outIncludeDir);
-        if (!Directory.Exists(outSrcDir)) Directory.CreateDirectory(outSrcDir);
+        // reset src/include directories
+        if (Directory.Exists(outIncludeDir)) Directory.Delete(outIncludeDir, true);
+        if (Directory.Exists(outSrcDir)) Directory.Delete(outSrcDir, true);
+		Directory.CreateDirectory(outIncludeDir);
+		Directory.CreateDirectory(outSrcDir);
 
         // pass to generators
         var generators = GameObject.FindObjectsOfType<GameObject>().SelectMany(x => x.GetComponents<ICodeGen>()).Where(x => x != null).OrderBy(x => x.CodeGenOrder).ToArray();

@@ -9,8 +9,8 @@
 #include <libdl/moby.h>
 #include <libdl/player.h>
 #include "config.h"
-#include "drop.h"
-#include "upgrade.h"
+#include "mobys/drop.h"
+#include "mobys/upgrade.h"
 
 struct MobConfig;
 struct MobSpawnEventArgs;

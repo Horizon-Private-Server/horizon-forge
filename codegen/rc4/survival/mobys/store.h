@@ -7,7 +7,7 @@
 #include <libdl/time.h>
 #include <libdl/player.h>
 #include <libdl/math3d.h>
-#include "item.h"
+#include "items/item.h"
 
 #define STORE_MOBY_OCLASS (0x4100)
 #define STORE_MAX_DIST (4)

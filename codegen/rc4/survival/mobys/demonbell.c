@@ -8,10 +8,10 @@
 #include <libdl/graphics.h>
 #include <libdl/random.h>
 #include <libdl/radar.h>
-#include "demonbell.h"
+#include "mobys/demonbell.h"
 #include "maputils.h"
 #include "utils.h"
-#include "shared.h"
+#include "mobs/mob.h"
 
 GuberEvent* demonbellCreateEvent(Moby* moby, u32 eventType);
 int demonbellCount = 0;

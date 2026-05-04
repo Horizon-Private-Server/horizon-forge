@@ -5,7 +5,7 @@
 #include "game.h"
 #include "messageid.h"
 #include "utils.h"
-#include "shared.h"
+#include "mobs/mob.h"
 #include "maputils.h"
 
 #define ITEM_STACKABLE_HOVERBOOTS_DUR_TPS (2 * TPS)

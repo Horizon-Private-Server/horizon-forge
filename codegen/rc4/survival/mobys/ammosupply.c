@@ -35,7 +35,7 @@
 #include "messageid.h"
 #include "utils.h"
 #include "maputils.h"
-#include "ammosupply.h"
+#include "mobys/ammosupply.h"
 
 //--------------------------------------------------------------------------
 int ammosupplyGetCost(Moby *moby, Player *player, int gadgetId)

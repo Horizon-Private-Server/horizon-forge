@@ -31,8 +31,8 @@
 #include <libdl/collision.h>
 #include <libdl/random.h>
 #include "maputils.h"
-#include "shared.h"
-#include "ammodrop.h"
+#include "mobs/mob.h"
+#include "mobys/ammodrop.h"
 #include "game.h"
 
 Moby *ammoDropMobyList[MAX_MOB_AMMO_DROPS];

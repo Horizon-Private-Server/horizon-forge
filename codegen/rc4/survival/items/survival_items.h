@@ -2,7 +2,7 @@
 #define SURVIVAL_MAP_ITEMS_H
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 
 void mapOnItemApply_PlayerSpeed(int defIdx, SurvivalItemDef_t *def, Player *player);
 void mapOnItemApply_PlayerHealth(int defIdx, SurvivalItemDef_t *def, Player *player);

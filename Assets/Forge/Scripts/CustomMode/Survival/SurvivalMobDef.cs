@@ -12,6 +12,9 @@ public class SurvivalMobDef : MonoBehaviour
     public SurvivalMobAttributes Attributes;
     public EnumOverride<DLBlipTypes> BlipType;
 
+    public List<ActionOverride> Actions = new List<ActionOverride>();
+    public List<ParamOverride> Parameters = new List<ParamOverride>();
+
     [Header("Spawn Parameters")]
     public bool SpecialRoundOnly = false;
     public int MinRound = 0;
@@ -98,7 +101,7 @@ public class SurvivalMobDef : MonoBehaviour
         sb.AppendLine($"\t\t\t.Health = {(Health.HasOverride ? Health.OverrideValue : defaults.Health).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.MaxHealth = {(HealthMax.HasOverride ? HealthMax.OverrideValue : defaults.HealthMax).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.HealthScale = {(HealthScale.HasOverride ? HealthScale.OverrideValue : defaults.HealthScale).ToInvariantCulture()},");
-        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius * SizeMultiplier).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius + (SizeMultiplier * defaults.CollRadius)).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.HitRadius = {(defaults.HitRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.CollRadius = {(defaults.CollRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.ReactionTickCount = {(int)(defaults.ReactionDelaySeconds * 60)},");
@@ -111,5 +114,99 @@ public class SurvivalMobDef : MonoBehaviour
         sb.AppendLine("\t},");
 
         return sb.ToString();
+    }
+
+    public string GetActionDefs()
+    {
+        var sb = new StringBuilder();
+
+        var mobPrefix = this.Mob.ToString().ToLower();
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+        var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new SurvivalMobsScriptableObject.SurvivalMobsConfig();
+        var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
+        var name = gameObject.name.MaxLength(31).Escape();
+
+        for (int i = 0; i < defaults.Actions.Count; ++i)
+        {
+            var action = defaults.Actions[i];
+            var actionOverride = Actions.ElementAtOrDefault(i);
+
+            float minCooldownSec = actionOverride?.MinCooldownSeconds.HasOverride == true ? actionOverride.MinCooldownSeconds.OverrideValue : action.MinCooldownSeconds;
+            float maxCooldownSec = actionOverride?.MaxCooldownSeconds.HasOverride == true ? actionOverride.MaxCooldownSeconds.OverrideValue : action.MaxCooldownSeconds;
+            float probability = actionOverride?.Probability.HasOverride == true ? actionOverride.Probability.OverrideValue : action.Probability;
+            float queuedForTicks = actionOverride?.QueuedForTicks.HasOverride == true ? actionOverride.QueuedForTicks.OverrideValue : action.QueuedForTicks;
+
+            sb.AppendLine($"\t{{ /* {action.Name} */ ");
+            sb.AppendLine($"\t\t.MinCooldownTicks = {(int)(60 * minCooldownSec)},");
+            sb.AppendLine($"\t\t.MaxCooldownTicks = {(int)(60 * maxCooldownSec)},");
+            sb.AppendLine($"\t\t.Probability = {probability.ToInvariantCulture()},");
+            sb.AppendLine($"\t\t.QueuedForTicks = {queuedForTicks},");
+            sb.AppendLine("\t},");
+        }
+
+        return sb.ToString();
+    }
+
+    public string GetParameterDefs()
+    {
+        var sb = new StringBuilder();
+
+        var mobPrefix = this.Mob.ToString().ToLower();
+        var mobConfig = SurvivalMobsScriptableObject.Load();
+        var defaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == this.Mob) ?? new SurvivalMobsScriptableObject.SurvivalMobsConfig();
+        var variant = defaults?.Variants?.ElementAtOrDefault(Variant);
+        var name = gameObject.name.MaxLength(31).Escape();
+
+        for (int i = 0; i < defaults.Parameters.Count; ++i)
+        {
+            var paramDef = defaults.Parameters[i];
+            var paramOverride = Parameters.ElementAtOrDefault(i);
+            var value = paramDef.DefaultValue;
+
+            switch (paramDef.ValueType)
+            {
+                case SurvivalMobsScriptableObject.SurvivalMobParameter.InputType.Float:
+                case SurvivalMobsScriptableObject.SurvivalMobParameter.InputType.Probability:
+                    if (paramOverride != null && paramOverride.FloatValue.HasOverride)
+                        value = paramOverride.FloatValue.OverrideValue.ToInvariantCulture();
+                    sb.AppendLine($"\t{{ .FloatValue = {value} /* {paramDef.Name} */ }},");
+                    break;
+                case SurvivalMobsScriptableObject.SurvivalMobParameter.InputType.Integer:
+                    if (paramOverride != null && paramOverride.IntValue.HasOverride)
+                        value = paramOverride.IntValue.OverrideValue.ToString();
+                    sb.AppendLine($"\t{{ .IntValue = {value} /* {paramDef.Name} */ }},");
+                    break;
+                case SurvivalMobsScriptableObject.SurvivalMobParameter.InputType.Boolean:
+                    var b = (bool.TryParse(paramDef.DefaultValue, out var bValue) && bValue) || (int.TryParse(paramDef.DefaultValue, out var iValue) && iValue != 0);
+                    if (paramOverride != null && paramOverride.BoolValue.HasOverride)
+                        b = paramOverride.BoolValue.OverrideValue;
+                    sb.AppendLine($"\t{{ .IntValue = {(b ? 1 : 0)} /* {paramDef.Name} */ }},");
+                    break;
+                default: throw new NotImplementedException();
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    [Serializable]
+    public class ParamOverride
+    {
+        public FloatOverride FloatValue;
+        public Int32Override IntValue;
+        public BoolOverride BoolValue;
+    }
+
+    [Serializable]
+    public class ActionOverride
+    {
+        [Tooltip("Minimum threshold for random cooldown time.")]
+        public FloatOverride MinCooldownSeconds;
+        [Tooltip("Maximum threshold for random cooldown time.")]
+        public FloatOverride MaxCooldownSeconds;
+        [Tooltip("Probability (0.0 - 1.0) that once the cooldown hits 0 that the action will be queued.")]
+        public FloatOverride Probability;
+        [Tooltip("How long the action can remain queued before it resets. 0 means it can remain queued forever. 60 ticks in a second.")]
+        public Int32Override QueuedForTicks;
     }
 }

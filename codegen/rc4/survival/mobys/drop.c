@@ -8,8 +8,8 @@
 #include <libdl/random.h>
 #include <libdl/radar.h>
 #include <libdl/string.h>
-#include "drop.h"
-#include "mob.h"
+#include "mobys/drop.h"
+#include "mobs/mob.h"
 #include "maputils.h"
 #include "utils.h"
 #include "game.h"

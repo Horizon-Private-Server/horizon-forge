@@ -7,13 +7,13 @@
 #include "messageid.h"
 #include "config.h"
 #include "interop.h"
-#include "upgrade.h"
-#include "drop.h"
+#include "mobys/upgrade.h"
+#include "mobys/drop.h"
 #include "gate.h"
-#include "mysterybox.h"
-#include "bankbox.h"
-#include "demonbell.h"
-#include "item.h"
+#include "mobys/mysterybox.h"
+#include "mobys/bankbox.h"
+#include "mobys/demonbell.h"
+#include "items/item.h"
 #include "utils.h"
 
 #define MAP_CONFIG_MAGIC (0xDEADBEEF)
@@ -157,6 +157,8 @@ enum MobStatId
 struct MobConfig;
 struct MobSpawnEventArgs;
 struct MobSpawnParams;
+union MobActionParameter;
+struct MobActionConfig;
 
 struct SurvivalPlayerState
 {
