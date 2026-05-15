@@ -102,6 +102,7 @@ public enum GCMapIds
 
 public enum DLCustomModeIds
 {
+	ForgeCustomMode = -6,
     Benchmark = -5,
     InfiniteClimber = -4,
     Spleef = -2,

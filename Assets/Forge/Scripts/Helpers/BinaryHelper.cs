@@ -78,6 +78,15 @@ public static class BinaryHelper
             ;
     }
 
+    public static void Align(this BinaryWriter writer, int alignment)
+    {
+		var mod = writer.BaseStream.Position % alignment;
+		if (mod == 0)
+			return;
+
+		writer.Write(new byte[alignment - mod]);
+    }
+
     public static void WriteString(this BinaryWriter writer, string value, int fixedLength)
     {
         var bytes = Encoding.ASCII.GetBytes(value ?? string.Empty);
@@ -140,4 +149,31 @@ public static class BinaryHelper
 
         return bytes.SelectMany(x => x).ToArray();
     }
+
+	
+	public static void WriteBoolOverride8(this BinaryWriter writer, BoolOverride value)
+	{
+        writer.Write((byte)(value.HasOverride ? (value.OverrideValue ? 1 : 0) : 255));
+	}
+
+	public static void WriteIntOverride8(this BinaryWriter writer, Int32Override value)
+	{
+        writer.Write((byte)(value.HasOverride ? value.OverrideValue : 255));
+	}
+
+	public static void WriteSteppedIntOverride8(this BinaryWriter writer, Int32Override value, int step)
+	{
+        writer.Write((byte)(value.HasOverride ? ((value.OverrideValue + step - 1) / step) : 255));
+	}
+
+	public static void WriteEnumOverride8<T>(this BinaryWriter writer, EnumOverride<T> value) where T : Enum, IConvertible
+	{
+        writer.Write((byte)(value.HasOverride ? Convert.ToInt32(value.OverrideValue) : 255));
+	}
+
+	public static void WriteEnumOverride32<T>(this BinaryWriter writer, EnumOverride<T> value) where T : Enum, IConvertible
+	{
+        writer.Write((uint)(value.HasOverride ? Convert.ToUInt32(value.OverrideValue) : uint.MaxValue));
+	}
+
 }

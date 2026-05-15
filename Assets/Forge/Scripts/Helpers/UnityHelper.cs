@@ -1692,7 +1692,7 @@ public static class UnityHelper
         ColorOverride(rect, property, field, defaultValue);
     }
 
-    public static Rect EnumOverride<T>(Rect position, SerializedProperty property, string field, T defaultValue) where T : Enum
+    public static Rect EnumOverride(Rect position, SerializedProperty property, string field, Enum defaultValue)
     {
         // find prop
         var prop = property;
@@ -1741,7 +1741,7 @@ public static class UnityHelper
         EnumOverride(rect, property, field, defaultValue);
     }
 
-    public static Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue, string label = null, string tooltip = null)
+    public static Rect FloatOverride(Rect position, SerializedProperty property, string field, float defaultValue, string label = null, string tooltip = null, float? rangeMin = null, float? rangeMax = null)
     {
         // find prop
         var prop = property;
@@ -1771,12 +1771,26 @@ public static class UnityHelper
         // Draw float only if there's a value
         if (hasValueProp.boolValue)
         {
-            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+			if (rangeMin.HasValue && rangeMax.HasValue)
+			{
+				valueProp.floatValue = EditorGUI.Slider(valueRect, GUIContent.none, valueProp.floatValue, rangeMin.Value, rangeMax.Value);
+			}
+			else
+			{
+            	EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        	}
         }
         else
         {
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUI.FloatField(valueRect, defaultValue);
+			if (rangeMin.HasValue && rangeMax.HasValue)
+			{
+				EditorGUI.Slider(valueRect, GUIContent.none, defaultValue, rangeMin.Value, rangeMax.Value);
+			}
+            else
+			{
+            	EditorGUI.FloatField(valueRect, defaultValue);
+			}
             EditorGUI.EndDisabledGroup();
         }
 
@@ -1839,7 +1853,7 @@ public static class UnityHelper
         BoolOverride(rect, property, field, defaultValue, label: label, tooltip: tooltip);
     }
 
-    public static Rect Int32Override(Rect position, SerializedProperty property, string field, int defaultValue, string label = null, string tooltip = null)
+    public static Rect Int32Override(Rect position, SerializedProperty property, string field, int defaultValue, string label = null, string tooltip = null, float? rangeMin = null, float? rangeMax = null)
     {
         // find prop
         var prop = property;
@@ -1869,12 +1883,26 @@ public static class UnityHelper
         // Draw float only if there's a value
         if (hasValueProp.boolValue)
         {
-            EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
-        }
+			if (rangeMin.HasValue && rangeMax.HasValue)
+			{
+				valueProp.intValue = EditorGUI.IntSlider(valueRect, GUIContent.none, valueProp.intValue, (int)rangeMin, (int)rangeMax);
+			}
+			else
+			{
+            	EditorGUI.PropertyField(valueRect, valueProp, GUIContent.none);
+        	}
+		}
         else
         {
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUI.IntField(valueRect, defaultValue);
+			if (rangeMin.HasValue && rangeMax.HasValue)
+			{
+				EditorGUI.IntSlider(valueRect, GUIContent.none, defaultValue, (int)rangeMin, (int)rangeMax);
+			}
+            else
+			{
+				EditorGUI.IntField(valueRect, defaultValue);
+			}
             EditorGUI.EndDisabledGroup();
         }
 
@@ -1984,6 +2012,36 @@ public static class UnityHelper
     {
         var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, options);
         DoubleOverride(rect, property, field, defaultValue);
+    }
+
+    public static Rect EmptyOverride(Rect position, SerializedProperty property, string field)
+    {
+        // find prop
+        var prop = property;
+        if (!string.IsNullOrEmpty(field))
+            prop = property.FindPropertyRelative(field);
+
+        // cannot find prop
+        if (prop == null)
+            return position;
+
+        var height = EditorGUIUtility.singleLineHeight;
+        position.height = height;
+
+        SerializedProperty hasValueProp = prop.FindPropertyRelative("HasOverride");
+        SerializedProperty valueProp = prop.FindPropertyRelative("OverrideValue");
+
+        var prefixRect = EditorGUI.PrefixLabel(position, new GUIContent("A"));
+        var labelWidth = position.width - prefixRect.width;
+        Rect toggleRect = new Rect(position.x, position.y, 20, position.height);
+        Rect labelRect = new Rect(position.x + 22, position.y, labelWidth - 22, position.height);
+
+        // On/off toggle
+        hasValueProp.boolValue = EditorGUI.Toggle(toggleRect, hasValueProp.boolValue);
+        GUI.Label(labelRect, new GUIContent(prop.displayName, prop.tooltip));
+
+        position.y += height;
+        return position;
     }
 
     #endregion

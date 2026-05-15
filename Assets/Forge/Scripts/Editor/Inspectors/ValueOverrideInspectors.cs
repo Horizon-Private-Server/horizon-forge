@@ -20,6 +20,13 @@ public class FloatOverrideDrawer : PropertyDrawer
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
+        var noDefaultAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(OverrideNoDefaultAttribute)) as OverrideNoDefaultAttribute;
+		if (noDefaultAttr is not null && property.FindPropertyRelative("HasOverride").boolValue == false)
+		{
+			UnityHelper.EmptyOverride(rect, property, null);
+			return;
+		}
+
         var defaultValue = 0f;
         var defaultValueAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(DefaultValueAttribute)) as DefaultValueAttribute;
         if (defaultValueAttr is not null)
@@ -39,6 +46,13 @@ public class DoubleOverrideDrawer : PropertyDrawer
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
+        var noDefaultAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(OverrideNoDefaultAttribute)) as OverrideNoDefaultAttribute;
+		if (noDefaultAttr is not null && property.FindPropertyRelative("HasOverride").boolValue == false)
+		{
+			UnityHelper.EmptyOverride(rect, property, null);
+			return;
+		}
+
         var defaultValue = 0d;
         var defaultValueAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(DefaultValueAttribute)) as DefaultValueAttribute;
         if (defaultValueAttr is not null)
@@ -58,6 +72,13 @@ public class BoolOverrideDrawer : PropertyDrawer
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
+        var noDefaultAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(OverrideNoDefaultAttribute)) as OverrideNoDefaultAttribute;
+		if (noDefaultAttr is not null && property.FindPropertyRelative("HasOverride").boolValue == false)
+		{
+			UnityHelper.EmptyOverride(rect, property, null);
+			return;
+		}
+
         var defaultValue = false;
         var defaultValueAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(DefaultValueAttribute)) as DefaultValueAttribute;
         if (defaultValueAttr is not null)
@@ -77,12 +98,20 @@ public class Int32OverrideDrawer : PropertyDrawer
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
+        var noDefaultAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(OverrideNoDefaultAttribute)) as OverrideNoDefaultAttribute;
+		if (noDefaultAttr is not null && property.FindPropertyRelative("HasOverride").boolValue == false)
+		{
+			UnityHelper.EmptyOverride(rect, property, null);
+			return;
+		}
+
         var defaultValue = 0;
         var defaultValueAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(DefaultValueAttribute)) as DefaultValueAttribute;
         if (defaultValueAttr is not null)
             defaultValue = defaultValueAttr.Value.TryConvertToInt32() ?? 0;
 
-        UnityHelper.Int32Override(rect, property, null, defaultValue);
+        var rangeAttr = fieldInfo.GetCustomAttributes(typeof(OverrideRangeAttribute), true).FirstOrDefault() as OverrideRangeAttribute;
+        UnityHelper.Int32Override(rect, property, null, defaultValue, rangeMin: rangeAttr?.min, rangeMax: rangeAttr?.max);
     }
 }
 
@@ -96,11 +125,57 @@ public class UInt32OverrideDrawer : PropertyDrawer
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
+        var noDefaultAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(OverrideNoDefaultAttribute)) as OverrideNoDefaultAttribute;
+		if (noDefaultAttr is not null && property.FindPropertyRelative("HasOverride").boolValue == false)
+		{
+			UnityHelper.EmptyOverride(rect, property, null);
+			return;
+		}
+
         uint defaultValue = 0;
         var defaultValueAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(DefaultValueAttribute)) as DefaultValueAttribute;
         if (defaultValueAttr is not null)
             defaultValue = defaultValueAttr.Value.TryConvertToUInt32() ?? 0;
 
         UnityHelper.UInt32Override(rect, property, null, defaultValue);
+    }
+}
+
+[CustomPropertyDrawer(typeof(EnumOverride<>), true)]
+public class EnumOverrideDrawer : PropertyDrawer
+{
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        return EditorGUIUtility.singleLineHeight;
+    }
+
+    public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
+    {
+        var noDefaultAttr = fieldInfo.GetCustomAttributes(true).FirstOrDefault(x => x.GetType() == typeof(OverrideNoDefaultAttribute)) as OverrideNoDefaultAttribute;
+		if (noDefaultAttr is not null && property.FindPropertyRelative("HasOverride").boolValue == false)
+		{
+			UnityHelper.EmptyOverride(rect, property, null);
+			return;
+		}
+
+        Type genericType = fieldInfo.FieldType;
+        if (genericType.IsGenericType && genericType.GetGenericTypeDefinition() == typeof(EnumOverride<>))
+        {
+            Type enumType = genericType.GetGenericArguments()[0];
+			var flagsAttr = enumType.GetCustomAttributes(typeof(FlagsAttribute), true).FirstOrDefault() as FlagsAttribute;
+
+            // get default value
+			// use first value in enum as fallback
+            Enum defaultValue = flagsAttr is not null ? (Enum)Enum.ToObject(enumType, 0) : (Enum)Enum.GetValues(enumType).GetValue(0);
+            var defaultValueAttr = fieldInfo.GetCustomAttributes(typeof(DefaultValueAttribute), true).FirstOrDefault() as DefaultValueAttribute;
+            if (defaultValueAttr != null && defaultValueAttr.Value != null)
+                defaultValue = (Enum)Enum.ToObject(enumType, defaultValueAttr.Value);
+
+            UnityHelper.EnumOverride(rect, property, null, defaultValue);
+        }
+        else
+        {
+            EditorGUI.PropertyField(rect, property, label);
+        }
     }
 }

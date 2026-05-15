@@ -72,3 +72,20 @@ public struct EnumOverride<T>
 
     public T GetValue(T defaultValue) => HasOverride ? OverrideValue : defaultValue;
 }
+
+public class OverrideRangeAttribute : PropertyAttribute
+{
+    public float min;
+    public float max;
+
+    public OverrideRangeAttribute(float min, float max)
+    {
+        this.min = min;
+        this.max = max;
+    }
+}
+
+public class OverrideNoDefaultAttribute : PropertyAttribute
+{
+    public OverrideNoDefaultAttribute() {}
+}

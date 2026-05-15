@@ -1,0 +1,4 @@
+#ifndef FORGE_CGM_NETMSG_H
+#define FORGE_CGM_NETMSG_H
+
+#endif // FORGE_CGM_NETMSG_H
