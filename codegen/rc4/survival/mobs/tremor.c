@@ -693,7 +693,7 @@ void tremorSpawnQuake(Moby *moby, float speed, int jointIdx)
 	VECTOR groundCheckTo = {0, 0, 0, 0};
 	vector_add(groundCheckFrom, groundCheckFrom, spawnAt);
 	vector_add(groundCheckTo, groundCheckTo, spawnAt);
-	if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
+	if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL))
 		vector_add(spawnAt, CollLine_Fix_GetHitPosition(), (VECTOR){0, 0, 0.1, 0});
 
 	// spawn quake moby

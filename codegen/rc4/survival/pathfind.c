@@ -306,7 +306,7 @@ int pathGetClosestNodeInSight(Moby* moby, int * foundInSight)
     float dist = nodeDists[i] = maxf(0, vector_length(delta) - radius);
 
     // if obstructed then increase distance by factor
-    //if (CollLine_Fix(position, MOB_PATHFINDING_NODES[i], COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
+    //if (CollLine_Fix(position, MOB_PATHFINDING_NODES[i], COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL))
     //  dist *= 1000;
     
     for (j = 0; j < CLOSEST_NODES_COLL_CHECK_SIZE; ++j) {
@@ -342,7 +342,7 @@ int pathGetClosestNodeInSight(Moby* moby, int * foundInSight)
       vector_subtract(nodePos, nodePos, delta);
 
       // check if closest point is obstructed
-      if (orderedNodesByDist[i] >= 0 && !CollLine_Fix(position, nodePos, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+      if (orderedNodesByDist[i] >= 0 && !CollLine_Fix(position, nodePos, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
         if (foundInSight)
           *foundInSight = 1;
 
@@ -730,7 +730,7 @@ int pathGetTargetPos(VECTOR output, Moby* moby)
     vector_add(to, pvars->MobVars.TargetPosition, up);
 
     // near and can see
-    if (vector_sqrmag(delta) < (MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH*MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH) && !CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+    if (vector_sqrmag(delta) < (MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH*MOB_TARGET_DIST_IN_SIGHT_IGNORE_PATH) && !CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
 
       // not in opposite direction of current edge
       u8* currentEdge = pathGetCurrentEdge(moby);
@@ -798,7 +798,7 @@ int pathGetTargetPos(VECTOR output, Moby* moby)
         VECTOR from, to;
         vector_add(from, up, moby->Position);
         vector_add(to, up, MOB_PATHFINDING_NODES[lastEdge[1]]);
-        if (!CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+        if (!CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
           pvars->MobVars.MoveVars.PathHasReachedEnd = 1;
         }
       }

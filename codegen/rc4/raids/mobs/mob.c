@@ -587,11 +587,11 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
   // get if we should check for collisions with all colliders
   // we have to alternate because when many mobs are in one space
   // collision checks against all of them become extremely expensive
-  int collFlag = (mobMoveCheckCollideWithOtherMobsRotatingIndex == pvars->MobVars.Order) ? COLLISION_FLAG_IGNORE_NONE : COLLISION_FLAG_IGNORE_DYNAMIC;
+  int collFlag = (mobMoveCheckCollideWithOtherMobsRotatingIndex == pvars->MobVars.Order) ? COLLISION_FLAG_IGNORE_NONE : COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS;
 
   // if we're stuck, ignore other mobs and just try and get unstuck
   if (pvars->MobVars.MoveVars.IsStuck)
-    collFlag = COLLISION_FLAG_IGNORE_DYNAMIC;
+    collFlag = COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS;
 
   // move up by collradius
   up[2] = collRadius; // 0.5;
@@ -731,7 +731,7 @@ void mobMove(Moby* moby)
     vector_subtract(delta, pvars->MobVars.MoveVars.Target->Position, moby->Position);
     vector_add(from, moby->Position, up);
     vector_add(to, pvars->MobVars.MoveVars.Target->Position, up);
-    if (CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+    if (CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
       vector_copy(MoveTargetLineOfSightHit, CollLine_Fix_GetHitPosition());
     } else {
       vector_copy(MoveTargetLineOfSightHit, to);
@@ -814,7 +814,7 @@ void mobMove(Moby* moby)
       groundCheckFrom[2] = maxf(moby->Position[2], ledgePos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
       vector_copy(groundCheckTo, ledgePos);
       groundCheckTo[2] = gameGetDeathHeight();
-      if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+      if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
         currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
       } else {
         // no ground
@@ -836,7 +836,7 @@ void mobMove(Moby* moby)
         groundCheckFrom[2] = maxf(moby->Position[2], ledgePos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
         vector_copy(groundCheckTo, ledgePos);
         groundCheckTo[2] = gameGetDeathHeight();
-        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
           currentHeightFromGround = pvars->MobVars.MoveVars.DistFromGround = vector_distance(moby->Position, CollLine_Fix_GetHitPosition());
           if (!mobCollisionIdIsWalkable(CollLine_Fix_GetHitCollisionId()) || mobCollisionIdIsLethal(CollLine_Fix_GetHitCollisionId())) {
             nextPosHasSafeGround = 0;
@@ -854,7 +854,7 @@ void mobMove(Moby* moby)
         groundCheckFrom[2] = maxf(moby->Position[2], nextPos[2]) + ZOMBIE_BASE_STEP_HEIGHT;
         vector_copy(groundCheckTo, nextPos);
         groundCheckTo[2] -= 0.5;
-        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
 
           // mark grounded this frame
           pvars->MobVars.MoveVars.Grounded = 1;
@@ -887,7 +887,7 @@ void mobMove(Moby* moby)
         vector_copy(groundCheckTo, nextPos);
         groundCheckTo[2] += 3;
         //groundCheckTo[2] += ZOMBIE_BASE_STEP_HEIGHT;
-        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+        if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
           // force position to below ceiling
           //vector_copy(nextPos, CollLine_Fix_GetHitPosition());
           //nextPos[2] -= 0.01;
@@ -1358,7 +1358,7 @@ int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby)
       vector_add(t, moby->Position, up);
     }
 
-    return !CollLine_Fix(t, t2, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL) || CollLine_Fix_GetHitMoby() == canSeeMoby;
+    return !CollLine_Fix(t, t2, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL) || CollLine_Fix_GetHitMoby() == canSeeMoby;
   }
   
   return 0;

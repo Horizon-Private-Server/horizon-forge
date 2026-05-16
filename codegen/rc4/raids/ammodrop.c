@@ -90,7 +90,7 @@ void ammodropCreateAt(Moby* moby)
     vector_copy(ammoMoby->Position, moby->Position);
     vector_add(from, moby->Position, from);
     vector_add(to, moby->Position, to);
-    if (CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL)) {
+    if (CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL)) {
       vector_copy(ammoMoby->Position, CollLine_Fix_GetHitPosition());
     }
 
