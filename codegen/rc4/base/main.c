@@ -141,6 +141,7 @@ void mapDrawDebugWatermark(void)
 //--------------------------------------------------------------------------
 void draw(void)
 {
+##DRAWBODY##
 
 #if DEBUG
   // draw debug watermark

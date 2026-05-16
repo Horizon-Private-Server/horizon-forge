@@ -81,6 +81,25 @@ public class CodeManager : MonoBehaviour
         // copy base into working dir
         CopySourceFilesIntoWorkingDirectory(FolderNames.GetCodeGenFolder(RCVER.DL, "base"), outDir);
 
+		// copy mod code folder into working dir
+		var modCodeFolder = Path.Combine(FolderNames.GetMapFolder(ctx.MapSceneName), FolderNames.ModCodeFolder, $"rc{ctx.RacVersion}");
+		if (!Directory.Exists(modCodeFolder)) Directory.CreateDirectory(modCodeFolder);
+		if (Directory.Exists(modCodeFolder))
+		{
+			var modCodeFiles = CopySourceFilesIntoWorkingDirectory(modCodeFolder, outDir);
+			foreach (var modCodeFile in modCodeFiles)
+			{
+				var fileName = Path.GetFileName(modCodeFile);
+				if (fileName.EndsWith(".c"))
+				{
+					state.ObjectFiles.Add("src/" + Path.GetFileNameWithoutExtension(fileName) + ".o");
+
+					// check for special functions
+					CheckForSpecialFunctions(state, File.ReadAllText(modCodeFile));
+				}
+			}
+		}
+
         // update main.c
         var cMainContent = File.ReadAllText(cMainPath)
             .Replace("##INCLUDES##", string.Join("\n", state.Includes))
@@ -90,6 +109,7 @@ public class CodeManager : MonoBehaviour
             .Replace("##CLEANUPBODY##", string.Join("\n", state.CleanupBody.Select(x => Indent(x, 1))))
             .Replace("##MAINBODYREADY##", string.Join("\n", state.MainBodyReady.Select(x => Indent(x, 2))))
             .Replace("##MAINBODY##", string.Join("\n", state.MainBody.Select(x => Indent(x, 1))))
+            .Replace("##DRAWBODY##", string.Join("\n", state.DrawBody.Select(x => Indent(x, 1))))
             .Replace("##GETGUBERCASES##", string.Join("\n", state.GetGuberCase.Select(x => Indent(x, 2))))
             .Replace("##HANDLEEVENTCASES##", string.Join("\n", state.HandleGuberEventCase.Select(x => Indent(x, 2))))
             ;
@@ -141,6 +161,11 @@ public class CodeManager : MonoBehaviour
         foreach (var baseFile in baseFiles)
         {
             var subPath = Path.GetRelativePath(srcFolder, baseFile);
+
+			// hidden
+			if (!string.IsNullOrEmpty(subPath) && subPath.StartsWith("."))
+				continue;
+
             string outPath;
             switch (Path.GetExtension(baseFile))
             {
@@ -159,9 +184,19 @@ public class CodeManager : MonoBehaviour
                         outPath = Path.Combine(outSrcDir, subPath);
                         break;
                     }
+                case ".s":
+                    {
+                        outPath = Path.Combine(outSrcDir, subPath);
+                        break;
+                    }
                 default:
                     {
-                        outPath = Path.Combine(destFolder, subPath);
+						outPath = null;
+						if (Path.GetFileNameWithoutExtension(baseFile).StartsWith("makefile", StringComparison.InvariantCultureIgnoreCase)
+							|| Path.GetFileNameWithoutExtension(baseFile).StartsWith("linkfile", StringComparison.InvariantCultureIgnoreCase))
+						{
+							outPath = Path.Combine(destFolder, subPath);
+						}
                         break;
                     }
             }
@@ -176,6 +211,40 @@ public class CodeManager : MonoBehaviour
 
         return copiedFiles.ToArray();
     }
+
+	private static void CheckForSpecialFunctions(CodeGenState state, string code)
+	{
+		if (string.IsNullOrEmpty(code))
+			return;
+
+		// auto add modInit()
+		if (code.Contains("void modInit(void)") && !state.InitBody.Contains("modInit();"))
+		{
+			state.Declarations.Add("void modInit(void);");
+			state.InitBody.Add("modInit();");
+		}
+		
+		// auto add modUpdate()
+		if (code.Contains("void modUpdate(void)") && !state.MainBodyReady.Contains("modUpdate();"))
+		{
+			state.Declarations.Add("void modUpdate(void);");
+			state.MainBodyReady.Add("modUpdate();");
+		}
+		
+		// auto add modDraw()
+		if (code.Contains("void modDraw(void)") && !state.DrawBody.Contains("modDraw();"))
+		{
+			state.Declarations.Add("void modDraw(void);");
+			state.DrawBody.Add("modDraw();");
+		}
+		
+		// auto add modCleanup()
+		if (code.Contains("void modCleanup(void)") && !state.CleanupBody.Contains("modCleanup();"))
+		{
+			state.Declarations.Add("void modCleanup(void);");
+			state.CleanupBody.Add("modCleanup();");
+		}
+	}
 }
 
 public class CodeGenState
@@ -189,6 +258,7 @@ public class CodeGenState
     public List<string> Functions { get; set; } = new List<string>();
     public List<string> InitBody { get; set; } = new List<string>();
     public List<string> CleanupBody { get; set; } = new List<string>();
+    public List<string> DrawBody { get; set; } = new List<string>();
     public List<string> MainBodyReady { get; set; } = new List<string>();
     public List<string> MainBody { get; set; } = new List<string>();
     public List<string> HandleGuberEventCase { get; set; } = new List<string>();

@@ -17,6 +17,7 @@ public static class FolderNames
     public static readonly string SoundsFolder = "Sounds";
     public static readonly string HUDFolder = "HUD";
     public static readonly string OcclusionFolder = "Occlusion";
+    public static readonly string ModCodeFolder = "ModCode";
 
     public static readonly string TempFolder = ".forgeartifacts";
 

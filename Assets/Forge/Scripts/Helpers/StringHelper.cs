@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 public static class StringHelper
@@ -25,6 +26,7 @@ public static class StringHelper
         return str
             .Replace("\"", "\\\"")
             .Replace("\'", "\\\'")
+            .Replace("\\", "\\\\")
             ;
     }
 
@@ -33,13 +35,26 @@ public static class StringHelper
         if (string.IsNullOrEmpty(str))
             return str;
 
-        return str
+        return new string(str
             .Trim()
             .ToUpper()
-            .Replace("\"", "")
-            .Replace("\'", "")
             .Replace(" ", "_")
-            ;
+			.Where(c => char.IsLetterOrDigit(c) || c == '_')
+			.ToArray()
+		);
+    }
+
+    public static string ToCVar(this string str)
+    {
+        if (string.IsNullOrEmpty(str))
+            return str;
+
+        return new string(str
+            .Trim()
+            .ToTitleCase()
+			.Where(c => char.IsLetterOrDigit(c))
+			.ToArray()
+		);
     }
 
     public static string ToTitleCase(this string str)
