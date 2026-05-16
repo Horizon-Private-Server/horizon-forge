@@ -243,7 +243,7 @@ void dropUpdate(Moby *moby)
 	{
 		vector_add(t, moby->Position, down);
 		vector_subtract(t, t, offset);
-		if (CollLine_Fix(moby->Position, t, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
+		if (CollLine_Fix(moby->Position, t, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL))
 		{
 			pvars->HitGround = 1;
 		}

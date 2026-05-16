@@ -99,7 +99,7 @@ void damageRadius(Moby* moby, VECTOR position, u32 damageFlags, float damage, fl
   in.Flags = 1;
   in.DamageHp = damage;
 
-  CollMobysSphere_Fix(position, COLLISION_FLAG_IGNORE_STATIC, moby, &in, damageRadius);
+  CollMobysSphere_Fix(position, COLLISION_FLAG_IGNORE_NONDAMAGEABLE, moby, &in, damageRadius);
 }
 
 //--------------------------------------------------------------------------

@@ -743,7 +743,7 @@ void zombieThrowMobyUpdate(Moby *moby)
 
 	// check for collision
 	// if hit anything, destroy
-	if (CollLine_Fix(startHeadPos, nextHeadPos, COLLISION_FLAG_IGNORE_DYNAMIC, pvars->ThrownBy, NULL))
+	if (CollLine_Fix(startHeadPos, nextHeadPos, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, pvars->ThrownBy, NULL))
 	{
 		vector_copy(pvars->HeadPos, CollLine_Fix_GetHitPosition());
 		zombieThrowMobySpawnExplosion(moby);
@@ -903,7 +903,7 @@ void zombieSpawnThrowMoby(Moby *moby, float speed, int jointIdx)
 	VECTOR groundCheckTo = {0, 0, 0, 0};
 	vector_add(groundCheckFrom, groundCheckFrom, spawnAt);
 	vector_add(groundCheckTo, groundCheckTo, spawnAt);
-	if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
+	if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL))
 		vector_add(spawnAt, CollLine_Fix_GetHitPosition(), (VECTOR){0, 0, 0.1, 0});
 
 	// spawn throw moby

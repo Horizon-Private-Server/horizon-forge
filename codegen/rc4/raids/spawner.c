@@ -948,7 +948,7 @@ void spawnerStart(void)
     VECTOR spawnFrom, spawnTo, up={0,0,0.1,0}, down = {0,0,-30,0};
     vector_add(spawnFrom, request->SpawnArgs.Position, up);
     vector_add(spawnTo, request->SpawnArgs.Position, down);
-    if (!CollLine_Fix(spawnFrom, spawnTo, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL)) {
+    if (!CollLine_Fix(spawnFrom, spawnTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, NULL, NULL)) {
       memcpy(&deferredRequests[deferredRequestsCount], request, sizeof(struct SpawnerSpawnRequest));
       deferredRequestsCount++;
       DLOG(request->Spawner, "spawn %d failed, could not find any ground (pos:(%.2f,%.2f,%.2f))\n"

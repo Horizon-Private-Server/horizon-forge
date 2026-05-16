@@ -576,7 +576,7 @@ int reactorGetPreferredState(Moby *moby, int *delayTicks)
 
 			vector_add(mobyPosUp, moby->Position, up);
 			vector_add(targetPosUp, target->Position, up);
-			int targetInSight = !CollLine_Fix(mobyPosUp, targetPosUp, COLLISION_FLAG_IGNORE_DYNAMIC, NULL, NULL);
+			int targetInSight = !CollLine_Fix(mobyPosUp, targetPosUp, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, NULL, NULL);
 			if (!targetInSight)
 			{
 				return REACTOR_STATE_WALK;
@@ -1500,7 +1500,7 @@ void reactorSpawnMinion(Moby *moby, float radius)
 		vector_subtract(to, from, hitOffset);
 		vector_add(from, from, hitOffset);
 
-		if (CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_DYNAMIC, moby, NULL))
+		if (CollLine_Fix(from, to, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL))
 		{
 			vector_copy(position, CollLine_Fix_GetHitPosition());
 			break;
