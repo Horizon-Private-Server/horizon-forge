@@ -610,7 +610,7 @@ void swarmerDoState(Moby *moby)
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWARMER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWARMER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
-		printf("speed:%f lunge:%f final:%f\n", pvars->MobVars.Config.Speed, lungeMult, speed);
+		// printf("speed:%f lunge:%f final:%f\n", pvars->MobVars.Config.Speed, lungeMult, speed);
 
 		if (!isInAirFromFlinching)
 		{
