@@ -254,7 +254,7 @@ public class ForgeCustomModeNetworkMessageModule : MonoBehaviour, IForgeCustomMo
 		sb.AppendLine("\t// unhook receipt of custom network messages");
 		foreach (var msg in Messages)
 		{
-			sb.AppendLine($"\tnetInstallCustomMsgHandler({msg.EnumName}, NULL);");
+			sb.AppendLine($"\tnetUninstallCustomMsgHandler({msg.EnumName}, &{msg.RecvFuncName});");
 		}
 		sb.AppendLine("}");
 
