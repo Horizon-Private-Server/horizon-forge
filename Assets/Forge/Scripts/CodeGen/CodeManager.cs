@@ -109,6 +109,7 @@ public class CodeManager : MonoBehaviour
             .Replace("##CLEANUPBODY##", string.Join("\n", state.CleanupBody.Select(x => Indent(x, 1))))
             .Replace("##MAINBODYREADY##", string.Join("\n", state.MainBodyReady.Select(x => Indent(x, 2))))
             .Replace("##MAINBODY##", string.Join("\n", state.MainBody.Select(x => Indent(x, 1))))
+            .Replace("##STARTBODY##", string.Join("\n", state.StartBody.Select(x => Indent(x, 1))))
             .Replace("##DRAWBODY##", string.Join("\n", state.DrawBody.Select(x => Indent(x, 1))))
             .Replace("##GETGUBERCASES##", string.Join("\n", state.GetGuberCase.Select(x => Indent(x, 2))))
             .Replace("##HANDLEEVENTCASES##", string.Join("\n", state.HandleGuberEventCase.Select(x => Indent(x, 2))))
@@ -231,6 +232,13 @@ public class CodeManager : MonoBehaviour
 			state.MainBodyReady.Add("modUpdate();");
 		}
 		
+		// auto add modStart()
+		if (code.Contains("void modStart(void)") && !state.StartBody.Contains("modStart();"))
+		{
+			state.Declarations.Add("void modStart(void);");
+			state.StartBody.Add("modStart();");
+		}
+		
 		// auto add modDraw()
 		if (code.Contains("void modDraw(void)") && !state.DrawBody.Contains("modDraw();"))
 		{
@@ -259,6 +267,7 @@ public class CodeGenState
     public List<string> InitBody { get; set; } = new List<string>();
     public List<string> CleanupBody { get; set; } = new List<string>();
     public List<string> DrawBody { get; set; } = new List<string>();
+    public List<string> StartBody { get; set; } = new List<string>();
     public List<string> MainBodyReady { get; set; } = new List<string>();
     public List<string> MainBody { get; set; } = new List<string>();
     public List<string> HandleGuberEventCase { get; set; } = new List<string>();

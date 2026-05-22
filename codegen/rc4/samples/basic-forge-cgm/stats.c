@@ -39,7 +39,7 @@ void statsTrackPlayer(Player* player)
 	if (gameData->PlayerStats.Kills[pidx] != modPlayerState->LastKills)
 	{
 		int delta = gameData->PlayerStats.Kills[pidx] - modPlayerState->LastKills;
-		if (delta > 0 && inHill) cgmScoreIncCustomPlayerIntStat(pidx, CSTAT_KILLS_IN_HILL, delta);
+		if (delta > 0 && inHill) cgmScoreIncCustomPlayerIntStat(pidx, CSTAT_KILLS_IN_HILL, delta, 0);
 		modPlayerState->LastKills = gameData->PlayerStats.Kills[pidx];
 	}
 	
@@ -47,7 +47,7 @@ void statsTrackPlayer(Player* player)
 	if (gameData->PlayerStats.Deaths[pidx] != modPlayerState->LastDeaths)
 	{
 		int delta = gameData->PlayerStats.Deaths[pidx] - modPlayerState->LastDeaths;
-		if (delta > 0 && inHill) cgmScoreIncCustomPlayerIntStat(pidx, CSTAT_DEATHS_IN_HILL, delta);
+		if (delta > 0 && inHill) cgmScoreIncCustomPlayerIntStat(pidx, CSTAT_DEATHS_IN_HILL, delta, 0);
 		modPlayerState->LastDeaths = gameData->PlayerStats.Deaths[pidx];
 	}
 	
@@ -55,7 +55,7 @@ void statsTrackPlayer(Player* player)
 	float distance = vector_distance(player->PlayerPosition, modPlayerState->LastPosition);
 	vector_copy(modPlayerState->LastPosition, player->PlayerPosition);
 	if (!playerIsDead(player) && !playerStateIsDead(modPlayerState->LastState) && modPlayerState->HasFirstPass)
-		cgmScoreIncCustomPlayerFloatStat(pidx, CSTAT_DISTANCE, distance);
+		cgmScoreIncCustomPlayerFloatStat(pidx, CSTAT_DISTANCE, distance, 0);
 
 	// finally update player state for next statsTrackPlayer() call
 	modPlayerState->LastState = player->PlayerState;

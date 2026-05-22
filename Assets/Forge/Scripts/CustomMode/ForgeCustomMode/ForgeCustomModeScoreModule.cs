@@ -8,6 +8,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Internal;
+using UnityEngine.Serialization;
 
 [Serializable]
 public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
@@ -49,7 +50,21 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		[Description("CGM_SCORE_STAT_TEAM_3")]
 		TeamStat3,
 		[Description("CGM_SCORE_STAT_TEAM_4")]
-		TeamStat4
+		TeamStat4,
+		[Description("CGM_SCORE_STAT_DISTANCE_TRAVELLED")]
+		DistanceTravelled,
+		[Description("CGM_SCORE_STAT_TIME_ALIVE_MILLISECONDS")]
+		TimeAliveMilliseconds,
+		[Description("CGM_SCORE_STAT_ROUNDS_COMPLETED")]
+		RoundsCompleted,
+		[Description("CGM_SCORE_STAT_ROUND_POINTS")]
+		RoundPoints,
+		[Obsolete("Use RoundPoints.")]
+		[Description("CGM_SCORE_STAT_ROUND_POINTS")]
+		RoundsWon = RoundPoints,
+		[Obsolete("Use RoundPoints.")]
+		[Description("CGM_SCORE_STAT_ROUND_POINTS")]
+		RoundsLost
 	}
 
 	public enum ScoreTargetSource
@@ -81,7 +96,9 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		[Description("CGM_SCORE_STAT_TYPE_TIME_SECONDS")]
 		TimeSeconds,
 		[Description("CGM_SCORE_STAT_TYPE_FLOAT")]
-		Float
+		Float,
+		[Description("CGM_SCORE_STAT_TYPE_TIME_MILLISECONDS")]
+		TimeMilliseconds,
 	}
 	
 	public enum StatTrackerType
@@ -102,6 +119,22 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		WhenMinTeamsForStatsMet,
 		[Description("CGM_SCORE_STAT_TRACK_SAVE_WITH_RANK")]
 		WhenMinTeamsForRankMet,
+	}
+
+	public enum ScoreRoundAggregateType
+	{
+		[Description("CGM_SCORE_ROUND_AGGREGATE_NONE")]
+		None,
+		[Description("CGM_SCORE_ROUND_AGGREGATE_SUM")]
+		Sum,
+		[Description("CGM_SCORE_ROUND_AGGREGATE_MAX")]
+		Max,
+		[Description("CGM_SCORE_ROUND_AGGREGATE_MIN")]
+		Min,
+		[Description("CGM_SCORE_ROUND_AGGREGATE_AVERAGE")]
+		Average,
+		[Description("CGM_SCORE_ROUND_AGGREGATE_LATEST")]
+		Latest,
 	}
 	
 	public enum StatTrackerSlot
@@ -130,13 +163,12 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 	{
 		[Tooltip("Whether the winning team is the one with the Most or Least of the following stat.")]
 		public ScoreTargetSort Sort = ScoreTargetSort.Most;
-		public StatSource Source = StatSource.Kills_Minus_Suicides;
-		public StatValueType ValueType = StatValueType.Integer;
+		[Tooltip("Stat from Stats to use for final scoring. Stored by name so stats can be reordered safely.")]
+		public string StatName = "Kills";
 		[Tooltip("Whether to use the configured value when deciding when to end the game.")]
 		public ScoreTargetSource Target = ScoreTargetSource.KillsToWin;
 		public ScoreboardType Scoreboard = ScoreboardType.Normal;
 		public string CustomTarget;
-		// public bool LeastWins;
 	}
 
 	[Serializable]
@@ -146,6 +178,8 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		public bool DisplayOnEndGameScoreboard;
 		public StatSource Source = StatSource.Kills;
 		public StatValueType ValueType = StatValueType.Integer;
+		[Tooltip("Optional in-match aggregate to keep behind the scenes when rounds reset this stat.")]
+		public ScoreRoundAggregateType RoundAggregateType = ScoreRoundAggregateType.None;
 
 		[Tooltip("If, and how, stat should be tracked by server between games.")]
 		public StatTrackerSlot TrackerSlot = StatTrackerSlot.None;
@@ -170,6 +204,18 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		// limit stats to 16
 		while (Stats.Count > 16)
 			Stats.RemoveAt(16);
+
+		foreach (var stat in Stats)
+		{
+			stat.Name = stat.Name.MaxLength(15);
+			if (stat.Source == StatSource.TimeAliveMilliseconds && stat.ValueType == StatValueType.TimeSeconds)
+				stat.ValueType = StatValueType.TimeMilliseconds;
+		}
+
+		if (string.IsNullOrWhiteSpace(Objective.StatName))
+			Objective.StatName = Stats.FirstOrDefault()?.Name;
+
+		EnsureObjectiveStatName();
 	}
 
 	public void Configure(string buildFolder, CodeGenState state)
@@ -185,8 +231,8 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
         state.LDFlags.Add("-DFORGE_CGM_SCORE");
         state.Includes.Add("#include \"cgm_score.h\"");
         state.InitBody.Add("cgmScoreInit();");
-		state.MainBody.Add("cgmScoreCheckTargetScoreReached();");
-		state.MainBody.Add("cgmScoreCheckForBroadcastCustomStats();");
+		state.MainBodyReady.Add("cgmScoreCheckTargetScoreReached();");
+		state.MainBodyReady.Add("cgmScoreCheckForBroadcastCustomStats();");
 
 		// add cgm_score_config
 		File.WriteAllText(Path.Combine(srcFolder, "cgm_score_config.c"), scoreConfig);
@@ -218,12 +264,18 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 
 	string BuildScoreConfig()
 	{
+		ValidateStatNames();
+		if (GetObjectiveStatIndex() < 0)
+			throw new InvalidOperationException($"Score objective stat '{Objective.StatName}' was not found in Stats.");
+
 		var sb = new StringBuilder();
+		var objectiveValueType = GetObjectiveValueType();
 
 		var customTarget = 0;
-		switch (Objective.ValueType)
+		switch (objectiveValueType)
 		{
 			case StatValueType.TimeSeconds:
+			case StatValueType.TimeMilliseconds:
 			case StatValueType.Integer:
 				{
 					if (int.TryParse(Objective.CustomTarget, out var iValue))
@@ -243,11 +295,10 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		sb.AppendLine();
 
 		sb.AppendLine("struct CgmScoreTarget cgmScoreTarget = {");
-		sb.AppendLine($"\t.Source = {Objective.Source.GetDescription()},");
-		sb.AppendLine($"\t.ValueType = {Objective.ValueType.GetDescription()},");
 		sb.AppendLine($"\t.Target = {Objective.Target.GetDescription()},");
 		sb.AppendLine($"\t.SortDescending = {(Objective.Sort == ScoreTargetSort.Least ? 1 : 0)},");
 		sb.AppendLine($"\t.Scoreboard = {Objective.Scoreboard.GetDescription()},");
+		sb.AppendLine($"\t.StatIndex = {GetObjectiveStatIndex()},");
 		sb.AppendLine($"\t.CustomTarget = {customTarget},");
 		sb.AppendLine("};");
 		sb.AppendLine("");
@@ -263,11 +314,68 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 			sb.AppendLine($"\t\t.TrackerSave = {stat.TrackerSave.GetDescription()},");
 			sb.AppendLine($"\t\t.TrackerSlot = {(int)stat.TrackerSlot},");
 			sb.AppendLine($"\t\t.DisplayOnEndGameScoreboard = {(stat.DisplayOnEndGameScoreboard ? 1 : 0)},");
+			sb.AppendLine($"\t\t.RoundAggregateType = {stat.RoundAggregateType.GetDescription()},");
 			sb.AppendLine("\t},");
 		}
 		sb.AppendLine("};");
         sb.AppendLine("const int cgmScoreStatsCount = COUNT_OF(cgmScoreStats);");
 
 		return sb.ToString();
+	}
+
+	int GetObjectiveStatIndex()
+	{
+		return GetStatIndexByName(Objective.StatName);
+	}
+
+	StatValueType GetObjectiveValueType()
+	{
+		var statIndex = GetObjectiveStatIndex();
+		if (statIndex >= 0)
+			return Stats[statIndex].ValueType;
+
+		return StatValueType.Integer;
+	}
+
+	public int GetStatIndexByName(string statName)
+	{
+		if (string.IsNullOrWhiteSpace(statName))
+			return -1;
+
+		return Stats.FindIndex(x => string.Equals(x.Name, statName, StringComparison.Ordinal));
+	}
+
+	public StatValueType GetStatValueTypeByName(string statName)
+	{
+		var statIndex = GetStatIndexByName(statName);
+		return statIndex >= 0 ? Stats[statIndex].ValueType : StatValueType.Integer;
+	}
+
+	public string[] GetStatNames()
+	{
+		return Stats.Select((x, i) => string.IsNullOrWhiteSpace(x.Name) ? $"Stat {i + 1}" : x.Name).ToArray();
+	}
+
+	public void EnsureObjectiveStatName()
+	{
+		if (Stats.Count <= 0)
+		{
+			Objective.StatName = "";
+			return;
+		}
+
+		if (GetStatIndexByName(Objective.StatName) < 0)
+			Objective.StatName = Stats[0].Name;
+	}
+
+	void ValidateStatNames()
+	{
+		var emptyStatIndex = Stats.FindIndex(x => string.IsNullOrWhiteSpace(x.Name));
+		if (emptyStatIndex >= 0)
+			throw new InvalidOperationException($"Score stat {emptyStatIndex + 1} must have a name.");
+
+		var duplicateName = Stats.GroupBy(x => x.Name).FirstOrDefault(x => x.Count() > 1)?.Key;
+		if (!string.IsNullOrWhiteSpace(duplicateName))
+			throw new InvalidOperationException($"Score stat name '{duplicateName}' is used more than once. Objective stats are stored by name, so names must be unique.");
 	}
 }

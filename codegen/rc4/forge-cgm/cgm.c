@@ -5,6 +5,9 @@
 #include <libdl/stdio.h>
 #include "cgm.h"
 #include "cgm_score.h"
+#ifdef FORGE_CGM_ROUNDS
+#include "cgm_rounds.h"
+#endif
 
 /*CUSTOM_FUNC_DECLS*/
 
@@ -66,7 +69,11 @@ void cgmUpdateGameState(PatchStateContainer_t *gameState)
 	// update game state (used by helga bot for tracking game state)
 	if (gameState->UpdateGameState)
 	{
+#ifdef FORGE_CGM_ROUNDS
+		gameState->GameStateUpdate.RoundNumber = cgmRoundsGetRoundNumber() + 1;
+#else
 		gameState->GameStateUpdate.RoundNumber = 0;
+#endif
 	}
 
 	// pass to cgm score

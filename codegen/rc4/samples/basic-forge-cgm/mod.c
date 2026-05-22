@@ -28,6 +28,13 @@ void modUpdate(void)
 }
 
 //--------------------------------------------------------------------------
+void modStart(void)
+{
+	// called once at the start of the game
+	// after the map has loaded and all players are 'ready'
+}
+
+//--------------------------------------------------------------------------
 void modCleanup(void)
 {
 	// called once when map is unloaded
