@@ -11,16 +11,16 @@
 #include "cgm_score.h"
 
 #define CGM_ROUNDS_POST_ROUND_GRACE_MS (5 * TIME_SECOND)
+#define CGM_ROUNDS_COMPLETE_DELAY_MS (TIME_SECOND / 4)
 
 enum CgmRoundsResetFlags
 {
 	CGM_ROUNDS_RESET_NONE = 0,
-	CGM_ROUNDS_RESET_PLAYER_STATS = 1 << 0,
-	CGM_ROUNDS_RESET_TEAM_STATS = 1 << 1,
-	CGM_ROUNDS_RESET_CUSTOM_PLAYER_STATS = 1 << 2,
-	CGM_ROUNDS_RESET_CUSTOM_TEAM_STATS = 1 << 3,
 	CGM_ROUNDS_RESET_RESPAWN_PLAYERS = 1 << 4,
 	CGM_ROUNDS_RESET_REFILL_HEALTH = 1 << 5,
+	CGM_ROUNDS_RESET_RETURN_FLAGS = 1 << 6,
+	CGM_ROUNDS_RESET_NODES = 1 << 7,
+	CGM_ROUNDS_RESET_DESTROY_PLAYER_OBJECTS = 1 << 8,
 };
 
 enum CgmRoundsCompleteFlags
@@ -29,7 +29,8 @@ enum CgmRoundsCompleteFlags
 	CGM_ROUNDS_COMPLETE_TIME_REACHED = 1 << 0,
 	CGM_ROUNDS_COMPLETE_TARGET_REACHED = 1 << 1,
 	CGM_ROUNDS_COMPLETE_ALL_PLAYERS_DEAD = 1 << 2,
-	CGM_ROUNDS_COMPLETE_CUSTOM = 1 << 3,
+	CGM_ROUNDS_COMPLETE_ONE_TEAM_LEFT_ALIVE = 1 << 3,
+	CGM_ROUNDS_COMPLETE_CUSTOM = 1 << 4,
 };
 
 typedef void (*CgmRoundsEvent_func)(int roundNumber);
@@ -40,13 +41,15 @@ struct CgmRoundsConfig
 {
 	int ResetFlags;
 	int RoundCompleteFlags;
+	int RoundCompleteCheckDelaySeconds;
 	int RoundTimeLimitSeconds;
 	int MaxRounds;
-	int MaxRoundWins;
+	int MaxRoundPoints;
+	int RoundPlacementPoints[GAME_MAX_PLAYERS];
 	int RoundObjectiveTarget;
-	enum CgmScoreStatSource RoundObjectiveSource;
-	enum CgmScoreStatValueType RoundObjectiveValueType;
+	int RoundObjectiveStatIndex;
 	char RoundObjectiveLowerScoreWins;
+	char DisplayRoundTargetInScoreboardHud;
 	CgmRoundsEvent_func ResetRound;
 	CgmRoundsEvent_func RoundStarted;
 	CgmRoundsEvent_func RoundCompleted;
@@ -60,16 +63,18 @@ struct CgmRoundsState
 	int RoundNumber;
 	int RoundStartTime;
 	int GameStartTime;
+	int RoundCompletePendingStartTime;
 	int LastRoundCompleteTime;
 	int PostRoundStartTime;
 	int RoundsCompleted;
-	int RoundWins[GAME_MAX_PLAYERS];
-	int RoundLosses[GAME_MAX_PLAYERS];
+	int RoundPoints[GAME_MAX_PLAYERS];
+	int LastRoundPointDeltas[GAME_MAX_PLAYERS];
 	int LastRoundWinner;
 	char RoundStarted;
 	char CompletingRound;
 	char InPostRoundGrace;
 	char ForcedRoundComplete;
+	char EndGameAfterPostRoundGrace;
 };
 
 struct CgmRoundsRoundEndedMessage
@@ -79,8 +84,16 @@ struct CgmRoundsRoundEndedMessage
 	int RoundEndTime;
 	int NextRoundStartTime;
 	int RoundsCompleted;
-	int RoundWins[GAME_MAX_PLAYERS];
-	int RoundLosses[GAME_MAX_PLAYERS];
+	int RoundPoints[GAME_MAX_PLAYERS];
+	int LastRoundPointDeltas[GAME_MAX_PLAYERS];
+};
+
+struct CgmRoundsRoundStartedMessage
+{
+	int RoundNumber;
+	int RoundStartTime;
+	int RoundsCompleted;
+	int RoundPoints[GAME_MAX_PLAYERS];
 };
 
 extern struct CgmRoundsConfig cgmRoundsConfig;
@@ -90,13 +103,13 @@ int cgmRoundsGetRoundNumber(void);
 int cgmRoundsGetRoundsCompleted(void);
 int cgmRoundsGetRoundElapsedTime(void);
 int cgmRoundsGetGameElapsedTime(void);
-int cgmRoundsGetRoundWins(int team);
-int cgmRoundsGetRoundLosses(int team);
+int cgmRoundsGetRoundPoints(int team);
 int cgmRoundsGetTeamScore(int team);
 int cgmRoundsGetFormattedTeamScore(int team);
 int cgmRoundsGetRoundObjectiveTarget(void);
 int cgmRoundsGetCurrentWinner(void);
 int cgmRoundsTargetReached(void);
+int cgmRoundsOneTeamLeftAlive(void);
 
 void cgmRoundsStartNextRound(void);
 void cgmRoundsCompleteRoundWithCurrentWinner(void);

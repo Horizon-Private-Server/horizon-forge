@@ -144,9 +144,20 @@ void draw(void)
 ##DRAWBODY##
 
 #if DEBUG
-  // draw debug watermark
   mapDrawDebugWatermark();
 #endif
+}
+
+//--------------------------------------------------------------------------
+void start(void)
+{
+	static int hasRun = 0;
+	if (hasRun)
+		return;
+
+	hasRun = 1;
+
+##STARTBODY##
 }
 
 //--------------------------------------------------------------------------
@@ -205,6 +216,7 @@ int main(void)
   }
 
   if (clientsReady || !netGetDmeServerConnection()) {
+	start();
 ##MAINBODYREADY##
   }
 

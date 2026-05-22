@@ -10,6 +10,16 @@
 #include "cgm_rounds.h"
 #include "window.h"
 
+int cgmRoundsGetPostRoundRowScore(int index, int teamsEnabled);
+int cgmRoundsGetPostRoundRowSortScore(int index, int teamsEnabled);
+int cgmRoundsBuildPostRoundRows(int *rows, int teamsEnabled);
+void cgmRoundsApplyReset(void);
+void cgmRoundsReturnFlags(void);
+void cgmRoundsResetNodes(void);
+void cgmRoundsDestroyPlayerObjects(void);
+void cgmRoundsFreezePlayers(void);
+int cgmRoundsGetOnlyTeamLeftAlive(void);
+
 struct CgmRoundsState cgmRoundsState = {};
 
 //--------------------------------------------------------------------------
@@ -56,33 +66,33 @@ int cgmRoundsGetGameElapsedTime(void)
 }
 
 //--------------------------------------------------------------------------
-int cgmRoundsGetRoundWins(int team)
+int cgmRoundsGetRoundPoints(int team)
 {
 	if (team < 0 || team >= GAME_MAX_PLAYERS)
 		return 0;
 
-	return cgmRoundsState.RoundWins[team];
-}
-
-//--------------------------------------------------------------------------
-int cgmRoundsGetRoundLosses(int team)
-{
-	if (team < 0 || team >= GAME_MAX_PLAYERS)
-		return 0;
-
-	return cgmRoundsState.RoundLosses[team];
+	return cgmRoundsState.RoundPoints[team];
 }
 
 //--------------------------------------------------------------------------
 int cgmRoundsGetTeamScore(int team)
 {
-	return cgmScoreGetTeamScoreForSource(team, cgmRoundsConfig.RoundObjectiveSource);
+	return cgmScoreGetStatValueForTeam(team, cgmRoundsConfig.RoundObjectiveStatIndex, 0);
+}
+
+//--------------------------------------------------------------------------
+enum CgmScoreStatValueType cgmRoundsGetRoundObjectiveValueType(void)
+{
+	if (cgmRoundsConfig.RoundObjectiveStatIndex >= 0 && cgmRoundsConfig.RoundObjectiveStatIndex < cgmScoreStatsCount)
+		return cgmScoreStats[cgmRoundsConfig.RoundObjectiveStatIndex].ValueType;
+
+	return CGM_SCORE_STAT_TYPE_INT;
 }
 
 //--------------------------------------------------------------------------
 int cgmRoundsGetFormattedTeamScore(int team)
 {
-	return cgmScoreGetFormattedScore(cgmRoundsGetTeamScore(team), cgmRoundsConfig.RoundObjectiveValueType);
+	return cgmScoreGetFormattedScore(cgmRoundsGetTeamScore(team), cgmRoundsGetRoundObjectiveValueType());
 }
 
 //--------------------------------------------------------------------------
@@ -110,7 +120,67 @@ void cgmRoundsSetTeamScoreboardOverride(int team, int score)
 //--------------------------------------------------------------------------
 void cgmRoundsSetScoreboardMaxOverride(int max)
 {
-	gameScoreboardSetScoreMax(cgmScoreGetFormattedScore(cgmRoundsGetRoundObjectiveTarget(), cgmRoundsConfig.RoundObjectiveValueType));
+	gameScoreboardSetScoreMax(cgmScoreGetFormattedScore(cgmRoundsGetRoundObjectiveTarget(), cgmRoundsGetRoundObjectiveValueType()));
+}
+
+//--------------------------------------------------------------------------
+void cgmRoundsApplyRemoteRoundStarted(struct CgmRoundsRoundStartedMessage *msg)
+{
+	if (msg->RoundNumber <= 0)
+		return;
+
+	if (msg->RoundNumber < cgmRoundsState.RoundNumber)
+		return;
+
+	if (msg->RoundNumber == cgmRoundsState.RoundNumber && cgmRoundsState.RoundStarted && !cgmRoundsState.InPostRoundGrace)
+		return;
+
+	cgmRoundsState.RoundNumber = msg->RoundNumber;
+	cgmRoundsState.RoundStartTime = msg->RoundStartTime;
+	cgmRoundsState.RoundsCompleted = msg->RoundsCompleted;
+	cgmRoundsState.RoundStarted = 1;
+	cgmRoundsState.InPostRoundGrace = 0;
+	cgmRoundsState.ForcedRoundComplete = 0;
+	cgmRoundsState.EndGameAfterPostRoundGrace = 0;
+	cgmRoundsState.RoundCompletePendingStartTime = 0;
+	cgmRoundsState.LastRoundCompleteTime = 0;
+	cgmRoundsState.PostRoundStartTime = 0;
+	cgmRoundsState.LastRoundWinner = -1;
+	memcpy(cgmRoundsState.RoundPoints, msg->RoundPoints, sizeof(cgmRoundsState.RoundPoints));
+	memset(cgmRoundsState.LastRoundPointDeltas, 0, sizeof(cgmRoundsState.LastRoundPointDeltas));
+
+	cgmRoundsApplyReset();
+
+	if (cgmRoundsConfig.RoundStarted)
+		cgmRoundsConfig.RoundStarted(cgmRoundsState.RoundNumber);
+}
+
+//--------------------------------------------------------------------------
+int cgmRoundsOnRecvRoundStarted(void *connection, void *data)
+{
+	struct CgmRoundsRoundStartedMessage msg;
+	memcpy(&msg, data, sizeof(msg));
+
+	cgmRoundsApplyRemoteRoundStarted(&msg);
+
+	return sizeof(msg);
+}
+
+//--------------------------------------------------------------------------
+void cgmRoundsBroadcastRoundStarted(void)
+{
+	void *connection = netGetDmeServerConnection();
+	if (!connection)
+		return;
+
+	struct CgmRoundsRoundStartedMessage msg;
+	memset(&msg, 0, sizeof(msg));
+	msg.RoundNumber = cgmRoundsState.RoundNumber;
+	msg.RoundStartTime = cgmRoundsState.RoundStartTime;
+	msg.RoundsCompleted = cgmRoundsState.RoundsCompleted;
+	memcpy(msg.RoundPoints, cgmRoundsState.RoundPoints, sizeof(msg.RoundPoints));
+
+	netBroadcastCustomAppMessage(NET_DELIVERY_CRITICAL, connection, CGM_MSG_ID_SEND_ROUND_STARTED, sizeof(msg), &msg);
 }
 
 //--------------------------------------------------------------------------
@@ -119,16 +189,21 @@ int cgmRoundsOnRecvRoundEnded(void *connection, void *data)
 	struct CgmRoundsRoundEndedMessage msg;
 	memcpy(&msg, data, sizeof(msg));
 
+	if (msg.RoundNumber < cgmRoundsState.RoundNumber)
+		return sizeof(msg);
+
 	cgmRoundsState.RoundNumber = msg.RoundNumber;
 	cgmRoundsState.RoundsCompleted = msg.RoundsCompleted;
 	cgmRoundsState.LastRoundCompleteTime = msg.RoundEndTime;
 	cgmRoundsState.LastRoundWinner = msg.Winner;
 	cgmRoundsState.RoundStarted = 1;
 	cgmRoundsState.ForcedRoundComplete = 1;
+	cgmRoundsState.RoundCompletePendingStartTime = 0;
 	if (msg.NextRoundStartTime > 0)
 	{
 		cgmRoundsState.PostRoundStartTime = msg.NextRoundStartTime - CGM_ROUNDS_POST_ROUND_GRACE_MS;
 		cgmRoundsState.InPostRoundGrace = 1;
+		cgmRoundsFreezePlayers();
 	}
 	else
 	{
@@ -136,8 +211,11 @@ int cgmRoundsOnRecvRoundEnded(void *connection, void *data)
 		cgmRoundsState.InPostRoundGrace = 0;
 	}
 
-	memcpy(cgmRoundsState.RoundWins, msg.RoundWins, sizeof(cgmRoundsState.RoundWins));
-	memcpy(cgmRoundsState.RoundLosses, msg.RoundLosses, sizeof(cgmRoundsState.RoundLosses));
+	memcpy(cgmRoundsState.RoundPoints, msg.RoundPoints, sizeof(cgmRoundsState.RoundPoints));
+	memcpy(cgmRoundsState.LastRoundPointDeltas, msg.LastRoundPointDeltas, sizeof(cgmRoundsState.LastRoundPointDeltas));
+	cgmScoreFinalizeRoundTimeAliveStats(cgmRoundsState.RoundStartTime, msg.RoundEndTime);
+	cgmScoreCommitRoundAggregates();
+	cgmScoreBroadcastLocalPlayerRoundAggregates();
 
 	return sizeof(msg);
 }
@@ -156,8 +234,8 @@ void cgmRoundsBroadcastRoundEnded(int winner, int nextRoundStartTime)
 	msg.RoundEndTime = cgmRoundsState.LastRoundCompleteTime;
 	msg.NextRoundStartTime = nextRoundStartTime;
 	msg.RoundsCompleted = cgmRoundsState.RoundsCompleted;
-	memcpy(msg.RoundWins, cgmRoundsState.RoundWins, sizeof(msg.RoundWins));
-	memcpy(msg.RoundLosses, cgmRoundsState.RoundLosses, sizeof(msg.RoundLosses));
+	memcpy(msg.RoundPoints, cgmRoundsState.RoundPoints, sizeof(msg.RoundPoints));
+	memcpy(msg.LastRoundPointDeltas, cgmRoundsState.LastRoundPointDeltas, sizeof(msg.LastRoundPointDeltas));
 
 	netBroadcastCustomAppMessage(NET_DELIVERY_CRITICAL, connection, CGM_MSG_ID_SEND_ROUND_ENDED, sizeof(msg), &msg);
 }
@@ -172,6 +250,10 @@ int cgmRoundsGetCurrentWinner(void)
 
 	if (cgmRoundsConfig.SelectRoundWinner)
 		return cgmRoundsConfig.SelectRoundWinner();
+
+	int onlyTeamLeftAlive = (cgmRoundsConfig.RoundCompleteFlags & CGM_ROUNDS_COMPLETE_ONE_TEAM_LEFT_ALIVE) ? cgmRoundsGetOnlyTeamLeftAlive() : -1;
+	if (onlyTeamLeftAlive >= 0)
+		return onlyTeamLeftAlive;
 
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 	{
@@ -227,7 +309,7 @@ int cgmRoundsAllPlayersDead(void)
 			continue;
 
 		hadPlayer = 1;
-		if (!playerIsDead(player) && player->Health > 0)
+		if (!playerIsDead(player))
 			return 0;
 	}
 
@@ -235,36 +317,68 @@ int cgmRoundsAllPlayersDead(void)
 }
 
 //--------------------------------------------------------------------------
+int cgmRoundsGetOnlyTeamLeftAlive(void)
+{
+	int teamsWithPlayers[GAME_MAX_PLAYERS] = {};
+	int teamsAlive[GAME_MAX_PLAYERS] = {};
+	int teamCount = 0;
+	int aliveTeamCount = 0;
+	int aliveTeam = -1;
+	int i;
+
+	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+	{
+		Player *player = playerGetFromIndex(i);
+		if (!playerIsValid(player))
+			continue;
+
+		int team = playerGetJuggSafeTeam(player);
+		if (team < 0 || team >= GAME_MAX_PLAYERS)
+			continue;
+
+		if (!teamsWithPlayers[team])
+		{
+			teamsWithPlayers[team] = 1;
+			teamCount += 1;
+		}
+
+		if (!playerIsDead(player) && player->Health > 0 && !teamsAlive[team])
+		{
+			teamsAlive[team] = 1;
+			aliveTeamCount += 1;
+			aliveTeam = team;
+		}
+	}
+
+	if (teamCount > 1 && aliveTeamCount == 1)
+		return aliveTeam;
+
+	return -1;
+}
+
+//--------------------------------------------------------------------------
+int cgmRoundsOneTeamLeftAlive(void)
+{
+	return cgmRoundsGetOnlyTeamLeftAlive() >= 0;
+}
+
+//--------------------------------------------------------------------------
 void cgmRoundsResetStats(void)
 {
-	GameData *gameData = gameGetData();
+	cgmScoreResetRoundStats();
+}
 
-	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_PLAYER_STATS)
-		memset(&gameData->PlayerStats, 0, sizeof(gameData->PlayerStats));
+//--------------------------------------------------------------------------
+void cgmRoundsRespawnPlayer(Player *player)
+{
+	// Kick from vehicle
+	if (player->Vehicle)
+		vehicleRemovePlayer(player->Vehicle, player);
 
-	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_TEAM_STATS)
-		memset(&gameData->TeamStats, 0, sizeof(gameData->TeamStats));
-
-	int i;
-	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_CUSTOM_PLAYER_STATS)
-	{
-		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
-		{
-			int s;
-			for (s = 0; s < MAX_CUSTOM_STATS; ++s)
-				cgmScoreSetCustomPlayerIntStat(i, s, 0);
-		}
-	}
-
-	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_CUSTOM_TEAM_STATS)
-	{
-		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
-		{
-			int s;
-			for (s = 0; s < MAX_CUSTOM_STATS; ++s)
-				cgmScoreSetCustomTeamIntStat(i, s, 0);
-		}
-	}
+	VECTOR p, r;
+	playerRespawn(player);
+	playerGetSpawnpoint(player, p, r, 1);
+	playerSetPosRot(player, p, r);
 }
 
 //--------------------------------------------------------------------------
@@ -278,10 +392,68 @@ void cgmRoundsResetPlayers(void)
 			continue;
 
 		if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_RESPAWN_PLAYERS)
-			playerRespawn(player);
+			cgmRoundsRespawnPlayer(player);
 
 		if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_REFILL_HEALTH)
 			playerSetHealth(player, player->MaxHealth);
+	}
+
+	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_DESTROY_PLAYER_OBJECTS)
+		cgmRoundsDestroyPlayerObjects();
+}
+
+//--------------------------------------------------------------------------
+void cgmRoundsReturnFlags(void)
+{
+	// find and reset flags
+	Moby *moby = mobyListGetStart();
+	Moby *mEnd = mobyListGetEnd();
+	while (moby < mEnd)
+	{
+		if (!mobyIsDestroyed(moby) &&
+				(moby->OClass == MOBY_ID_BLUE_FLAG ||
+				 moby->OClass == MOBY_ID_RED_FLAG ||
+				 moby->OClass == MOBY_ID_GREEN_FLAG ||
+				 moby->OClass == MOBY_ID_ORANGE_FLAG))
+		{
+			*(u16 *)(moby->PVar + 0x10) = 0xFFFF;
+			vector_copy((float *)&moby->Position, (float *)moby->PVar);
+		}
+
+		++moby;
+	}
+}
+
+//--------------------------------------------------------------------------
+void cgmRoundsResetNodes(void)
+{
+}
+
+//--------------------------------------------------------------------------
+void cgmRoundsDestroyPlayerObjects(void)
+{
+	Moby *moby = mobyListGetStart();
+	Moby *mEnd = mobyListGetEnd();
+	while (moby < mEnd)
+	{
+		if (!mobyIsDestroyed(moby))
+		{
+			switch (moby->OClass)
+			{
+			case MOBY_ID_MINE_LAUNCHER_MINE:
+			{
+				moby->State = 3; // destroy
+				break;
+			}
+			case MOBY_ID_HOLOSHIELD_SHOT:
+			{
+				// todo
+				break;
+			}
+			}
+		}
+
+		++moby;
 	}
 }
 
@@ -289,10 +461,40 @@ void cgmRoundsResetPlayers(void)
 void cgmRoundsApplyReset(void)
 {
 	cgmRoundsResetStats();
-	cgmRoundsResetPlayers();
+	if (cgmRoundsState.RoundNumber > 1 || cgmRoundsState.RoundsCompleted > 0)
+		cgmRoundsResetPlayers();
+
+	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_RETURN_FLAGS)
+		cgmRoundsReturnFlags();
+
+	if (cgmRoundsConfig.ResetFlags & CGM_ROUNDS_RESET_NODES)
+		cgmRoundsResetNodes();
 
 	if (cgmRoundsConfig.ResetRound)
 		cgmRoundsConfig.ResetRound(cgmRoundsState.RoundNumber);
+
+	cgmScorePrimeManualStatSources();
+}
+
+//--------------------------------------------------------------------------
+void cgmRoundsFreezePlayers(void)
+{
+	// freeze players
+	int i;
+	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+	{
+		Player *player = playerGetFromIndex(i);
+		if (!player)
+			continue;
+
+		player->timers.noInput = 3;
+		player->timers.allowQuickSelect = 3;
+		player->timers.noCamInputTimer = 3;
+		player->timers.invincibilityTimer = 3;
+		player->timers.noExternalRot = 3;
+		player->timers.noJumps = 3;
+		player->timers.noSwing = 3;
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -303,14 +505,19 @@ void cgmRoundsStartNextRound(void)
 	cgmRoundsState.RoundStarted = 1;
 	cgmRoundsState.InPostRoundGrace = 0;
 	cgmRoundsState.ForcedRoundComplete = 0;
+	cgmRoundsState.EndGameAfterPostRoundGrace = 0;
+	cgmRoundsState.RoundCompletePendingStartTime = 0;
 	cgmRoundsState.LastRoundCompleteTime = 0;
 	cgmRoundsState.PostRoundStartTime = 0;
 	cgmRoundsState.LastRoundWinner = -1;
+	memset(cgmRoundsState.LastRoundPointDeltas, 0, sizeof(cgmRoundsState.LastRoundPointDeltas));
 
 	cgmRoundsApplyReset();
 
 	if (cgmRoundsConfig.RoundStarted)
 		cgmRoundsConfig.RoundStarted(cgmRoundsState.RoundNumber);
+
+	cgmRoundsBroadcastRoundStarted();
 }
 
 //--------------------------------------------------------------------------
@@ -318,6 +525,9 @@ int cgmRoundsShouldCompleteRound(void)
 {
 	if (cgmRoundsState.ForcedRoundComplete)
 		return 1;
+
+	if (cgmRoundsConfig.RoundCompleteCheckDelaySeconds > 0 && cgmRoundsGetRoundElapsedTime() < (cgmRoundsConfig.RoundCompleteCheckDelaySeconds * TIME_SECOND))
+		return 0;
 
 	if ((cgmRoundsConfig.RoundCompleteFlags & CGM_ROUNDS_COMPLETE_TIME_REACHED) && cgmRoundsConfig.RoundTimeLimitSeconds > 0)
 	{
@@ -329,6 +539,9 @@ int cgmRoundsShouldCompleteRound(void)
 		return 1;
 
 	if ((cgmRoundsConfig.RoundCompleteFlags & CGM_ROUNDS_COMPLETE_ALL_PLAYERS_DEAD) && cgmRoundsAllPlayersDead())
+		return 1;
+
+	if ((cgmRoundsConfig.RoundCompleteFlags & CGM_ROUNDS_COMPLETE_ONE_TEAM_LEFT_ALIVE) && cgmRoundsOneTeamLeftAlive())
 		return 1;
 
 	if ((cgmRoundsConfig.RoundCompleteFlags & CGM_ROUNDS_COMPLETE_CUSTOM) && cgmRoundsConfig.CustomRoundCompleteCondition)
@@ -344,6 +557,7 @@ void cgmRoundsStartPostRoundGrace(int winner)
 	cgmRoundsState.PostRoundStartTime = gameGetTime();
 	cgmRoundsState.LastRoundWinner = winner;
 
+	cgmRoundsFreezePlayers();
 	if (cgmRoundsConfig.PostRoundStarted)
 		cgmRoundsConfig.PostRoundStarted(cgmRoundsState.RoundNumber);
 
@@ -362,12 +576,12 @@ int cgmRoundsShouldEndGame(void)
 	if (cgmRoundsConfig.MaxRounds > 0 && cgmRoundsState.RoundsCompleted >= cgmRoundsConfig.MaxRounds)
 		return 1;
 
-	if (cgmRoundsConfig.MaxRoundWins > 0)
+	if (cgmRoundsConfig.MaxRoundPoints > 0)
 	{
 		int i;
 		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 		{
-			if (cgmRoundsState.RoundWins[i] >= cgmRoundsConfig.MaxRoundWins)
+			if (cgmRoundsState.RoundPoints[i] >= cgmRoundsConfig.MaxRoundPoints)
 				return 1;
 		}
 	}
@@ -383,35 +597,53 @@ void cgmRoundsCompleteRound(int winnerOverride)
 
 	cgmRoundsState.CompletingRound = 1;
 	cgmRoundsState.ForcedRoundComplete = 1;
+	cgmRoundsState.RoundCompletePendingStartTime = 0;
 
+	int roundEndTime = gameGetTime();
+	cgmScoreUpdateRoundTrackedStats();
+	cgmScoreFinalizeRoundTimeAliveStats(cgmRoundsState.RoundStartTime, roundEndTime);
 	int winner = winnerOverride >= -1 ? winnerOverride : cgmRoundsGetCurrentWinner();
 	cgmRoundsState.LastRoundWinner = winner;
 	cgmRoundsState.RoundsCompleted += 1;
-	if (winner >= 0 && winner < GAME_MAX_PLAYERS)
+	int rows[GAME_MAX_PLAYERS] = {};
+	int teamsEnabled = gameGetOptions()->GameFlags.MultiplayerGameFlags.Teamplay;
+	int rowCount = cgmRoundsBuildPostRoundRows(rows, teamsEnabled);
+	int placement = 0;
+	int lastScore = 0;
+	int i;
+	memset(cgmRoundsState.LastRoundPointDeltas, 0, sizeof(cgmRoundsState.LastRoundPointDeltas));
+	for (i = 0; i < rowCount; ++i)
 	{
-		cgmRoundsState.RoundWins[winner] += 1;
+		int score = cgmRoundsGetPostRoundRowSortScore(rows[i], teamsEnabled);
+		if (i == 0 || score != lastScore)
+			placement = i;
 
-		int i;
-		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+		lastScore = score;
+
+		if (placement >= 0 && placement < GAME_MAX_PLAYERS)
 		{
-			if (i == winner || !cgmScoreGetTeamHasPlayer(i))
-				continue;
-
-			cgmRoundsState.RoundLosses[i] += 1;
+			int delta = cgmRoundsConfig.RoundPlacementPoints[placement];
+			cgmRoundsState.LastRoundPointDeltas[rows[i]] = delta;
+			cgmRoundsState.RoundPoints[rows[i]] += delta;
 		}
 	}
 
-	cgmRoundsState.LastRoundCompleteTime = gameGetTime();
+	cgmRoundsState.LastRoundCompleteTime = roundEndTime;
+	cgmScoreCommitRoundAggregates();
+	cgmScoreBroadcastLocalPlayerRoundAggregates();
 	if (cgmRoundsConfig.RoundCompleted)
 		cgmRoundsConfig.RoundCompleted(cgmRoundsState.RoundNumber);
 
 	if (cgmRoundsShouldEndGame())
 	{
-		cgmRoundsBroadcastRoundEnded(winner, -1);
-		cgmScoreEndGameEarly();
+		cgmRoundsState.EndGameAfterPostRoundGrace = 1;
+		cgmRoundsStartPostRoundGrace(winner);
 	}
 	else
+	{
+		cgmRoundsState.EndGameAfterPostRoundGrace = 0;
 		cgmRoundsStartPostRoundGrace(winner);
+	}
 
 	cgmRoundsState.CompletingRound = 0;
 }
@@ -423,15 +655,53 @@ void cgmRoundsCompleteRoundWithCurrentWinner(void)
 }
 
 //--------------------------------------------------------------------------
+void cgmRoundsCheckDelayedRoundComplete(void)
+{
+	if (cgmRoundsState.RoundCompletePendingStartTime > 0)
+	{
+		if ((gameGetTime() - cgmRoundsState.RoundCompletePendingStartTime) >= CGM_ROUNDS_COMPLETE_DELAY_MS)
+			cgmRoundsCompleteRound(-2);
+
+		return;
+	}
+
+	if (cgmRoundsShouldCompleteRound())
+		cgmRoundsState.RoundCompletePendingStartTime = gameGetTime();
+}
+
+//--------------------------------------------------------------------------
 void cgmRoundsTick(void)
 {
 	GameData *gameData = gameGetData();
 
-	if (gameData->GameIsOver || !gameAmIHost())
-		return;
-
 	// update score hud timer
 	((void (*)(int))0x00540508)(cgmRoundsGetRoundElapsedTime());
+
+	if (gameData->GameIsOver)
+		return;
+
+	if (cgmRoundsState.InPostRoundGrace)
+	{
+		cgmRoundsFreezePlayers();
+
+		if (!gameAmIHost())
+			return;
+
+		if (cgmRoundsPostRoundGraceComplete())
+		{
+			if (cgmRoundsState.EndGameAfterPostRoundGrace)
+			{
+				cgmScoreEndGameEarly();
+				return;
+			}
+
+			cgmRoundsStartNextRound();
+		}
+		return;
+	}
+
+	if (!gameAmIHost())
+		return;
 
 	if (!cgmRoundsState.RoundStarted)
 	{
@@ -439,15 +709,7 @@ void cgmRoundsTick(void)
 		return;
 	}
 
-	if (cgmRoundsState.InPostRoundGrace)
-	{
-		if (cgmRoundsPostRoundGraceComplete())
-			cgmRoundsStartNextRound();
-		return;
-	}
-
-	if (cgmRoundsShouldCompleteRound())
-		cgmRoundsCompleteRound(-2);
+	cgmRoundsCheckDelayedRoundComplete();
 }
 
 //--------------------------------------------------------------------------
@@ -458,28 +720,35 @@ void cgmRoundsInit(void)
 	cgmRoundsState.LastRoundWinner = -1;
 
 	// hook net messages
+	netInstallCustomMsgHandler(CGM_MSG_ID_SEND_ROUND_STARTED, &cgmRoundsOnRecvRoundStarted);
 	netInstallCustomMsgHandler(CGM_MSG_ID_SEND_ROUND_ENDED, &cgmRoundsOnRecvRoundEnded);
 
 	// prevent survivor from ending the game when it is a round end condition
-	if ((cgmRoundsConfig.RoundCompleteFlags & CGM_ROUNDS_COMPLETE_ALL_PLAYERS_DEAD))
+	if ((cgmRoundsConfig.RoundCompleteFlags & (CGM_ROUNDS_COMPLETE_ALL_PLAYERS_DEAD | CGM_ROUNDS_COMPLETE_ONE_TEAM_LEFT_ALIVE)))
 	{
 		POKE_U32(0x006219B8, 0);
+		POKE_U32(0x00621A10, 0);
 	}
 
+	// always display round time in score timer
 	HOOK_JAL(0x0055b968, cgmRoundsGetScoreboardTimerOverride);
-	HOOK_JAL(0x005404f0, cgmRoundsSetTeamScoreboardOverride);
-	HOOK_JAL(0x005404d0, cgmRoundsSetScoreboardMaxOverride);
-	cgmRoundsSetScoreboardMaxOverride(0);
 
-	if (cgmRoundsConfig.RoundObjectiveLowerScoreWins)
+	if (cgmRoundsConfig.DisplayRoundTargetInScoreboardHud)
 	{
-		POKE_U32(0x00542640, 0x15400044); // bne t2,zero,0x00542754
-		POKE_U32(0x005426D0, 0x1040005D); // beq v0,zero,0x00542848
-	}
-	else
-	{
-		POKE_U32(0x00542640, 0x11400044); // beq t2,zero,0x00542754
-		POKE_U32(0x005426D0, 0x1440005D); // bne v0,zero,0x00542848
+		HOOK_JAL(0x005404f0, cgmRoundsSetTeamScoreboardOverride);
+		HOOK_JAL(0x005404d0, cgmRoundsSetScoreboardMaxOverride);
+		cgmRoundsSetScoreboardMaxOverride(0);
+
+		if (cgmRoundsConfig.RoundObjectiveLowerScoreWins)
+		{
+			POKE_U32(0x00542640, 0x15400044); // bne t2,zero,0x00542754
+			POKE_U32(0x005426D0, 0x1040005D); // beq v0,zero,0x00542848
+		}
+		else
+		{
+			POKE_U32(0x00542640, 0x11400044); // beq t2,zero,0x00542754
+			POKE_U32(0x005426D0, 0x1440005D); // bne v0,zero,0x00542848
+		}
 	}
 }
 
@@ -496,21 +765,7 @@ void cgmRoundsDrawStatus(void)
 
 	char buf[32];
 	snprintf(buf, sizeof(buf), "Round %d", cgmRoundsState.RoundNumber);
-	gfxHelperDrawText(x, y, 0, 0, 1.0 * scale, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLERIGHT, COMMON_DZO_DRAW_NORMAL);
-
-	float yOffset = lineHeight;
-	if (cgmRoundsConfig.MaxRounds > 0)
-	{
-		snprintf(buf, sizeof(buf), "of %d", cgmRoundsConfig.MaxRounds);
-		gfxHelperDrawText(x, y, 0, yOffset, 0.8 * scale, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLERIGHT, COMMON_DZO_DRAW_NORMAL);
-		yOffset += lineHeight;
-	}
-	else if (cgmRoundsConfig.MaxRoundWins > 0)
-	{
-		snprintf(buf, sizeof(buf), "first to %d wins", cgmRoundsConfig.MaxRoundWins);
-		gfxHelperDrawText(x, y, 0, yOffset, 0.8 * scale, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLERIGHT, COMMON_DZO_DRAW_NORMAL);
-		yOffset += lineHeight;
-	}
+	gfxHelperDrawText(15, SCREEN_HEIGHT - 15, 0, 0, 0.8, 0x80FFFFFF, buf, -1, TEXT_ALIGN_BOTTOMLEFT, COMMON_DZO_DRAW_NORMAL);
 }
 
 //--------------------------------------------------------------------------
@@ -519,16 +774,26 @@ int cgmRoundsGetPostRoundRowScore(int index, int teamsEnabled)
 	if (teamsEnabled)
 		return cgmRoundsGetTeamScore(index);
 
-	return cgmScoreGetPlayerStat(index, cgmRoundsConfig.RoundObjectiveSource);
+	return cgmScoreGetStatValueForPlayer(index, cgmRoundsConfig.RoundObjectiveStatIndex, 0);
 }
 
 //--------------------------------------------------------------------------
-int cgmRoundsGetPostRoundRowStat(int index, int teamsEnabled, struct CgmScoreStat *stat)
+int cgmRoundsGetPostRoundRowSortScore(int index, int teamsEnabled)
+{
+	enum CgmScoreStatSource source = cgmScoreStats[cgmRoundsConfig.RoundObjectiveStatIndex].Source;
+	if (teamsEnabled)
+		return cgmScoreGetTeamScoreSortValueForSource(index, source);
+
+	return cgmScoreGetPlayerStatSortValue(index, source);
+}
+
+//--------------------------------------------------------------------------
+int cgmRoundsGetPostRoundRowStat(int index, int teamsEnabled, int statIndex)
 {
 	if (teamsEnabled)
-		return cgmScoreGetTeamScoreForSource(index, stat->Source);
+		return cgmScoreGetStatValueForTeam(index, statIndex, 1);
 
-	return cgmScoreGetPlayerStat(index, stat->Source);
+	return cgmScoreGetStatValueForPlayer(index, statIndex, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -554,6 +819,15 @@ void cgmRoundsFormatPostRoundStat(char *buf, int bufSize, int value, enum CgmSco
 		snprintf(buf, bufSize, "%d:%02d", seconds / 60, seconds % 60);
 		break;
 	}
+	case CGM_SCORE_STAT_TYPE_TIME_MILLISECONDS:
+	{
+		int seconds = value / TIME_SECOND;
+		if (seconds < 0)
+			seconds = 0;
+
+		snprintf(buf, bufSize, "%d:%02d", seconds / 60, seconds % 60);
+		break;
+	}
 	case CGM_SCORE_STAT_TYPE_FLOAT:
 	{
 		int whole = value / SCORE_FLOAT_PRECISION;
@@ -572,7 +846,7 @@ void cgmRoundsFormatPostRoundStat(char *buf, int bufSize, int value, enum CgmSco
 }
 
 //--------------------------------------------------------------------------
-int cgmRoundsGetPostRoundScoreboardStats(struct CgmScoreStat **stats)
+int cgmRoundsGetPostRoundScoreboardStats(int *statIndexes)
 {
 	int count = 0;
 	int i;
@@ -581,7 +855,7 @@ int cgmRoundsGetPostRoundScoreboardStats(struct CgmScoreStat **stats)
 		if (!cgmScoreStats[i].DisplayOnEndGameScoreboard)
 			continue;
 
-		stats[count++] = &cgmScoreStats[i];
+		statIndexes[count++] = i;
 	}
 
 	return count;
@@ -606,8 +880,8 @@ int cgmRoundsBuildPostRoundRows(int *rows, int teamsEnabled)
 		int b;
 		for (b = a + 1; b < count; ++b)
 		{
-			int aScore = cgmRoundsGetPostRoundRowScore(rows[a], teamsEnabled);
-			int bScore = cgmRoundsGetPostRoundRowScore(rows[b], teamsEnabled);
+			int aScore = cgmRoundsGetPostRoundRowSortScore(rows[a], teamsEnabled);
+			int bScore = cgmRoundsGetPostRoundRowSortScore(rows[b], teamsEnabled);
 			int shouldSwap = cgmRoundsConfig.RoundObjectiveLowerScoreWins ? bScore < aScore : bScore > aScore;
 			if (!shouldSwap && aScore == bScore)
 				shouldSwap = rows[b] < rows[a];
@@ -631,16 +905,27 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 	GameSettings *gameSettings = gameGetSettings();
 	int teamsEnabled = gameOptions->GameFlags.MultiplayerGameFlags.Teamplay;
 	int rows[GAME_MAX_PLAYERS] = {};
-	struct CgmScoreStat *stats[MAX_SCOREBOARD_STATS] = {};
+	int statIndexes[MAX_SCOREBOARD_STATS] = {};
 	int rowCount = cgmRoundsBuildPostRoundRows(rows, teamsEnabled);
-	int statCount = cgmRoundsGetPostRoundScoreboardStats(stats);
+	int statCount = cgmRoundsGetPostRoundScoreboardStats(statIndexes);
+	int hasRoundPointsStat = 0;
+
+	int s;
+	for (s = 0; s < statCount; ++s)
+	{
+		if (cgmScoreStats[statIndexes[s]].Source == CGM_SCORE_STAT_ROUND_POINTS)
+		{
+			hasRoundPointsStat = 1;
+			break;
+		}
+	}
 
 	if (rowCount <= 0)
 		return;
 
 	float padding = 4;
 	float labelWidth = 70;
-	float statWidth = statCount > 0 ? 58 : 0;
+	float statWidth = statCount > 0 ? (hasRoundPointsStat ? 70 : 58) : 0;
 	float rowHeight = 13;
 	float contentWidth = labelWidth + (statCount * statWidth);
 	float windowWidth = contentWidth + (padding * 2);
@@ -654,9 +939,8 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 	windowCreate(&window, SCREEN_WIDTH / 2, y, 0, 0, windowWidth, windowHeight, TEXT_ALIGN_TOPCENTER);
 
 	windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding, rowHeight / 2, scale, color, teamsEnabled ? "Team" : "Player", -1, TEXT_ALIGN_MIDDLELEFT);
-	int s;
 	for (s = 0; s < statCount; ++s)
-		windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding + labelWidth + (s * statWidth), rowHeight / 2, scale, color, stats[s]->Name, -1, TEXT_ALIGN_MIDDLELEFT);
+		windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding + labelWidth + (s * statWidth), rowHeight / 2, scale, color, cgmScoreStats[statIndexes[s]].Name, -1, TEXT_ALIGN_MIDDLELEFT);
 
 	int r;
 	for (r = 0; r < rowCount; ++r)
@@ -678,8 +962,12 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 
 		for (s = 0; s < statCount; ++s)
 		{
-			int value = cgmRoundsGetPostRoundRowStat(index, teamsEnabled, stats[s]);
-			cgmRoundsFormatPostRoundStat(buf, sizeof(buf), value, stats[s]->ValueType);
+			int value = cgmRoundsGetPostRoundRowStat(index, teamsEnabled, statIndexes[s]);
+			if (cgmScoreStats[statIndexes[s]].Source == CGM_SCORE_STAT_ROUND_POINTS && cgmRoundsState.LastRoundPointDeltas[index] > 0)
+				snprintf(buf, sizeof(buf), "%d  (+%d)", value, cgmRoundsState.LastRoundPointDeltas[index]);
+			else
+				cgmRoundsFormatPostRoundStat(buf, sizeof(buf), value, cgmScoreStats[statIndexes[s]].ValueType);
+
 			windowDrawText(&windowRow, TEXT_ALIGN_MIDDLELEFT, padding + labelWidth + (s * statWidth), 2, scale, color, buf, -1, TEXT_ALIGN_BOTTOMLEFT);
 		}
 	}
@@ -718,7 +1006,7 @@ void cgmRoundsDrawPostRound(void)
 
 	char buf[32];
 	int won = cgmRoundsDidLocalPlayerWinLastRound();
-	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 98, 0, 0, 1.4, won ? 0x8000FF00 : 0x800000FF, won ? "VICTORY" : "FAILURE", -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 98, 0, 0, 2.0, won ? 0x8000FF00 : 0x800000FF, won ? "VICTORY" : "FAILURE", -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
 
 	snprintf(buf, sizeof(buf), "Round %d Results", cgmRoundsState.RoundNumber);
 	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 70, 0, 0, 0.8, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
