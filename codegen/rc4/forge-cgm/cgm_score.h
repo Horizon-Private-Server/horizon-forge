@@ -61,6 +61,9 @@ enum CgmScoreStatSource
 	CGM_SCORE_STAT_TEAM_2,
 	CGM_SCORE_STAT_TEAM_3,
 	CGM_SCORE_STAT_TEAM_4,
+	CGM_SCORE_STAT_ROUNDS_COMPLETED,
+	CGM_SCORE_STAT_ROUNDS_WON,
+	CGM_SCORE_STAT_ROUNDS_LOST,
 };
 
 struct CgmScoreTarget
@@ -112,6 +115,11 @@ void cgmScoreEndGameEarly(void);
 void cgmScoreEndGameEarlyWithWinner(int winnerOverride);
 
 int cgmScoreGetTargetScore(void);
+int cgmScoreGetTeamHasPlayer(int team);
+int cgmScoreGetPlayerStat(int playerIdx, enum CgmScoreStatSource source);
+int cgmScoreGetTeamScoreForSource(int team, enum CgmScoreStatSource source);
+int cgmScoreGetTeamScore(int team);
+int cgmScoreGetFormattedScore(int score, enum CgmScoreStatValueType type);
 void cgmScoreUpdateGameState(PatchStateContainer_t *gameState);
 void cgmScoreInit(void);
 void cgmScoreCheckTargetScoreReached(void);

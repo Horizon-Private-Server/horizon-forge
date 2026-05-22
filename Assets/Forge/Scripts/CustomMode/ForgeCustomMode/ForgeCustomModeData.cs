@@ -132,6 +132,9 @@ public class ForgeCustomModeData : CustomModeData, ICodeGen, IBuildHook
     public override void Write(BinaryWriter writer)
     {
 		int startPos = (int)writer.BaseStream.Position;
+		var modules = GetModules().ToArray();
+		var roundsModuleEnabled = modules.OfType<ForgeCustomModeRoundsModule>().Any(x => x.Enabled);
+		var timelimit = roundsModuleEnabled ? new Int32Override() { HasOverride = true, OverrideValue = 0 } : GameSettings.Timelimit;
 
         writer.Write(FORGE_CGM_VERSION);
 		writer.WriteString(CustomModeName, 32);
@@ -145,7 +148,7 @@ public class ForgeCustomModeData : CustomModeData, ICodeGen, IBuildHook
 		writer.WriteBoolOverride8(GameSettings.SpawnWithChargeboots);
 		writer.WriteBoolOverride8(GameSettings.AutospawnWeapons);
 		writer.WriteBoolOverride8(GameSettings.UnlimitedAmmo);
-		writer.WriteIntOverride8(GameSettings.Timelimit);
+		writer.WriteIntOverride8(timelimit);
 		writer.WriteIntOverride8(GameSettings.RespawnTime);
 
 		writer.WriteIntOverride8(GameSettings.KillsToWin);
@@ -205,7 +208,6 @@ public class ForgeCustomModeData : CustomModeData, ICodeGen, IBuildHook
 		writer.Write(new byte[3]);
 
 		// write modules
-		var modules = GetModules();
 		foreach (var module in modules)
 			module.WriteExData(writer);
 			

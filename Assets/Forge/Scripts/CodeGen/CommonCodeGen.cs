@@ -54,6 +54,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/launchstream.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/holder.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/soulcollector.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
 
         state.LDFlags.Add("-DGATE");
         state.LDFlags.Add("-DSOULCOLLECTOR");

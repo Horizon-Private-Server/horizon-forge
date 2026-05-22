@@ -49,7 +49,13 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 		[Description("CGM_SCORE_STAT_TEAM_3")]
 		TeamStat3,
 		[Description("CGM_SCORE_STAT_TEAM_4")]
-		TeamStat4
+		TeamStat4,
+		[Description("CGM_SCORE_STAT_ROUNDS_COMPLETED")]
+		RoundsCompleted,
+		[Description("CGM_SCORE_STAT_ROUNDS_WON")]
+		RoundsWon,
+		[Description("CGM_SCORE_STAT_ROUNDS_LOST")]
+		RoundsLost
 	}
 
 	public enum ScoreTargetSource

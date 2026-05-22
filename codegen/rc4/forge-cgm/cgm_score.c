@@ -7,6 +7,9 @@
 #include <libdl/string.h>
 #include "cgm.h"
 #include "cgm_score.h"
+#ifdef FORGE_CGM_ROUNDS
+#include "cgm_rounds.h"
+#endif
 
 struct CgmScoreState cgmScoreState = {};
 
@@ -293,17 +296,26 @@ int cgmScoreGetPlayerStat(int playerIdx, enum CgmScoreStatSource source)
 		return cgmScoreState.CustomTeamStats[2][team];
 	case CGM_SCORE_STAT_TEAM_4:
 		return cgmScoreState.CustomTeamStats[3][team];
+
+#ifdef FORGE_CGM_ROUNDS
+	case CGM_SCORE_STAT_ROUNDS_COMPLETED:
+		return cgmRoundsGetRoundsCompleted();
+	case CGM_SCORE_STAT_ROUNDS_WON:
+		return cgmRoundsGetRoundWins(team);
+	case CGM_SCORE_STAT_ROUNDS_LOST:
+		return cgmRoundsGetRoundLosses(team);
+#endif
 	}
 
 	return 0;
 }
 
 //--------------------------------------------------------------------------
-int cgmScoreGetTeamScore(int team)
+int cgmScoreGetTeamScoreForSource(int team, enum CgmScoreStatSource source)
 {
 	GameData *gameData = gameGetData();
 
-	switch (cgmScoreTarget.Source)
+	switch (source)
 	{
 		// return raw team stat
 	case CGM_SCORE_STAT_POINTS:
@@ -319,6 +331,15 @@ int cgmScoreGetTeamScore(int team)
 	case CGM_SCORE_STAT_TEAM_4:
 		return cgmScoreState.CustomTeamStats[3][team];
 
+#ifdef FORGE_CGM_ROUNDS
+	case CGM_SCORE_STAT_ROUNDS_COMPLETED:
+		return cgmRoundsGetRoundsCompleted();
+	case CGM_SCORE_STAT_ROUNDS_WON:
+		return cgmRoundsGetRoundWins(team);
+	case CGM_SCORE_STAT_ROUNDS_LOST:
+		return cgmRoundsGetRoundLosses(team);
+#endif
+
 		// fall through to sum of team's player's stats
 	default:
 		break;
@@ -333,10 +354,16 @@ int cgmScoreGetTeamScore(int team)
 			continue;
 
 		if (playerGetJuggSafeTeam(player) == team)
-			score += cgmScoreGetPlayerStat(i, cgmScoreTarget.Source);
+			score += cgmScoreGetPlayerStat(i, source);
 	}
 
 	return score;
+}
+
+//--------------------------------------------------------------------------
+int cgmScoreGetTeamScore(int team)
+{
+	return cgmScoreGetTeamScoreForSource(team, cgmScoreTarget.Source);
 }
 
 //--------------------------------------------------------------------------
