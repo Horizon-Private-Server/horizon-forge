@@ -70,6 +70,7 @@ typedef void (*MapOnPlayerUpdate_func)(Player *player);
 typedef void (*MapOnPlayerDied_func)(Player *player);
 typedef void (*MapOnPlayerGetVendorReward_func)(Player *player, int gadgetId, int levelNum);
 typedef int (*MapOnBeforeDamageMob_func)(Player *player, Moby *sourceMoby, Moby *mobMoby, struct MobDamageEventArgs *args);
+typedef void (*MapMobAfterDamage_func)(Moby *moby, struct MobDamageEventArgs *args, float appliedDamage);
 
 struct SurvivalInteropTable
 {
@@ -126,6 +127,7 @@ struct SurvivalInteropTable
 	MapOnPlayerDied_func OnPlayerDiedFunc;
 	MapOnPlayerGetVendorReward_func OnPlayerGetVendorRewardFunc;
 	MapOnBeforeDamageMob_func OnBeforeDamageMobFunc;
+	MapMobAfterDamage_func MobAfterDamageFunc;
 
 	// creates extra empty function slots
 	// so that when adding new ones, old maps at least have a nullptr
