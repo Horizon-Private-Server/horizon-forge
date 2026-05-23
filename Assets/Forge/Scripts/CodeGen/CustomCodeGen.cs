@@ -9,9 +9,12 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
 {
     public List<string> Defines = new List<string>();
     public List<UnityEngine.Object> Files = new List<UnityEngine.Object>();
+    public string LoadFunctionName;
     public string InitFunctionName = "customModuleInit";
     public string CleanupFunctionName = "customModuleCleanup";
+    public string StartFunctionName;
     public string TickFunctionName = "customModuleTick";
+    public string DrawFunctionName;
     public bool WaitForClientsReady = false;
     public List<CodeGenMeta> Metas = new List<CodeGenMeta>();
 
@@ -51,6 +54,12 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
             }
         }
 
+        if (!string.IsNullOrEmpty(LoadFunctionName))
+        {
+            state.Declarations.Add($"void {LoadFunctionName}(void);");
+            state.LoadBody.Add($"{LoadFunctionName}();");
+        }
+
         if (!string.IsNullOrEmpty(InitFunctionName))
         {
             state.Declarations.Add($"void {InitFunctionName}(void);");
@@ -63,6 +72,12 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
             state.CleanupBody.Add($"{CleanupFunctionName}();");
         }
 
+        if (!string.IsNullOrEmpty(StartFunctionName))
+        {
+            state.Declarations.Add($"void {StartFunctionName}(void);");
+            state.StartBody.Add($"{StartFunctionName}();");
+        }
+
         if (!string.IsNullOrEmpty(TickFunctionName))
         {
             state.Declarations.Add($"void {TickFunctionName}(void);");
@@ -70,6 +85,12 @@ public class CustomCodeGen : MonoBehaviour, ICodeGen
                 state.MainBodyReady.Add($"{TickFunctionName}();");
             else
                 state.MainBody.Add($"{TickFunctionName}();");
+        }
+
+        if (!string.IsNullOrEmpty(DrawFunctionName))
+        {
+            state.Declarations.Add($"void {DrawFunctionName}(void);");
+            state.DrawBody.Add($"{DrawFunctionName}();");
         }
 
         foreach (var define in Defines)
