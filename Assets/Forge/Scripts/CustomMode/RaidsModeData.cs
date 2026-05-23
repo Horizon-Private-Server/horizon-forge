@@ -147,7 +147,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
 
         state.LDFlags.Add("-DGATE");
         if (isRaidsMap) state.LDFlags.Add("-DRAIDS");

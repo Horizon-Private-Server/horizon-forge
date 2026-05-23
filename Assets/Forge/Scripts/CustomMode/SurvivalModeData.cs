@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 
 public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int SURVIVAL_VERSION = 11;
+    public static readonly int SURVIVAL_VERSION = 12;
     public const int DEMONBELL_OCLASS = 0x2479;
     public const int BANK_OCLASS = 0x1F7;
     public const int STORE_OCLASS = 0x4100;
@@ -226,7 +226,6 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/survival.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/window.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/items/survival_items.o");
@@ -293,14 +292,18 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"mobys/store.h\"");
 
         // 
+        state.Declarations.Add("void survivalLoad(void);");
         state.Declarations.Add("void interopInit(void);");
         state.Declarations.Add("void survivalInit(void);");
         state.Declarations.Add("void survivalTick(void);");
+        state.Declarations.Add("void survivalStart(void);");
 
         // 
+        state.LoadBody.Add($"survivalLoad();");
         state.InitBody.Insert(0, "interopInit();");
         state.InitBody.Add($"survivalInit();");
         state.MainBody.Add($"survivalTick();");
+        state.StartBody.Add($"survivalStart();");
 
         // get gubers
         state.GetGuberCase.Add("case MYSTERY_BOX_OCLASS: return mboxGetGuber(moby);");
