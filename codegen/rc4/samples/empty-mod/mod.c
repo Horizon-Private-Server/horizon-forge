@@ -42,8 +42,16 @@ void modCleanup(void)
 //--------------------------------------------------------------------------
 void modInit(void)
 {
-	// called once when map is loaded
+	// called once after map is loaded and mobys are spawned
 	DPRINTF("modInit()\n");
 
 	Mod.ModRunningForTicks = 0;
+}
+
+//--------------------------------------------------------------------------
+void modLoad(void)
+{
+	// called once when map is loaded
+	// install your game hooks here
+	DPRINTF("modLoad()\n");
 }

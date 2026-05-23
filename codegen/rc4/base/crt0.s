@@ -17,7 +17,7 @@
 
 	.ent _start
 _start:
-	j main
+	j entrypoint
 	nop
 	nop
 	nop
