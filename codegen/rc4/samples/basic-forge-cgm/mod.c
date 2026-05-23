@@ -43,7 +43,13 @@ void modCleanup(void)
 //--------------------------------------------------------------------------
 void modInit(void)
 {
-	// called once when map is loaded
+	// called once after map is loaded and mobys are spawned
 	// find hill moby
 	Mod.HillMoby = mobyFindNextByOClass(mobyListGetStart(), 9732);
+}
+
+//--------------------------------------------------------------------------
+void modLoad(void)
+{
+	// called once when map is loaded
 }

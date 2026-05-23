@@ -105,6 +105,7 @@ public class CodeManager : MonoBehaviour
             .Replace("##INCLUDES##", string.Join("\n", state.Includes))
             .Replace("##DECLARATIONS##", string.Join("\n", state.Declarations))
             .Replace("##FUNCTIONS##", string.Join("\n", state.Functions))
+            .Replace("##LOADBODY##", string.Join("\n", state.LoadBody.Select(x => Indent(x, 1))))
             .Replace("##INITBODY##", string.Join("\n", state.InitBody.Select(x => Indent(x, 1))))
             .Replace("##CLEANUPBODY##", string.Join("\n", state.CleanupBody.Select(x => Indent(x, 1))))
             .Replace("##MAINBODYREADY##", string.Join("\n", state.MainBodyReady.Select(x => Indent(x, 2))))
@@ -221,6 +222,13 @@ public class CodeManager : MonoBehaviour
 		if (string.IsNullOrEmpty(code))
 			return;
 
+		// auto add modLoad()
+		if (code.Contains("void modLoad(void)") && !state.LoadBody.Contains("modLoad();"))
+		{
+			state.Declarations.Add("void modLoad(void);");
+			state.LoadBody.Add("modLoad();");
+		}
+		
 		// auto add modInit()
 		if (code.Contains("void modInit(void)") && !state.InitBody.Contains("modInit();"))
 		{
@@ -267,6 +275,7 @@ public class CodeGenState
     public List<string> Includes { get; set; } = new List<string>();
     public List<string> Declarations { get; set; } = new List<string>();
     public List<string> Functions { get; set; } = new List<string>();
+    public List<string> LoadBody { get; set; } = new List<string>();
     public List<string> InitBody { get; set; } = new List<string>();
     public List<string> CleanupBody { get; set; } = new List<string>();
     public List<string> DrawBody { get; set; } = new List<string>();

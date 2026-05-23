@@ -196,9 +196,20 @@ void initialize(void)
 }
 
 //--------------------------------------------------------------------------
-int main(void)
+void load(void)
+{
+##LOADBODY##
+}
+
+//--------------------------------------------------------------------------
+int entrypoint(int a0)
 {
   if (baseCleanedUp) return 0;
+  if (a0 == 0) {
+	load();
+	return 0;
+  }
+
   if (!isInGame() && !isSceneLoadedNotYetInGame())
     return 0;
 
