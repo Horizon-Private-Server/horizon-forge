@@ -168,7 +168,7 @@ void gfxHelperDrawText_WS(VECTOR worldPosition, float scale, u32 color, char* st
 }
 
 //------------------------------------------------------------------------------
-void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float offsetY, float width, float height, float textOffsetX, float textOffsetY, float scale, u32 color, char* str, int length, enum TextAlign alignment, enum FontWindowFlags flags, enum COMMON_DZO_DRAW_TYPE dzoDrawType)
+float gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float offsetY, float width, float height, float textOffsetX, float textOffsetY, float scale, u32 color, char* str, int length, enum TextAlign alignment, enum FontWindowFlags flags, enum COMMON_DZO_DRAW_TYPE dzoDrawType)
 {
   float fx = anchorX + offsetX;
   float fy = anchorY + offsetY;
@@ -229,6 +229,8 @@ void gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float 
   if (dzoDrawType != COMMON_DZO_DRAW_ONLY) {
     gfxScreenSpaceTextWindow(&fontWindow, scale, scale, color, str, length, 0x80000000);
   }
+
+  return fontWindow.maxHeight;
 }
 
 //------------------------------------------------------------------------------

@@ -1167,6 +1167,17 @@ void cgmScoreSetScoreboardMaxOverride(int max)
 }
 
 //--------------------------------------------------------------------------
+int cgmScoreSetCustomTarget(int target)
+{
+	if (target == cgmScoreTarget.CustomTarget)
+		return cgmScoreTarget.CustomTarget;
+
+	cgmScoreTarget.CustomTarget = target;
+	cgmScoreSetScoreboardMaxOverride(0);
+	return cgmScoreTarget.CustomTarget;
+}
+
+//--------------------------------------------------------------------------
 void cgmScoreSendSerializedStatsUpstreamToMode(void)
 {
 	struct CgmStats stats;
@@ -1372,10 +1383,10 @@ void cgmScoreCheckTargetScoreReached(void)
 	if (gameData->GameIsOver || !gameAmIHost())
 		return;
 
-#ifdef FORGE_CGM_ROUNDS
-	if (cgmRoundsState.InPostRoundGrace)
-		return;
-#endif
+// #ifdef FORGE_CGM_ROUNDS
+// 	if (cgmRoundsState.InPostRoundGrace)
+// 		return;
+// #endif
 
 	// get current winner
 	// if we have a winner trigger game end
