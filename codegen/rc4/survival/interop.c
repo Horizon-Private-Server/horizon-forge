@@ -413,6 +413,23 @@ int mapOnBeforeDamageMob(Player *player, Moby *sourceMoby, Moby *mobMoby, struct
 }
 
 //--------------------------------------------------------------------------
+void mapMobAfterDamage(Moby *moby, struct MobDamageEventArgs *args, float appliedDamage) 
+{
+	if (appliedDamage <= 0)
+		return;
+
+  	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  	VECTOR mobCenter = {0, 0, pvars->TargetVars.targetHeight, 0};
+    vector_add(mobCenter, mobCenter, moby->Position);
+
+	Player* damager = playerGetFromUID(args->SourceUID);
+    int isLocal = 0;
+    if (damager) isLocal = damager->IsLocal;
+
+    MapConfig.Functions.ModePushBubbleFunc(mobCenter, pvars->MobVars.Config.CollRadius, appliedDamage, isLocal, (args->DamageFlags & 0x20000000) ? TEAM_RED : TEAM_YELLOW);
+}
+
+//--------------------------------------------------------------------------
 void interopInit(void)
 {
 	MapConfig.Functions.OnMobCreateFunc = &mapOnMobCreate;
@@ -442,4 +459,5 @@ void interopInit(void)
 	MapConfig.Functions.OnPlayerDiedFunc = &mapOnPlayerDied;
 	MapConfig.Functions.OnPlayerGetVendorRewardFunc = &mapOnPlayerGetVendorReward;
 	MapConfig.Functions.OnBeforeDamageMobFunc = &mapOnBeforeDamageMob;
+	MapConfig.Functions.MobAfterDamageFunc = &mapMobAfterDamage;
 }
