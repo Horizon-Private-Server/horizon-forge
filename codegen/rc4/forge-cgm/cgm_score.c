@@ -209,12 +209,6 @@ void cgmScoreCheckForBroadcastCustomStats(void)
 }
 
 //--------------------------------------------------------------------------
-int cgmScoreGetCustomPlayerIntStat(int playerId, int statId)
-{
-	return cgmScoreState.CustomPlayerStats[statId][playerId];
-}
-
-//--------------------------------------------------------------------------
 int cgmScoreCanUpdateCustomStat(int force)
 {
 	if (force)
@@ -316,6 +310,15 @@ void cgmScoreUpdateManualStatSources(void)
 }
 
 //--------------------------------------------------------------------------
+int cgmScoreGetCustomPlayerIntStat(int playerId, int statId)
+{
+	if (statId < 0 || statId >= MAX_CUSTOM_PLAYER_STATS)
+		return 0;
+
+	return cgmScoreState.CustomPlayerStats[statId][playerId];
+}
+
+//--------------------------------------------------------------------------
 int cgmScoreSetCustomPlayerIntStat(int playerId, int statId, int value, int force)
 {
 	if (!cgmScoreCanUpdateCustomStat(force))
@@ -338,6 +341,9 @@ int cgmScoreIncCustomPlayerIntStat(int playerId, int statId, int amount, int for
 //--------------------------------------------------------------------------
 float cgmScoreGetCustomPlayerFloatStat(int playerId, int statId)
 {
+	if (statId < 0 || statId >= MAX_CUSTOM_PLAYER_STATS)
+		return 0;
+
 	return cgmScoreState.CustomPlayerStats[statId][playerId] / SCORE_FLOAT_PRECISION;
 }
 
@@ -356,6 +362,9 @@ float cgmScoreIncCustomPlayerFloatStat(int playerId, int statId, float amount, i
 //--------------------------------------------------------------------------
 int cgmScoreGetCustomTeamIntStat(int teamId, int statId)
 {
+	if (statId < 0 || statId >= MAX_CUSTOM_TEAM_STATS)
+		return 0;
+
 	return cgmScoreState.CustomTeamStats[statId][teamId];
 }
 
@@ -382,6 +391,9 @@ int cgmScoreIncCustomTeamIntStat(int teamId, int statId, int amount, int force)
 //--------------------------------------------------------------------------
 float cgmScoreGetCustomTeamFloatStat(int teamId, int statId)
 {
+	if (statId < 0 || statId >= MAX_CUSTOM_TEAM_STATS)
+		return 0;
+
 	return cgmScoreState.CustomTeamStats[statId][teamId] / SCORE_FLOAT_PRECISION;
 }
 
@@ -1383,10 +1395,10 @@ void cgmScoreCheckTargetScoreReached(void)
 	if (gameData->GameIsOver || !gameAmIHost())
 		return;
 
-// #ifdef FORGE_CGM_ROUNDS
-// 	if (cgmRoundsState.InPostRoundGrace)
-// 		return;
-// #endif
+	// #ifdef FORGE_CGM_ROUNDS
+	// 	if (cgmRoundsState.InPostRoundGrace)
+	// 		return;
+	// #endif
 
 	// get current winner
 	// if we have a winner trigger game end
