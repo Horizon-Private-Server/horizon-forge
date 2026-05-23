@@ -771,8 +771,9 @@ public class PvarOverlayDef
         switch (this.DataType?.ToLower())
         {
             case "screenposition": return $"{(int)((Vector2)value).x}|{(int)((Vector2)value).y}";
-            case "vector2": return $"{((Vector2)value).x}|{((Vector2)value).y}";
-            case "vector3": return $"{((Vector3)value).x}|{((Vector3)value).y}|{((Vector3)value).z}";
+            case "float": return ((float)value).ToInvariantCulture();
+            case "vector2": return $"{((Vector2)value).x.ToInvariantCulture()}|{((Vector2)value).y.ToInvariantCulture()}";
+            case "vector3": return $"{((Vector3)value).x.ToInvariantCulture()}|{((Vector3)value).y.ToInvariantCulture()}|{((Vector3)value).z.ToInvariantCulture()}";
             case "colorrgb": return $"{((Color32)value).r},{((Color32)value).g},{((Color32)value).b}";
             case "colorrgba": return $"{((Color32)value).r},{((Color32)value).g},{((Color32)value).b},{((Color32)value).a}";
             default: return value?.ToString();
@@ -794,14 +795,24 @@ public class PvarOverlayDef
             case "mobygroupid":
             case "tiegroupid":
             case "integer": return int.TryParse(v, out var intValue) ? intValue : 0;
-            case "float": return float.TryParse(v, out var floatValue) ? floatValue : 0f;
+            case "float": return StringHelper.FromCultureAgnostic(v);
             case "screenposition":
+                {
+                    try
+                    {
+                        var parts = v.Split('|');
+                        return new Vector2(int.Parse(parts[0]), int.Parse(parts[1]));
+                    }
+                    catch { }
+
+                    return Vector2.zero;
+                }
             case "vector2":
                 {
                     try
                     {
                         var parts = v.Split('|');
-                        return new Vector2(float.Parse(parts[0]), float.Parse(parts[1]));
+                        return new Vector2(StringHelper.FromCultureAgnostic(parts[0]), StringHelper.FromCultureAgnostic(parts[1]));
                     }
                     catch { }
 
@@ -812,7 +823,7 @@ public class PvarOverlayDef
                     try
                     {
                         var parts = v.Split('|');
-                        return new Vector3(float.Parse(parts[0]), float.Parse(parts[1]), float.Parse(parts[2]));
+                        return new Vector3(StringHelper.FromCultureAgnostic(parts[0]), StringHelper.FromCultureAgnostic(parts[1]), StringHelper.FromCultureAgnostic(parts[2]));
                     }
                     catch { }
 
