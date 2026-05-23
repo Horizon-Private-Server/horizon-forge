@@ -13,6 +13,7 @@
 int cgmRoundsGetPostRoundRowScore(int index, int teamsEnabled);
 int cgmRoundsGetPostRoundRowSortScore(int index, int teamsEnabled);
 int cgmRoundsBuildPostRoundRows(int *rows, int teamsEnabled);
+int cgmRoundsFormatPostRoundScoreTarget(char *buf, int bufSize);
 void cgmRoundsApplyReset(void);
 void cgmRoundsReturnFlags(void);
 void cgmRoundsResetNodes(void);
@@ -930,13 +931,14 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 		return;
 
 	float padding = 4;
+	float placementWidth = 16;
 	float labelWidth = 70;
 	float statWidth = statCount > 0 ? (hasRoundPointsStat ? 70 : 58) : 0;
 	float rowHeight = 13;
-	float contentWidth = labelWidth + (statCount * statWidth);
+	float contentWidth = placementWidth + labelWidth + (statCount * statWidth);
 	float windowWidth = contentWidth + (padding * 2);
 	float windowHeight = rowHeight * (rowCount + 1);
-	float y = (SCREEN_HEIGHT / 2) - 60;
+	float y = (SCREEN_HEIGHT / 2) - (cgmScoreGetTargetScore() > 0 ? 45 : 60);
 	float scale = 0.55;
 	u32 color = 0x80FFFFFF;
 	char buf[32];
@@ -944,9 +946,20 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 	Window_t window;
 	windowCreate(&window, SCREEN_WIDTH / 2, y, 0, 0, windowWidth, windowHeight, TEXT_ALIGN_TOPCENTER);
 
-	windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding, rowHeight / 2, scale, color, teamsEnabled ? "Team" : "Player", -1, TEXT_ALIGN_MIDDLELEFT);
+	windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding, rowHeight / 2, scale, color, "#", -1, TEXT_ALIGN_MIDDLELEFT);
+	windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding + placementWidth, rowHeight / 2, scale, color, teamsEnabled ? "Team" : "Player", -1, TEXT_ALIGN_MIDDLELEFT);
 	for (s = 0; s < statCount; ++s)
-		windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding + labelWidth + (s * statWidth), rowHeight / 2, scale, color, cgmScoreStats[statIndexes[s]].Name, -1, TEXT_ALIGN_MIDDLELEFT);
+	{
+		if (cgmScoreGetTargetScore() > 0 && statIndexes[s] == cgmScoreTarget.StatIndex)
+		{
+			snprintf(buf, sizeof(buf), "%s*", cgmScoreStats[statIndexes[s]].Name);
+			windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding + placementWidth + labelWidth + (s * statWidth), rowHeight / 2, scale, color, buf, -1, TEXT_ALIGN_MIDDLELEFT);
+		}
+		else
+		{
+			windowDrawText(&window, TEXT_ALIGN_TOPLEFT, padding + placementWidth + labelWidth + (s * statWidth), rowHeight / 2, scale, color, cgmScoreStats[statIndexes[s]].Name, -1, TEXT_ALIGN_MIDDLELEFT);
+		}
+	}
 
 	int r;
 	for (r = 0; r < rowCount; ++r)
@@ -963,8 +976,10 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 		Window_t windowRow;
 		windowCreateFrom(&windowRow, &window, 0, rowY, windowWidth, rowHeight, TEXT_ALIGN_TOPLEFT);
 		windowDrawBox(&windowRow, TEXT_ALIGN_TOPLEFT, 0, 0, windowWidth, rowHeight - 1, rowColor, TEXT_ALIGN_TOPLEFT);
-		safe_strcpy(buf, teamsEnabled ? teamName : playerName, sizeof(buf));
+		snprintf(buf, sizeof(buf), "%d", r + 1);
 		windowDrawText(&windowRow, TEXT_ALIGN_MIDDLELEFT, padding, 2, scale, color, buf, -1, TEXT_ALIGN_BOTTOMLEFT);
+		safe_strcpy(buf, teamsEnabled ? teamName : playerName, sizeof(buf));
+		windowDrawText(&windowRow, TEXT_ALIGN_MIDDLELEFT, padding + placementWidth, 2, scale, color, buf, -1, TEXT_ALIGN_BOTTOMLEFT);
 
 		for (s = 0; s < statCount; ++s)
 		{
@@ -974,9 +989,23 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 			else
 				cgmRoundsFormatPostRoundStat(buf, sizeof(buf), value, cgmScoreStats[statIndexes[s]].ValueType);
 
-			windowDrawText(&windowRow, TEXT_ALIGN_MIDDLELEFT, padding + labelWidth + (s * statWidth), 2, scale, color, buf, -1, TEXT_ALIGN_BOTTOMLEFT);
+			windowDrawText(&windowRow, TEXT_ALIGN_MIDDLELEFT, padding + placementWidth + labelWidth + (s * statWidth), 2, scale, color, buf, -1, TEXT_ALIGN_BOTTOMLEFT);
 		}
 	}
+
+}
+
+//--------------------------------------------------------------------------
+int cgmRoundsFormatPostRoundScoreTarget(char *buf, int bufSize)
+{
+	int target = cgmScoreGetTargetScore();
+	int statIndex = cgmScoreTarget.StatIndex;
+	if (target <= 0 || statIndex < 0 || statIndex >= cgmScoreStatsCount)
+		return 0;
+
+	int displayTarget = cgmScoreGetFormattedScore(target, cgmScoreStats[statIndex].ValueType);
+	snprintf(buf, bufSize, "First to %d", displayTarget);
+	return 1;
 }
 
 //--------------------------------------------------------------------------
@@ -1010,12 +1039,15 @@ void cgmRoundsDrawPostRound(void)
 	if (!cgmRoundsState.InPostRoundGrace)
 		return;
 
-	char buf[32];
+	char buf[48];
 	int won = cgmRoundsDidLocalPlayerWinLastRound();
 	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 98, 0, 0, 2.0, won ? 0x8000FF00 : 0x800000FF, won ? "VICTORY" : "FAILURE", -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
 
 	snprintf(buf, sizeof(buf), "Round %d Results", cgmRoundsState.RoundNumber);
 	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 70, 0, 0, 0.8, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+	if (cgmRoundsFormatPostRoundScoreTarget(buf, sizeof(buf)))
+		gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 56, 0, 0, 0.65, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+
 	cgmRoundsDrawPostRoundScoreboard();
 }
 
