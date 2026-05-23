@@ -372,6 +372,7 @@ void bankRequestMapStats(char* mapFilename, char* mapName, struct RaidsBankMapSt
     .MissionType = missionType
   };
 
+  if (strstr(mapFilename, "..") || strstr(mapName, "..")) return;
   safe_strcpy(msg.MapFilename, mapFilename, sizeof(msg.MapFilename));
   safe_strcpy(msg.MapName, mapName, sizeof(msg.MapName));
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_GET_MAP_STATS_REQUEST, sizeof(msg), &msg);
