@@ -68,4 +68,5 @@ public static class StringHelper
     public static string ToInvariantCulture(this float value, string format) => value.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
     public static string ToInvariantCulture(this double value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     public static string ToInvariantCulture(this decimal value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    public static float FromInvariantCulture(string str, float defaultValue = 0f) => float.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
 }

@@ -176,7 +176,7 @@ public static class UnityHelper
                 }
             case BYTEARRAY_PROPERTYFIELD_FORMAT.FLOAT:
                 {
-                    value = BitConverter.ToSingle(ByteArrayPropertyField_Buffer, 0).ToString("0.#######");
+                    value = BitConverter.ToSingle(ByteArrayPropertyField_Buffer, 0).ToInvariantCulture("0.#######");
                     break;
                 }
         }
@@ -205,7 +205,7 @@ public static class UnityHelper
                     }
                 case BYTEARRAY_PROPERTYFIELD_FORMAT.FLOAT:
                     {
-                        var bytes = BitConverter.GetBytes(float.Parse(newValue));
+                        var bytes = BitConverter.GetBytes(StringHelper.FromInvariantCulture(newValue));
                         Array.Copy(bytes, 0, ByteArrayPropertyField_Buffer, 0, bytes.Length);
                         break;
                     }
