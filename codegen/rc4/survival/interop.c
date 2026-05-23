@@ -412,6 +412,7 @@ int mapOnBeforeDamageMob(Player *player, Moby *sourceMoby, Moby *mobMoby, struct
 	return 1;
 }
 
+//--------------------------------------------------------------------------
 void mapMobAfterDamage(Moby *moby, struct MobDamageEventArgs *args, float appliedDamage) 
 {
 	if (appliedDamage <= 0)
