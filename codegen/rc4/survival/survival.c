@@ -576,6 +576,17 @@ struct StoreDef *mapGetStore(Moby *moby, int localPlayerIndex, int storeIdx)
 }
 
 //--------------------------------------------------------------------------
+void survivalStart(void)
+{
+#if RANDOMIZE_WEAPONS_AT_START
+	if (gameAmIHost())
+	{
+		randomizeWeaponPickups();
+	}
+#endif
+}
+
+//--------------------------------------------------------------------------
 void survivalInit(void)
 {
 	static int initialized = 0;
@@ -589,7 +600,6 @@ void survivalInit(void)
 
 	MapConfig.Magic = MAP_CONFIG_MAGIC;
 
-	mapApplyFixes();
 	poolInit();
 	mboxInit();
 	mobInit();
@@ -608,15 +618,19 @@ void survivalInit(void)
 #if GAMBITS
 	gambitsInit();
 #endif
-#if RANDOMIZE_WEAPONS_AT_START
-	if (gameAmIHost())
-	{
-		randomizeWeaponPickups();
-	}
-#endif
 #ifdef AMMO_DROP_PROBABILITY
 	ammodropInit();
 #endif
+
+	DPRINTF("path %08X end %08X\n", (u32)&MOB_PATHFINDING_PATHS, (u32)&MOB_PATHFINDING_PATHS + (MOB_PATHFINDING_PATHS_MAX_PATH_LENGTH * MOB_PATHFINDING_NODES_COUNT * MOB_PATHFINDING_NODES_COUNT));
+
+	initialized = 1;
+}
+
+//--------------------------------------------------------------------------
+void survivalLoad(void)
+{
+	mapApplyFixes();
 
 	// hook HudAmmo XP bar
 	POKE_U32(0x00552CD8, 0x10000013);
@@ -649,10 +663,6 @@ void survivalInit(void)
 	HOOK_JAL(0x005DA5AC, &playerDamageAndTeleportToSpawn); // acid drown / lava
 	POKE_U32(0x006090b8, 0);
 	HOOK_JAL(0x006090f0, &playerDrownAndTeleportToSpawn); // water drown
-
-	DPRINTF("path %08X end %08X\n", (u32)&MOB_PATHFINDING_PATHS, (u32)&MOB_PATHFINDING_PATHS + (MOB_PATHFINDING_PATHS_MAX_PATH_LENGTH * MOB_PATHFINDING_NODES_COUNT * MOB_PATHFINDING_NODES_COUNT));
-
-	initialized = 1;
 }
 
 //--------------------------------------------------------------------------
