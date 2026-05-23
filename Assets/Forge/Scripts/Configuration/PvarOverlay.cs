@@ -795,7 +795,7 @@ public class PvarOverlayDef
             case "mobygroupid":
             case "tiegroupid":
             case "integer": return int.TryParse(v, out var intValue) ? intValue : 0;
-            case "float": return StringHelper.FromInvariantCulture(v);
+            case "float": return StringHelper.FromCultureAgnostic(v);
             case "screenposition":
                 {
                     try
@@ -812,7 +812,7 @@ public class PvarOverlayDef
                     try
                     {
                         var parts = v.Split('|');
-                        return new Vector2(StringHelper.FromInvariantCulture(parts[0]), StringHelper.FromInvariantCulture(parts[1]));
+                        return new Vector2(StringHelper.FromCultureAgnostic(parts[0]), StringHelper.FromCultureAgnostic(parts[1]));
                     }
                     catch { }
 
@@ -823,7 +823,7 @@ public class PvarOverlayDef
                     try
                     {
                         var parts = v.Split('|');
-                        return new Vector3(StringHelper.FromInvariantCulture(parts[0]), StringHelper.FromInvariantCulture(parts[1]), StringHelper.FromInvariantCulture(parts[2]));
+                        return new Vector3(StringHelper.FromCultureAgnostic(parts[0]), StringHelper.FromCultureAgnostic(parts[1]), StringHelper.FromCultureAgnostic(parts[2]));
                     }
                     catch { }
 

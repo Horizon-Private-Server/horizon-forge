@@ -69,4 +69,18 @@ public static class StringHelper
     public static string ToInvariantCulture(this double value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     public static string ToInvariantCulture(this decimal value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     public static float FromInvariantCulture(string str, float defaultValue = 0f) => float.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
+    public static float FromCultureAgnostic(string str, float defaultValue = 0f)
+	{
+		if (string.IsNullOrWhiteSpace(str))
+			return defaultValue;
+
+		if (float.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float result))
+            return result;
+
+		var commaCulture = new System.Globalization.NumberFormatInfo { NumberDecimalSeparator = "," };
+		if (float.TryParse(str, System.Globalization.NumberStyles.Float, commaCulture, out result))
+            return result;
+
+		return defaultValue;
+	}
 }
