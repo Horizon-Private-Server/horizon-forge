@@ -675,7 +675,10 @@ void cgmRoundsTick(void)
 	GameData *gameData = gameGetData();
 
 	// update score hud timer
-	((void (*)(int))0x00540508)(cgmRoundsGetRoundElapsedTime());
+	if (cgmRoundsConfig.RoundTimeLimitSeconds > 0)
+	{
+		((void (*)(int))0x00540508)(cgmRoundsGetRoundElapsedTime());
+	}
 
 	if (gameData->GameIsOver)
 		return;
@@ -730,8 +733,11 @@ void cgmRoundsInit(void)
 		POKE_U32(0x00621A10, 0);
 	}
 
-	// always display round time in score timer
-	HOOK_JAL(0x0055b968, cgmRoundsGetScoreboardTimerOverride);
+	// display round time in score timer if round has time limit
+	if (cgmRoundsConfig.RoundTimeLimitSeconds > 0)
+	{
+		HOOK_JAL(0x0055b968, cgmRoundsGetScoreboardTimerOverride);
+	}
 
 	if (cgmRoundsConfig.DisplayRoundTargetInScoreboardHud)
 	{

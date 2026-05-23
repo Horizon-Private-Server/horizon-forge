@@ -187,7 +187,10 @@ public class CodeManager : MonoBehaviour
                     }
                 case ".s":
                     {
-                        outPath = Path.Combine(outSrcDir, subPath);
+						if (Path.GetFileName(baseFile) == "crt0.s")
+                        	outPath = Path.Combine(destFolder, subPath);
+						else
+                        	outPath = Path.Combine(outSrcDir, subPath);
                         break;
                     }
                 default:

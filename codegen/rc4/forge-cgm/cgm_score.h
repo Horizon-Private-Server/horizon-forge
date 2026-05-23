@@ -166,6 +166,9 @@ void cgmScoreEndGameEarly(void);
 void cgmScoreEndGameEarlyWithWinner(int winnerOverride);
 
 int cgmScoreGetTargetScore(void);
+// Sets cgmScoreTarget.CustomTarget and refreshes the scoreboard HUD max.
+// This overrides the max set by the rounds module when rounds displays its target on the scoreboard HUD.
+int cgmScoreSetCustomTarget(int target);
 int cgmScoreGetTeamHasPlayer(int team);
 int cgmScoreGetPlayerStat(int playerIdx, enum CgmScoreStatSource source);
 int cgmScoreGetTeamScoreForSource(int team, enum CgmScoreStatSource source);
