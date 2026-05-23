@@ -375,10 +375,10 @@ void cgmRoundsRespawnPlayer(Player *player)
 	if (player->Vehicle)
 		vehicleRemovePlayer(player->Vehicle, player);
 
-	VECTOR p, r;
-	playerRespawn(player);
-	playerGetSpawnpoint(player, p, r, 1);
-	playerSetPosRot(player, p, r);
+    // Respawn (first res patch)
+    POKE_U32(0x205e2d48, 0x24070001);
+    playerRespawn(player);
+    POKE_U32(0x205e2d48, 0x0000382d);
 }
 
 //--------------------------------------------------------------------------

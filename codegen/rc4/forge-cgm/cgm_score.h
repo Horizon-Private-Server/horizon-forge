@@ -126,7 +126,7 @@ struct CgmScoreState
 	int ManualPlayerTimeAliveMs[GAME_MAX_PLAYERS];
 	int ManualPlayerTimeAliveRoundStartMs[GAME_MAX_PLAYERS];
 	char ManualPlayerTimeAliveFinalized[GAME_MAX_PLAYERS];
-	float ManualPlayerLastPosition[GAME_MAX_PLAYERS][4];
+	VECTOR ManualPlayerLastPosition[GAME_MAX_PLAYERS];
 	char ManualPlayerHasLastPosition[GAME_MAX_PLAYERS];
 	char ManualPlayerWasAlive[GAME_MAX_PLAYERS];
 	int ManualPlayerLastDistanceSampleTime;
