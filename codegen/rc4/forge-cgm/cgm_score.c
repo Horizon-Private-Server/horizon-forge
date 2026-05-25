@@ -896,6 +896,20 @@ int cgmScoreGetStatValueForTeam(int team, int statIndex, int useRoundAggregate)
 }
 
 //--------------------------------------------------------------------------
+int cgmScoreGetLiveStatValueForTeam(int team, int statIndex, int teamsEnabled)
+{
+	cgmScoreUpdateRoundTrackedStats();
+
+	if (statIndex < 0 || statIndex >= cgmScoreStatsCount)
+		return 0;
+
+	if (cgmScoreGetStatHasRoundAggregate(statIndex))
+		return cgmScoreGetLiveRoundAggregateValue(team, statIndex, 0, teamsEnabled);
+
+	return cgmScoreGetStatValueForTeam(team, statIndex, 0);
+}
+
+//--------------------------------------------------------------------------
 int cgmScoreGetTeamScore(int team)
 {
 	return cgmScoreGetTargetTeamScore(team);

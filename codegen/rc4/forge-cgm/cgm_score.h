@@ -176,6 +176,7 @@ int cgmScoreGetPlayerStatSortValue(int playerIdx, enum CgmScoreStatSource source
 int cgmScoreGetTeamScoreSortValueForSource(int team, enum CgmScoreStatSource source);
 int cgmScoreGetStatValueForPlayer(int playerIdx, int statIndex, int useRoundAggregate);
 int cgmScoreGetStatValueForTeam(int team, int statIndex, int useRoundAggregate);
+int cgmScoreGetLiveStatValueForTeam(int team, int statIndex, int teamsEnabled);
 int cgmScoreGetTeamScore(int team);
 int cgmScoreGetTargetTeamScore(int team);
 int cgmScoreGetFormattedScore(int score, enum CgmScoreStatValueType type);

@@ -78,6 +78,9 @@ int cgmRoundsGetRoundPoints(int team)
 //--------------------------------------------------------------------------
 int cgmRoundsGetTeamScore(int team)
 {
+	if (cgmRoundsConfig.ShowLiveAggregateScore)
+		return cgmScoreGetLiveStatValueForTeam(team, cgmRoundsConfig.RoundObjectiveStatIndex, gameGetOptions()->GameFlags.MultiplayerGameFlags.Teamplay);
+
 	return cgmScoreGetStatValueForTeam(team, cgmRoundsConfig.RoundObjectiveStatIndex, 0);
 }
 

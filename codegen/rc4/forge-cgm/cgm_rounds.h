@@ -50,6 +50,7 @@ struct CgmRoundsConfig
 	int RoundObjectiveStatIndex;
 	char RoundObjectiveLowerScoreWins;
 	char DisplayRoundTargetInScoreboardHud;
+	char ShowLiveAggregateScore;
 	CgmRoundsEvent_func ResetRound;
 	CgmRoundsEvent_func RoundStarted;
 	CgmRoundsEvent_func RoundCompleted;
