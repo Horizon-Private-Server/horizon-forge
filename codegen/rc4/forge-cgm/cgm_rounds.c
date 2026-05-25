@@ -1112,7 +1112,7 @@ void cgmRoundsDrawPostRound(void)
 
 	char buf[48];
 	int won = cgmRoundsDidLocalPlayerWinLastRound();
-	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 98, 0, 0, 2.0, won ? 0x8000FF00 : 0x800000FF, won ? "VICTORY" : "FAILURE", -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 98, 0, 0, 2.0, won ? 0x8000FF00 : 0x800000FF, won ? "ROUND WIN" : "ROUND LOSS", -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
 
 	snprintf(buf, sizeof(buf), "Round %d Results", cgmRoundsState.RoundNumber);
 	gfxHelperDrawText(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 70, 0, 0, 0.8, 0x80FFFFFF, buf, -1, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
