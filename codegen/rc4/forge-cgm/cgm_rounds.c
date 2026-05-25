@@ -835,10 +835,19 @@ int cgmRoundsGetPostRoundRowStat(int index, int teamsEnabled, int statIndex)
 //--------------------------------------------------------------------------
 int cgmRoundsPostRoundRowHasPlayer(int index, int teamsEnabled)
 {
-	if (teamsEnabled)
-		return cgmScoreGetTeamHasPlayer(index);
+	GameSettings *gameSettings = gameGetSettings();
 
-	return playerIsValid(playerGetFromIndex(index));
+	if (teamsEnabled)
+	{
+		int i;
+		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
+			if (gameSettings->PlayerTeams[i] == index && gameSettings->PlayerNames[i][0])
+				return 1;
+
+		return 0;
+	}
+
+	return gameSettings->PlayerNames[index][0];
 }
 
 //--------------------------------------------------------------------------
