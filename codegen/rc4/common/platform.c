@@ -42,6 +42,12 @@
 void moverApplyMobyTransformationToAttachedPlayers(Moby* moby, MATRIX mWorldBeforeTransformation);
 
 //--------------------------------------------------------------------------
+int platformAmIOwner(Moby* moby)
+{
+  return gameAmIHost() || !moby->GuberMoby;
+}
+
+//--------------------------------------------------------------------------
 int platformMobyIsPlatform(Moby* moby)
 {
   return moby && (moby->OClass == PLATFORM_FLIPPER_MOBY_OCLASS || moby->OClass == PLATFORM_PIVOT_MOBY_OCLASS);
@@ -50,9 +56,9 @@ int platformMobyIsPlatform(Moby* moby)
 //--------------------------------------------------------------------------
 void platformBroadcastNewState(Moby* moby, int state)
 {
-	// create event
+  // create event
   // or if not synced just update state
-	GuberEvent * guberEvent = guberCreateEvent(moby, PLATFORM_EVENT_SET_STATE);
+  GuberEvent * guberEvent = guberCreateEvent(moby, PLATFORM_EVENT_SET_STATE);
   if (guberEvent) {
     guberEventWrite(guberEvent, &state, 1);
   } else if (moby->State != state) {
@@ -150,7 +156,7 @@ void platformFlipperDoFlip(Moby* moby)
   }
 
   // flip / unflip
-  if (secondsSinceLastFlip > flipAfterSec && gameAmIHost()) {
+  if (secondsSinceLastFlip > flipAfterSec && platformAmIOwner(moby)) {
     platformBroadcastNewState(moby, !moby->State);
     DLOG(moby, "flip %d\n", !moby->State);
   }
@@ -182,9 +188,10 @@ void platformFlipperDoFall(Moby* moby)
 
     // check for fall
     int i;
-    for (i = 0; i < GAME_MAX_LOCALS; ++i) {
-      Player* player = playerGetFromSlot(i);
-      if (playerIsValid(player) && player->Ground.pMoby == moby && player->Ground.onGood && player->Ground.dist < 0.1) {
+    int checkNonLocals = !moby->GuberMoby;
+    for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+      Player* player = playerGetFromIndex(i);
+      if (playerIsValid(player) && (checkNonLocals || player->IsLocal) && player->Ground.pMoby == moby && player->Ground.onGood && player->Ground.dist < 0.01) {
         platformBroadcastNewState(moby, PLATFORM_FLIPPER_STATE_FALL);
         DLOG(moby, "fall from player %d\n", player->PlayerId);
       }
@@ -214,7 +221,7 @@ void platformDoPivot(Moby* moby)
     vector_subtract(dt, player->PlayerPosition, moby->Position);
     vector_projectonhorizontal(dt, dt);
     float dist = vector_length(dt);
-    float angle = clampAngle(atan2f(dt[1] / dist, dt[0] / dist) + (MATH_PI/2));
+    float angle = clampAngle(atan2f(dt[1] / dist, dt[0] / dist) + (MATH_PI/2) - moby->Rotation[2]);
     float magnitude = powf(dist * PLATFORM_PIVOT_FORCE_BY_DIST, 2);
 
     VECTOR force;
@@ -353,6 +360,12 @@ void platformFlipperUpdate(Moby* moby)
   }
   
   platformApplyTransformation(moby, snapPlayer ? mRot0 : NULL);
+  
+  // detect when state was changed
+  if ((moby->Triggers & 1) == 0) {
+    platformFlipperOnStateChanged(moby);
+    moby->Triggers |= 1;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -387,8 +400,8 @@ int platformHandleEvent_SetState(Moby* moby, GuberEvent* event)
 
   // struct PlatformFlipperPVar* pvars = (struct PlatformFlipperPVar*)moby->PVar;
 
-	// read event
-	guberEventRead(event, &state, 1);
+  // read event
+  guberEventRead(event, &state, 1);
   if (moby->State != state) {
     DLOG(moby, "platform %08X recv state %d => %d\n", (u32)moby, moby->State, state);
     mobySetState(moby, state, -1);
@@ -399,33 +412,57 @@ int platformHandleEvent_SetState(Moby* moby, GuberEvent* event)
 //--------------------------------------------------------------------------
 struct Guber* platformGetGuber(Moby* moby)
 {
-	if (platformMobyIsPlatform(moby) && moby->PVar)
-		return moby->Guber;
-	
-	return 0;
+  if (platformMobyIsPlatform(moby) && moby->PVar)
+    return moby->Guber;
+  
+  return 0;
 }
 
 //--------------------------------------------------------------------------
 int platformHandleEvent(Moby* moby, GuberEvent* event)
 {
-	if (!moby || !event)
-		return 0;
+  if (!moby || !event)
+    return 0;
 
-	if (isInGame() && !mobyIsDestroyed(moby) && platformMobyIsPlatform(moby) && moby->PVar) {
-		u32 eventId = event->NetEvent.EventID;
+  if (isInGame() && !mobyIsDestroyed(moby) && platformMobyIsPlatform(moby) && moby->PVar) {
+    u32 eventId = event->NetEvent.EventID;
 
-		switch (eventId)
-		{
+    switch (eventId)
+    {
       case PLATFORM_EVENT_SET_STATE: { return platformHandleEvent_SetState(moby, event); }
-			default:
-			{
-				DLOG(moby, "unhandle platform event %d\n", eventId);
-				break;
-			}
-		}
-	}
+      default:
+      {
+        DLOG(moby, "unhandle platform event %d\n", eventId);
+        break;
+      }
+    }
+  }
 
-	return 0;
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+void platformInitMoby(Moby* moby, int timeSpawned)
+{
+  if (!moby)
+    return;
+
+  int isFlipper = moby->OClass == PLATFORM_FLIPPER_MOBY_OCLASS;
+  struct PlatformFlipperPVar* flipperPVars = (struct PlatformFlipperPVar*)moby->PVar;
+  struct PlatformPivotPVar* pivotPVars = (struct PlatformPivotPVar*)moby->PVar;
+  struct PlatformSharedPVar* pvars = (struct PlatformSharedPVar*)moby->PVar;
+
+  // update pvars
+  memset(pvars->LastPosition, 0, sizeof(pvars->LastPosition));
+  memset(pvars->LastRotation, 0, sizeof(pvars->LastRotation));
+  if (isFlipper) {
+    flipperPVars->TimeStateLastChanged = flipperPVars->TimeStarted = timeSpawned;
+  } else {
+    memset(pivotPVars->LastPivotAmount, 0, sizeof(pivotPVars->LastPivotAmount));
+    pivotPVars->LastBuoyancyAmount = 0;
+	moby->Rotation[0] = 0;
+	moby->Rotation[1] = 0;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -446,12 +483,10 @@ void platformInitType(int oclass, void* updateFunc)
   
   // create gubers for flippers
   Moby* moby = mobyListGetStart();
-	while ((moby = mobyFindNextByOClass(moby, oclass)))
-	{
-		if (!mobyIsDestroyed(moby) && moby->PVar) {
+  while ((moby = mobyFindNextByOClass(moby, oclass)))
+  {
+    if (!mobyIsDestroyed(moby) && moby->PVar) {
       struct PlatformFlipperPVar* flipperPVars = (struct PlatformFlipperPVar*)moby->PVar;
-      struct PlatformPivotPVar* pivotPVars = (struct PlatformPivotPVar*)moby->PVar;
-      struct PlatformSharedPVar* pvars = (struct PlatformSharedPVar*)moby->PVar;
 
       // only fall platforms should be synced
       if (isFlipper && flipperPVars->Type == PLATFORM_FLIPPER_FALL) {
@@ -463,19 +498,11 @@ void platformInitType(int oclass, void* updateFunc)
       moby->PUpdate = updateFunc;
       moby->ModeBits &= ~MOBY_MODE_BIT_NO_UPDATE;
 
-      // update pvars
-      memset(pvars->LastPosition, 0, sizeof(pvars->LastPosition));
-      memset(pvars->LastRotation, 0, sizeof(pvars->LastRotation));
-      if (isFlipper) {
-        flipperPVars->TimeStateLastChanged = flipperPVars->TimeStarted = gameGetTime();
-      } else {
-        memset(pivotPVars->LastPivotAmount, 0, sizeof(pivotPVars->LastPivotAmount));
-        pivotPVars->LastBuoyancyAmount = 0;
-      }
+      platformInitMoby(moby, gameGetTime());
     }
 
-		++moby;
-	}
+    ++moby;
+  }
 }
 
 //--------------------------------------------------------------------------
