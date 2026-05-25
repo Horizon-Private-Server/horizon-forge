@@ -122,6 +122,7 @@ public class ForgeCustomModeRoundsModule : MonoBehaviour, IForgeCustomModeModule
 		state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/cgm_rounds.o");
 		state.LDFlags.Add("-DFORGE_CGM_ROUNDS");
 		state.Includes.Add("#include \"cgm_rounds.h\"");
+		state.CleanupBody.Add("cgmRoundsCleanup();");
 		state.InitBody.Add("cgmRoundsInit();");
 		state.MainBodyReady.Remove("cgmScoreCheckTargetScoreReached();");
 		state.MainBodyReady.Add("cgmRoundsTick();");

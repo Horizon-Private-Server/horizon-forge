@@ -114,6 +114,7 @@ int cgmRoundsOneTeamLeftAlive(void);
 void cgmRoundsStartNextRound(void);
 void cgmRoundsCompleteRoundWithCurrentWinner(void);
 void cgmRoundsCompleteRound(int winnerOverride);
+void cgmRoundsCleanup(void);
 void cgmRoundsInit(void);
 void cgmRoundsTick(void);
 void cgmRoundsDraw(void);

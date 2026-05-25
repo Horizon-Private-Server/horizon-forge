@@ -376,10 +376,10 @@ void cgmRoundsRespawnPlayer(Player *player)
 	if (player->Vehicle)
 		vehicleRemovePlayer(player->Vehicle, player);
 
-    // Respawn (first res patch)
-    POKE_U32(0x205e2d48, 0x24070001);
-    playerRespawn(player);
-    POKE_U32(0x205e2d48, 0x0000382d);
+	// Respawn (first res patch)
+	POKE_U32(0x205e2d48, 0x24070001);
+	playerRespawn(player);
+	POKE_U32(0x205e2d48, 0x0000382d);
 }
 
 //--------------------------------------------------------------------------
@@ -717,6 +717,13 @@ void cgmRoundsTick(void)
 }
 
 //--------------------------------------------------------------------------
+void cgmRoundsCleanup(void)
+{
+	netUninstallCustomMsgHandler(CGM_MSG_ID_SEND_ROUND_STARTED, &cgmRoundsOnRecvRoundStarted);
+	netUninstallCustomMsgHandler(CGM_MSG_ID_SEND_ROUND_ENDED, &cgmRoundsOnRecvRoundEnded);
+}
+
+//--------------------------------------------------------------------------
 void cgmRoundsInit(void)
 {
 	memset(&cgmRoundsState, 0, sizeof(cgmRoundsState));
@@ -992,7 +999,6 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 			windowDrawText(&windowRow, TEXT_ALIGN_MIDDLELEFT, padding + placementWidth + labelWidth + (s * statWidth), 2, scale, color, buf, -1, TEXT_ALIGN_BOTTOMLEFT);
 		}
 	}
-
 }
 
 //--------------------------------------------------------------------------
@@ -1036,6 +1042,13 @@ int cgmRoundsDidLocalPlayerWinLastRound(void)
 //--------------------------------------------------------------------------
 void cgmRoundsDrawPostRound(void)
 {
+	// draw post round scoreboard during game end phase
+	if (gameHasEnded())
+	{
+		cgmRoundsDrawPostRoundScoreboard();
+		return;
+	}
+
 	if (!cgmRoundsState.InPostRoundGrace)
 		return;
 
@@ -1054,10 +1067,6 @@ void cgmRoundsDrawPostRound(void)
 //--------------------------------------------------------------------------
 void cgmRoundsDraw(void)
 {
-	GameData *gameData = gameGetData();
-	if (gameData->GameIsOver)
-		return;
-
 	if (gameIsAnyStartMenuOpen())
 		return;
 

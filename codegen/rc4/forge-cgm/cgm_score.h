@@ -85,7 +85,7 @@ struct CgmScoreTarget
 	enum CgmScoreStatTargetSource Target;
 	enum CgmScoreScoreboardType Scoreboard;
 	int StatIndex;
-	int SortDescending;
+	int SortAscending;
 	int CustomTarget;
 };
 
@@ -187,6 +187,7 @@ void cgmScoreFinalizeRoundTimeAliveStats(int roundStartTime, int roundEndTime);
 void cgmScoreCommitRoundAggregates(void);
 void cgmScoreBroadcastLocalPlayerRoundAggregates(void);
 void cgmScoreUpdateGameState(PatchStateContainer_t *gameState);
+void cgmScoreCleanup(void);
 void cgmScoreInit(void);
 void cgmScoreCheckTargetScoreReached(void);
 void cgmScoreCheckForBroadcastCustomStats(void);

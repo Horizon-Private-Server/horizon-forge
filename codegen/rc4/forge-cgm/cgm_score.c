@@ -14,20 +14,24 @@
 #include "cgm_rounds.h"
 #endif
 
+//--------------------------------------------------------------------------
 struct CgmScoreState cgmScoreState = {};
 
+//--------------------------------------------------------------------------
 struct CustomPlayerStatMessage
 {
 	char PlayerId;
 	int Values[MAX_CUSTOM_STATS];
 };
 
+//--------------------------------------------------------------------------
 struct CustomTeamStatMessage
 {
 	char TeamId;
 	int Values[MAX_CUSTOM_STATS];
 };
 
+//--------------------------------------------------------------------------
 struct PlayerRoundAggregateMessage
 {
 	char PlayerId;
@@ -35,9 +39,22 @@ struct PlayerRoundAggregateMessage
 	int Values[MAX_CUSTOM_STATS];
 };
 
+//--------------------------------------------------------------------------
 char cgmScoreCustomPlayerStatsDirty[GAME_MAX_PLAYERS] = {};
 char cgmScoreCustomTeamStatsDirty[GAME_MAX_PLAYERS] = {};
 int cgmScoreBroadcastCustomStatsTicker = 0;
+
+//--------------------------------------------------------------------------
+void cgmScoreSendSerializedStatsUpstreamToMode(void);
+int cgmScoreGetRoundAggregateCurrentValue(int row, int statIndex, int teamsEnabled);
+
+//--------------------------------------------------------------------------
+void cgmScoreRefreshSerializedStatsUpstreamIfGameOver(void)
+{
+	GameData *gameData = gameGetData();
+	if (gameData->GameIsOver)
+		cgmScoreSendSerializedStatsUpstreamToMode();
+}
 
 //--------------------------------------------------------------------------
 int cgmScoreOnRecvCustomPlayerStats(void *connection, void *data)
@@ -53,6 +70,7 @@ int cgmScoreOnRecvCustomPlayerStats(void *connection, void *data)
 		cgmScoreState.CustomPlayerStats[i][(int)msg.PlayerId] = msg.Values[i];
 
 	cgmScoreCustomPlayerStatsDirty[(int)msg.PlayerId] = 0;
+	cgmScoreRefreshSerializedStatsUpstreamIfGameOver();
 	return sizeof(msg);
 }
 
@@ -70,6 +88,7 @@ int cgmScoreOnRecvCustomTeamStats(void *connection, void *data)
 		cgmScoreState.CustomTeamStats[i][(int)msg.TeamId] = msg.Values[i];
 
 	cgmScoreCustomTeamStatsDirty[(int)msg.TeamId] = 0;
+	cgmScoreRefreshSerializedStatsUpstreamIfGameOver();
 	return sizeof(msg);
 }
 
@@ -91,6 +110,7 @@ int cgmScoreOnRecvPlayerRoundAggregates(void *connection, void *data)
 	for (i = 0; i < MAX_CUSTOM_STATS; ++i)
 		cgmScoreState.RoundPlayerAggregateValues[i][(int)msg.PlayerId] = msg.Values[i];
 
+	cgmScoreRefreshSerializedStatsUpstreamIfGameOver();
 	return sizeof(msg);
 }
 
@@ -204,8 +224,8 @@ void cgmScoreCheckForBroadcastCustomStats(void)
 		}
 	}
 
-	// run every 5 seconds
-	cgmScoreBroadcastCustomStatsTicker = 60 * 5;
+	// run every quarter second
+	cgmScoreBroadcastCustomStatsTicker = 15;
 }
 
 //--------------------------------------------------------------------------
@@ -779,7 +799,8 @@ int cgmScoreGetStatHasRoundAggregate(int statIndex)
 int cgmScoreGetRoundAggregateCount(void)
 {
 #ifdef FORGE_CGM_ROUNDS
-	return cgmRoundsGetRoundsCompleted();
+	int roundsCompleted = cgmRoundsGetRoundsCompleted();
+	return cgmScoreState.RoundAggregateCount > roundsCompleted ? cgmScoreState.RoundAggregateCount : roundsCompleted;
 #else
 	return cgmScoreState.RoundAggregateCount;
 #endif
@@ -802,6 +823,48 @@ int cgmScoreGetRoundAggregateValue(int row, int statIndex, int playerAggregate)
 	}
 
 	return playerAggregate ? cgmScoreState.RoundPlayerAggregateValues[firstStatIndex][row] : cgmScoreState.RoundAggregateValues[firstStatIndex][row];
+}
+
+//--------------------------------------------------------------------------
+int cgmScoreHasActiveRoundForLiveAggregate(void)
+{
+#ifdef FORGE_CGM_ROUNDS
+	return cgmRoundsState.RoundStarted && !cgmRoundsState.InPostRoundGrace;
+#else
+	return 0;
+#endif
+}
+
+//--------------------------------------------------------------------------
+int cgmScoreGetLiveRoundAggregateValue(int row, int statIndex, int playerAggregate, int teamsEnabled)
+{
+	if (!cgmScoreGetStatHasRoundAggregate(statIndex) || row < 0 || row >= GAME_MAX_PLAYERS)
+		return 0;
+
+	int firstStatIndex = cgmScoreGetFirstStatIndexForStat(statIndex);
+	int committedCount = cgmScoreGetRoundAggregateCount();
+	int committedValue = playerAggregate ? cgmScoreState.RoundPlayerAggregateValues[firstStatIndex][row] : cgmScoreState.RoundAggregateValues[firstStatIndex][row];
+
+	if (!cgmScoreHasActiveRoundForLiveAggregate())
+		return cgmScoreGetRoundAggregateValue(row, statIndex, playerAggregate);
+
+	int currentValue = playerAggregate ? cgmScoreGetPlayerStat(row, cgmScoreStats[firstStatIndex].Source) : cgmScoreGetRoundAggregateCurrentValue(row, firstStatIndex, teamsEnabled);
+	switch (cgmScoreStats[firstStatIndex].RoundAggregateType)
+	{
+	case CGM_SCORE_ROUND_AGGREGATE_SUM:
+		return committedValue + currentValue;
+	case CGM_SCORE_ROUND_AGGREGATE_AVERAGE:
+		return (committedValue + currentValue) / (committedCount + 1);
+	case CGM_SCORE_ROUND_AGGREGATE_MAX:
+		return committedCount <= 0 || currentValue > committedValue ? currentValue : committedValue;
+	case CGM_SCORE_ROUND_AGGREGATE_MIN:
+		return committedCount <= 0 || currentValue < committedValue ? currentValue : committedValue;
+	case CGM_SCORE_ROUND_AGGREGATE_LATEST:
+		return currentValue;
+	case CGM_SCORE_ROUND_AGGREGATE_NONE:
+	default:
+		return cgmScoreGetRoundAggregateValue(row, statIndex, playerAggregate);
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -1043,6 +1106,61 @@ void cgmScoreCommitRoundAggregateValue(int statIndex, int row, int roundValue, i
 }
 
 //--------------------------------------------------------------------------
+void cgmScoreCommitRoundAggregatesToCount(int targetAggregateCount)
+{
+#ifdef FORGE_CGM_ROUNDS
+	if (targetAggregateCount <= 0 || cgmScoreState.RoundAggregateCount >= targetAggregateCount)
+		return;
+
+	cgmScoreUpdateRoundTrackedStats();
+
+	GameOptions *gameOptions = gameGetOptions();
+	int teamsEnabled = gameOptions->GameFlags.MultiplayerGameFlags.Teamplay;
+	int statIndex;
+	for (statIndex = 0; statIndex < cgmScoreStatsCount && statIndex < MAX_CUSTOM_STATS; ++statIndex)
+	{
+		if (statIndex != cgmScoreGetFirstStatIndexForStat(statIndex) || !cgmScoreGetStatHasRoundAggregate(statIndex))
+			continue;
+
+		if (gameAmIHost())
+		{
+			int row;
+			for (row = 0; row < GAME_MAX_PLAYERS; ++row)
+			{
+				int playerRoundValue = cgmScoreGetPlayerStat(row, cgmScoreStats[statIndex].Source);
+				cgmScoreCommitRoundAggregateValue(statIndex, row, playerRoundValue, 1);
+			}
+		}
+		else
+		{
+			int localIdx;
+			for (localIdx = 0; localIdx < GAME_MAX_LOCALS; ++localIdx)
+			{
+				Player *player = playerGetFromSlot(localIdx);
+				if (!playerIsValid(player))
+					continue;
+
+				int playerRoundValue = cgmScoreGetPlayerStat(player->PlayerId, cgmScoreStats[statIndex].Source);
+				cgmScoreCommitRoundAggregateValue(statIndex, player->PlayerId, playerRoundValue, 1);
+			}
+		}
+
+		if (!gameAmIHost())
+			continue;
+
+		int row;
+		for (row = 0; row < GAME_MAX_PLAYERS; ++row)
+		{
+			int teamRoundValue = cgmScoreGetRoundAggregateCurrentValue(row, statIndex, teamsEnabled);
+			cgmScoreCommitRoundAggregateValue(statIndex, row, teamRoundValue, 0);
+		}
+	}
+
+	cgmScoreState.RoundAggregateCount = targetAggregateCount;
+#endif
+}
+
+//--------------------------------------------------------------------------
 void cgmScoreCommitRoundAggregates(void)
 {
 #ifndef FORGE_CGM_ROUNDS
@@ -1068,43 +1186,24 @@ void cgmScoreCommitRoundAggregates(void)
 
 	cgmScoreState.RoundAggregateCount += 1;
 #else
-	int targetAggregateCount = cgmRoundsGetRoundsCompleted();
-	if (targetAggregateCount <= 0 || cgmScoreState.RoundAggregateCount >= targetAggregateCount)
+	cgmScoreCommitRoundAggregatesToCount(cgmRoundsGetRoundsCompleted());
+#endif
+}
+
+//--------------------------------------------------------------------------
+void cgmScoreFinalizeActiveRoundAggregatesForGameEnd(void)
+{
+#ifdef FORGE_CGM_ROUNDS
+	if (!cgmRoundsState.RoundStarted || cgmRoundsState.InPostRoundGrace)
 		return;
 
-	cgmScoreUpdateRoundTrackedStats();
+	int targetAggregateCount = cgmRoundsGetRoundsCompleted() + 1;
+	if (cgmScoreState.RoundAggregateCount >= targetAggregateCount)
+		return;
 
-	GameOptions *gameOptions = gameGetOptions();
-	int teamsEnabled = gameOptions->GameFlags.MultiplayerGameFlags.Teamplay;
-	int statIndex;
-	for (statIndex = 0; statIndex < cgmScoreStatsCount && statIndex < MAX_CUSTOM_STATS; ++statIndex)
-	{
-		if (statIndex != cgmScoreGetFirstStatIndexForStat(statIndex) || !cgmScoreGetStatHasRoundAggregate(statIndex))
-			continue;
-
-		int localIdx;
-		for (localIdx = 0; localIdx < GAME_MAX_LOCALS; ++localIdx)
-		{
-			Player *player = playerGetFromSlot(localIdx);
-			if (!playerIsValid(player))
-				continue;
-
-			int playerRoundValue = cgmScoreGetPlayerStat(player->PlayerId, cgmScoreStats[statIndex].Source);
-			cgmScoreCommitRoundAggregateValue(statIndex, player->PlayerId, playerRoundValue, 1);
-		}
-
-		if (gameAmIHost())
-		{
-			int row;
-			for (row = 0; row < GAME_MAX_PLAYERS; ++row)
-			{
-				int teamRoundValue = cgmScoreGetRoundAggregateCurrentValue(row, statIndex, teamsEnabled);
-				cgmScoreCommitRoundAggregateValue(statIndex, row, teamRoundValue, 0);
-			}
-		}
-	}
-
-	cgmScoreState.RoundAggregateCount = targetAggregateCount;
+	cgmScoreFinalizeRoundTimeAliveStats(cgmRoundsState.RoundStartTime, gameGetTime());
+	cgmScoreCommitRoundAggregatesToCount(targetAggregateCount);
+	cgmScoreBroadcastLocalPlayerRoundAggregates();
 #endif
 }
 
@@ -1293,7 +1392,7 @@ int cgmScoreUpdateCurrentWinner(int force)
 			continue;
 
 		int teamScore = cgmScoreGetTargetTeamScore(i);
-		if (winningIndex < 0 || (!cgmScoreTarget.SortDescending && teamScore > winningScore) || (cgmScoreTarget.SortDescending && teamScore < winningScore))
+		if (winningIndex < 0 || (!cgmScoreTarget.SortAscending && teamScore > winningScore) || (cgmScoreTarget.SortAscending && teamScore < winningScore))
 		{
 			winningIndex = i;
 			numWithWinningScore = 1;
@@ -1317,6 +1416,7 @@ int cgmScoreUpdateCurrentWinner(int force)
 	if (hasWinner || force)
 	{
 		gameSetWinner(winner, gameOptions->GameFlags.MultiplayerGameFlags.Teamplay);
+		cgmScoreFinalizeActiveRoundAggregatesForGameEnd();
 		cgmScoreSendSerializedStatsUpstreamToMode();
 	}
 
@@ -1328,20 +1428,38 @@ int cgmScoreUpdateCurrentWinner(int force)
 void cgmScoreGameEndedUpdateWinnerOverride(void)
 {
 	GameData *gameData = gameGetData();
+	cgmScoreFinalizeActiveRoundAggregatesForGameEnd();
 
-	// if game reached time limit, determine who won and change the GameEndReason accordingly
-	if (gameData->GameEndReason == GAME_END_REASON_TIME_LIMIT_REACHED)
-	{
-		cgmScoreUpdateCurrentWinner(1);
-		gameData->GameEndReason = cgmScoreGetGameEndReasonScoreReached();
-		return;
-	}
-
-	// otherwise assert the provided game winning team
+	// reassert the provided game winning team
 	if (gameData->WinningPlayer >= 0)
 		gameSetWinner(gameData->WinningPlayer, 0);
 	else
 		gameSetWinner(gameData->WinningTeam, 1);
+
+	// if game reached time limit, determine who won and change the GameEndReason accordingly
+	if (gameData->GameEndReason <= GAME_END_REASON_TIME_LIMIT_REACHED)
+	{
+		gameData->GameEndReason = cgmScoreGetGameEndReasonScoreReached();
+
+		// only host can update who won as the game is ending abruptly
+		if (gameAmIHost())
+			cgmScoreUpdateCurrentWinner(1);
+	}
+}
+
+//--------------------------------------------------------------------------
+int cgmScoreBroadcastGameEndedOverride(int transport, void *connection, int toClientIndex, int msgId, int payloadSize, void *payload)
+{
+	// trigger winner override early so we can broadcast the result
+	cgmScoreGameEndedUpdateWinnerOverride();
+
+	// patch winner
+	GameData *gameData = gameGetData();
+	POKE_U32(payload + 0x2C, gameData->WinningTeam);
+	POKE_U32(payload + 0x30, gameData->WinningPlayer);
+
+	// send
+	return netBroadcastMediusAppMessage(transport, connection, msgId, payloadSize, payload);
 }
 
 //--------------------------------------------------------------------------
@@ -1361,7 +1479,7 @@ void cgmScoreAfterGameOverDataUpdated(void)
 	}
 
 	// invert points to flip sort order
-	if (cgmScoreTarget.SortDescending)
+	if (cgmScoreTarget.SortAscending)
 	{
 		for (i = 0; i < GAME_MAX_PLAYERS; ++i)
 		{
@@ -1416,18 +1534,23 @@ void cgmScoreUpdateGameState(PatchStateContainer_t *gameState)
 	if (!gameState->UpdateCustomGameStats || !gameState->CustomGameStats)
 		return;
 
-	cgmScoreUpdateManualStatSources();
+	cgmScoreUpdateRoundTrackedStats();
 
 	gameState->CustomGameStatsSize = sizeof(struct CgmCustomGameStats);
 	struct CgmCustomGameStats *sGameData = (struct CgmCustomGameStats *)gameState->CustomGameStats->Payload;
 	sGameData->Version = 0x00000001;
 	sGameData->TeamsEnabled = gameOptions->GameFlags.MultiplayerGameFlags.Teamplay;
-	sGameData->OrderScoreByAscending = 0; // not yet implemented
+	sGameData->OrderScoreByAscending = cgmScoreTarget.SortAscending;
 
 	// set team scores
 	int i;
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
-		sGameData->TeamScores[i] = cgmScoreGetTargetTeamScore(i);
+	{
+		if (cgmScoreTarget.StatIndex >= 0 && cgmScoreTarget.StatIndex < cgmScoreStatsCount && cgmScoreGetStatHasRoundAggregate(cgmScoreTarget.StatIndex))
+			sGameData->TeamScores[i] = cgmScoreGetLiveRoundAggregateValue(i, cgmScoreTarget.StatIndex, 0, sGameData->TeamsEnabled);
+		else
+			sGameData->TeamScores[i] = cgmScoreGetTargetTeamScore(i);
+	}
 
 	// set teams
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
@@ -1462,10 +1585,23 @@ void cgmScoreUpdateGameState(PatchStateContainer_t *gameState)
 		// copy player stat values for tracked stat into buffer
 		int p;
 		for (p = 0; p < GAME_MAX_PLAYERS; ++p)
-			sGameData->TrackedStatValues[i][p] = cgmScoreGetStatValueForPlayer(p, s, 1);
+		{
+			if (cgmScoreGetStatHasRoundAggregate(s))
+				sGameData->TrackedStatValues[i][p] = cgmScoreGetLiveRoundAggregateValue(p, s, 1, sGameData->TeamsEnabled);
+			else
+				sGameData->TrackedStatValues[i][p] = cgmScoreGetStatValueForPlayer(p, s, 1);
+		}
 
 		++s;
 	}
+}
+
+//--------------------------------------------------------------------------
+void cgmScoreCleanup(void)
+{
+	netUninstallCustomMsgHandler(CGM_MSG_ID_SEND_CUSTOM_PLAYER_STAT, &cgmScoreOnRecvCustomPlayerStats);
+	netUninstallCustomMsgHandler(CGM_MSG_ID_SEND_CUSTOM_TEAM_STAT, &cgmScoreOnRecvCustomTeamStats);
+	netUninstallCustomMsgHandler(CGM_MSG_ID_SEND_PLAYER_ROUND_AGGREGATES, &cgmScoreOnRecvPlayerRoundAggregates);
 }
 
 //--------------------------------------------------------------------------
@@ -1483,12 +1619,13 @@ void cgmScoreInit(void)
 	HOOK_J(0x00623d2c, &cgmScoreAfterGameOverDataUpdated);
 
 	// override game ended who won
+	HOOK_JAL(0x00622E34, cgmScoreBroadcastGameEndedOverride);
 	HOOK_JAL(0x00623434, cgmScoreGameEndedUpdateWinnerOverride);
 	POKE_U32(0x0062343c, 0x100001fd); // b 0x00623c3c
 	POKE_U32(0x00623440, 0x27C4D600); // addiu a0,fp,-0x2A00
 
 	// invert hud scoreboard sort
-	if (cgmScoreTarget.SortDescending)
+	if (cgmScoreTarget.SortAscending)
 	{
 		POKE_U32(0x00542640, 0x15400044); // bne t2,zero,0x00542754
 		POKE_U32(0x005426D0, 0x1040005D); // beq v0,zero,0x00542848
