@@ -12,7 +12,10 @@
 
 int cgmRoundsGetPostRoundRowScore(int index, int teamsEnabled);
 int cgmRoundsGetPostRoundRowSortScore(int index, int teamsEnabled);
+int cgmRoundsGetPostRoundRowScoreboardSortScore(int index, int teamsEnabled);
 int cgmRoundsBuildPostRoundRows(int *rows, int teamsEnabled);
+int cgmRoundsBuildPostRoundScoreboardRows(int *rows, int teamsEnabled);
+int cgmRoundsBuildPostRoundRowsWithSort(int *rows, int teamsEnabled, int scoreboardSort);
 int cgmRoundsFormatPostRoundScoreTarget(char *buf, int bufSize);
 void cgmRoundsApplyReset(void);
 void cgmRoundsReturnFlags(void);
@@ -805,6 +808,21 @@ int cgmRoundsGetPostRoundRowSortScore(int index, int teamsEnabled)
 }
 
 //--------------------------------------------------------------------------
+int cgmRoundsGetPostRoundRowScoreboardSortScore(int index, int teamsEnabled)
+{
+	int statIndex = cgmRoundsConfig.RoundObjectiveStatIndex;
+	if (cgmScoreGetStatHasRoundAggregate(statIndex))
+	{
+		if (teamsEnabled)
+			return cgmScoreGetStatValueForTeam(index, statIndex, 1);
+
+		return cgmScoreGetStatValueForPlayer(index, statIndex, 1);
+	}
+
+	return cgmRoundsGetPostRoundRowSortScore(index, teamsEnabled);
+}
+
+//--------------------------------------------------------------------------
 int cgmRoundsGetPostRoundRowStat(int index, int teamsEnabled, int statIndex)
 {
 	if (teamsEnabled)
@@ -881,6 +899,18 @@ int cgmRoundsGetPostRoundScoreboardStats(int *statIndexes)
 //--------------------------------------------------------------------------
 int cgmRoundsBuildPostRoundRows(int *rows, int teamsEnabled)
 {
+	return cgmRoundsBuildPostRoundRowsWithSort(rows, teamsEnabled, 0);
+}
+
+//--------------------------------------------------------------------------
+int cgmRoundsBuildPostRoundScoreboardRows(int *rows, int teamsEnabled)
+{
+	return cgmRoundsBuildPostRoundRowsWithSort(rows, teamsEnabled, 1);
+}
+
+//--------------------------------------------------------------------------
+int cgmRoundsBuildPostRoundRowsWithSort(int *rows, int teamsEnabled, int scoreboardSort)
+{
 	int count = 0;
 	int i;
 	for (i = 0; i < GAME_MAX_PLAYERS; ++i)
@@ -897,8 +927,19 @@ int cgmRoundsBuildPostRoundRows(int *rows, int teamsEnabled)
 		int b;
 		for (b = a + 1; b < count; ++b)
 		{
-			int aScore = cgmRoundsGetPostRoundRowSortScore(rows[a], teamsEnabled);
-			int bScore = cgmRoundsGetPostRoundRowSortScore(rows[b], teamsEnabled);
+			int aScore;
+			int bScore;
+			if (scoreboardSort)
+			{
+				aScore = cgmRoundsGetPostRoundRowScoreboardSortScore(rows[a], teamsEnabled);
+				bScore = cgmRoundsGetPostRoundRowScoreboardSortScore(rows[b], teamsEnabled);
+			}
+			else
+			{
+				aScore = cgmRoundsGetPostRoundRowSortScore(rows[a], teamsEnabled);
+				bScore = cgmRoundsGetPostRoundRowSortScore(rows[b], teamsEnabled);
+			}
+
 			int shouldSwap = cgmRoundsConfig.RoundObjectiveLowerScoreWins ? bScore < aScore : bScore > aScore;
 			if (!shouldSwap && aScore == bScore)
 				shouldSwap = rows[b] < rows[a];
@@ -923,7 +964,7 @@ void cgmRoundsDrawPostRoundScoreboard(void)
 	int teamsEnabled = gameOptions->GameFlags.MultiplayerGameFlags.Teamplay;
 	int rows[GAME_MAX_PLAYERS] = {};
 	int statIndexes[MAX_SCOREBOARD_STATS] = {};
-	int rowCount = cgmRoundsBuildPostRoundRows(rows, teamsEnabled);
+	int rowCount = cgmRoundsBuildPostRoundScoreboardRows(rows, teamsEnabled);
 	int statCount = cgmRoundsGetPostRoundScoreboardStats(statIndexes);
 	int hasRoundPointsStat = 0;
 
@@ -1020,11 +1061,14 @@ int cgmRoundsFormatPostRoundScoreTarget(char *buf, int bufSize)
 //--------------------------------------------------------------------------
 int cgmRoundsDidLocalPlayerWinLastRound(void)
 {
-	if (cgmRoundsState.LastRoundWinner < 0)
-		return 0;
-
 	GameOptions *gameOptions = gameGetOptions();
 	int teamsEnabled = gameOptions->GameFlags.MultiplayerGameFlags.Teamplay;
+	int rows[GAME_MAX_PLAYERS] = {};
+	int rowCount = cgmRoundsBuildPostRoundRows(rows, teamsEnabled);
+	if (rowCount <= 0)
+		return 0;
+
+	int winningScore = cgmRoundsGetPostRoundRowSortScore(rows[0], teamsEnabled);
 	int i;
 	for (i = 0; i < GAME_MAX_LOCALS; ++i)
 	{
@@ -1032,10 +1076,11 @@ int cgmRoundsDidLocalPlayerWinLastRound(void)
 		if (!playerIsValid(player))
 			continue;
 
-		if (teamsEnabled && playerGetJuggSafeTeam(player) == cgmRoundsState.LastRoundWinner)
-			return 1;
+		int row = teamsEnabled ? playerGetJuggSafeTeam(player) : player->PlayerId;
+		if (row < 0 || row >= GAME_MAX_PLAYERS)
+			continue;
 
-		if (!teamsEnabled && player->PlayerId == cgmRoundsState.LastRoundWinner)
+		if (cgmRoundsGetPostRoundRowSortScore(row, teamsEnabled) == winningScore)
 			return 1;
 	}
 
