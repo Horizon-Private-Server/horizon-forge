@@ -81,9 +81,6 @@ int cgmRoundsGetRoundPoints(int team)
 //--------------------------------------------------------------------------
 int cgmRoundsGetTeamScore(int team)
 {
-	if (cgmRoundsConfig.ShowLiveAggregateScore)
-		return cgmScoreGetLiveStatValueForTeam(team, cgmRoundsConfig.RoundObjectiveStatIndex, gameGetOptions()->GameFlags.MultiplayerGameFlags.Teamplay);
-
 	return cgmScoreGetStatValueForTeam(team, cgmRoundsConfig.RoundObjectiveStatIndex, 0);
 }
 
@@ -99,7 +96,11 @@ enum CgmScoreStatValueType cgmRoundsGetRoundObjectiveValueType(void)
 //--------------------------------------------------------------------------
 int cgmRoundsGetFormattedTeamScore(int team)
 {
-	return cgmScoreGetFormattedScore(cgmRoundsGetTeamScore(team), cgmRoundsGetRoundObjectiveValueType());
+	int score = cgmRoundsGetTeamScore(team);
+	if (cgmRoundsConfig.ShowLiveAggregateScore)
+		score = cgmScoreGetLiveStatValueForTeam(team, cgmRoundsConfig.RoundObjectiveStatIndex, gameGetOptions()->GameFlags.MultiplayerGameFlags.Teamplay);
+
+	return cgmScoreGetFormattedScore(score, cgmRoundsGetRoundObjectiveValueType());
 }
 
 //--------------------------------------------------------------------------

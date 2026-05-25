@@ -836,25 +836,14 @@ int cgmScoreHasActiveRoundForLiveAggregate(void)
 }
 
 //--------------------------------------------------------------------------
-int cgmScoreGetLiveRoundAggregateValue(int row, int statIndex, int playerAggregate, int teamsEnabled)
+int cgmScoreCombineLiveRoundAggregate(int statIndex, int committedValue, int committedCount, int currentValue)
 {
-	if (!cgmScoreGetStatHasRoundAggregate(statIndex) || row < 0 || row >= GAME_MAX_PLAYERS)
-		return 0;
-
-	int firstStatIndex = cgmScoreGetFirstStatIndexForStat(statIndex);
-	int committedCount = cgmScoreGetRoundAggregateCount();
-	int committedValue = playerAggregate ? cgmScoreState.RoundPlayerAggregateValues[firstStatIndex][row] : cgmScoreState.RoundAggregateValues[firstStatIndex][row];
-
-	if (!cgmScoreHasActiveRoundForLiveAggregate())
-		return cgmScoreGetRoundAggregateValue(row, statIndex, playerAggregate);
-
-	int currentValue = playerAggregate ? cgmScoreGetPlayerStat(row, cgmScoreStats[firstStatIndex].Source) : cgmScoreGetRoundAggregateCurrentValue(row, firstStatIndex, teamsEnabled);
-	switch (cgmScoreStats[firstStatIndex].RoundAggregateType)
+	switch (cgmScoreStats[statIndex].RoundAggregateType)
 	{
 	case CGM_SCORE_ROUND_AGGREGATE_SUM:
 		return committedValue + currentValue;
 	case CGM_SCORE_ROUND_AGGREGATE_AVERAGE:
-		return (committedValue + currentValue) / (committedCount + 1);
+		return ((committedValue * committedCount) + currentValue) / (committedCount + 1);
 	case CGM_SCORE_ROUND_AGGREGATE_MAX:
 		return committedCount <= 0 || currentValue > committedValue ? currentValue : committedValue;
 	case CGM_SCORE_ROUND_AGGREGATE_MIN:
@@ -863,8 +852,35 @@ int cgmScoreGetLiveRoundAggregateValue(int row, int statIndex, int playerAggrega
 		return currentValue;
 	case CGM_SCORE_ROUND_AGGREGATE_NONE:
 	default:
-		return cgmScoreGetRoundAggregateValue(row, statIndex, playerAggregate);
+		return committedValue;
 	}
+}
+
+//--------------------------------------------------------------------------
+int cgmScoreGetLiveRoundAggregateValue(int row, int statIndex, int playerAggregate, int teamsEnabled)
+{
+	if (statIndex < 0 || statIndex >= cgmScoreStatsCount || row < 0 || row >= GAME_MAX_PLAYERS)
+		return 0;
+
+	int firstStatIndex = cgmScoreGetFirstStatIndexForStat(statIndex);
+	if (firstStatIndex < 0 || !cgmScoreGetStatHasRoundAggregate(firstStatIndex))
+		return 0;
+
+	int usePlayerRow = playerAggregate || !teamsEnabled;
+	if (!cgmScoreHasActiveRoundForLiveAggregate())
+	{
+		if (usePlayerRow)
+			return cgmScoreGetStatValueForPlayer(row, firstStatIndex, 1);
+
+		return cgmScoreGetStatValueForTeam(row, firstStatIndex, 1);
+	}
+
+	cgmScoreUpdateRoundTrackedStats();
+
+	int committedCount = cgmScoreGetRoundAggregateCount();
+	int committedValue = usePlayerRow ? cgmScoreGetStatValueForPlayer(row, firstStatIndex, 1) : cgmScoreGetStatValueForTeam(row, firstStatIndex, 1);
+	int currentValue = usePlayerRow ? cgmScoreGetStatValueForPlayer(row, firstStatIndex, 0) : cgmScoreGetStatValueForTeam(row, firstStatIndex, 0);
+	return cgmScoreCombineLiveRoundAggregate(firstStatIndex, committedValue, committedCount, currentValue);
 }
 
 //--------------------------------------------------------------------------
@@ -898,13 +914,28 @@ int cgmScoreGetStatValueForTeam(int team, int statIndex, int useRoundAggregate)
 //--------------------------------------------------------------------------
 int cgmScoreGetLiveStatValueForTeam(int team, int statIndex, int teamsEnabled)
 {
-	cgmScoreUpdateRoundTrackedStats();
-
 	if (statIndex < 0 || statIndex >= cgmScoreStatsCount)
 		return 0;
 
 	if (cgmScoreGetStatHasRoundAggregate(statIndex))
-		return cgmScoreGetLiveRoundAggregateValue(team, statIndex, 0, teamsEnabled);
+	{
+		GameData *gameData = gameGetData();
+		if (gameData->GameIsOver)
+		{
+			if (!teamsEnabled)
+				return cgmScoreGetStatValueForPlayer(team, statIndex, 1);
+
+			return cgmScoreGetStatValueForTeam(team, statIndex, 1);
+		}
+
+		if (cgmScoreHasActiveRoundForLiveAggregate())
+			return cgmScoreGetLiveRoundAggregateValue(team, statIndex, 0, teamsEnabled);
+
+		if (!teamsEnabled)
+			return cgmScoreGetStatValueForPlayer(team, statIndex, 1);
+
+		return cgmScoreGetStatValueForTeam(team, statIndex, 1);
+	}
 
 	return cgmScoreGetStatValueForTeam(team, statIndex, 0);
 }
