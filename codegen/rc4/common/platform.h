@@ -103,6 +103,7 @@ struct PlatformPivotPVar
 int platformMobyIsPlatform(Moby* moby);
 struct Guber* platformGetGuber(Moby* moby);
 int platformHandleEvent(Moby* moby, GuberEvent* event);
+void platformInitMoby(Moby* moby, int timeSpawned);
 void platformInit(void);
 
 #endif // COMMON_PLATFORM_H

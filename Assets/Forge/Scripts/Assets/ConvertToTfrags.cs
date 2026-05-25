@@ -88,6 +88,7 @@ public class ConvertToTfrags : BaseAssetGenerator
 
 				// convert to mesh data
 				var meshData = RenderedMeshData.FromUnityMesh(mf.sharedMesh, renderer.sharedMaterials, defaultVertexColor: new Color32(0x80, 0x80, 0x80, 0x80));
+				BakeMaterialUvTransforms(meshData, renderer.sharedMaterials);
 				
 				// apply material config
 				for (int i = 0; i < meshData.Materials.Count; ++i)
@@ -265,6 +266,93 @@ public class ConvertToTfrags : BaseAssetGenerator
 		}
 	}
 
+	private void BakeMaterialUvTransforms(RenderedMeshData meshData, Material[] materials)
+	{
+		if (meshData == null || meshData.Triangles.Count == 0)
+			return;
+
+		var newPositions = new List<Vector3>();
+		var newNormals = new List<Vector3>();
+		var newUVs = new List<Vector2>();
+		var newColors = new List<Color32>();
+		var remappedVertices = new Dictionary<UvBakeKey, int>();
+
+		int MapVertex(int oldIdx, int materialIdx)
+		{
+			GetUvTransform(materials, materialIdx, out var scale, out var offset);
+			var key = new UvBakeKey(oldIdx, scale, offset);
+			if (remappedVertices.TryGetValue(key, out var newIdx))
+				return newIdx;
+
+			var sourceUv = oldIdx < meshData.UVs.Count ? meshData.UVs[oldIdx] : Vector2.zero;
+			newIdx = newPositions.Count;
+			remappedVertices.Add(key, newIdx);
+			newPositions.Add(meshData.Positions[oldIdx]);
+			newNormals.Add(oldIdx < meshData.Normals.Count ? meshData.Normals[oldIdx] : Vector3.up);
+			newUVs.Add(Vector2.Scale(sourceUv, scale) + offset);
+			newColors.Add(oldIdx < meshData.Colors.Count ? meshData.Colors[oldIdx] : new Color32(0x80, 0x80, 0x80, 0x80));
+			return newIdx;
+		}
+
+		var newTriangles = new List<RenderedMeshData.Triangle>(meshData.Triangles.Count);
+		foreach (var tri in meshData.Triangles)
+		{
+			newTriangles.Add(new RenderedMeshData.Triangle
+			{
+				V0 = MapVertex(tri.V0, tri.MaterialIndex),
+				V1 = MapVertex(tri.V1, tri.MaterialIndex),
+				V2 = MapVertex(tri.V2, tri.MaterialIndex),
+				MaterialIndex = tri.MaterialIndex
+			});
+		}
+
+		meshData.Positions = newPositions;
+		meshData.Normals = newNormals;
+		meshData.UVs = newUVs;
+		meshData.Colors = newColors;
+		meshData.Triangles = newTriangles;
+	}
+
+	private void GetUvTransform(Material[] materials, int materialIdx, out Vector2 scale, out Vector2 offset)
+	{
+		scale = Vector2.one;
+		offset = Vector2.zero;
+
+		if (materials == null || materialIdx < 0 || materialIdx >= materials.Length || !materials[materialIdx])
+			return;
+
+		var material = materials[materialIdx];
+		scale = material.mainTextureScale;
+		offset = material.mainTextureOffset;
+	}
+
+	private readonly struct UvBakeKey : IEquatable<UvBakeKey>
+	{
+		private readonly int VertexIndex;
+		private readonly Vector2 Scale;
+		private readonly Vector2 Offset;
+
+		public UvBakeKey(int vertexIndex, Vector2 scale, Vector2 offset)
+		{
+			VertexIndex = vertexIndex;
+			Scale = scale;
+			Offset = offset;
+		}
+
+		public bool Equals(UvBakeKey other) => VertexIndex == other.VertexIndex && Scale == other.Scale && Offset == other.Offset;
+		public override bool Equals(object obj) => obj is UvBakeKey other && Equals(other);
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				int hash = VertexIndex;
+				hash = (hash * 397) ^ Scale.GetHashCode();
+				hash = (hash * 397) ^ Offset.GetHashCode();
+				return hash;
+			}
+		}
+	}
+
     #endregion
 
     #region Bake
@@ -322,17 +410,22 @@ public class ConvertToTfrags : BaseAssetGenerator
             var mesh = mf ? mf.sharedMesh : null;
 
             // include mesh hash
-            if (mf.sharedMesh)
-                hash.Append(mf.sharedMesh.ComputeHash());
+            if (mesh)
+                hash.Append(mesh.ComputeHash());
 
             // include texture hash
             if (renderer.sharedMaterials != null)
             {
                 foreach (var mat in renderer.sharedMaterials)
                 {
+					if (!mat)
+						continue;
+
                     if (mat.mainTexture)
                         hash.Append(mat.mainTexture.imageContentsHash.ToString());
                     hash.Append(mat.color.GetHashCode());
+					hash.Append(mat.mainTextureScale.GetHashCode());
+					hash.Append(mat.mainTextureOffset.GetHashCode());
                 }
             }
 		}

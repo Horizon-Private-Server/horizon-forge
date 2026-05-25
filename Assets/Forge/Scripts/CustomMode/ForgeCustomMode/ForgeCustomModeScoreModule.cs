@@ -230,6 +230,7 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/cgm_score.o");
         state.LDFlags.Add("-DFORGE_CGM_SCORE");
         state.Includes.Add("#include \"cgm_score.h\"");
+        state.CleanupBody.Add("cgmScoreCleanup();");
         state.InitBody.Add("cgmScoreInit();");
 		state.MainBodyReady.Add("cgmScoreCheckTargetScoreReached();");
 		state.MainBodyReady.Add("cgmScoreCheckForBroadcastCustomStats();");
@@ -296,7 +297,7 @@ public class ForgeCustomModeScoreModule : MonoBehaviour, IForgeCustomModeModule
 
 		sb.AppendLine("struct CgmScoreTarget cgmScoreTarget = {");
 		sb.AppendLine($"\t.Target = {Objective.Target.GetDescription()},");
-		sb.AppendLine($"\t.SortDescending = {(Objective.Sort == ScoreTargetSort.Least ? 1 : 0)},");
+		sb.AppendLine($"\t.SortAscending = {(Objective.Sort == ScoreTargetSort.Least ? 1 : 0)},");
 		sb.AppendLine($"\t.Scoreboard = {Objective.Scoreboard.GetDescription()},");
 		sb.AppendLine($"\t.StatIndex = {GetObjectiveStatIndex()},");
 		sb.AppendLine($"\t.CustomTarget = {customTarget},");

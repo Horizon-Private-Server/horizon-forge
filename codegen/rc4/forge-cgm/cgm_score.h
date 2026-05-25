@@ -85,7 +85,7 @@ struct CgmScoreTarget
 	enum CgmScoreStatTargetSource Target;
 	enum CgmScoreScoreboardType Scoreboard;
 	int StatIndex;
-	int SortDescending;
+	int SortAscending;
 	int CustomTarget;
 };
 
@@ -174,8 +174,10 @@ int cgmScoreGetPlayerStat(int playerIdx, enum CgmScoreStatSource source);
 int cgmScoreGetTeamScoreForSource(int team, enum CgmScoreStatSource source);
 int cgmScoreGetPlayerStatSortValue(int playerIdx, enum CgmScoreStatSource source);
 int cgmScoreGetTeamScoreSortValueForSource(int team, enum CgmScoreStatSource source);
+int cgmScoreGetStatHasRoundAggregate(int statIndex);
 int cgmScoreGetStatValueForPlayer(int playerIdx, int statIndex, int useRoundAggregate);
 int cgmScoreGetStatValueForTeam(int team, int statIndex, int useRoundAggregate);
+int cgmScoreGetLiveStatValueForTeam(int team, int statIndex, int teamsEnabled);
 int cgmScoreGetTeamScore(int team);
 int cgmScoreGetTargetTeamScore(int team);
 int cgmScoreGetFormattedScore(int score, enum CgmScoreStatValueType type);
@@ -187,6 +189,7 @@ void cgmScoreFinalizeRoundTimeAliveStats(int roundStartTime, int roundEndTime);
 void cgmScoreCommitRoundAggregates(void);
 void cgmScoreBroadcastLocalPlayerRoundAggregates(void);
 void cgmScoreUpdateGameState(PatchStateContainer_t *gameState);
+void cgmScoreCleanup(void);
 void cgmScoreInit(void);
 void cgmScoreCheckTargetScoreReached(void);
 void cgmScoreCheckForBroadcastCustomStats(void);

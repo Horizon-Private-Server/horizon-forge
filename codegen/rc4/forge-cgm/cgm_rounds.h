@@ -50,6 +50,7 @@ struct CgmRoundsConfig
 	int RoundObjectiveStatIndex;
 	char RoundObjectiveLowerScoreWins;
 	char DisplayRoundTargetInScoreboardHud;
+	char ShowLiveAggregateScore;
 	CgmRoundsEvent_func ResetRound;
 	CgmRoundsEvent_func RoundStarted;
 	CgmRoundsEvent_func RoundCompleted;
@@ -114,6 +115,7 @@ int cgmRoundsOneTeamLeftAlive(void);
 void cgmRoundsStartNextRound(void);
 void cgmRoundsCompleteRoundWithCurrentWinner(void);
 void cgmRoundsCompleteRound(int winnerOverride);
+void cgmRoundsCleanup(void);
 void cgmRoundsInit(void);
 void cgmRoundsTick(void);
 void cgmRoundsDraw(void);

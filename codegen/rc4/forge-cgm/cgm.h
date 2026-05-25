@@ -8,6 +8,8 @@
 #include "messageid.h"
 
 #define MAP_CONFIG_MAGIC (0xDEADBEEF)
+#define MAX_CUSTOM_PLAYER_STATS (4)
+#define MAX_CUSTOM_TEAM_STATS (4)
 #define MAX_SCOREBOARD_STATS (4)
 #define MAX_TRACKED_STATS (8)
 #define MAX_CUSTOM_STATS (16)

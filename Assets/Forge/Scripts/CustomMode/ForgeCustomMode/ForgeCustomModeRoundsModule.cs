@@ -81,6 +81,8 @@ public class ForgeCustomModeRoundsModule : MonoBehaviour, IForgeCustomModeModule
 	public string RoundObjectiveTarget = "0";
 	[Tooltip("Displays the round objective score and target in the scoreboard HUD during rounds.")]
 	public bool DisplayRoundTargetInScoreboardHud = true;
+	[Tooltip("When the round objective uses a round aggregate, displays the live aggregate value in the scoreboard HUD.")]
+	public bool ShowLiveAggregateScore = false;
 
 	[Header("Custom Hooks")]
 	[Tooltip("Optional: void FunctionName(int roundNumber); Runs after built-in reset logic when a new round starts.")]
@@ -122,6 +124,7 @@ public class ForgeCustomModeRoundsModule : MonoBehaviour, IForgeCustomModeModule
 		state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/cgm_rounds.o");
 		state.LDFlags.Add("-DFORGE_CGM_ROUNDS");
 		state.Includes.Add("#include \"cgm_rounds.h\"");
+		state.CleanupBody.Add("cgmRoundsCleanup();");
 		state.InitBody.Add("cgmRoundsInit();");
 		state.MainBodyReady.Remove("cgmScoreCheckTargetScoreReached();");
 		state.MainBodyReady.Add("cgmRoundsTick();");
@@ -165,6 +168,7 @@ public class ForgeCustomModeRoundsModule : MonoBehaviour, IForgeCustomModeModule
 		sb.AppendLine($"\t.RoundObjectiveStatIndex = {GetRoundObjectiveStatIndex()},");
 		sb.AppendLine($"\t.RoundObjectiveLowerScoreWins = {(Sort == TargetSort.Least ? 1 : 0)},");
 		sb.AppendLine($"\t.DisplayRoundTargetInScoreboardHud = {(DisplayRoundTargetInScoreboardHud ? 1 : 0)},");
+		sb.AppendLine($"\t.ShowLiveAggregateScore = {(ShowLiveAggregateScore ? 1 : 0)},");
 		sb.AppendLine($"\t.ResetRound = {GetFuncOrNull(ResetRoundFunctionName)},");
 		sb.AppendLine($"\t.RoundStarted = {GetFuncOrNull(RoundStartedFunctionName)},");
 		sb.AppendLine($"\t.RoundCompleted = {GetFuncOrNull(RoundCompletedFunctionName)},");
