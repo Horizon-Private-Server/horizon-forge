@@ -9,6 +9,9 @@ using UnityEngine;
 
 public static class TfragHelper
 {
+    // real gap is under 1 unit; other STROW rows are orders of magnitude away
+    private const float STROW_POSITION_MATCH_TOLERANCE = 8f;
+
     #region Transformations
 
     public static void SetChunkTextureIndices(byte[] def, byte[] data, IEnumerable<int> texIndices)
@@ -93,9 +96,9 @@ public static class TfragHelper
             WriteVector3_1024(dataWriter, transformationMatrix.MultiplyPoint(ReadVector3_1024(dataReader)));
         }
 
-        // write position
-        dataReader.BaseStream.Position = dataWriter.BaseStream.Position = pOffset;
-        WriteVector3_1024(dataWriter, transformationMatrix.MultiplyPoint(ReadVector3_1024(dataReader)));
+        // write position (int32 fixed point, not float32)
+        dataWriter.BaseStream.Position = pOffset;
+        WriteVector3_32(dataWriter, transformedBasePosition);
 
         // write cube
         for (int c = 0; c < 8; ++c)
@@ -114,10 +117,13 @@ public static class TfragHelper
             if (word == 0x30000000)
             {
                 var strowPosition = ReadVector3_32(dataReader);
-                if (originalBasePosition == strowPosition) 
+
+                // this row is the origin added to each V3_16 displacement, so it must move too
+                if (Vector3.Distance(originalBasePosition, strowPosition) <= STROW_POSITION_MATCH_TOLERANCE)
                 {
+                    // transform the row itself, so unmoved chunks stay unchanged
                     dataWriter.BaseStream.Position = w + 4;
-                    WriteVector3_32(dataWriter, transformedBasePosition);
+                    WriteVector3_32(dataWriter, transformationMatrix.MultiplyPoint(strowPosition));
                 }
             }
         }
