@@ -35,6 +35,7 @@
 #include "mobs/mob.h"
 #include "maputils.h"
 #include "gate.h"
+#include "gambits.h"
 
 extern struct SurvivalMapConfig MapConfig;
 
@@ -280,6 +281,11 @@ void mapSendSendGambitCompletedMessage(int gambit)
 {
 	if (!gambit)
 		return;
+
+#if GAMBITS
+	// Publish locally even when the lobby is disconnected.
+	gambitsMarkCompleted(gambit);
+#endif
 
 	void *lobbyConnection = netGetLobbyServerConnection();
 	if (!lobbyConnection)

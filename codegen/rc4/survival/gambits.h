@@ -3,6 +3,7 @@
 
 #include <tamtypes.h>
 
+void gambitsMarkCompleted(int gambitIdx);
 void gambitsOnRoundComplete(int roundNo);
 void gambitsTick(void);
 void gambitsInit(void);

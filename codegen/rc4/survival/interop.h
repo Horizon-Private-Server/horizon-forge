@@ -6,6 +6,7 @@
 #define SURVIVAL_XP_CURVE_FLATTEN_AFTER_N_TOKENS (50)
 #endif
 
+#include <stddef.h>
 #include <libdl/moby.h>
 #include <libdl/player.h>
 #include "config.h"
@@ -32,6 +33,7 @@ typedef void (*ModeRevivePlayer_func)(Player *player, int fromPlayerId);
 typedef void (*ModeSendPlayerStats_func)(int playerId);
 typedef void (*ModeSendOnPlayerItemAcquired_func)(int playerId, int itemId);
 typedef void (*ModeSendOnPlayerItemConsumed_func)(int playerId, int itemId);
+typedef void (*ModeReportGambitState_func)(int gambitIdx, int completed);
 
 typedef struct Guber *(*ModeGetGuber_func)(Moby *moby);
 typedef int (*ModeHandleGuberEvent_func)(Moby *moby, GuberEvent *event);
@@ -128,11 +130,18 @@ struct SurvivalInteropTable
 	MapOnPlayerGetVendorReward_func OnPlayerGetVendorRewardFunc;
 	MapOnBeforeDamageMob_func OnBeforeDamageMobFunc;
 	MapMobAfterDamage_func MobAfterDamageFunc;
+	ModeReportGambitState_func ModeReportGambitStateFunc;
 
 	// creates extra empty function slots
 	// so that when adding new ones, old maps at least have a nullptr
 	// instead of garbage pointing to a random, invalid piece of memory
 	void *PlaceholderForFutureUseFuncs[16];
 };
+
+/* NTSC EE ABI: consume the first reserved pointer without shifting old fields. */
+typedef char SurvivalInteropPointerSizeCheck[sizeof(void *) == 4 ? 1 : -1];
+typedef char SurvivalInteropSizeCheck[sizeof(struct SurvivalInteropTable) == 272 ? 1 : -1];
+typedef char SurvivalInteropGambitOffsetCheck[offsetof(struct SurvivalInteropTable, ModeReportGambitStateFunc) == 204 ? 1 : -1];
+typedef char SurvivalInteropReservedOffsetCheck[offsetof(struct SurvivalInteropTable, PlaceholderForFutureUseFuncs) == 208 ? 1 : -1];
 
 #endif // SURVIVAL_INTEROP_H

@@ -6,6 +6,7 @@
 #include "mobs/mob.h"
 #include "mobys/store.h"
 #include "mobys/vendor.h"
+#include "gambits.h"
 
 extern SurvivalBakedConfig_t bakedConfig;
 extern char MysteryBoxRespawnImmediately;
@@ -16,6 +17,8 @@ struct
 {
 	char FinishedSetup;
 	char PrintedGambit;
+	int SelectedGambitIdx;
+	int CompletedGambitIdx;
 } GambitsState = {};
 
 //--------------------------------------------------------------------------
@@ -32,6 +35,42 @@ GambitDef_t *gambitsGetActive(void)
 		return NULL;
 
 	return &gambitDefs[idx];
+}
+
+//--------------------------------------------------------------------------
+void gambitsSyncSelection(void)
+{
+	int selected = gambitsGetActiveValue();
+	if (selected != GambitsState.SelectedGambitIdx) {
+		GambitsState.SelectedGambitIdx = selected;
+		GambitsState.CompletedGambitIdx = 0;
+	}
+}
+
+//--------------------------------------------------------------------------
+void gambitsReportState(void)
+{
+	ModeReportGambitState_func report;
+	gambitsSyncSelection();
+	if (!gambitsGetActive())
+		return;
+
+	report = MapConfig.Functions.ModeReportGambitStateFunc;
+	if (!report)
+		return;
+
+	report(GambitsState.SelectedGambitIdx, GambitsState.CompletedGambitIdx == GambitsState.SelectedGambitIdx);
+}
+
+//--------------------------------------------------------------------------
+void gambitsMarkCompleted(int gambitIdx)
+{
+	gambitsSyncSelection();
+	if (!gambitsGetActive() || gambitIdx != GambitsState.SelectedGambitIdx)
+		return;
+
+	GambitsState.CompletedGambitIdx = gambitIdx;
+	gambitsReportState();
 }
 
 //--------------------------------------------------------------------------
@@ -250,6 +289,7 @@ void gambitsSetup(void)
 //--------------------------------------------------------------------------
 void gambitsTick(void)
 {
+	gambitsReportState();
 	GambitDef_t *gambit = gambitsGetActive();
 	if (!gambit)
 		return;
