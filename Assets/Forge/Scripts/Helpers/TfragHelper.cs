@@ -95,7 +95,7 @@ public static class TfragHelper
 
         // write position
         dataReader.BaseStream.Position = dataWriter.BaseStream.Position = pOffset;
-        WriteVector3_1024(dataWriter, transformationMatrix.MultiplyPoint(ReadVector3_1024(dataReader)));
+        WriteVector3_32(dataWriter, transformedBasePosition);
 
         // write cube
         for (int c = 0; c < 8; ++c)
