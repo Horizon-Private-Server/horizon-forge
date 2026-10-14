@@ -156,6 +156,26 @@ public static class MapExporter
                 if (!await export.SaveToStreamAndDispose(fs))
                     return false;
 
+			// save music tracks
+			if (dzoConfig.CustomMusicTracks != null)
+			{
+				var outDir = new FileInfo(outFilePath).Directory.FullName;
+				var outFilePrefix = Path.GetFileNameWithoutExtension(outFilePath);
+				for (int i = 0 ; i < dzoConfig.CustomMusicTracks.Count; ++i)
+				{
+					var track = dzoConfig.CustomMusicTracks[i];
+					var trackSourcePath = AssetDatabase.GetAssetPath(track);
+					if (string.IsNullOrEmpty(trackSourcePath))
+					{
+						Debug.LogWarning($"Unable to find asset path for custom music track #{i}", track);
+						continue;
+					}
+
+					var outMusicPath = Path.Combine(outDir, $"{outFilePrefix}.{i}{Path.GetExtension(trackSourcePath)}");
+					File.Copy(trackSourcePath, outMusicPath, true);
+				}
+			}
+
             // save metadata
             if (!string.IsNullOrEmpty(outMetadataFilePath))
             {

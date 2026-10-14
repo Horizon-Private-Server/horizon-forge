@@ -212,9 +212,46 @@ typedef struct PatchInterop
 	int *ClientLatency;
 } PatchInterop_t;
 
+enum DzoMusicTrackOperation {
+  DZO_MUSIC_FETCH = 0, DZO_MUSIC_PLAY = 1, DZO_MUSIC_PAUSE = 2,
+  DZO_MUSIC_SEEK = 3, DZO_MUSIC_RESTART = 4, DZO_MUSIC_STOP = 5
+};
+
+enum DzoMusicTrackState {
+  DZO_MUSIC_STOPPED = 0, DZO_MUSIC_LOADING = 1,
+  DZO_MUSIC_PLAYING = 2, DZO_MUSIC_PAUSED = 3
+};
+
+typedef struct DzoMusicTrackStatus {
+  volatile int Ready; // Set to 1 by DZO after the snapshot is written.
+  int State;
+  int IsPlaying;
+  int TrackId; // -1 when stopped; paused tracks retain their ID.
+  int PositionMs;
+  unsigned int LoopCount;
+} DzoMusicTrackStatus_t;
+
+// Fetch: keep Status alive until Ready becomes 1; one outstanding request per buffer.
+// Poll Ready on subsequent ticks. Other operations ignore Status.
+typedef struct DzoCommandManageMusicTrack {
+  int Operation;
+  int TrackId;
+  int PositionMs;
+  int DurationMs; // -1: preserve on resume; new/restarted track is unlimited. 0: unlimited.
+  int FadeMs;     // -1: existing exponential fade. 0: immediate. Positive: linear milliseconds.
+  int LoopEnabled;
+  DzoMusicTrackStatus_t* Status;
+  float Volume; // Play/Restart multiplier in [0, 1]. Set explicitly to 1 for full volume.
+} DzoCommandManageMusicTrack_t;
+
+typedef char DzoMusicCommandSizeCheck[(sizeof(void*) != 4 || sizeof(DzoCommandManageMusicTrack_t) == 32) ? 1 : -1];
+typedef char DzoMusicStatusSizeCheck[(sizeof(DzoMusicTrackStatus_t) == 24) ? 1 : -1];
+typedef void (*ManageMusicTrackFunc_t)(const DzoCommandManageMusicTrack_t* command);
+
 typedef struct DzoInteropFunctions
 {
-	SendCustomCommandToClientFunc_t SendCustomCommandToClient;
+  SendCustomCommandToClientFunc_t SendCustomCommandToClient;
+  ManageMusicTrackFunc_t ManageMusicTrack; // Requires the music-capable DZO patch.
 } DzoInteropFunctions_t;
 
 typedef struct CustomMapDef

@@ -26,6 +26,7 @@ public class DzoConfig : MonoBehaviour
     public bool Lights = true;
     public Texture2D MinimapTextureOverride;
     public int MinimapResolution = 512;
+	public List<AudioClip> CustomMusicTracks = new List<AudioClip>();
 
     [Header("Post Processing")]
     public float PostExposure = 0f;
