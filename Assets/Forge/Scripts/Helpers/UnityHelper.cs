@@ -922,8 +922,7 @@ public static class UnityHelper
                         if (!_raidsModeData)
                             _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
 
-                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Disabled ? $"{x.Name} (DISABLED)" : x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
-                        mobIds.Add("None", -1);
+                        var mobIds = _raidsModeData ? _raidsModeData.GetMobOptions(includeNone: true) : new Dictionary<string, long> { { "None", -1 } };
 
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, mobIds, dataSize);
@@ -959,7 +958,7 @@ public static class UnityHelper
                         {
                             var refValue = pvarValues[refPath];
                             if (int.TryParse(refValue, out int idx))
-                                mobId = _raidsModeData?.Mobs?.ElementAtOrDefault(idx)?.Mob;
+                                mobId = _raidsModeData ? _raidsModeData.GetMobs().ElementAtOrDefault(idx)?.Mob : null;
                         }
 
                         var mob = _raidsMobConfig?.Mobs?.FirstOrDefault(x => x.Mob == mobId);

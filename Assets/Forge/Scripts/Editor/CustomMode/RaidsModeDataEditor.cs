@@ -16,6 +16,8 @@ public class RaidsModeDataEditor : Editor
     {
         var manager = (target as RaidsModeData);
         base.OnInspectorGUI();
+        if (manager.GetMobs().Count > 16)
+            EditorGUILayout.HelpBox("Raids supports at most 16 mob definitions, including disabled mobs. Builds will be rejected until the count is reduced.", MessageType.Error);
         CheckForMissingMobAssets(manager);
     }
 
@@ -24,7 +26,8 @@ public class RaidsModeDataEditor : Editor
         var mobConfig = RaidsMobsScriptableObject.Load();
         var mobyDir = $"{FolderNames.GetMapFolder(SceneManager.GetActiveScene().name)}/{FolderNames.GetMapMobyFolder(RCVER.DL)}";
         var missingVariants = new List<RaidsMobsScriptableObject.RaidsMobVariant>();
-        foreach (var mob in raidsModeData.Mobs)
+        var mobs = raidsModeData.GetMobs().Where(x => x.isActiveAndEnabled).ToList();
+        foreach (var mob in mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -63,7 +66,7 @@ public class RaidsModeDataEditor : Editor
 
         if (GUILayout.Button("Reinstall All Mobs"))
         {
-            foreach (var mob in raidsModeData.Mobs)
+            foreach (var mob in mobs)
             {
                 var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
                 var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
