@@ -24,7 +24,7 @@
 
 #include "messageid.h"
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 
 #define PATHGRAPH_MAX_NUM_NODES             (100)
 #define PATHGRAPH_MAX_HEIGHT_LIMIT          (256)

@@ -8,10 +8,10 @@
 #include <libdl/color.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "pathfind.h"
 #include "spawner.h"
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 
 void stalkerturretPreUpdate(Moby* moby);
@@ -205,7 +205,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   void* mobyClass = mobyGetClassPtr(0x2038);
   turretVars->TurretMoby = moby;
   moby->PClass = mobyClass;
-  moby->CollData = *(int*)((u32)mobyClass + 0x10);
+  moby->CollData = *(int**)((u32)mobyClass + 0x10);
   moby->MClass = *(u8*)(0x0024a110 + 0x2038);
   moby->AnimSeq = *(void**)((u32)mobyClass + 0x48);
   moby->AnimSeqId = 0;
@@ -331,7 +331,7 @@ float stalkerturretGetRoamYaw(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-float stalkerturretSpinTurretGatling(Moby* turretMoby, int jointIdx, float rot)
+void stalkerturretSpinTurretGatling(Moby* turretMoby, int jointIdx, float rot)
 {
   MATRIX* mtxs = (MATRIX*)turretMoby->JointCache;
   MATRIX m;
@@ -390,6 +390,8 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
   
   // play sound
   mobyPlaySound(1, 0, turretVars->TurretMoby);
+
+  return shotMoby;
 }
 
 //--------------------------------------------------------------------------

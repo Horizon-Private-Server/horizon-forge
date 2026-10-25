@@ -14,17 +14,18 @@
 #include <libdl/moby.h>
 #include <libdl/random.h>
 #include <libdl/sha1.h>
+#include <libdl/hud.h>
 #include <libdl/radar.h>
 #include <libdl/color.h>
 #include <libdl/spawnpoint.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "controller.h"
 #include "npc.h"
 #include "pathfind.h"
 #include "spawner.h"
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 
 #if DEBUG
@@ -182,7 +183,7 @@ void npcPreUpdate(Moby* moby)
 
   // healthbar
   if (pvars->Parameters.Healthbar) {
-    gfxRegisterDrawFunction((void**)0x0022251C, &npcDrawHealthbar, moby);
+    gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&npcDrawHealthbar, moby);
   }
 
   mobPreUpdate(moby);

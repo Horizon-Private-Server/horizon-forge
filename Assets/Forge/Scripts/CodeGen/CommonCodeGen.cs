@@ -125,6 +125,8 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
             state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
             state.Includes.Add("#include \"messager.h\"");
             state.InitBody.Add($"messagerInit();");
+            state.DrawBody.Add($"messagerFrameUpdate();");
+            state.CleanupBody.Add($"messagerCleanup();");
         }
 
         if (LaserbeamEnabled || LaserEnabled)
@@ -208,7 +210,7 @@ public class CommonCodeGen : MonoBehaviour, ICodeGen, IBuildHook
     {
         if (stage != BuildStateStage.BeforeBuild) return;
 
-        state.MobyOClasses.Add(RaidsModeData.LASERBEAM_OCLASS);
+        state.MobyOClasses.Add(LASERBEAM_OCLASS);
     }
 
     #region Menu Items

@@ -157,10 +157,10 @@ void windowBorder(Window_t *window, u32 color, float left, float top, float righ
 }
 
 //--------------------------------------------------------------------------
-void windowDrawTextWindow(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char *str, int length, enum TextAlign alignment)
+float windowDrawTextWindow(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char *str, int length, enum TextAlign alignment)
 {
 	if (!windowHasArea(window))
-		return;
+		return 0;
 
 	float x, y, w, h;
   Window_t drawWindow;
@@ -169,7 +169,7 @@ void windowDrawTextWindow(Window_t *window, enum TextAlign windowAnchor, float o
   windowGetScale(&drawWindow, &w, &h);
 
   float s = scale * minf(w, h);
-	gfxHelperDrawTextWindow(drawWindow.AnchorPoint[0], drawWindow.AnchorPoint[1], x, y, drawWindow.Width - drawWindow.Position[0], drawWindow.Height - drawWindow.Position[1], offsetX, offsetY, s, color, str, -1, alignment, FONT_WINDOW_FLAGS_NO_SCISSOR, COMMON_DZO_DRAW_NORMAL);
+	return gfxHelperDrawTextWindow(drawWindow.AnchorPoint[0], drawWindow.AnchorPoint[1], x, y, drawWindow.Width - drawWindow.Position[0], drawWindow.Height - drawWindow.Position[1], offsetX, offsetY, s, color, str, -1, alignment, FONT_WINDOW_FLAGS_NO_SCISSOR, COMMON_DZO_DRAW_NORMAL);
 }
 
 //--------------------------------------------------------------------------

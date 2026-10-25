@@ -59,5 +59,6 @@ struct MessagerPVar
 
 void messagerFrameUpdate(void);
 void messagerInit(void);
+void messagerCleanup(void);
 
 #endif // COMMON_MESSAGER_H

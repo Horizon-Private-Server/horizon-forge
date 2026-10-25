@@ -7,16 +7,16 @@
 #include <libdl/time.h>
 #include <libdl/player.h>
 #include <libdl/sound.h>
-#include "zombie.h"
-#include "stalkerturret.h"
-#include "executioner.h"
+#include "mobs/zombie.h"
+#include "mobs/stalkerturret.h"
+#include "mobs/executioner.h"
 //#include "reactor.h"
-#include "tremor.h"
-#include "swarmer.h"
-#include "swamper.h"
-#include "leviathan.h"
-#include "dzstriker.h"
-#include "reaper.h"
+#include "mobs/tremor.h"
+#include "mobs/swarmer.h"
+#include "mobs/swamper.h"
+#include "mobs/leviathan.h"
+#include "mobs/dzstriker.h"
+#include "mobs/reaper.h"
 #include "game.h"
 
 #define MOB_MAX_OTHER_TARGETS       (32)

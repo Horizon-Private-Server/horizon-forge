@@ -36,24 +36,11 @@
 #include "utils.h"
 #endif
 
-char LocalPlayerStrBuffer[2][64];
+#if RAIDS
+#include "utils.h"
+#endif
 
-/* 
- * reusable menu sound def
- */
-SoundDef MenuSoundDef =
-{
-	0.0,	// MinRange
-	20.0,	// MaxRange
-	100,		// MinVolume
-	2000,		// MaxVolume
-	0,			// MinPitch
-	0,			// MaxPitch
-	0,			// Loop
-	0x10,		// Flags
-	19,		  // Index
-	3			  // Bank
-};
+char LocalPlayerStrBuffer[2][64];
 
 //--------------------------------------------------------------------------
 Moby * spawnExplosion(VECTOR position, float size, u32 color)
@@ -194,6 +181,11 @@ void pushSnack(int localPlayerIdx, char* string, int ticksAlive)
 #if SURVIVAL
   if (MapConfig.Functions.ModePushSnackFunc)
     MapConfig.Functions.ModePushSnackFunc(string, ticksAlive, localPlayerIdx);
+  else
+    uiShowPopup(localPlayerIdx, string);
+#elif RAIDS
+  if (MapConfig.PushSnackFunc)
+    MapConfig.PushSnackFunc(string, ticksAlive, localPlayerIdx);
   else
     uiShowPopup(localPlayerIdx, string);
 #else

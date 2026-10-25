@@ -12,7 +12,7 @@
 #include <libdl/ui.h>
 #include <libdl/hud.h>
 #include <libdl/graphics.h>
-#include "maputils.h"
+#include "utils.h"
 #include "game.h"
 #include "window.h"
 #include "bank.h"
@@ -114,18 +114,6 @@ char inventoryWeaponSpriteIds[] = {
   [WEAPON_SLOT_FLAIL] 23,
 };
 
-char inventoryWeaponSpriteDims[] = {
-  [WEAPON_SLOT_WRENCH] 32,
-  [WEAPON_SLOT_VIPERS] 64,
-  [WEAPON_SLOT_MAGMA_CANNON] 64,
-  [WEAPON_SLOT_ARBITER] 32,
-  [WEAPON_SLOT_FUSION_RIFLE] 64,
-  [WEAPON_SLOT_MINE_LAUNCHER] 32,
-  [WEAPON_SLOT_B6] 32,
-  [WEAPON_SLOT_OMNI_SHIELD] 32,
-  [WEAPON_SLOT_FLAIL] 32,
-};
-
 char* inventoryBadgeNames[] = {
   [RAIDS_BADGE_TYPE_HEALTH_REGEN] "Health Regen",
   [RAIDS_BADGE_TYPE_AMMO_REGEN] "Ammo Regen",
@@ -218,7 +206,7 @@ void inventoryDrawSpinner(Window_t* drawWindow)
   float t = (int)(4*fastmodf(gameGetTime() / 1000.0, 1.0));
   int i = 0;
   while (i < t) {
-    windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, x, 0, 16, 16, 80, 64, 64, 0x80FFFFFF, TEXT_ALIGN_MIDDLECENTER);
+    windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, x, 0, 16, 16, 80, 0x80FFFFFF, TEXT_ALIGN_MIDDLECENTER);
     //gfxHelperDrawSprite(UPGRADE_DRAW_CENTER_X, UPGRADE_DRAW_CENTER_Y, x, y, 16, 16, 64, 64, 80, 0x80FFFFFF, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
     ++i;
     x += 16;
@@ -409,7 +397,7 @@ void inventoryDrawWeaponInfo(Window_t* drawWindow)
     windowCreateFrom(&windowAlphaMod, drawWindow, 5 + ((i-1) * alphamodWidth), 0, alphamodWidth, alphamodWidth, TEXT_ALIGN_TOPLEFT);
 
     // sprite
-    windowDrawSprite(&windowAlphaMod, TEXT_ALIGN_MIDDLECENTER, 0, 0, 16, 16, inventoryAlphaModSpriteIds[i], 32, 32, spriteColor, TEXT_ALIGN_MIDDLECENTER);
+    windowDrawSprite(&windowAlphaMod, TEXT_ALIGN_MIDDLECENTER, 0, 0, 16, 16, inventoryAlphaModSpriteIds[i], spriteColor, TEXT_ALIGN_MIDDLECENTER);
     snprintf(strBuf, sizeof(strBuf), "%d", baseItem->WeaponData.AlphaModCounts[i-1]);
     strW = windowDrawText(&windowAlphaMod, TEXT_ALIGN_BOTTOMLEFT, 0, 0, 0.7, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMLEFT);
     if (hasComparison) {
@@ -501,14 +489,13 @@ void inventoryDrawInfo(Window_t* drawWindow)
   float profWidth = (drawWindow->Width - 10) / (WEAPON_SLOT_COUNT - 1);
   for (i = 1; i < WEAPON_SLOT_COUNT; ++i) {
     int iconSpriteId = inventoryWeaponSpriteIds[i];
-    int iconSpriteDim = inventoryWeaponSpriteDims[i];
 
     // get window
     Window_t windowProficiency;
     windowCreateFrom(&windowProficiency, &windowStats, 5 + ((i-1) * profWidth), 0, profWidth, profWidth, TEXT_ALIGN_TOPLEFT);
 
     // sprite
-    windowDrawSprite(&windowProficiency, TEXT_ALIGN_MIDDLECENTER, 0, 0, 16, 16, iconSpriteId, iconSpriteDim, iconSpriteDim, spriteColor, TEXT_ALIGN_MIDDLECENTER);
+    windowDrawSprite(&windowProficiency, TEXT_ALIGN_MIDDLECENTER, 0, 0, 16, 16, iconSpriteId, spriteColor, TEXT_ALIGN_MIDDLECENTER);
     snprintf(strBuf, sizeof(strBuf), "%d", getProficiencyFromXp(localBank->Account.WeaponXp[i-1]) + 1);
     windowDrawText(&windowProficiency, TEXT_ALIGN_BOTTOMCENTER, 0, 3, 0.7, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMCENTER);
   }
@@ -568,18 +555,16 @@ void inventoryDrawItem(Window_t* drawWindow, int idx)
 
   int slotId = weaponIdToSlot(item->WeaponData.GadgetId);
   int iconSpriteId = inventoryWeaponSpriteIds[slotId];
-  int iconSpriteDim = inventoryWeaponSpriteDims[slotId];
   if (isBadge) {
     slotId = 0;
     iconSpriteId = 114;
-    iconSpriteDim = 32;
   }
   
   // draw icon
   u32 iconColor = bankRarityColors[bankGetRarityFromQuality(item->Quality)];
   gfxSetupGifPaging(0);
-  windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, -1, -1, itemDim+2, itemDim+2, iconSpriteId, iconSpriteDim, iconSpriteDim, 0x80000000, TEXT_ALIGN_MIDDLECENTER);
-  windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, itemDim, itemDim, iconSpriteId, iconSpriteDim, iconSpriteDim, iconColor, TEXT_ALIGN_MIDDLECENTER);
+  windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, -1, -1, itemDim+2, itemDim+2, iconSpriteId, 0x80000000, TEXT_ALIGN_MIDDLECENTER);
+  windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, itemDim, itemDim, iconSpriteId, iconColor, TEXT_ALIGN_MIDDLECENTER);
 
   // draw equipped
   if (isEquipped) {
@@ -589,18 +574,18 @@ void inventoryDrawItem(Window_t* drawWindow, int idx)
   // draw notify
   if (item->Notify) {
     u32 notifyColor = item->Notify == RAIDS_ITEM_NOTIFY_NEW ? INVENTORY_NOTIFY_NEW_COLOR : INVENTORY_NOTIFY_FAV_COLOR;
-    windowDrawSprite(drawWindow, TEXT_ALIGN_TOPRIGHT, 0, 0, 8, 8, INVENTORY_NOTIFY_SPRITE_ID, 32, 32, notifyColor, TEXT_ALIGN_TOPRIGHT);
+    windowDrawSprite(drawWindow, TEXT_ALIGN_TOPRIGHT, 0, 0, 8, 8, INVENTORY_NOTIFY_SPRITE_ID, notifyColor, TEXT_ALIGN_TOPRIGHT);
   }
 
   // draw paint
   if (isWeapon && (item->WeaponData.Paint || item->WeaponData.PaintSpecialMask)) {
-    windowDrawSprite(drawWindow, TEXT_ALIGN_BOTTOMLEFT, 0, 0, 8, 8, 80 + (item->WeaponData.PaintSpecialMask>0?1:0), 32, 32, bankPaintColors[item->WeaponData.Paint] | 0x80000000, TEXT_ALIGN_BOTTOMLEFT);
+    windowDrawSprite(drawWindow, TEXT_ALIGN_BOTTOMLEFT, 0, 0, 8, 8, 80 + (item->WeaponData.PaintSpecialMask>0?1:0), bankPaintColors[item->WeaponData.Paint] | 0x80000000, TEXT_ALIGN_BOTTOMLEFT);
   }
 
   // draw omega
   if (isWeapon && item->WeaponData.ModType) {
     u32 omegaColor = bankGetWeaponOmegaModColor(item);
-    windowDrawSprite(drawWindow, TEXT_ALIGN_BOTTOMRIGHT, 0, 0, 8, 8, 79, 32, 32, omegaColor | 0x80000000, TEXT_ALIGN_BOTTOMRIGHT);
+    windowDrawSprite(drawWindow, TEXT_ALIGN_BOTTOMRIGHT, 0, 0, 8, 8, 79, omegaColor | 0x80000000, TEXT_ALIGN_BOTTOMRIGHT);
   }
 
   gfxDoGifPaging();
@@ -666,7 +651,6 @@ void inventoryDrawTabs(Window_t* drawWindow)
     float spriteWH = tabH * 0.7;
     float spriteBgWH = tabH * 0.8;
     int spriteId = inventoryWeaponSpriteIds[i];
-    int spriteDim = inventoryWeaponSpriteDims[i];
     u32 color = isTabSelected ? textColor : textFadedColor;
     u32 bgColor = isTabSelected ? selectedColor : tabBgColor;
 
@@ -676,8 +660,8 @@ void inventoryDrawTabs(Window_t* drawWindow)
     windowCreateFrom(&windowTab, &windowTabs, 0, 0, tabW, tabH, TEXT_ALIGN_TOPLEFT);
     windowFill(&windowTab, bgColor);
 
-    windowDrawSprite(&windowTab, TEXT_ALIGN_MIDDLECENTER, 0, 0, spriteBgWH, spriteBgWH, spriteId, spriteDim, spriteDim, 0x70000000, TEXT_ALIGN_MIDDLECENTER);
-    windowDrawSprite(&windowTab, TEXT_ALIGN_MIDDLECENTER, 0, 0, spriteWH, spriteWH, spriteId, spriteDim, spriteDim, color, TEXT_ALIGN_MIDDLECENTER);
+    windowDrawSprite(&windowTab, TEXT_ALIGN_MIDDLECENTER, 0, 0, spriteBgWH, spriteBgWH, spriteId, 0x70000000, TEXT_ALIGN_MIDDLECENTER);
+    windowDrawSprite(&windowTab, TEXT_ALIGN_MIDDLECENTER, 0, 0, spriteWH, spriteWH, spriteId, color, TEXT_ALIGN_MIDDLECENTER);
     windowMove(&windowTabs, tabW, 0);
   }
   gfxDoGifPaging();

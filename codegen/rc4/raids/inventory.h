@@ -42,6 +42,7 @@ typedef struct InventoryDrawState
 void inventoryOpen(void);
 void inventoryClose(void);
 void inventorySetFilter(int filter);
+void inventoryFrameTick(void);
 void inventoryTick(void);
 void inventoryInit(void);
 

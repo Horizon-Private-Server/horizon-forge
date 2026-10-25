@@ -8,10 +8,10 @@
 #include <libdl/color.h>
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "pathfind.h"
 #include "spawner.h"
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 
 void dzstrikerPreUpdate(Moby* moby);
@@ -641,6 +641,8 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
   
   // play sound
   mobyPlaySoundByClass(1, 0, dzstrikerVars->TorsoMoby, MOBY_ID_LANDSTALKER);
+
+  return shotMoby;
 }
 
 //--------------------------------------------------------------------------

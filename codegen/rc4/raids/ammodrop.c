@@ -30,7 +30,7 @@
 #include <libdl/utils.h>
 #include <libdl/collision.h>
 #include <libdl/random.h>
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 #include "ammodrop.h"
 #include "game.h"

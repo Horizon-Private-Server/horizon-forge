@@ -28,12 +28,12 @@
 #include <libdl/color.h>
 #include <libdl/utils.h>
 #include <libdl/random.h>
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 #include "badges.h"
 #include "game.h"
 
-int badgesPlayerCooldown[GAME_MAX_PLAYERS][BANK_BADGE_EFFECT_COUNT] = {0};
+int badgesPlayerCooldown[GAME_MAX_PLAYERS][BANK_BADGE_EFFECT_COUNT] = {};
 int badgesPlayerTimeLastHit[GAME_MAX_PLAYERS] = {0};
 int badgesPlayerTimeLastCantShoot[GAME_MAX_PLAYERS] = {0};
 int badgesAmmoRegenAmount[WEAPON_SLOT_COUNT] = {

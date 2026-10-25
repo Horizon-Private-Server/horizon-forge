@@ -9,24 +9,11 @@ using UnityEngine;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int RAIDS_VERSION = 0;
+    public static readonly int RAIDS_VERSION = 1;
 
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
-    public static readonly int MOVER_OCLASS = 0x4002;
-    public static readonly int CONTROLLER_OCLASS = 0x4003;
-    public static readonly int GATE_OCLASS = 0x4004;
-    public static readonly int MESSAGER_OCLASS = 0x4005;
     public static readonly int NPC_OCLASS = 0x4006;
-    public static readonly int CHECKPOINT_MANAGER_OCLASS = 0x4007;
-    public static readonly int CHECKPOINT_OCLASS = 0x4008;
-    public static readonly int LASERBEAM_OCLASS = 0x4009;
-    public static readonly int LASER_OCLASS = 0x400A;
-    public static readonly int PVARPOKE_OCLASS = 0x400B;
-    public static readonly int BLIP_OCLASS = 0x400C;
-    public static readonly int DUMMY_OCLASS = 0x400D;
     public static readonly int GOLDBOLT_OCLASS = 0x400E;
-    public static readonly int COUNTER_OCLASS = 0x400F;
-    public static readonly int SOULCOLLECTOR_OCLASS = 0x4010;
 
     public static readonly float[] DIFFICULTY_FACTORS = new float[]
     {
@@ -57,8 +44,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public int Cost3Star = 0;
     public int Cost4Star = 0;
     public int Cost5Star = 0;
-    public string Author;
-    [Multiline] public string Description;
 
     [Header("Zones (Open World Only)")]
     public List<RaidsZone> Zones = new List<RaidsZone>();
@@ -85,22 +70,17 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     private void OnValidate()
     {
-        if (Author != null && Author.Length > 32) Author = Author.Substring(0, 32);
-        if (Description != null && Description.Length > 256) Description = Description.Substring(0, 256);
         while (Mobs != null && Mobs.Count > 16) Mobs.RemoveAt(16);
 
         // at some point migrate the reuseable moby logic out of raids and into common
-        //var commonCodeGen = FindObjectOfType<CommonCodeGen>();
-        //if (!commonCodeGen)
-        //{
-        //    this.gameObject.AddComponent<CommonCodeGen>();
-        //}
+        var commonCodeGen = FindObjectOfType<CommonCodeGen>();
+        if (!commonCodeGen)
+           this.gameObject.AddComponent<CommonCodeGen>();
     }
 
     public void Configure(string buildFolder, CodeGenState state)
     {
         var mapConfig = FindObjectOfType<MapConfig>();
-        var isRaidsMap = mapConfig.DLForceCustomMode == DLCustomModeIds.Raids;
         var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
         var includeFolder = Path.Combine(buildFolder, FolderNames.CodeBuildIncludeFolder);
         var enabledMobs = Mobs.Where(x => !x.Disabled);
@@ -116,40 +96,22 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/config.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/path.o");
-
-        if (isRaidsMap)
-        {
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/contracts.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
-            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
-        }
-
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/contracts.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/map.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/gate.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/messager.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/checkpoint.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mover.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/platform.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/controller.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laserbeam.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/laser.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pvarpoke.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/maputils.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/utils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/hackerorb.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/blip.o");
-        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/dummy.o");
 
-        state.LDFlags.Add("-DGATE");
-        if (isRaidsMap) state.LDFlags.Add("-DRAIDS");
+        state.LDFlags.Add("-DRAIDS");
         var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
@@ -163,7 +125,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         }
 
         state.Includes.Add("#include \"game.h\"");
-        state.Includes.Add("#include \"maputils.h\"");
+        state.Includes.Add("#include \"utils.h\"");
         state.Includes.Add("#include \"bank.h\"");
         state.Includes.Add("#include \"inventory.h\"");
         state.Includes.Add("#include \"game.h\"");
@@ -177,7 +139,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"pvarpoke.h\"");
         state.Includes.Add("#include \"mover.h\"");
         state.Includes.Add("#include \"platform.h\"");
-        state.Includes.Add("#include \"mob.h\"");
+        state.Includes.Add("#include \"mobs/mob.h\"");
         state.Includes.Add("#include \"shared.h\"");
         state.Includes.Add("#include \"pathfind.h\"");
         state.Includes.Add("#include \"vendor.h\"");
@@ -190,21 +152,13 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"levelselect.h\"");
         state.Includes.Add("#include \"contracts.h\"");
 
-        state.Declarations.Add("void configInit(void);");
-        state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,  .TrackWhitelist = NULL,\r\n};");
-
-        if (isRaidsMap)
+        // declarations
         {
-            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mobForceIntoMapBounds(Moby* moby)\r\n{{\r\n\r\n}}\r\n");
-            state.Functions.Add($"//--------------------------------------------------------------------------\r\nint mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)\r\n{{\r\n  return 1;\r\n}}\r\n");
-            state.Functions.Add($"//--------------------------------------------------------------------------\r\nint createMob(struct MobCreateArgs* args)\r\n{{\r\n  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount) {{\r\n    DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n    return 0;\r\n  }}\r\n\r\n  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];\r\n  if (spawnParams->MobCreate)\r\n    return spawnParams->MobCreate(args);\r\n\r\n  DPRINTF(\"unhandled create spawnParamsIdx %d\\n\", args->SpawnParamsIdx);\r\n  return 0;\r\n}}\r\n");
-            state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid mapOnFrameTick(void)\r\n{{\r\n  dlPreUpdate();\r\n\r\n  messagerFrameUpdate();\r\n  levelselectFrameTick();\r\n  contractsFrameTick();\r\n  inventoryFrameTick();\r\n  {String.Join("\t\r\n", state.Meta.GetValueOrDefault("RAIDS_FRAMEUPDATE") ?? new List<string>())}\r\n\r\n  dlPostUpdate();\r\n}}\r\n");
+            state.Declarations.Add("void configInit(void);");
+            state.Declarations.Add("struct RaidsMapConfig MapConfig __attribute__((section(\".config\"))) = {\r\n  .Magic = MAP_CONFIG_MAGIC,\r\n  .State = NULL,  .TrackWhitelist = NULL,\r\n};");
         }
 
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes(void)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)())0x005ce1d8)();\r\n}}\r\n");
-        state.Functions.Add($"//--------------------------------------------------------------------------\r\nvoid onBeforeUpdateHeroes2(u32 a0)\r\n{{\r\n  gateSetCollision(1);\r\n  ((void (*)(u32))0x0059b320)(a0);\r\n}}\r\n");
-
-        if (isRaidsMap)
+        // init
         {
             state.InitBody.Add($"configInit();");
             state.InitBody.Add($"bankInit();");
@@ -219,79 +173,47 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"badgesInit();");
             state.InitBody.Add($"collectibleInit();");
             state.InitBody.Add($"npcInit();");
+
+            state.InitBody.Add("respawnAllPlayers();");
         }
-        state.InitBody.Add($"moverInit();");
-        state.InitBody.Add($"platformInit();");
-        state.InitBody.Add($"controllerInit();");
-        state.InitBody.Add($"gateInit();");
-        state.InitBody.Add($"messagerInit();");
-        state.InitBody.Add($"checkpointInit();");
-        state.InitBody.Add($"laserInit();");
-        state.InitBody.Add($"pvarpokeInit();");
-        state.InitBody.Add($"hackerorbInit();");
-        state.InitBody.Add($"blipInit();");
-        state.InitBody.Add($"dummyInit();");
 
         // get gubers
-        if (isRaidsMap)
         {
             state.GetGuberCase.Add("case SPAWNER_OCLASS: return spawnerGetGuber(moby);");
-            if (mobTypes.Contains(RaidsMob.DZStriker))
-                state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
+            // if (mobTypes.Contains(RaidsMob.DZStriker))
+                // state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
         }
-        state.GetGuberCase.Add("case GATE_OCLASS: return gateGetGuber(moby);");
-        state.GetGuberCase.Add("case MOVER_OCLASS: return moverGetGuber(moby);");
-        state.GetGuberCase.Add("case PLATFORM_FLIPPER_MOBY_OCLASS: return platformGetGuber(moby);");
-        state.GetGuberCase.Add("case PLATFORM_PIVOT_MOBY_OCLASS: return platformGetGuber(moby);");
-        state.GetGuberCase.Add("case CONTROLLER_OCLASS: return controllerGetGuber(moby);");
-        state.GetGuberCase.Add("case CHECKPOINT_MANAGER_OCLASS: return checkpointGetGuber(moby);");
-        state.GetGuberCase.Add("case CHECKPOINT_OCLASS: return checkpointGetGuber(moby);");
-        state.GetGuberCase.Add("case DUMMY_OCLASS: return dummyGetGuber(moby);");
-        state.GetGuberCase.Add("case MOBY_ID_HACKER_ORB: return hackerorbGetGuber(moby);");
 
         // handle events
-        if (isRaidsMap)
         {
             state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
-            if (mobTypes.Contains(RaidsMob.DZStriker))
-                state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
+            // if (mobTypes.Contains(RaidsMob.DZStriker))
+                // state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
         }
-        state.HandleGuberEventCase.Add("case GATE_OCLASS: gateHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case MOVER_OCLASS: moverHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case PLATFORM_FLIPPER_MOBY_OCLASS: platformHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case PLATFORM_PIVOT_MOBY_OCLASS: platformHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case CONTROLLER_OCLASS: controllerHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case CHECKPOINT_MANAGER_OCLASS: checkpointHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case CHECKPOINT_OCLASS: checkpointHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case DUMMY_OCLASS: dummyHandleEvent(moby, event); break;");
-        state.HandleGuberEventCase.Add("case MOBY_ID_HACKER_ORB: hackerorbHandleEvent(moby, event); break;");
 
-        if (isRaidsMap)
+        // raids hooks
         {
-            state.InitBody.Add($"MapConfig.OnMobCreateFunc = &createMob;");
+            state.InitBody.Add($"MapConfig.OnMobCreateFunc = &mapCreateMob;");
             state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
             state.InitBody.Add($"MapConfig.OnMobDamagedFunc = &mapOnMobDamaged;");
             state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
             state.InitBody.Add($"MapConfig.OnMobDestroyedFunc = &mapOnMobDestroyed;");
             state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
             state.InitBody.Add($"MapConfig.CreateAmmoDropAtFunc = &ammodropCreateAt;");
-            state.InitBody.Add($"MapConfig.OnFrameTickFunc = &mapOnFrameTick;");
         }
 
-        state.InitBody.Add($"HOOK_JAL(0x003bd854, &onBeforeUpdateHeroes);");
-        state.InitBody.Add($"HOOK_JAL(0x0051f648, &onBeforeUpdateHeroes2);");
-
-        if (isRaidsMap)
+        // draw functions
         {
-            state.InitBody.Add("respawnAllPlayers();");
+            state.DrawBody.Add("levelselectFrameTick();");
+            state.DrawBody.Add("contractsFrameTick();");
+            state.DrawBody.Add("inventoryFrameTick();");
         }
 
-        if (isRaidsMap)
+        // ready
         {
             state.MainBodyReady.Add("mapStart();");
             state.MainBodyReady.Add("levelselectStart();");
             state.MainBodyReady.Add("spawnerStart();");
-            state.MainBodyReady.Add("checkpointStart();");
             state.MainBodyReady.Add("vendorStart();");
             state.MainBodyReady.Add("badgesStart();");
             state.MainBodyReady.Add("ammodropStart();");
@@ -299,24 +221,20 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             if (MissionType == RAIDS_MISSION_TYPES.OpenWorld)
                 state.MainBodyReady.Add("mapApplyZoning();");
         }
-        state.MainBodyReady.Add("moverStart();");
-        state.MainBodyReady.Add("controllerStart();");
-        state.MainBodyReady.Add("gateStart();");
-        state.MainBodyReady.Add("laserStart();");
-        state.MainBodyReady.Add("pvarpokeStart();");
-        state.MainBodyReady.Add("dummyStart();");
 
-        state.MainBody.Add("mapTick();");
-        if (isRaidsMap)
+        // tick
         {
+            state.MainBody.Add("mapTick();");
             state.MainBody.Add("bankTick();");
             state.MainBody.Add("inventoryTick();");
             state.MainBody.Add("contractsTick();");
             state.MainBody.Add("mobTick();");
+
+            state.MainBody.Add("int i;");
+            state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
+            state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
+            state.MainBody.Add("mapTickEnd();");
         }
-        state.MainBody.Add("for (i = 0; i < PathsCount; ++i) pathTick(&Paths[i]);");
-        state.MainBody.Add($"if (MapConfig.State) {{\r\n    MapConfig.State->MapBaseComplexity = {MapBaseComplexity};\r\n  }}");
-        state.MainBody.Add("mapTickEnd();");
     }
 
     public void Configure(BuildState state, BuildStateStage stage)
@@ -326,8 +244,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(8309); // node base (for capture sound)
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
-        state.MobyOClasses.Add(13); // bolt (for gold bolt)
-        state.MobyOClasses.Add(LASERBEAM_OCLASS);
+        state.MobyOClasses.Add(13);   // bolt (for gold bolt)
 
         // add mob oclasses
         var mobConfig = RaidsMobsScriptableObject.Load();
@@ -361,7 +278,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         sb.AppendLine("#include <libdl/utils.h>");
         sb.AppendLine("#include \"game.h\"");
-        sb.AppendLine("#include \"mob.h\"");
+        sb.AppendLine("#include \"mobs/mob.h\"");
         sb.AppendLine("");
 
         sb.AppendLine("extern struct RaidsMapConfig MapConfig;");
@@ -444,9 +361,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         writer.Write(Cost3Star);
         writer.Write(Cost4Star);
         writer.Write(Cost5Star);
-        writer.WriteString(BinaryHelper.StrToRatchetStr(Author), 31);
+        writer.WriteString(BinaryHelper.StrToRatchetStr(mapConfig.MapAuthor), 31);
         writer.Write((byte)0);
-        writer.WriteString(BinaryHelper.StrToRatchetStr(Description), 255);
+        writer.WriteString(BinaryHelper.StrToRatchetStr(mapConfig.MapDescription), 255);
         writer.Write((byte)0);
 
         // prewrite header
@@ -504,99 +421,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Mover Moby", priority = 10)]
-    public static void CreateMoverMoby()
-    {
-        var go = new GameObject("Mover");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = MOVER_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Mover");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Controller Moby", priority = 10)]
-    public static void CreateControllerMoby()
-    {
-        var go = new GameObject("Controller");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = CONTROLLER_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Controller");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Counter Moby", priority = 10)]
-    public static void CreateCounterMoby()
-    {
-        var go = new GameObject("Counter");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = COUNTER_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Counter");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/PVar Poke Moby", priority = 10)]
-    public static void CreatePVarPokeMoby()
-    {
-        var go = new GameObject("PVar Poke");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = PVARPOKE_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("PVarPoke");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Gate Moby", priority = 10)]
-    public static void CreateGateMoby()
-    {
-        var mobyBin = Convert.FromBase64String("sAAAAAEAAAEAAAAAAQD/AMAAAAAAAQAAAAEAAAABAABgAgAAq6qqPAAAAAAABQAAnFNJvZxTybycU8m8PMQHR3h4eIAAAAAQYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgqh7vgAAAACcU8m8N8QHRwH/AAAAAAAAJAAAADAAAAACABQAAAAAAAAAAAAAAAAAAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAQAACAAEAJABAAANAwIIAAAAAAAAAAAQAAAAIAAAAAAAAKAAYAAAAAAAYABgAAAAAABgAKAAAAAAAKAAoAAAAAIBbwIAA28BAwBvAwECbwAAAAAAAAAAAAAAAAAAAADCgAh1AAAAEAAQABAAEAAAAAAAAAAAABAAEAAQABAAAAAAAAAtgQRu/gQBAACCBAOFhggHAQEBAAAAAAAxgQRskv8AAAQAAAAEAKBBAAAAAAAAAAAAAAAACAAAAAAAAAD/////AAAAAAYAAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAEAAAAAAAgAAAAIACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAAAAAAAAAAGAAYAAAAPQAAAAAAAAAAACgAGAAAAD0AAAAAAAAAAAAoACgAAAA9AAAAAAAAAAAAGAAoAAAAPQAAAAAgAAAAACgAGAAAAD0AAAAAIAAAAAAYABgAAAA9AAAAACAAAAAAGAAoP8AAPQAAAAAgAAAAACgAKD/AAAAAAAAAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAP8AAAD/AP8A/wD/AAAAAAD///////////////9AAQCA");
-
-        var go = new GameObject("Gate");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = GATE_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.Color = new Color(1, 0, 0, 0.5f);
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Gate");
-        moby.InitializePVarReferences();
-
-        // create gate core.bin (has collision)
-        var mobyFolder = FolderNames.GetLocalAssetFolder(FolderNames.MobyFolder, RCVER.DL);
-        if (Directory.Exists(mobyFolder))
-        {
-            var gateMobyFolder = Path.Combine(mobyFolder, GATE_OCLASS.ToString());
-            if (!Directory.Exists(gateMobyFolder))
-            {
-                Directory.CreateDirectory(gateMobyFolder);
-                File.WriteAllBytes(Path.Combine(gateMobyFolder, "core.bin"), mobyBin);
-            }
-        }
-
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Messager Moby", priority = 10)]
-    public static void CreateMessagerMoby()
-    {
-        var go = new GameObject("Messager");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = MESSAGER_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Messager");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
     [MenuItem("GameObject/Forge/Deadlocked/Raids/NPC Controller Moby", priority = 10)]
     public static void CreateNpcControllerMoby()
     {
@@ -606,75 +430,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.RCVersion = RCVER.DL;
         moby.UpdateDistance = 255;
         moby.PrefabOverride = UnityHelper.GetRaidsPrefab("NPC Controller");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Checkpoint Manager Moby", priority = 10)]
-    public static void CreateCheckpointManagerMoby()
-    {
-        var go = new GameObject("Checkpoint Manager");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = CHECKPOINT_MANAGER_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        //moby.PrefabOverride = UnityHelper.GetRaidsPrefab("NPC Controller");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Checkpoint Moby", priority = 10)]
-    public static void CreateCheckpointMoby()
-    {
-        var go = new GameObject("Checkpoint");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = CHECKPOINT_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.Color = new Color(1, 1, 1, 0.5f);
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Checkpoint");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Laser (Tripwire) Moby", priority = 10)]
-    public static void CreateLaserMoby()
-    {
-        var go = new GameObject("Laser (Tripwire)");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = LASER_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.Color = new Color(1, 1, 1, 0.5f);
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Laser");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Radar Blip Moby", priority = 10)]
-    public static void CreateRadarBlipMoby()
-    {
-        var go = new GameObject("Radar Blip Moby");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = BLIP_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.Color = new Color(1, 1, 1, 0.5f);
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Radar Blip");
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Health Proxy Moby", priority = 10)]
-    public static void CreateHealthProxyMoby()
-    {
-        var go = new GameObject("Health Proxy Moby");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = DUMMY_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.Color = new Color(1, 1, 1, 0.5f);
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Health Proxy");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }
@@ -691,20 +446,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         moby.Color = new Color(1, 1, 1, 0.5f);
         moby.PrefabOverride = UnityHelper.GetAssetPrefab(FolderNames.MobyFolder, "13", RCVER.DL, includeGlobal: true);
         moby.PrefabOverrideTransformation = Matrix4x4.TRS(Vector3.zero, Quaternion.FromToRotation(Vector3.right, Vector3.up), Vector3.one * 3);
-        moby.InitializePVarReferences();
-        OnAfterCreateGameObject(go);
-    }
-
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Soul Collector Moby", priority = 10)]
-    public static void CreateSoulCollectorMoby()
-    {
-        var go = new GameObject("Soul Collector Moby");
-        var moby = go.AddComponent<Moby>();
-        moby.OClass = SOULCOLLECTOR_OCLASS;
-        moby.RCVersion = RCVER.DL;
-        moby.UpdateDistance = 255;
-        moby.Color = new Color(1, 1, 1, 0.5f);
-        moby.PrefabOverride = UnityHelper.GetRaidsPrefab("Soul Collector");
         moby.InitializePVarReferences();
         OnAfterCreateGameObject(go);
     }

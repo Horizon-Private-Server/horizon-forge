@@ -9,8 +9,8 @@
 #include <libdl/random.h>
 #include <libdl/radar.h>
 #include "drop.h"
-#include "mob.h"
-#include "maputils.h"
+#include "mobs/mob.h"
+#include "utils.h"
 #include "game.h"
 
 int dropCount = 0;

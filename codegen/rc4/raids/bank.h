@@ -396,9 +396,9 @@ int bankGetPlayerIdxFromGadgetBox(GadgetBox* gbox);
 RaidsPlayerEquippedInventory_t* bankGetEquippedFromGadgetBox(GadgetBox* gbox);
 RaidsInventoryItem_t* bankGetEquippedBadgeFromGadgetBox(GadgetBox* gbox);
 RaidsInventoryItem_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int gadgetId);
-enum RaidsItemRarity bankGetRarityFromQuality(u8 quality);
+enum RaidsItemRarity bankGetRarityFromQuality(int quality);
 float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect);
-int bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType);
+enum RaidsItemRarity bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType);
 u32 bankGetWeaponOmegaModColor(RaidsInventoryItem_t* item);
 
 void bankTick(void);

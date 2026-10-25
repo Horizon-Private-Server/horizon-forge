@@ -566,7 +566,7 @@ int pathGetPath(struct PathGraph* path, Moby* moby, struct MobMoveVars* moveVars
   //if (i > 0 && (pathSegmentCanBeSkipped(moby, 0, 1, alpha) || isOnSameSegment)) {
   int canBeSkipped = pathCanStartNodeBeSkipped(path, moby, moveVars);
   //DPRINTF("len:%d onSame:%d canSkip:%d lastEdgeIdx:%d newEdgeIdx:%d\n", i, isOnSameSegment, canBeSkipped, lastEdgeIdx, moveVars->CurrentPath[0]);
-  if (i > 0 && !moveVars->IsStuck && (isOnSameSegment || canBeSkipped)) {
+  if (moveVars->PathEdgeCount > 0 && !moveVars->IsStuck && (isOnSameSegment || canBeSkipped)) {
     moveVars->PathHasReachedStart = 1;
   }
 

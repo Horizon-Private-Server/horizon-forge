@@ -30,10 +30,10 @@
 #include <libdl/color.h>
 #include <libdl/utils.h>
 #include <libdl/random.h>
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 #include "spawner.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "pathfind.h"
 #include "game.h"
 
@@ -1013,6 +1013,7 @@ void spawnerInit(void)
   if (mobyFunctionsPtr) {
     mapInstallMobyFunctions(mobyFunctionsPtr);
     DPRINTF("SPAWNER oClass:%04X mClass:%02X func:%08X getGuber:%08X handleEvent:%08X\n", temp->OClass, temp->MClass, (u32)mobyFunctionsPtr, (u32)mobyFunctionsPtr->GetGuberObject, (u32)mobyFunctionsPtr->MobyEventHandler);
+  }
   mobyDestroy(temp);
   
   // create gubers for spawners

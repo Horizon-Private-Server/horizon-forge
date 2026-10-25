@@ -37,8 +37,14 @@
 #include "mover.h"
 #include "controller.h"
 
-#if OBSTACLE || RAIDS
+#if OBSTACLE
 #include "config.h"
+#endif
+
+#if RAIDS
+#include "utils.h"
+#include "npc.h"
+#include "spawner.h"
 #endif
 
 #if DEBUG
@@ -827,10 +833,11 @@ int controllerControlGivePlayerAmmo(Moby* moby, struct ControllerTarget* target)
       for (j = 1; j < WEAPON_SLOT_COUNT; ++j) {
         int gadgetId = weaponSlotToId(j);
         int maxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, gadgetId);
+        int amount = target->GivePlayer.IsPercent ? ((target->GivePlayer.Amount / 100.0) * maxAmmo) : target->GivePlayer.Amount;
         int newAmmo = player->GadgetBox->Gadgets[gadgetId].Ammo;
 
-        if (target->GivePlayer.Amount == 0) newAmmo = maxAmmo;
-        else newAmmo += target->GivePlayer.Amount;
+        if (amount == 0) newAmmo = maxAmmo;
+        else newAmmo += amount;
         if (newAmmo < 0) newAmmo = 0;
         else if (newAmmo > maxAmmo) newAmmo = maxAmmo;
         
@@ -859,9 +866,10 @@ int controllerControlGivePlayerHealth(Moby* moby, struct ControllerTarget* targe
     if ((target->RespawnPlayer.PlayerMask & bit) != 0 || (acceptsHost && player->IsLocal)) {
       if (target->GivePlayer.LivingOnly && playerIsDead(player)) continue;
       
-      if (target->GivePlayer.Amount >= 0 && playerIsDead(player)) playerRespawn(player);
-      if (target->GivePlayer.Amount == 0) playerSetHealth(player, player->MaxHealth);
-      else playerSetHealth(player, clamp(player->Health + target->GivePlayer.Amount, 0, player->MaxHealth));
+      float amount = target->GivePlayer.IsPercent ? ((target->GivePlayer.Amount / 100.0) * player->MaxHealth) : target->GivePlayer.Amount;
+      if (amount >= 0 && playerIsDead(player)) playerRespawn(player); // respawn if dead and giving health
+      if (amount == 0) playerSetHealth(player, player->MaxHealth);    // set to max if amount is 0
+      else playerSetHealth(player, clamp(player->Health + amount, 0, player->MaxHealth));
       
       count++;
     }
@@ -1009,9 +1017,9 @@ int controllerControlUpdateChallenge(Moby* moby, struct ControllerTarget* target
     struct RaidsCustomMapExtraData* exData = (struct RaidsCustomMapExtraData*)exDataBuf;
     PATCH_INTEROP->ReadCustomMapExtraData(MapConfig.State->CurrentMapDef->Filename, exDataBuf, sizeof(exDataBuf), CUSTOM_MODE_RAIDS);
       
-    int cNameOff = exData->Challenges[(challengeIndex*2)+0];
+    int cNameOff = (int)exData->Challenges[(challengeIndex*2)+0];
     if (cNameOff) {
-      char* cName = exDataBuf + cNameOff;
+      char* cName = &exDataBuf[cNameOff];
       char strBuf[64];
       snprintf(strBuf, sizeof(strBuf), "Challenge \x0E%s\x08 Complete", cName);
       pushSnack(0, strBuf, 120);
@@ -1188,8 +1196,11 @@ void controllerUpdate(Moby* moby)
   }
 
   if (!controllerAmIOwner(moby)) return;
-  //if (!missionIsActive() && !isOnHubWorld()) return;
-  //if (missionIsFailed()) return;
+#if RAIDS
+  // unsure if this is still necessary
+  if (!missionIsActive() && !isOnHubWorld()) return;
+  if (missionIsFailed()) return;
+#endif
   if (moby->State == CONTROLLER_STATE_DEACTIVATED) return;
   if (moby->State == CONTROLLER_STATE_COMPLETED) return;
 

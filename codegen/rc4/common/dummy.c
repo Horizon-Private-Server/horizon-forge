@@ -36,8 +36,13 @@
 #include "dummy.h"
 #include "common.h"
 
-#if SURVIVAL || RAIDS
+#if SURVIVAL
 #include "mobs/mob.h"
+#endif
+
+#if RAIDS
+#include "mobs/mob.h"
+#include "utils.h"
 #endif
 
 #if DEBUG
@@ -202,7 +207,10 @@ void dummyUpdate(Moby* moby)
     return;
   }
   
-  //if (!missionIsActive()) return;
+#if RAIDS
+  // require active mission
+  if (!missionIsActive()) return;
+#endif
 
   // increment ticks since last damage
   ++pvars->State.TicksSinceLastDamage;
@@ -296,6 +304,9 @@ void dummyUpdate(Moby* moby)
       // push bubble
       if (pvars->Config.DamageBubbles && MapConfig.Functions.ModePushBubbleFunc)
         MapConfig.Functions.ModePushBubbleFunc(pos, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
+#elif RAIDS
+      if (pvars->Config.DamageBubbles && MapConfig.PushDamageBubbleFunc)
+        MapConfig.PushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, 0);
 #endif
 
       pvars->State.TicksSinceLastDamage = 0;

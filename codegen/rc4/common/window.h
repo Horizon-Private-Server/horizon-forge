@@ -29,7 +29,7 @@ void windowDrawBox(Window_t *window, enum TextAlign windowAnchor, float offsetX,
 void windowFill(Window_t *window, u32 color);
 void windowBorder(Window_t *window, u32 color, float left, float top, float right, float bottom);
 float windowDrawText(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char *str, int length, enum TextAlign alignment);
-void windowDrawTextWindow(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char *str, int length, enum TextAlign alignment);
+float windowDrawTextWindow(Window_t *window, enum TextAlign windowAnchor, float offsetX, float offsetY, float scale, u32 color, char *str, int length, enum TextAlign alignment);
 int windowHasArea(Window_t *window);
 void windowCreateFrom(Window_t *out, Window_t *window, float winOffsetX, float winOffsetY, float winWidth, float winHeight, enum TextAlign winAlignment);
 void windowCreate(Window_t *out, float anchorX, float anchorY, float offsetX, float offsetY, float width, float height, enum TextAlign anchorAlignment);

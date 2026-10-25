@@ -28,7 +28,7 @@
 #include <libdl/color.h>
 #include <libdl/utils.h>
 #include <libdl/random.h>
-#include "maputils.h"
+#include "utils.h"
 #include "shared.h"
 #include "vendor.h"
 #include "game.h"

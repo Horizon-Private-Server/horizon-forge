@@ -1,4 +1,4 @@
-#include <string.h>
+#include <libdl/string.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
 #include <libdl/collision.h>
@@ -12,12 +12,14 @@
 #include <libdl/net.h>
 #include <libdl/ui.h>
 #include <libdl/graphics.h>
-#include "maputils.h"
+#include "utils.h"
 #include "game.h"
 #include "bank.h"
 #include "common.h"
 
 extern struct RaidsState State;
+
+void bankUpdateLocalState(Player * player);
 
 // send as binary payload from server
 RaidsPlayerBank_t bankLocalBank = {};
@@ -545,7 +547,7 @@ int bankGetEquipSlotFromGadgetId(int gadgetId)
 }
 
 //--------------------------------------------------------------------------
-enum RaidsItemRarity bankGetRarityFromQuality(u8 quality)
+enum RaidsItemRarity bankGetRarityFromQuality(int quality)
 {
   if (quality < 64) return RAIDS_ITEM_RARITY_COMMON;
   if (quality < 128) return RAIDS_ITEM_RARITY_UNCOMMON;
@@ -571,9 +573,9 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize)
 //--------------------------------------------------------------------------
 int bankGetPlayerIdxFromGadgetBox(GadgetBox* gbox)
 {
-  if (!gbox) return NULL;
+  if (!gbox) return 0;
   
-  return gbox->Initialized - 1;
+  return (int)gbox->Initialized - 1;
 }
 
 //--------------------------------------------------------------------------
@@ -713,7 +715,7 @@ float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effec
 }
 
 //--------------------------------------------------------------------------
-int bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType)
+enum RaidsItemRarity bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType)
 {
   struct RaidsState* state = MapConfig.State;
   if (!state) return -1;

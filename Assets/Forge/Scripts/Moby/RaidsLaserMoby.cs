@@ -48,7 +48,7 @@ public class RaidsLaserMoby : MonoBehaviour, IRenderHandlePrefab
     private void UpdateMaterial()
     {
         if (!m_Moby) return;
-        if (m_Moby.OClass != RaidsModeData.LASER_OCLASS) return;
+        if (m_Moby.OClass != CommonCodeGen.LASER_OCLASS) return;
         if (m_Mpb == null) m_Mpb = new MaterialPropertyBlock();
 
         var levelDir = FolderNames.GetMapBinFolder(SceneManager.GetActiveScene().name, m_Moby.RCVersion);

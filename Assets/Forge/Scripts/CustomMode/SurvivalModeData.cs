@@ -338,7 +338,7 @@ public class SurvivalModeData : CustomModeData, ICodeGen, IBuildHook
     {
         ValidateSurvivalConfigOrError();
 
-        state.MobyOClasses.Add(RaidsModeData.LASERBEAM_OCLASS);
+        state.MobyOClasses.Add(CommonCodeGen.LASERBEAM_OCLASS);
         state.MobyOClasses.Add(0x2075); // node base (sounds)
         state.MobyOClasses.Add(0x2635); // mysterybox
         state.MobyOClasses.Add(0x2124); // bigal

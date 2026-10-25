@@ -1,4 +1,4 @@
-#include <string.h>
+#include <libdl/string.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
 #include <libdl/collision.h>
@@ -14,7 +14,7 @@
 #include <libdl/graphics.h>
 #include "levelselect.h"
 #include "game.h"
-#include "maputils.h"
+#include "utils.h"
 #include "window.h"
 #include "common.h"
 
@@ -73,7 +73,9 @@ void levelselectGo(LevelselectDrawState_t* drawState)
     drawState->SelectedDifficulty = 0;
   }
 
-#if !DEBUG
+#if DEBUG
+  int cost = 0;
+#else
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   int cost = drawState->SelectedMapExtraData.Cost[drawState->SelectedDifficulty];
   int level = bankGetLevel();
@@ -82,9 +84,6 @@ void levelselectGo(LevelselectDrawState_t* drawState)
     playEquipRejectSound(playerGetFromSlot(0));
     return;
   }
-
-#else
-  int cost = 0;
 #endif
 
   // hop
@@ -151,8 +150,8 @@ void levelselectDrawChallengesDialog(Window_t* drawWindow, int selectedIdx)
     if (!cNameOff || !cDescOff) break;
     if (!windowHasArea(drawWindow)) { --itemIdx; break; }
 
-    char* cName = (u32)levelselectDrawState.SelectedMapExtraDataBuf + cNameOff;
-    char* cDesc = (u32)levelselectDrawState.SelectedMapExtraDataBuf + cDescOff;
+    char* cName = &levelselectDrawState.SelectedMapExtraDataBuf[cNameOff];
+    char* cDesc = &levelselectDrawState.SelectedMapExtraDataBuf[cDescOff];
     int isCompleted = (levelselectDrawState.MapStats.ChallengesMask & (1 << itemIdx)) != 0;
 
     // create line window
@@ -166,7 +165,7 @@ void levelselectDrawChallengesDialog(Window_t* drawWindow, int selectedIdx)
     }
 
     if (isCompleted)
-      windowDrawSprite(&windowLine, TEXT_ALIGN_MIDDLELEFT, 5, 0, 12, 12, 35, 32, 32, completedColor, TEXT_ALIGN_MIDDLELEFT);
+      windowDrawSprite(&windowLine, TEXT_ALIGN_MIDDLELEFT, 5, 0, 12, 12, 35, completedColor, TEXT_ALIGN_MIDDLELEFT);
 
     // draw name
     windowDrawText(&windowLine, TEXT_ALIGN_MIDDLELEFT, 5 + (isCompleted ? 16 : 0), 0, 0.7, textColor, cName, -1, TEXT_ALIGN_MIDDLELEFT);
@@ -328,14 +327,14 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
 
     // gold bolts
     gfxSetupGifPaging(0);
-    windowDrawSprite(&windowProgress, TEXT_ALIGN_TOPLEFT, 5, 5, 12, 12, 4, 32, 32, textColor, TEXT_ALIGN_TOPLEFT);
+    windowDrawSprite(&windowProgress, TEXT_ALIGN_TOPLEFT, 5, 5, 12, 12, 4, textColor, TEXT_ALIGN_TOPLEFT);
     gfxDoGifPaging();
     snprintf(strBuf, sizeof(strBuf), "%d/%d", countBits(levelselectDrawState.MapStats.CollectiblesMask), levelselectDrawState.MapStats.CollectiblesCount);
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPLEFT, 5 + 16, 5, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
 
     // challenges
     gfxSetupGifPaging(0);
-    windowDrawSprite(&windowProgress, TEXT_ALIGN_TOPRIGHT, -5, 5, 12, 12, 31, 32, 32, textColor, TEXT_ALIGN_TOPRIGHT);
+    windowDrawSprite(&windowProgress, TEXT_ALIGN_TOPRIGHT, -5, 5, 12, 12, 31, textColor, TEXT_ALIGN_TOPRIGHT);
     gfxDoGifPaging();
     snprintf(strBuf, sizeof(strBuf), "%d/%d", countBits(levelselectDrawState.MapStats.ChallengesMask), levelselectDrawState.MapStats.ChallengesCount);
     windowDrawText(&windowProgress, TEXT_ALIGN_TOPRIGHT, -(5+16), 5, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
@@ -367,7 +366,7 @@ void levelselectDrawMapInfo(Window_t* drawWindow)
       gfxSetupGifPaging(0);
       windowMove(&windowStars, windowStars.Width/2 - (RAIDS_DIFFICULTY_COUNT/2.0)*(starHeight+starSpacing), 0);
       for (i = 0; i < RAIDS_DIFFICULTY_COUNT; ++i) {
-        windowDrawSprite(&windowStars, TEXT_ALIGN_TOPLEFT, 0, 5, starHeight, starHeight, LEVELSELECT_STAR_SPRITE_ID, 32, 32, i <= levelselectDrawState.SelectedDifficulty ? starActiveColor : starInactiveColor, TEXT_ALIGN_TOPLEFT);
+        windowDrawSprite(&windowStars, TEXT_ALIGN_TOPLEFT, 0, 5, starHeight, starHeight, LEVELSELECT_STAR_SPRITE_ID, i <= levelselectDrawState.SelectedDifficulty ? starActiveColor : starInactiveColor, TEXT_ALIGN_TOPLEFT);
         windowMove(&windowStars, starHeight + starSpacing, 0);
       }
       gfxDoGifPaging();

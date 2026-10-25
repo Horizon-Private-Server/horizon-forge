@@ -36,7 +36,7 @@
 #include "controller.h"
 #include "checkpoint.h"
 
-#if OBSTACLE || RAIDS
+#if OBSTACLE
 #include "config.h"
 #endif
 
@@ -142,6 +142,8 @@ int checkpointSetActive(Moby* checkpointMoby)
   } else {
     uiShowPopup(0, "Checkpoint");
   }
+#elif RAIDS
+  // no checkpoint popup for raids
 #else
   uiShowPopup(0, "Checkpoint");
 #endif
@@ -324,4 +326,20 @@ void checkpointInit(void)
 
   DPRINTF("checkpoint manager pvar size %d\n", sizeof(struct CheckpointManagerPVar));
   DPRINTF("checkpoint pvar size %d\n", sizeof(struct CheckpointPVar));
+
+  /*
+  // RAIDS
+  // position players at loaded checkpoint
+  // to be tested if this is needed in latest revision
+  int i;
+  Player** players = playerGetAll();
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* player = players[i];
+    if (playerIsValid(player)) {
+      VECTOR pos,rot;
+      playerGetSpawnpoint(player, pos, rot, 1);
+      playerSetPosRot(player, pos, rot);
+    }
+  }
+  */
 }

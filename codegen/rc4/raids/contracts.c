@@ -36,11 +36,11 @@
 #include "spawner.h"
 #include "mover.h"
 #include "bank.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "shared.h"
 #include "pathfind.h"
 #include "window.h"
-#include "maputils.h"
+#include "utils.h"
 
 #define CONTRACTS_REROLL_COST (50000)
 #define CONTRACTS_MIN_LEVEL   (9)
@@ -62,7 +62,6 @@ struct ContractsState {
 
 extern char inventoryAlphaModSpriteIds[];
 extern char inventoryWeaponSpriteIds[];
-extern char inventoryWeaponSpriteDims[];
 extern char inventorySkillSpriteIds[];
 extern char* inventorySkillNames[];
 extern char* inventoryRarityNames[];
@@ -282,7 +281,7 @@ void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, 
       float starWidth = 20;
       float starsWidth = contract->RequiredDifficultyStars * starWidth;
       for (i = 0; i <= contract->RequiredDifficultyStars; ++i) {
-        windowDrawSprite(drawWindow, TEXT_ALIGN_TOPCENTER, (i*starWidth) - (starsWidth/2), 6, 16, 16, 88, 32, 32, starColor, TEXT_ALIGN_TOPCENTER);
+        windowDrawSprite(drawWindow, TEXT_ALIGN_TOPCENTER, (i*starWidth) - (starsWidth/2), 6, 16, 16, 88, starColor, TEXT_ALIGN_TOPCENTER);
       }
       gfxDoGifPaging();
     }
@@ -308,9 +307,8 @@ void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, 
     float killsOffsetX = 0;
     if (slotId > 0) {
       int spriteId = inventoryWeaponSpriteIds[slotId];
-      int spriteDim = inventoryWeaponSpriteDims[slotId];
       gfxSetupGifPaging(0);
-      windowDrawSprite(drawWindow, TEXT_ALIGN_TOPCENTER, -14, 0, 16, 16, spriteId, spriteDim, spriteDim, textColor, TEXT_ALIGN_TOPCENTER);
+      windowDrawSprite(drawWindow, TEXT_ALIGN_TOPCENTER, -14, 0, 16, 16, spriteId, textColor, TEXT_ALIGN_TOPCENTER);
       gfxDoGifPaging();
       killsOffsetX += 10;
     }
@@ -339,7 +337,7 @@ void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, 
   windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
   windowMove(drawWindow, 0, 14);
   gfxSetupGifPaging(0);
-  windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 12, 12, inventoryAlphaModSpriteIds[ALPHA_MOD_JACKPOT], 32, 32, textColor, TEXT_ALIGN_TOPLEFT);
+  windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 12, 12, inventoryAlphaModSpriteIds[ALPHA_MOD_JACKPOT], textColor, TEXT_ALIGN_TOPLEFT);
   gfxDoGifPaging();
   snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardBolts);
   windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
@@ -353,9 +351,8 @@ void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, 
   // weapon xp reward
   if (slotId > 0) {
     int spriteId = inventoryWeaponSpriteIds[slotId];
-    int spriteDim = inventoryWeaponSpriteDims[slotId];
     gfxSetupGifPaging(0);
-    windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 12, 12, spriteId, spriteDim, spriteDim, textColor, TEXT_ALIGN_TOPLEFT);
+    windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 12, 12, spriteId, textColor, TEXT_ALIGN_TOPLEFT);
     gfxDoGifPaging();
     snprintf(strBuf, sizeof(strBuf), " XP");
     windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 12+6, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);

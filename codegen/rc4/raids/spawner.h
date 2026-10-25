@@ -7,7 +7,7 @@
 #include <libdl/time.h>
 #include <libdl/player.h>
 #include <libdl/math3d.h>
-#include "mob.h"
+#include "mobs/mob.h"
 #include "game.h"
 
 #define SPAWNER_OCLASS                        (0x4001)

@@ -20,15 +20,14 @@
 #include <libdl/collision.h>
 #include <libdl/utils.h>
 #include "game.h"
-#include "mob.h"
-#include "maputils.h"
+#include "mobs/mob.h"
+#include "utils.h"
 #include "shared.h"
 #include "gate.h"
 #include "spawner.h"
 #include "pathfind.h"
 #include "dummy.h"
 
-void mobForceIntoMapBounds(Moby* moby);
 Moby* mobOtherTargets[MOB_MAX_OTHER_TARGETS];
 Moby* mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
 
@@ -702,6 +701,12 @@ float mobGetFreezeSpeedFactor(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void mobForceIntoMapBounds(Moby* moby)
+{
+  
+}
+
+//--------------------------------------------------------------------------
 void mobMove(Moby* moby)
 {
   VECTOR targetVelocity;
@@ -995,7 +1000,7 @@ float mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed)
   VECTOR delta;
   
   if (!moby || !moby->PVar)
-    return;
+    return 0;
 
   vector_subtract(delta, towards, moby->Position);
   float targetYaw = atan2f(delta[1], delta[0]);
@@ -1013,7 +1018,7 @@ float mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float 
   VECTOR pos;
   
   if (!moby || !moby->PVar)
-    return;
+    return 0;
 
   // if target is player, use their velocity to predict their future position
   Player* player = guberMobyGetPlayerDamager(target);

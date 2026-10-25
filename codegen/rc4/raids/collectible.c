@@ -31,7 +31,7 @@
 #include <libdl/color.h>
 #include <libdl/utils.h>
 #include <libdl/random.h>
-#include "maputils.h"
+#include "utils.h"
 #include "collectible.h"
 
 //--------------------------------------------------------------------------
@@ -113,7 +113,7 @@ void collectibleInit(void)
       DPRINTF("found collectible %08X\n", (u32)moby);
       moby->PUpdate = &collectibleUpdate;
       moby->PClass = boltMobyClass;
-      moby->CollData = *(int*)((u32)boltMobyClass + 0x10);
+      moby->CollData = *(int**)((u32)boltMobyClass + 0x10);
       moby->MClass = *(u8*)(0x0024a110 + 13);
       moby->AnimSeq = *(void**)((u32)boltMobyClass + 0x48);
       moby->AnimSeqId = 0;

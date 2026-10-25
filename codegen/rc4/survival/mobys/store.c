@@ -689,7 +689,7 @@ void storeUpdate(Moby *moby)
 		{
 			if (moby->State != STORE_STATE_DISABLED)
 			{
-#if !DEBUG
+#if RELEASE
 				storeSetState(moby, STORE_STATE_DISABLED);
 #endif
 			}

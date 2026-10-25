@@ -199,3 +199,9 @@ void messagerInit(void)
 
   DPRINTF("messager pvar size %d\n", sizeof(struct MessagerPVar));
 }
+
+//--------------------------------------------------------------------------
+void messagerCleanup(void)
+{
+  messagerDrawQueueCount = 0;
+}

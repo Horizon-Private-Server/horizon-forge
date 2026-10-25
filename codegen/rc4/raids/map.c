@@ -17,20 +17,19 @@
 #include "mover.h"
 #include "gate.h"
 #include "dummy.h"
+#include "pathfind.h"
 #include "controller.h"
 #include "hackerorb.h"
 #include "checkpoint.h"
-#include "mob.h"
+#include "mobs/mob.h"
 #include "game.h"
 #include "badges.h"
 #include "shared.h"
-#include "maputils.h"
+#include "utils.h"
 
 extern struct RaidsMapConfig MapConfig;
 
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
-
-#if RAIDS
 
 //--------------------------------------------------------------------------
 void mapOnMobUpdate(Moby* moby)
@@ -94,7 +93,11 @@ void mapOnMobSpawned(Moby* moby)
   }
 }
 
-#endif
+//--------------------------------------------------------------------------
+int mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)
+{
+  return 1;
+}
 
 //--------------------------------------------------------------------------
 int mapWhoKilledMeHook(Player* player, Moby* moby, int b)
@@ -240,6 +243,23 @@ void mapGetResurrectPoint(Player* player, VECTOR outPos, VECTOR outRot, int firs
   playerGetSpawnpoint(player, outPos, outRot, firstRes);
 
   playerSetHealth(player, player->MaxHealth);
+}
+
+//--------------------------------------------------------------------------
+int mapCreateMob(struct MobCreateArgs* args)
+{
+  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount)
+  {
+    DPRINTF("unhandled create spawnParamsIdx %d\n", args->SpawnParamsIdx);
+    return 0;
+  }
+  
+  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];
+  if (spawnParams->MobCreate)
+    return spawnParams->MobCreate(args);
+    
+  DPRINTF("unhandled create spawnParamsIdx %d\n", args->SpawnParamsIdx);
+  return 0;
 }
 
 //--------------------------------------------------------------------------

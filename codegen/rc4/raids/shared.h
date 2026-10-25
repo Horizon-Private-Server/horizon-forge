@@ -30,6 +30,7 @@ void mapOnMobDamaged(Moby* moby, struct MobDamageEventArgs* args);
 void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void mapOnMobDestroyed(Moby* moby);
 void mapOnMobSpawned(Moby* moby);
+int mapCreateMob(struct MobCreateArgs* args);
 struct Guber* mapGetGuber(Moby* moby);
 void mapHandleEvent(Moby* moby, GuberEvent* event);
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);

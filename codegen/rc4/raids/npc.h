@@ -2,7 +2,7 @@
 #define RAIDS_NPC_H
 
 #include "game.h"
-#include "mob.h"
+#include "mobs/mob.h"
 
 #define NPC_BASE_REACTION_TICKS						(0.25 * TPS)
 #define NPC_BASE_ATTACK_COOLDOWN_TICKS		(2 * TPS)
