@@ -1096,9 +1096,9 @@ int dzstrikerShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
-  // only send state updates at regular intervals, unless dying
+  // only send state updates at regular intervals, unless dying or flinching
   // or if we're entering/leaving the roaming state
-  if (action == DZSTRIKER_ACTION_DIE) return 1;
+  if (action == DZSTRIKER_ACTION_DIE || action == DZSTRIKER_ACTION_FLINCH || action == DZSTRIKER_ACTION_BIG_FLINCH) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_ROAM || action == DZSTRIKER_ACTION_ROAM) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_AIM || action == DZSTRIKER_ACTION_AIM) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_FIRE || action == DZSTRIKER_ACTION_FIRE) return 1;

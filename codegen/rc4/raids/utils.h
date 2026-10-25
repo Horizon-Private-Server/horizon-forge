@@ -13,6 +13,8 @@
 #include "game.h"
 #include "maputils.h"
 
+#define WRAP_DISTANCE(value, max) (((value % max) + max) % max)
+
 extern struct RaidsMapConfig MapConfig;
 
 void playEquipRejectSound(Player* player);

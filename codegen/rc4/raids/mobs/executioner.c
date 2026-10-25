@@ -891,9 +891,9 @@ int executionerShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
-  // only send state updates at regular intervals, unless dying
+  // only send state updates at regular intervals, unless dying or flinching
   // or if we're entering/leaving the roaming state
-  if (action == EXECUTIONER_ACTION_DIE) return 1;
+  if (action == EXECUTIONER_ACTION_DIE || action == EXECUTIONER_ACTION_FLINCH || action == EXECUTIONER_ACTION_BIG_FLINCH) return 1;
   if (pvars->MobVars.Action == EXECUTIONER_ACTION_ROAM || action == EXECUTIONER_ACTION_ROAM) return 1;
   if (pvars->MobVars.Action == EXECUTIONER_ACTION_FIRE || action == EXECUTIONER_ACTION_FIRE) return 1;
 

@@ -1059,9 +1059,9 @@ int leviathanShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
-  // only send state updates at regular intervals, unless dying
+  // only send state updates at regular intervals, unless dying or flinching
   // or if we're entering/leaving the roaming/laser/chase states
-  if (action == LEVIATHAN_ACTION_DIE) return 1;
+  if (action == LEVIATHAN_ACTION_DIE || action == LEVIATHAN_ACTION_FLINCH || action == LEVIATHAN_ACTION_BIG_FLINCH) return 1;
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_ROAM || action == LEVIATHAN_ACTION_ROAM) return 1;
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER || action == LEVIATHAN_ACTION_ATTACK_LASER) return 1;
   if (pvars->MobVars.Action == LEVIATHAN_ACTION_ATTACK_LASER_LOCKON || action == LEVIATHAN_ACTION_ATTACK_LASER_LOCKON) return 1;

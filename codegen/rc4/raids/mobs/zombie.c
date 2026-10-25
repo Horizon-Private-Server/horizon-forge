@@ -722,9 +722,9 @@ int zombieShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
-  // only send state updates at regular intervals, unless dying
+  // only send state updates at regular intervals, unless dying or flinching
   // or if we're entering/leaving the roaming state
-  if (action == ZOMBIE_ACTION_DIE) return 1;
+  if (action == ZOMBIE_ACTION_DIE || action == ZOMBIE_ACTION_FLINCH || action == ZOMBIE_ACTION_BIG_FLINCH) return 1;
   if (pvars->MobVars.Action == ZOMBIE_ACTION_ROAM || action == ZOMBIE_ACTION_ROAM) return 1;
 
   return 0;

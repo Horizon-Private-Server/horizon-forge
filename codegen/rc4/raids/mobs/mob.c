@@ -575,13 +575,14 @@ void mobResetMoveStep(Moby* moby)
 int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
 {
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  VECTOR delta, horizontalDelta, reflectedDelta;
+  VECTOR delta, horizontalDelta;
   VECTOR hitTo, hitFrom;
   VECTOR hitToEx, hitNormal, hitToExBack;
   VECTOR up = {0,0,0,0};
-  float collRadius = pvars->MobVars.Config.CollRadius;
   if (!pvars)
     return 0;
+
+  float collRadius = pvars->MobVars.Config.CollRadius;
 
   // get if we should check for collisions with all colliders
   // we have to alternate because when many mobs are in one space
@@ -627,7 +628,8 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
     vector_normalize(hitNormal, CollLine_Fix_GetHitNormal());
 
     // compute wall slope
-    pvars->MobVars.MoveVars.WallSlope = maxf(pvars->MobVars.MoveVars.WallSlope, getSignedSlope(horizontalDelta, hitNormal));
+    float slope = getSignedSlope(horizontalDelta, hitNormal);
+    pvars->MobVars.MoveVars.WallSlope = maxf(pvars->MobVars.MoveVars.WallSlope, slope);
     pvars->MobVars.MoveVars.HitWall = 1;
 
     // check if we hit another mob
@@ -641,26 +643,28 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
     vector_copy(MoveCheckHit, CollLine_Fix_GetHitPosition());
 #endif
 
-    // if the hit point is before to
-    // then we want to snap back before to
-    vector_subtract(to, CollLine_Fix_GetHitPosition(), up);
-    
-    // stop if hit steep wall
-    if (pvars->MobVars.MoveVars.WallSlope > (60 * MATH_DEG2RAD)) {
-      vector_projectonhorizontal(hitToEx, hitToEx);
-      vector_subtract(outputPos, to, hitToEx);
-#if DEBUGMOVE
-      DPRINTF("movecheck hit steep slope %f\n", pvars->MobVars.MoveVars.WallSlope * MATH_RAD2DEG);
-#endif
-      return 2;
+    // get tangent to surface
+    VECTOR hitTangent, hitBitangent, hitDir;
+    VECTOR hitRight;
+    vector_outerproduct(hitRight, horizontalDelta, up);
+    vector_outerproduct(hitTangent, hitNormal, hitRight);
+    vector_outerproduct(hitBitangent, hitNormal, hitTangent);
+    vector_lerp(hitDir, hitTangent, hitBitangent, fabsf(2 * slope) / MATH_PI);
+    vector_normalize(hitDir, hitDir);
+    float hitBitangentDotDelta = signf(vector_innerproduct(hitDir, delta));
+
+    // Snap before distant obstacles to avoid large sideways slides at high speeds.
+    VECTOR fromToHit;
+    vector_subtract(fromToHit, CollLine_Fix_GetHitPosition(), hitFrom);
+    float distToHit = vector_length(fromToHit);
+    if (distToHit > collRadius * 2.0f) {
+      vector_normalize(hitToEx, delta);
+      vector_scale(hitToEx, hitToEx, collRadius);
+      vector_subtract(outputPos, CollLine_Fix_GetHitPosition(), hitToEx);
+    } else {
+      vector_scale(hitDir, hitDir, hitBitangentDotDelta * vector_length(delta));
+      vector_add(outputPos, from, hitDir);
     }
-
-    //vector_projectonhorizontal(hitToEx, hitToEx);
-    vector_reflect(reflectedDelta, hitToEx, hitNormal);
-    //if (reflectedDelta[2] > delta[2])
-    //  reflectedDelta[2] = delta[2];
-
-    vector_add(outputPos, to, reflectedDelta);
 
 #if DEBUGMOVE
     vector_copy(MoveCheckFinal, outputPos);
@@ -729,6 +733,10 @@ void mobMove(Moby* moby)
     decTimerU8(&pvars->MobVars.MoveVars.WasStuckTicks);
   }
 
+  // If LastMoveStep hasn't been initialized yet, default to the current move step.
+  if (moveStep == 0 && pvars->MobVars.MoveVars.MoveStep > 0)
+    moveStep = pvars->MobVars.MoveVars.MoveStep;
+
 #if DEBUGMOVE
   VECTOR up = {0,0,1,0};
   if (pvars->MobVars.MoveVars.Target) {
@@ -748,7 +756,7 @@ void mobMove(Moby* moby)
 
     // reset move step
     moveStep = pvars->MobVars.MoveVars.MoveStep;
-    int rotatingDt = fabsf((mobMoveCheckCollideWithOtherMobsRotatingIndex - pvars->MobVars.Order) % MAX_MOBS_ALIVE) < 15;
+    int rotatingDt = WRAP_DISTANCE(mobMoveCheckCollideWithOtherMobsRotatingIndex - pvars->MobVars.Order, MAX_MOBS_ALIVE) < 15;
     if (!isOwner || !rotatingDt)
       moveStep = MOB_MOVE_SKIP_TICKS_LOWPRIORITY;
     
@@ -802,7 +810,7 @@ void mobMove(Moby* moby)
     if (mobMoveCheck(moby, nextPos, moby->Position, nextPos) == 1) {
       if (mobMoveCheck(moby, nextPos, moby->Position, nextPos)) {
         //vector_copy(nextPos, moby->Position); // don't move
-        pvars->MobVars.MoveVars.IsStuck = 1;
+        //pvars->MobVars.MoveVars.IsStuck = 1;
       }
     }
     
@@ -999,14 +1007,15 @@ float mobTurnTowards(Moby* moby, VECTOR towards, float turnSpeed)
 {
   VECTOR delta;
   
-  if (!moby || !moby->PVar)
+  if (!moby || !moby->PVar || fabsf(turnSpeed) < 0.001)
     return 0;
 
   vector_subtract(delta, towards, moby->Position);
   float targetYaw = atan2f(delta[1], delta[0]);
   float yawDelta = clampAngle(targetYaw - moby->Rotation[2]);
 
-  float radians = turnSpeed * MATH_DT;
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float radians = turnSpeed * pvars->MobVars.Config.Speed * MATH_DT;
   moby->Rotation[2] = clampAngle(moby->Rotation[2] + clamp(yawDelta, -radians, radians));
 
   return clampAngle(moby->Rotation[2] - targetYaw);
@@ -1017,7 +1026,7 @@ float mobTurnTowardsPredictive(Moby* moby, Moby* target, float turnSpeed, float 
 {
   VECTOR pos;
   
-  if (!moby || !moby->PVar)
+  if (!moby || !moby->PVar || fabsf(turnSpeed) < 0.001)
     return 0;
 
   // if target is player, use their velocity to predict their future position
@@ -1061,7 +1070,7 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
 
   Moby* target = pvars->MobVars.MoveVars.Target;
   if (target) {
-    targetRadius = (target->BSphere[3] / 1024) * 0.5;
+    targetRadius = (target->BSphere[3] / 1024) * 1;
   }
 
   // target velocity from rotation
@@ -1084,24 +1093,28 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
   // stop when at target
   if (targetSpeed > 0) {
     vector_subtract(fromToTarget, targetPosition, from);
+    vector_projectonhorizontal(fromToTarget, fromToTarget);
+    float distToTarget = vector_length(fromToTarget);
+    float min = pvars->MobVars.Config.CollRadius + targetRadius;
+
+    // Clamp horizontal velocity before it can cross the target's stopping distance.
+    vector_projectonhorizontal(hVelocity, velocity);
+    float speedThisFrame = vector_length(hVelocity);
+    if (speedThisFrame > 0 && distToTarget > min && speedThisFrame > (distToTarget - min)) {
+      float scale = (distToTarget - min) / speedThisFrame;
+      vector_scale(hVelocity, hVelocity, scale);
+      vector_projectonvertical(velocity, velocity);
+      vector_add(velocity, velocity, hVelocity);
+      return;
+    }
+
     vector_add(next, from, velocity);
     vector_subtract(nextToTarget, targetPosition, next);
     vector_projectonhorizontal(nextToTarget, nextToTarget);
     float distNextToTarget = vector_length(nextToTarget);
     
-    float min = pvars->MobVars.Config.CollRadius + targetRadius;
-    float max = min + targetRadius; //(pvars->MobVars.Config.AttackRadius + PLAYER_COLL_RADIUS) + (targetSpeed * 0.2);
-
     // if too close to target, stop
-    if (max > min && distNextToTarget < max && distNextToTarget > min) {
-      float amt = (distNextToTarget - min) / (max - min);
-      //vector_normalize(velocity, velocity);
-      vector_projectonhorizontal(hVelocity, velocity);
-      vector_scale(hVelocity, hVelocity, sqrtf(maxf(amt, 0)));
-      vector_projectonvertical(velocity, velocity);
-      vector_add(velocity, velocity, hVelocity);
-      return;
-    } else if (distNextToTarget < min) {
+    if (distNextToTarget < min) {
       vector_projectonvertical(velocity, velocity);
     }
   }
@@ -1194,7 +1207,7 @@ void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSp
   if (!isFlying) {
     vector_subtract(t, targetPosition, moby->Position);
     float dist = vector_length(t);
-    if (dist < 10.0) {
+    if (dist < 10.0 && fabsf(curveNearTargetDir) > 0.001) {
       mobAlterTarget(t2, moby, t, clamp(dist, 0, 10) * 0.3 * curveNearTargetDir);
       vector_add(t, t, t2);
     }
