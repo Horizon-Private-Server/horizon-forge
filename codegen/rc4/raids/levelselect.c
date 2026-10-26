@@ -18,7 +18,14 @@
 #include "window.h"
 #include "common.h"
 
+#ifndef RAIDS_VERSION
+#define RAIDS_VERSION (0)
+#endif
+
 extern struct RaidsState State;
+
+u8* levelselectCompatibleMaps = NULL;
+int levelselectMapCount = 0;
 
 LevelselectDrawState_t levelselectDrawState = {
   .SelectedIdx = 0,
@@ -34,6 +41,38 @@ char* levelselectMissionTypes[] = {
 };
 
 //--------------------------------------------------------------------------
+void levelselectRefreshMaps(void)
+{
+  if (levelselectCompatibleMaps) free(levelselectCompatibleMaps);
+  levelselectCompatibleMaps = NULL;
+  levelselectMapCount = 0;
+  levelselectDrawState.SelectedMapDef = NULL;
+  levelselectDrawState.SelectedMapFilename[0] = 0;
+  levelselectDrawState.NumPlanets = 0;
+  levelselectDrawState.MapStats.Invalid = 1;
+
+  if (!PATCH_INTEROP || !PATCH_INTEROP->GetCustomMapDefCount || !PATCH_INTEROP->GetCustomMapDef || !PATCH_INTEROP->ReadCustomMapExtraData) return;
+
+  int count = PATCH_INTEROP->GetCustomMapDefCount();
+  if (count <= 0) return;
+  levelselectCompatibleMaps = malloc(count);
+  if (!levelselectCompatibleMaps) return;
+  levelselectMapCount = count;
+
+  int i;
+  for (i = 0; i < count; ++i) {
+    CustomMapDef_t* def = PATCH_INTEROP->GetCustomMapDef(i);
+    int version = 0;
+    levelselectCompatibleMaps[i] = def && def->ForcedCustomModeId == CUSTOM_MODE_RAIDS
+      && (def->CustomModeExtraDataMask & (1 << CUSTOM_MODE_RAIDS))
+      && PATCH_INTEROP->ReadCustomMapExtraData(def->Filename, &version, sizeof(version), CUSTOM_MODE_RAIDS) == sizeof(version)
+      && version == RAIDS_VERSION;
+    levelselectDrawState.NumPlanets += levelselectCompatibleMaps[i];
+  }
+  if (levelselectDrawState.SelectedIdx >= levelselectDrawState.NumPlanets) levelselectDrawState.SelectedIdx = 0;
+}
+
+//--------------------------------------------------------------------------
 void levelselectOpen(void)
 {
   struct RaidsState* state = MapConfig.State;
@@ -43,7 +82,7 @@ void levelselectOpen(void)
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
 
   state->MenuOpen = RAIDS_CUSTOM_MENU_LEVELSELECT;
-  levelselectDrawState.SelectedMapFilename[0] = 0; // reset
+  levelselectRefreshMaps();
   padDisableInput();
 }
 
@@ -55,13 +94,17 @@ void levelselectClose(void)
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_LEVELSELECT) return;
 
   state->MenuOpen = RAIDS_CUSTOM_MENU_NONE;
+  if (levelselectCompatibleMaps) free(levelselectCompatibleMaps);
+  levelselectCompatibleMaps = NULL;
+  levelselectMapCount = 0;
   padEnableInput();
 }
 
 //--------------------------------------------------------------------------
 void levelselectGo(LevelselectDrawState_t* drawState)
 {
-  if (hasPendingWorldHop() || !gameAmIHost() || !drawState || !drawState->SelectedMapFilename[0]) {
+  if (hasPendingWorldHop() || !gameAmIHost() || !drawState || !drawState->SelectedMapDef
+      || !drawState->SelectedMapFilename[0] || drawState->SelectedMapExtraData.RaidsVersion != RAIDS_VERSION) {
     playEquipRejectSound(playerGetFromSlot(0));
     return;
   }
@@ -215,21 +258,23 @@ int levelselectDrawMapList(Window_t* drawWindow, int selectedIdx, CustomMapDef_t
 
   if (drawItemsFrom > selectedIdx) drawItemsFrom = selectedIdx;
 
-  if (PATCH_INTEROP && PATCH_INTEROP->GetCustomMapDefCount && PATCH_INTEROP->GetCustomMapDef) {
-    if (PATCH_INTEROP->GetCustomMapDefCount) totalMapDefCount = PATCH_INTEROP->GetCustomMapDefCount();
+  *selectedMapDef = NULL;
+  if (levelselectCompatibleMaps && PATCH_INTEROP && PATCH_INTEROP->GetCustomMapDef) {
+    totalMapDefCount = levelselectMapCount;
 
     i = 0;
     for (; i < totalMapDefCount; ++i) {
       if (!windowHasArea(drawWindow)) break;
       
       Window_t windowLine;
+      if (!levelselectCompatibleMaps[i]) continue;
       CustomMapDef_t* def = PATCH_INTEROP->GetCustomMapDef(i);
       if (!def) continue;
       if (def->ForcedCustomModeId != CUSTOM_MODE_RAIDS) continue;
       if (!(def->CustomModeExtraDataMask & (1<<CUSTOM_MODE_RAIDS))) continue;
       //if (strncmp(def->Filename, RAIDS_HUB_MAPFILENAME, sizeof(def->Filename)) == 0) continue;
       if (!init && MapConfig.State && def == MapConfig.State->CurrentMapDef) levelselectDrawState.SelectedIdx = numMaps;
-      if (i < drawItemsFrom) { ++numMaps; continue; }
+      if (numMaps < drawItemsFrom) { ++numMaps; continue; }
 
       int missionType = def->Subsort / 10000;
       if (lastMissionType != missionType) {
@@ -534,6 +579,7 @@ void levelselectHandleInput(void)
     if (levelselectDrawState.SelectedIdx < 0) levelselectDrawState.SelectedIdx = levelselectDrawState.NumPlanets - 1;
   } else if (PATCH_INTEROP && PATCH_INTEROP->RefreshCustomMapDefs && padGetButtonDown(0, PAD_SQUARE) > 0) {   // REFRESH
     PATCH_INTEROP->RefreshCustomMapDefs();
+    levelselectRefreshMaps();
     levelselectDrawState.InputCooldownTicks = LEVELSELECT_INPUT_COOLDOWN;
   } else if (!levelselectDrawState.MapStats.Invalid && levelselectDrawState.MapStats.ChallengesCount > 0 && padGetButtonDown(0, PAD_CIRCLE) > 0) {   // CHALLENGES
     levelselectDrawState.ChallengesDialogSelectedIdx = 0;
@@ -568,7 +614,7 @@ void levelselectStart(void)
 
   decTimerU32(&levelselectDrawState.InputCooldownTicks);
 
-  if (gameHasEnded() || !isInGame() || gameIsAnyStartMenuOpen()) {
+  if (gameHasEnded() || !isInGame() || gameIsAnyStartMenuOpen() || hasPendingWorldHop()) {
     levelselectClose();
     return;
   }

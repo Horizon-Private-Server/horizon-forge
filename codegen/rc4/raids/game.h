@@ -50,12 +50,7 @@
 
 #define MOB_AUTO_DIRTY_COOLDOWN_TICKS			    (60 * 5)
 
-#define MOB_BASE_DAMAGE										    (10)
-#define MOB_BASE_DAMAGE_SCALE                 (0.03*1)
 #define MOB_BASE_SPEED											  (3)
-#define MOB_BASE_SPEED_SCALE                  (0.05*1)
-#define MOB_BASE_HEALTH										    (30)
-#define MOB_BASE_HEALTH_SCALE                 (0.05*1)
 #define MOB_JUMP_MOVE_SPEED                   (10)
 
 #define MAX_MOB_AMMO_DROPS                    (10)
@@ -197,7 +192,7 @@ typedef void (*PushSnack_func)(char * string, int ticksAlive, int localPlayerIdx
 typedef void (*PushDamageBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int isCrit);
 typedef long (*GetAmmoRefillCost_func)(Player* player);
 typedef void (*BeginWorldHop_func)(char* mapFilename, int difficulty, int cost, int delayMs);
-typedef void (*PopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobConfig* config, int spawnParamsIdx, int isBaseConfig, float difficultyMult);
+typedef void (*PopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobCreateArgs* args);
 typedef void (*RegisterNpc_func)(Moby* moby);
 typedef int (*OnGuberEvent_func)(Moby* moby, GuberEvent* event);
 typedef struct Guber* (*OnGetGuber_func)(Moby* moby);

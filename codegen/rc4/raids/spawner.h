@@ -50,7 +50,9 @@ struct SpawnerMobParams
 {
   int MobParamIdx;
   float Probability;
-  float DifficultyMultiplier;
+  float HealthMultiplier;
+  float DamageMultiplier;
+  float SpeedMultiplier;
   int MaxCanSpawnOrUnlimited;
   int MaxCanAliveAtOnce;
   int CooldownTicks;

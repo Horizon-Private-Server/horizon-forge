@@ -242,16 +242,13 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
     .Behavior = mobParams->MobBehavior,
     .Parent = moby,
     .Userdata = mobParamsIdx,
-    .DifficultyMult = mobParams->DifficultyMultiplier,
+    .HealthMultiplier = mobParams->HealthMultiplier,
+    .DamageMultiplier = mobParams->DamageMultiplier,
+    .SpeedMultiplier = mobParams->SpeedMultiplier,
+    .DifficultyStars = spawnerGetDifficultyStars(moby),
     .Config = &mobSpawnParams->Config,
     .SpawnFromUID = fromUid,
   };
-
-  // if we're in an open world
-  // use zone to determine difficulty mult
-  if (missionIsOpenWorld()) {
-    args.DifficultyMult *= Difficulties[spawnerGetDifficultyStars(moby)];
-  }
 
   if (spawnerGetRandomSpawnPoint(moby, mobParamsIdx, args.Position, &args.Yaw)) {
     spawnerRequestSpawn(moby, &args);
@@ -722,7 +719,9 @@ void spawnerOnGuberCreated(Moby* moby)
     for (i = 0; i < SPAWNER_MAX_MOB_TYPES; ++i) {
       DLOG(moby, " [%d].MobParamIdx=%d\n", i, pvars->SpawnableMobParam[i].MobParamIdx);
       DLOG(moby, " [%d].Probability=%f\n", i, pvars->SpawnableMobParam[i].Probability);
-      DLOG(moby, " [%d].DifficultyMultiplier=%f\n", i, pvars->SpawnableMobParam[i].DifficultyMultiplier);
+      DLOG(moby, " [%d].HealthMultiplier=%f\n", i, pvars->SpawnableMobParam[i].HealthMultiplier);
+      DLOG(moby, " [%d].DamageMultiplier=%f\n", i, pvars->SpawnableMobParam[i].DamageMultiplier);
+      DLOG(moby, " [%d].SpeedMultiplier=%f\n", i, pvars->SpawnableMobParam[i].SpeedMultiplier);
       DLOG(moby, " [%d].MaxCanSpawnOrUnlimited=%d\n", i, pvars->SpawnableMobParam[i].MaxCanSpawnOrUnlimited);
     }
   #endif

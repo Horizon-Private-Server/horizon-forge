@@ -11,6 +11,7 @@
 #include <libdl/game.h>
 #include <libdl/collision.h>
 #include <libdl/ui.h>
+#include <libdl/hud.h>
 #include <libdl/utils.h>
 #include <libdl/spawnpoint.h>
 #include "spawner.h"
@@ -29,6 +30,28 @@
 
 extern struct RaidsMapConfig MapConfig;
 
+typedef struct HudBoss_CommonData
+{ // 0x38
+	/* 0x00 */ int iShown;
+	/* 0x04 */ int iState;
+	/* 0x08 */ float fHP;
+	/* 0x0c */ float fDisplayHP;
+	/* 0x10 */ unsigned int iColor;
+	/* 0x14 */ unsigned int iColor2;
+	/* 0x18 */ int iIcon;
+	/* 0x1c */ float fHideX;
+	/* 0x20 */ float fShown;
+	/* 0x24 */ char bShown;
+	/* 0x25 */ char bFancy;
+	/* 0x28 */ int iDelay;
+	/* 0x2c */ char bUpdate;
+	/* 0x30 */ float fPulse;
+	/* 0x34 */ int iFillMode;
+} HudBoss_CommonData_t;
+
+Moby* mapBossMoby = NULL;
+float mapBossLastHealth = -1;
+
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
 
 //--------------------------------------------------------------------------
@@ -37,6 +60,8 @@ void mapOnMobUpdate(Moby* moby)
   if (!moby || !moby->PVar) return;
 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  if (mapBossMoby == moby && (pvars->MobVars.Health <= 0 || pvars->MobVars.Respawn))
+    mapBossMoby = NULL;
   if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
     spawnerOnChildMobUpdate(moby->PParent, moby, pvars->MobVars.Userdata);
   }
@@ -74,6 +99,8 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource sourc
 //--------------------------------------------------------------------------
 void mapOnMobDestroyed(Moby* moby)
 {
+  if (mapBossMoby == moby)
+    mapBossMoby = NULL;
   if (!moby || !moby->PVar) return;
 
 	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
@@ -349,6 +376,54 @@ void mapStart(void)
 }
 
 //--------------------------------------------------------------------------
+void mapUpdateBossMeter(void)
+{
+  int i;
+  HudBoss_CommonData_t* hudBossData = (HudBoss_CommonData_t*)0x00310400;
+
+  // Keep the current boss until it dies, then select the next boss in mob order.
+  if (!mapBossMoby) {
+    Moby* moby = mobyListGetStart();
+    Moby* end = mobyListGetEnd();
+    int order = 0xFF;
+    for (; moby < end; ++moby) {
+      if (mobyIsDestroyed(moby) || !mobyIsMob(moby) || mobyIsNpc(moby)) continue;
+      struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+      if (!mobIsBoss(moby) || pvars->MobVars.Health <= 0 || pvars->MobVars.Destroy || pvars->MobVars.Respawn) continue;
+      if ((u8)pvars->MobVars.Order <= order) {
+        mapBossMoby = moby;
+        order = (u8)pvars->MobVars.Order;
+      }
+    }
+  }
+
+  // show/hide boss meter
+  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
+    PlayerHUDFlags* hud = hudGetPlayerFlags(i);
+    if (hud)
+      hud->Flags.Meter = mapBossMoby ? 1 : 0;
+  }
+
+  if (!mapBossMoby)
+    return;
+
+  struct MobPVar* pvars = (struct MobPVar*)mapBossMoby->PVar;
+  float health = pvars->MobVars.Health / pvars->MobVars.Config.MaxHealth;
+
+  // update meter and icon
+  hudBossData->fHP = health;
+  if (mapBossLastHealth != health) {
+    mapBossLastHealth = health;
+    hudBossData->bUpdate = 1;
+  }
+
+  u32 id = hudPanelGetElement((void*)0x222b18, 6);
+  struct HUDWidgetRectangleObject* bossImgRectObject = (struct HUDWidgetRectangleObject*)hudCanvasGetObject(hudGetCanvas(4), id);
+  if (bossImgRectObject)
+    ((void (*)(struct HUDWidgetRectangleObject*, int))0x005ca3e8)(bossImgRectObject, mobGetSpawnParams(mapBossMoby)->BossTexUid);
+}
+
+//--------------------------------------------------------------------------
 void mapTick(void)
 {
   mapApplyFixes();
@@ -357,6 +432,7 @@ void mapTick(void)
 //--------------------------------------------------------------------------
 void mapTickEnd(void)
 {
+  mapUpdateBossMeter();
 }
 
 //--------------------------------------------------------------------------

@@ -5,37 +5,44 @@
 
 #define DZSTRIKER_RENDER_COST                    (300)
 
-#define DZSTRIKER_BASE_REACTION_TICKS						(0.25 * TPS)
-#define DZSTRIKER_BASE_ATTACK_COOLDOWN_TICKS			(2 * TPS)
-#define DZSTRIKER_BASE_EXPLODE_RADIUS						(5)
-#define DZSTRIKER_MELEE_HIT_RADIUS								(0.5)
-#define DZSTRIKER_EXPLODE_HIT_RADIUS							(5)
-#define DZSTRIKER_MELEE_ATTACK_RADIUS						(5)
-
-#define DZSTRIKER_TARGET_KEEP_CURRENT_FACTOR     (3)
-
 #define DZSTRIKER_MAX_WALKABLE_SLOPE             (40 * MATH_DEG2RAD)
-#define DZSTRIKER_BASE_STEP_HEIGHT								(2)
 #define DZSTRIKER_TURN_RADIANS_PER_SEC           (90 * MATH_DEG2RAD)
 #define DZSTRIKER_TURN_AIR_RADIANS_PER_SEC       (45 * MATH_DEG2RAD)
 #define DZSTRIKER_MOVE_ACCELERATION              (25)
 #define DZSTRIKER_MOVE_AIR_ACCELERATION          (5)
 
-#define DZSTRIKER_ANIM_ATTACK_TICKS							(30)
 #define DZSTRIKER_FLINCH_COOLDOWN_TICKS					(60 * 7)
 #define DZSTRIKER_KNOCKBACK_MULTIPLIER				    (1.5)
 #define DZSTRIKER_ACTION_COOLDOWN_TICKS					(30)
-#define DZSTRIKER_RESPAWN_AFTER_TICKS						(60 * 30)
-#define DZSTRIKER_BASE_COLL_RADIUS								(1.0)
-#define DZSTRIKER_MAX_COLL_RADIUS								(4)
-#define DZSTRIKER_AMBSND_MIN_COOLDOWN_TICKS    	(60 * 2)
-#define DZSTRIKER_AMBSND_MAX_COOLDOWN_TICKS    	(60 * 3)
 #define DZSTRIKER_FLINCH_PROBABILITY             (1.0)
 #define DZSTRIKER_FLINCH_PROBABILITY_PWR_FACTOR  (0.1)
 
-#define DZSTRIKER_PRIMARY_COLOR                  (0x00464443)
-#define DZSTRIKER_GLOW_COLOR                     (0x80202020)
-#define DZSTRIKER_LOD_COLOR                      (0x00808080)
+enum DZStrikerAttackActions
+{
+  DZSTRIKER_ATTACK_ACTION_MELEE,
+  DZSTRIKER_ATTACK_ACTION_FIRE,
+  DZSTRIKER_ATTACK_ACTION_COUNT,
+};
+
+enum DZStrikerBehaviorId
+{
+	DZSTRIKER_BEHAVIOR_NORMAL,
+	DZSTRIKER_BEHAVIOR_HOLD_POSITION,
+	DZSTRIKER_BEHAVIOR_FLY,
+};
+
+enum DZStrikerParameters
+{
+  /* DZSTRIKER_ATTACK_ACTION_MELEE */
+  DZSTRIKER_PARAM_MELEE_DAMAGE = 0,
+  DZSTRIKER_PARAM_MELEE_SPEED = 1,
+
+  /* DZSTRIKER_ATTACK_ACTION_FIRE */
+  DZSTRIKER_PARAM_FIRE_DAMAGE_MULTIPLIER = 2,
+  DZSTRIKER_PARAM_FIRE_PROJECTILE_SPEED = 3,
+  DZSTRIKER_PARAM_FIRE_INTERVAL = 4,
+  DZSTRIKER_PARAM_FIRE_MAX_DISTANCE = 5,
+};
 
 enum DZStrikerTorsoAnimId
 {
@@ -125,16 +132,11 @@ enum DZStrikerAction
 	DZSTRIKER_ACTION_FIRE,
 };
 
-enum DZStrikerBehaviorId
-{
-	DZSTRIKER_BEHAVIOR_NORMAL,
-	DZSTRIKER_BEHAVIOR_HOLD_POSITION,
-	DZSTRIKER_BEHAVIOR_FLY,
-};
-
-extern struct MobVTable DZStrikerVTable;
-
 typedef struct DZStrikerMobVars {
+  u32 ActionCooldownTicks[DZSTRIKER_ATTACK_ACTION_COUNT];
+  u32 ActionQueuedForTicks[DZSTRIKER_ATTACK_ACTION_COUNT];
+  u32 ShotCooldownTicks;
+
   VECTOR HoldPosition;
   Moby* TorsoMoby;
   float TorsoRotation[3];
@@ -157,6 +159,8 @@ typedef struct DZStrikerTorsoPVar {
 	struct TargetVars TargetVars;
 	struct FlashVars FlashVars;
 } DZStrikerTorsoPVar_t;
+
+extern struct MobVTable DZStrikerVTable;
 
 int dzstrikerCreate(struct MobCreateArgs* args);
 

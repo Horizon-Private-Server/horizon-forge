@@ -76,7 +76,7 @@ int stalkerturretCreate(struct MobCreateArgs* args)
 	if (guberEvent)
 	{
     if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args->Config, args->SpawnParamsIdx, args->SpawnFromUID == -1, args->DifficultyMult);
+      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args);
     }
 
 		u8 random = (u8)rand(100);
@@ -124,6 +124,9 @@ void stalkerturretPreUpdate(Moby* moby)
   turretVars->TargetCacheThisFrame = 0;
 
   mobPreUpdate(moby);
+
+  mobTickActionCooldowns(moby, STALKERTURRET_ATTACK_ACTION_COUNT, turretVars->ActionCooldownTicks, turretVars->ActionQueuedForTicks);
+  if (turretVars->ShotCooldownTicks) --turretVars->ShotCooldownTicks;
 }
 
 //--------------------------------------------------------------------------
@@ -149,16 +152,16 @@ void stalkerturretPostUpdate(Moby* moby)
 
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
-    u32 color = colorLerp(STALKERTURRET_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
+    u32 color = colorLerp(mobGetSpawnParams(moby)->BaseColor, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
     if (turretVars->BaseMoby) turretVars->BaseMoby->PrimaryColor = color;
     if (turretVars->TurretMoby) turretVars->TurretMoby->PrimaryColor = color;
   } else if (pvars->MobVars.FreezeEffectActiveTicks > 0) {
-    u32 color = colorLerp(STALKERTURRET_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
+    u32 color = colorLerp(mobGetSpawnParams(moby)->BaseColor, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
     if (turretVars->BaseMoby) turretVars->BaseMoby->PrimaryColor = color;
     if (turretVars->TurretMoby) turretVars->TurretMoby->PrimaryColor = color;
   } else {
-    if (turretVars->BaseMoby) turretVars->BaseMoby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
-    if (turretVars->TurretMoby) turretVars->TurretMoby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
+    if (turretVars->BaseMoby) turretVars->BaseMoby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
+    if (turretVars->TurretMoby) turretVars->TurretMoby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   }
 }
 
@@ -168,8 +171,8 @@ void stalkerturretPostDraw(Moby* moby)
   if (!moby || !moby->PVar)
     return;
     
-  u32 color = STALKERTURRET_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, STALKERTURRET_SUBSKELETON_JOINT_0);
+  u32 color = mobGetSpawnParams(moby)->SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, STALKERTURRET_SUBSKELETON_JOINT_0);
 }
 
 //--------------------------------------------------------------------------
@@ -193,8 +196,8 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   // targeting
 	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
   
-  turretVars->GatlingDelay1 = STALKERTURRET_SHOT_ALTERNATE_DELAY;
-  turretVars->GatlingDelay2 = STALKERTURRET_SHOT_ALTERNATE_DELAY;
+  turretVars->GatlingDelay1 = mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY);
+  turretVars->GatlingDelay2 = mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY);
   turretVars->Team = params->TeamPalette;
   
 #if MOB_DAMAGETYPES
@@ -218,8 +221,8 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   *(char*)(mobyClass + 0x46) = 5;
 
   // colors by mob type
-	moby->GlowRGBA = STALKERTURRET_GLOW_COLOR;
-	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
+	moby->GlowRGBA = mobGetSpawnParams(moby)->GlowColor;
+	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   moby->ModeBits2 |= (0x80 + (8 * params->TeamPalette)) << 8;
 
   // configure turret base moby
@@ -229,6 +232,7 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
     baseMoby->Rotation[2] = moby->Rotation[2];
     baseMoby->Scale = 0.1 * scale;
     baseMoby->PUpdate = NULL;
+    baseMoby->GlowRGBA = mobGetSpawnParams(moby)->GlowColor;
     baseMoby->DrawDist = moby->DrawDist;
     baseMoby->UpdateDist = moby->UpdateDist;
     baseMoby->ModeBits2 |= (0x80 + (8 * (params->TeamPalette ? TEAM_RED : TEAM_BLUE))) << 8;
@@ -241,6 +245,10 @@ void stalkerturretOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromU
   pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
   vector_copy(pvars->MobVars.MoveVars.TargetPosition, moby->Position);
   mobyAnimTransition(moby, 0, 0, 0);
+
+  memset(turretVars->ActionCooldownTicks, 0, sizeof(turretVars->ActionCooldownTicks));
+  memset(turretVars->ActionQueuedForTicks, 0, sizeof(turretVars->ActionQueuedForTicks));
+  turretVars->ShotCooldownTicks = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -250,7 +258,7 @@ void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSour
     return;
     
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = STALKERTURRET_PRIMARY_COLOR;
+	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
   //mobBlowCorn(moby);
@@ -302,8 +310,7 @@ void stalkerturretOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int stalkerturretOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -359,7 +366,7 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
     vector_normalize(dir, dir);
     VECTOR planarForward;
     vector_projectonplane(planarForward, dir, moby->M2_03);
-    if (acosf(vector_innerproduct(planarForward, moby->M0_03)) < STALKERTURRET_SHOT_LOCK_ON_WITHIN_RAD) {
+    if (acosf(vector_innerproduct(planarForward, moby->M0_03)) < (mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_LOCK_ANGLE) * MATH_DEG2RAD)) {
       mobGetTargetCenter(target, to);
       vector_subtract(vel, to, from);
       vector_normalize(vel, vel);
@@ -373,10 +380,10 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
   // move shot from forward
   vector_scale(offset, &m[0], 0.5);
   vector_add(from, from, offset);
-  //vector_scale(vel, vel, 1.0); // speed
+  vector_scale(vel, vel, mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_PROJECTILE_SPEED));
 
   // fire shot
-  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4.0, pvars->MobVars.Config.Damage, from, vel, turretVars->TurretMoby, 1, 0x222124, -1, 0);
+  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4.0, pvars->MobVars.Config.Damage * mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_PROJECTILE_DAMAGE), from, vel, turretVars->TurretMoby, 1, 0x222124, -1, 0);
   if (shotMoby) {
     ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0); // shot type
     ((void (*)(Moby*, int))0x0045d788)(shotMoby, turretVars->Team); // shot color
@@ -513,7 +520,7 @@ int stalkerturretGetPreferredAction(Moby* moby, int * delayTicks)
     VECTOR dt;
     vector_subtract(dt, target->Position, moby->Position);
     float distSqr = vector_sqrmag(dt);
-    float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+    float rangedAttackRadiusSqr = powf(mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_MAX_DISTANCE), 2);
     if (distSqr <= rangedAttackRadiusSqr && stalkerturretCanAttack(pvars)) {
       if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
       return STALKERTURRET_ACTION_ATTACK;
@@ -647,12 +654,12 @@ void stalkerturretDoAction(Moby* moby)
 
         if (stalkerturretCanShoot(pvars) && turretVars->GatlingDelay1 == 0) {
           stalkerturretFireShot(moby, target, 3);
-          turretVars->GatlingDelay1 = STALKERTURRET_SHOT_ALTERNATE_DELAY - (2 * MapConfig.State->DifficultyStars);
+          turretVars->GatlingDelay1 = (u8)clamp(mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY) - (2 * MapConfig.State->DifficultyStars), 0, 255);
           turretVars->GatlingActive = !turretVars->GatlingActive;
         }
         if (stalkerturretCanShoot(pvars) && turretVars->GatlingDelay2 == 0) {
           stalkerturretFireShot(moby, target, 8);
-          turretVars->GatlingDelay2 = STALKERTURRET_SHOT_ALTERNATE_DELAY - (2 * MapConfig.State->DifficultyStars);
+          turretVars->GatlingDelay2 = (u8)clamp(mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY) - (2 * MapConfig.State->DifficultyStars), 0, 255);
           turretVars->GatlingActive = !turretVars->GatlingActive;
         }
       }
@@ -662,8 +669,8 @@ void stalkerturretDoAction(Moby* moby)
 
   // update gatling speed
   float targetGatlingSpeed = 0;
-  if (stalkerturretIsAttacking(moby)) targetGatlingSpeed = STALKERTURRET_MAX_GATLING_SPEED;
-  turretVars->GatlingSpeed = lerpf(turretVars->GatlingSpeed, targetGatlingSpeed, 1 - powf(MATH_E, -STALKERTURRET_GATLING_ACCELERATION * MATH_DT));
+  if (stalkerturretIsAttacking(moby)) targetGatlingSpeed = mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_GATLING_MAX_SPEED);
+  turretVars->GatlingSpeed = lerpf(turretVars->GatlingSpeed, targetGatlingSpeed, 1 - powf(MATH_E, -mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_GATLING_ACCELERATION) * MATH_DT));
   turretVars->GatlingRotation = clampAngle(turretVars->GatlingRotation + (turretVars->GatlingSpeed * MATH_DT));
 
   pvars->MobVars.CurrentActionForTicks ++;
@@ -679,6 +686,13 @@ void stalkerturretDoDamage(Moby* moby, float radius, float amount, int damageFla
 void stalkerturretForceLocalAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  StalkerTurretMobVars_t* attackVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
+  int attackAction = action == STALKERTURRET_ACTION_ATTACK ? STALKERTURRET_ATTACK_ACTION_FIRE : -1;
+  if (attackAction >= 0) {
+    attackVars->ActionCooldownTicks[attackAction] = mobGetActionCooldownTicks(moby, attackAction);
+    attackVars->ActionQueuedForTicks[attackAction] = 0;
+  }
   float difficulty = 1;
 
   if (MapConfig.State)
@@ -808,14 +822,14 @@ int stalkerturretIsIdling(struct MobPVar* pvars)
 //--------------------------------------------------------------------------
 int stalkerturretCanAttack(struct MobPVar* pvars)
 {
-	return pvars->MobVars.AttackCooldownTicks == 0;
+	return pvars->MobVars.AttackCooldownTicks == 0 && ((StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr)->ActionQueuedForTicks[STALKERTURRET_ATTACK_ACTION_FIRE];
 }
 
 //--------------------------------------------------------------------------
 int stalkerturretCanShoot(struct MobPVar* pvars)
 {
   StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;
-	return turretVars->GatlingSpeed >= STALKERTURRET_SHOOT_AT_GATLING_SPEED;
+  return turretVars->GatlingSpeed >= mobGetFloat(turretVars->TurretMoby, STALKERTURRET_PARAM_FIRE_GATLING_FIRE_SPEED);
 }
 
 //--------------------------------------------------------------------------

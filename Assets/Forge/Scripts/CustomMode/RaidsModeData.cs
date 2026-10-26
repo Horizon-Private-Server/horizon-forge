@@ -9,7 +9,10 @@ using UnityEngine;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int RAIDS_VERSION = 1;
+    public static readonly int RAIDS_VERSION = 2;
+    public const int MAX_ACTIONS_PER_MOB = 8;
+    public const int MAX_PARAMS_PER_MOB = 16;
+    [NonSerialized] private SpriteContainer _buildSprites;
 
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int NPC_OCLASS = 0x4006;
@@ -83,6 +86,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     {
         if (GetMobs().Count > 16)
             throw new InvalidOperationException("Raids supports at most 16 mob definitions, including disabled mobs. No definitions have been removed.");
+        foreach (var mob in GetMobs().Where(x => x.isActiveAndEnabled)) mob.ValidateConfig();
     }
 
     public Dictionary<string, long> GetMobOptions(bool asMask = false, int maxCount = int.MaxValue, bool includeNone = false)
@@ -162,6 +166,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
 
         state.LDFlags.Add("-DRAIDS");
+        state.LDFlags.Add($"-DRAIDS_VERSION={RAIDS_VERSION}");
         var mobTypes = enabledMobs.Select(x => x.Mob).Distinct();
         foreach (var mobType in mobTypes)
             state.LDFlags.Add($"-DMOB_{mobType.ToString().ToUpper()}");
@@ -289,13 +294,22 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public void Configure(BuildState state, BuildStateStage stage)
     {
+        if (stage == BuildStateStage.Cleanup)
+        {
+            if (_buildSprites) DestroyImmediate(_buildSprites.gameObject);
+            _buildSprites = null;
+            return;
+        }
         if (stage != BuildStateStage.BeforeBuild) return;
         ValidateDefinitionLimits();
+        PrepareMobSprites(state);
 
         state.MobyOClasses.Add(8309); // node base (for capture sound)
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
         state.MobyOClasses.Add(13);   // bolt (for gold bolt)
+        if (GetMobs().Any(x => x.isActiveAndEnabled && x.Mob == RaidsMob.Reactor))
+            state.MobyOClasses.Add(0x01F8); // Reactor trailshot
 
         // add mob oclasses
         var mobConfig = RaidsMobsScriptableObject.Load();
@@ -323,9 +337,50 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     }
 
+    private void PrepareMobSprites(BuildState state)
+    {
+        if (_buildSprites) DestroyImmediate(_buildSprites.gameObject);
+        _buildSprites = null;
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var sprites = mapConfig.DLSprites.Count > 0 ? mapConfig.GetSpriteDefs(RCVER.DL).ToList() : new List<SpriteDef>();
+        var added = new List<SpriteDef>();
+        foreach (var mob in GetMobs().Where(x => x.isActiveAndEnabled))
+        {
+            var variant = mob.GetDefaults().Variants[mob.Variant];
+            Add(variant.SpriteTexture, variant.SpriteTextureTint);
+            if (mob.IsBoss) Add(variant.BossTexture, variant.BossTextureTint);
+        }
+        if (added.Count == 0) return;
+        if (mapConfig.DLSprites.Count == 0)
+            throw new InvalidOperationException("Raids mob sprites require the map's base DL sprite bank.");
+        _buildSprites = new GameObject("Raids Build Sprites").AddComponent<SpriteContainer>();
+        _buildSprites.transform.SetParent(transform, false);
+        _buildSprites.gameObject.hideFlags = HideFlags.HideAndDontSave;
+        _buildSprites.RacVersion = state.RacVersion;
+        _buildSprites.Sprites = added;
+
+        void Add(Texture2D texture, Color tint)
+        {
+            if (!texture || sprites.Concat(added).Any(x => x.m_Texture == texture && (x.m_Tint ?? Color.white) == tint)) return;
+            var uid = sprites.Concat(added).Select(x => (int)x.m_Uid).DefaultIfEmpty(0).Max() + 1;
+            if (uid > ushort.MaxValue) throw new InvalidOperationException("No sprite UIDs remain for raids mob textures.");
+            added.Add(new SpriteDef
+            {
+                m_Bank = SpriteDef.SpriteDefBank.Bank1,
+                m_Texture = texture,
+                m_TextureSizeOverride = SpriteDef.SpriteTextureSize._64,
+                m_Tint = tint,
+                m_Uid = (ushort)uid,
+                m_Unknown = 1
+            });
+        }
+    }
+
     string GetConfigContents()
     {
-        var mobs = GetMobs();
+        var mobs = GetMobs().Where(x => x.isActiveAndEnabled).ToList();
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var spriteDefs = mapConfig.DLSprites.Count > 0 ? mapConfig.GetSpriteDefs(RCVER.DL) : Array.Empty<SpriteDef>();
         var zones = GetZones();
         var contractRules = GetContractRules();
         var sb = new StringBuilder();
@@ -338,9 +393,28 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("extern struct RaidsMapConfig MapConfig;");
         sb.AppendLine("");
 
+        sb.AppendLine($"struct MobActionConfig mobActionConfigs[][RAIDS_DIFFICULTY_COUNT][MOB_MAX_ACTIONS_PER_MOB] = {{");
+        foreach (var mob in mobs)
+        {
+            sb.AppendLine("{");
+            for (var difficulty = 0; difficulty < 5; ++difficulty)
+                sb.AppendLine("{\n" + mob.GetActionDefs(difficulty) + "},");
+            sb.AppendLine("},");
+        }
+        sb.AppendLine("};");
+        sb.AppendLine($"union MobParameter mobParameters[][RAIDS_DIFFICULTY_COUNT][MOB_MAX_PARAMS_PER_MOB] = {{");
+        foreach (var mob in mobs)
+        {
+            sb.AppendLine("{");
+            for (var difficulty = 0; difficulty < 5; ++difficulty)
+                sb.AppendLine("{\n" + mob.GetParameterDefs(difficulty) + "},");
+            sb.AppendLine("},");
+        }
+        sb.AppendLine("};");
+
         sb.AppendLine("struct MobSpawnParams mobSpawnParams[] = {");
-        foreach (var mob in mobs.Where(x => x.isActiveAndEnabled))
-            sb.AppendLine(mob.GetDef());
+        foreach (var mob in mobs)
+            sb.AppendLine(mob.GetDef(spriteDefs));
         sb.AppendLine("};");
         sb.AppendLine("");
 
@@ -580,7 +654,8 @@ public enum RaidsMob
     DZStriker,
     Executioner,
     Reaper,
-    Tremor
+    Tremor,
+    Reactor = 9
 }
 
 [Flags]

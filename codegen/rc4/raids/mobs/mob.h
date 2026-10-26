@@ -10,7 +10,7 @@
 #include "mobs/zombie.h"
 #include "mobs/stalkerturret.h"
 #include "mobs/executioner.h"
-//#include "reactor.h"
+#include "mobs/reactor.h"
 #include "mobs/tremor.h"
 #include "mobs/swarmer.h"
 #include "mobs/swamper.h"
@@ -20,6 +20,14 @@
 #include "game.h"
 
 #define MOB_MAX_OTHER_TARGETS       (32)
+#define MOB_MAX_ACTIONS_PER_MOB (8)
+#define MOB_MAX_PARAMS_PER_MOB (16)
+#define MOB_ARMOR_THRESHOLD_LOW (0.3)
+#define MOB_ARMOR_THRESHOLD_MID (0.5)
+#define MOB_ARMOR_THRESHOLD_HIGH (0.7)
+#define MOB_DAMAGE_FLAG_SHOCK (0x40)
+#define MOB_DAMAGE_FLAG_SHORT_FREEZE (0x40000000)
+#define MOB_DAMAGE_FLAG_BASE (0x00081801)
 
 enum MobEvent
 {
@@ -85,29 +93,23 @@ struct MobVTable {
 };
 
 struct MobConfig {
-	int Bolts;
-	float Damage;
-	float MaxDamage;
-  float DamageScale;
-	float Speed;
-	float MaxSpeed;
-  float SpeedScale;
-	float Health;
-	float MaxHealth;
-  float HealthScale;
-	float TurnSpeed;
+  int Bolts[RAIDS_DIFFICULTY_COUNT];
+  float Damage[RAIDS_DIFFICULTY_COUNT];
+  float Speed[RAIDS_DIFFICULTY_COUNT];
+  float Health[RAIDS_DIFFICULTY_COUNT];
+	float TurnSpeed[RAIDS_DIFFICULTY_COUNT];
 	float AttackRadius;
 	float HitRadius;
   float CollRadius;
   float AutoAggroMaxRange;
   float VisionRange;
-  float RangedMaxDistanceToTarget;
   float PeripheryRangeTheta;
 	u16 Bangles;
-	u16 Xp;
+  u16 Xp[RAIDS_DIFFICULTY_COUNT];
 	u16 AttackCooldownTickCount;
   u16 OutOfSightDeAggroTickCount;
 	u8 ReactionTickCount;
+  u16 DamageCooldownTickCount;
 };
 
 struct MobSpawnedConfig {
@@ -125,7 +127,6 @@ struct MobSpawnedConfig {
 
   float AutoAggroMaxRange;
   float VisionRange;
-  float RangedMaxDistanceToTarget;
   float PeripheryRangeTheta;
 
 	u16 Bangles;
@@ -134,6 +135,8 @@ struct MobSpawnedConfig {
 
   u16 OutOfSightDeAggroTickCount;
 	u8 ReactionTickCount;
+  float MaxHealth;
+  u16 DamageCooldownTickCount;
 };
 
 struct MobSpawnParams {
@@ -146,6 +149,27 @@ struct MobSpawnParams {
   char BlipType;
   char BlipTeam;
   char TeamPalette;
+  char IsBoss;
+  u32 BaseColor;
+  u32 GlowColor;
+  u32 SpriteColor;
+  int SpriteTexId;
+  int BossTexUid;
+  char Name[32];
+};
+
+union MobParameter
+{
+  float FloatValue;
+  int IntValue;
+};
+
+struct MobActionConfig
+{
+  int MinCooldownTicks;
+  int MaxCooldownTicks;
+  float Probability;
+  int QueuedForTicks;
 };
 
 struct Knockback {
@@ -249,6 +273,8 @@ struct MobVars {
   char BlipType;
   char BlipTeam;
   char Behavior;
+  u8 DifficultyStars;
+  u16 LocalPlayerDamageHitInvTimer[GAME_MAX_LOCALS];
 };
 
 // warning: multiple differing types with the same name, only one recovered
@@ -357,17 +383,12 @@ struct MobStateUpdateEventArgs
 struct MobSpawnEventArgs
 {
 	int Bolts;
+	int Xp;
 	int StartHealth;
-	u16 Bangles;
 	u16 SpeedEighths;
 	u16 Damage;
-	u16 AttackRadiusEighths;
-	u16 AttackCooldownTickCount;
   u8 SpawnParamsIdx;
-	u8 Xp;
-	u8 HitRadiusEighths;
-  u8 CollRadiusEighths;
-	u8 ReactionTickCount;
+  u8 DifficultyStars;
 };
 
 struct MobCreateArgs
@@ -378,7 +399,10 @@ struct MobCreateArgs
   VECTOR Position;
   float Yaw;
   int SpawnFromUID;
-  float DifficultyMult;
+  float HealthMultiplier;
+  float DamageMultiplier;
+  float SpeedMultiplier;
+  u8 DifficultyStars;
   struct MobConfig *Config;
   char Behavior;
 };
@@ -402,8 +426,30 @@ void mobNuke(int killedByPlayerId);
 int mobHandleEvent(Moby* moby, GuberEvent* event);
 int mobCreate(struct MobCreateArgs* args);
 void mobRegisterNpc(Moby* moby);
-void mobPopulateSpawnArgsFromConfig(struct MobSpawnEventArgs* output, struct MobConfig* config, int spawnParamsIdx, int isBaseConfig, float difficultyMult);
+void mobPopulateSpawnArgsFromConfig(struct MobSpawnEventArgs* output, struct MobCreateArgs* args);
 void mobInitialize(void);
 void mobTick(void);
+
+struct MobSpawnParams* mobGetSpawnParams(Moby* moby);
+int mobIsBoss(Moby* moby);
+int mobIsFrozen(Moby* moby);
+int mobGetBehavior(Moby* moby);
+float mobGetScaleMultiplier(Moby* moby);
+float mobGetTargetRadius(Moby* target);
+float mobGetDistanceToTarget(Moby* moby, Moby* target);
+int mobCanSeeMoby(Moby* moby, Moby* target);
+int mobGetPathTargetPos(VECTOR output, Moby* moby);
+struct MobActionConfig* mobGetActionConfig(Moby* moby, int action);
+int mobGetActionCooldownTicks(Moby* moby, int action);
+void mobTickActionCooldowns(Moby* moby, int count, u32* cooldowns, u32* queued);
+float mobGetFloat(Moby* moby, int parameter);
+int mobGetInt(Moby* moby, int parameter);
+u32 mobGetDamageFlags(Moby* moby, u32 flags);
+void mobDefaultPreUpdate(Moby* moby);
+int mobDefaultOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
+void mobHandleFlinch(Moby* moby, struct MobDamageEventArgs* e, int canFlinch, int isShock, float probability, float powerFactor, int flinchAction, int bigFlinchAction);
+void mobTransAnimDefaultLerp(Moby* moby, int animId, int lerpFrames, float startOff);
+void mobSpawnCorn(Moby* moby, int bangle);
+float mobTurnTowardsPredictiveWithSpeed(Moby* moby, Moby* target, float turnSpeed, float speed);
 
 #endif // RAIDS_MOB_H

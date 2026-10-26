@@ -30,6 +30,8 @@
 
 Moby* mobOtherTargets[MOB_MAX_OTHER_TARGETS];
 Moby* mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
+extern struct MobActionConfig mobActionConfigs[][RAIDS_DIFFICULTY_COUNT][MOB_MAX_ACTIONS_PER_MOB];
+extern union MobParameter mobParameters[][RAIDS_DIFFICULTY_COUNT][MOB_MAX_PARAMS_PER_MOB];
 
 #if MOB_DZSTRIKER
 #include "dzstriker.c"
@@ -661,6 +663,8 @@ int mobMoveCheck(Moby* moby, VECTOR outputPos, VECTOR from, VECTOR to)
       vector_normalize(hitToEx, delta);
       vector_scale(hitToEx, hitToEx, collRadius);
       vector_subtract(outputPos, CollLine_Fix_GetHitPosition(), hitToEx);
+      // Convert the center-height collision point back to the mob's feet.
+      vector_subtract(outputPos, outputPos, up);
     } else {
       vector_scale(hitDir, hitDir, hitBitangentDotDelta * vector_length(delta));
       vector_add(outputPos, from, hitDir);
@@ -1307,6 +1311,7 @@ void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
 	
 	// set world matrix by joint
 	mobyGetJointMatrix(moby, jointId, m2);
+  memcpy(m2, camera->uMtx, sizeof(VECTOR) * 3);
 
 	// draw
 	gfxDrawQuad((void*)0x00222590, &quad, m2, 1);
@@ -1535,4 +1540,312 @@ void mobTick(void)
   // clear targets
   memcpy(mobOtherTargets, mobOtherTargets2, sizeof(mobOtherTargets));
   memset(mobOtherTargets2, 0, sizeof(mobOtherTargets2));
+}
+
+//--------------------------------------------------------------------------
+int mobGetActionCooldownTicks(Moby *moby, int action)
+{
+	struct MobActionConfig *actionConfig = mobGetActionConfig(moby, action);
+	if (!actionConfig)
+		return 0;
+
+	return randRangeInt(actionConfig->MinCooldownTicks, actionConfig->MaxCooldownTicks);
+}
+
+//--------------------------------------------------------------------------
+void mobTickActionCooldowns(Moby *moby, int actionCount, u32 *actionCooldowns, u32 *actionQueuedForTicks)
+{
+	int i;
+	for (i = 0; i < actionCount; ++i)
+	{
+		struct MobActionConfig *actionConfig = mobGetActionConfig(moby, i);
+
+		// increment and check if any queues have reached their end
+		if (actionQueuedForTicks[i] > 0)
+		{
+			if (++actionQueuedForTicks[i] > actionConfig->QueuedForTicks && actionConfig->QueuedForTicks > 0)
+			{
+				// reset
+				actionCooldowns[i] = mobGetActionCooldownTicks(moby, i);
+				actionQueuedForTicks[i] = 0;
+			}
+
+			// action is queued so no need to decrement cooldown
+			continue;
+		}
+
+		// decrement and check if cooldown is 0
+		if (decTimerU32(&actionCooldowns[i]) == 0)
+		{
+			// cooldown hit 0
+			// check if action is already queued
+			if (actionQueuedForTicks[i] == 0)
+			{
+				// action is not queued
+				// run probability check
+				float roll = randRange(0, 1);
+				int success = roll < actionConfig->Probability;
+				if (success)
+				{
+					// queue action
+					actionQueuedForTicks[i] = 1;
+				}
+				else
+				{
+					// reset action cooldown
+					actionCooldowns[i] = mobGetActionCooldownTicks(moby, i);
+				}
+			}
+		}
+	}
+}
+
+//--------------------------------------------------------------------------
+float mobGetTargetRadius(Moby *target)
+{
+	if (!target)
+		return 0;
+
+	Player *player = guberMobyGetPlayerDamager(target);
+	if (player)
+		return player->Coll.radius;
+
+	return target->BSphere[3] / 1024.0;
+}
+
+//--------------------------------------------------------------------------
+float mobGetDistanceToTarget(Moby *moby, Moby *target)
+{
+	// struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	VECTOR t;
+
+	if (!target)
+		return 0;
+
+	vector_copy(t, target->Position);
+	vector_subtract(t, t, moby->Position);
+	float dist = vector_length(t) - mobGetTargetRadius(target);
+
+	return maxf(0, dist);
+}
+
+//--------------------------------------------------------------------------
+void mobDefaultPreUpdate(Moby *moby)
+{
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+
+	// Runtime owns the per-local-player hit timers, including NPC updates.
+
+	// decrement path target pos tickers
+	decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
+	decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
+
+	mobPreUpdate(moby);
+
+  struct MobSpawnParams* params = mobGetSpawnParams(moby);
+  if (pvars->MobVars.AcidEffectActiveTicks) {
+    moby->PrimaryColor = colorLerp(params->BaseColor, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
+  } else if (pvars->MobVars.FreezeEffectActiveTicks) {
+    moby->PrimaryColor = colorLerp(params->BaseColor, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
+  } else {
+    moby->PrimaryColor = params->BaseColor;
+  }
+  moby->GlowRGBA = params->GlowColor;
+}
+
+//--------------------------------------------------------------------------
+int mobDefaultOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
+{
+	if (!e->PlayerDamager)
+		return 1;
+	if (!e->PlayerDamager->IsLocal)
+		return 1;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+
+	// only accept local damage when timer is 0
+	int timer = pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex];
+	if (timer == 0)
+	{
+		pvars->MobVars.LocalPlayerDamageHitInvTimer[e->PlayerDamager->LocalPlayerIndex] = pvars->MobVars.Config.DamageCooldownTickCount;
+		return 1;
+	}
+
+	return 0;
+}
+
+//--------------------------------------------------------------------------
+void mobHandleFlinch(Moby *moby, struct MobDamageEventArgs *e, int canFlinch, int isShock, float probability, float powerFactor, int flinchState, int bigFlinchState)
+{
+	// knockback
+	if (e->Knockback.Power > 0 && (canFlinch || e->Knockback.Force))
+	{
+		struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+		memcpy(&pvars->MobVars.Knockback, &e->Knockback, sizeof(struct Knockback));
+	}
+
+	if (!mobAmIOwner(moby))
+		return;
+
+#if ALWAYS_FLINCH
+	probability = 2;
+	powerFactor = 2;
+#endif
+
+	if (canFlinch)
+	{
+		if (e->Knockback.Force)
+		{
+			mobSetAction(moby, bigFlinchState);
+		}
+		else if (isShock)
+		{
+			mobSetAction(moby, flinchState);
+		}
+		else if (randRange(0, 1) < probability)
+		{
+			if (randRange(0, 1) < powerFactor)
+			{
+				mobSetAction(moby, bigFlinchState);
+			}
+			else
+			{
+				mobSetAction(moby, flinchState);
+			}
+		}
+	}
+}
+
+//--------------------------------------------------------------------------
+void mobTransAnimDefaultLerp(Moby *moby, int animId, int lerpFrames, float startOff)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	if (moby->AnimSeqId != animId)
+	{
+		mobyAnimTransition(moby, animId, lerpFrames, startOff);
+
+		pvars->MobVars.AnimationReset = 1;
+		pvars->MobVars.AnimationLooped = 0;
+	}
+	else
+	{
+
+		// get current t
+		// if our stored start is uninitialized, then set current t as start
+		float t = moby->AnimSeqT;
+		float end = *(u8 *)((u32)moby->AnimSeq + 0x10) - (float)(lerpFrames * 0.5);
+		if (t >= end && pvars->MobVars.AnimationReset)
+		{
+			pvars->MobVars.AnimationLooped++;
+			pvars->MobVars.AnimationReset = 0;
+		}
+		else if (t < end)
+		{
+			pvars->MobVars.AnimationReset = 1;
+		}
+	}
+}
+
+//--------------------------------------------------------------------------
+float mobTurnTowardsPredictiveWithSpeed(Moby *moby, Moby *target, float turnSpeed, float speed)
+{
+	if (!moby || !target || fabsf(turnSpeed) < 0.001)
+		return 0;
+
+	// Calculate distance between moby and target
+	float distance = mobGetDistanceToTarget(moby, target);
+
+	// Calculate predictFactor from distance and speed
+	// predictFactor = distance / speed (in game units per frame)
+	float predictFactor = speed > 0 ? distance / speed : 0;
+
+	// Call the existing predictive turn function with calculated predictFactor
+	return mobTurnTowardsPredictive(moby, target, turnSpeed, predictFactor);
+}
+
+//--------------------------------------------------------------------------
+struct MobSpawnParams* mobGetSpawnParams(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return &MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx];
+}
+
+//--------------------------------------------------------------------------
+int mobIsBoss(Moby* moby)
+{
+  return mobGetSpawnParams(moby)->IsBoss;
+}
+
+//--------------------------------------------------------------------------
+int mobIsFrozen(Moby* moby)
+{
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+int mobGetBehavior(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return pvars->MobVars.Behavior;
+}
+
+//--------------------------------------------------------------------------
+float mobGetScaleMultiplier(Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return pvars->MobVars.Config.Scale;
+}
+
+//--------------------------------------------------------------------------
+u32 mobGetDamageFlags(Moby* moby, u32 flags)
+{
+  return flags;
+}
+
+//--------------------------------------------------------------------------
+void mobSpawnCorn(Moby* moby, int bangle)
+{
+  mobBlowCorn(moby);
+}
+
+//--------------------------------------------------------------------------
+struct MobActionConfig* mobGetActionConfig(Moby* moby, int action)
+{
+  if (!moby || !moby->PVar || !MapConfig.State)
+    return NULL;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return &mobActionConfigs[pvars->MobVars.SpawnParamsIdx][pvars->MobVars.DifficultyStars][action];
+}
+
+//--------------------------------------------------------------------------
+float mobGetFloat(Moby* moby, int parameter)
+{
+  if (!moby || !moby->PVar || !MapConfig.State)
+    return 0;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return mobParameters[pvars->MobVars.SpawnParamsIdx][pvars->MobVars.DifficultyStars][parameter].FloatValue;
+}
+
+//--------------------------------------------------------------------------
+int mobGetInt(Moby* moby, int parameter)
+{
+  if (!moby || !moby->PVar || !MapConfig.State)
+    return 0;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return mobParameters[pvars->MobVars.SpawnParamsIdx][pvars->MobVars.DifficultyStars][parameter].IntValue;
+}
+
+//--------------------------------------------------------------------------
+int mobGetPathTargetPos(VECTOR output, Moby* moby)
+{
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  return pathGetTargetPos(pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars), output, moby, &pvars->MobVars.MoveVars);
 }

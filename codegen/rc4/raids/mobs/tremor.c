@@ -9,35 +9,43 @@
 
 #include "game.h"
 #include "mobs/mob.h"
+#include "utils.h"
+#include "maputils.h"
 #include "pathfind.h"
 #include "spawner.h"
-#include "utils.h"
 #include "shared.h"
 
-void tremorPreUpdate(Moby* moby);
-void tremorPostUpdate(Moby* moby);
-void tremorPostDraw(Moby* moby);
+Moby *tremorGetQuakeMoby(Moby *moby);
+void tremorResetActionCooldownTicks(Moby *moby, enum TremorAttackActions action);
+int tremorGetActionReady(Moby *moby, enum TremorAttackActions action);
+void tremorPreUpdate(Moby *moby);
+void tremorPostUpdate(Moby *moby);
+void tremorPostDraw(Moby *moby);
+void tremorAlterTarget(VECTOR out, Moby *moby, VECTOR forward, float amount);
 void tremorMove(Moby* moby);
-void tremorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
+void tremorOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs *e);
 void tremorOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 void tremorOnDamage(Moby* moby, struct MobDamageEventArgs* e);
-int tremorOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e);
-void tremorOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
-int tremorGetPreferredAction(Moby* moby, int * delayTicks);
-void tremorDoAction(Moby* moby);
-void tremorDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire);
-void tremorForceLocalAction(Moby* moby, int action);
-short tremorGetArmor(Moby* moby);
-int tremorIsAttacking(Moby* moby);
-int tremorCanNonOwnerTransitionToAction(Moby* moby, int action);
-int tremorShouldForceStateUpdateOnAction(Moby* moby, int action);
-
-int tremorIsSpawning(struct MobPVar* pvars);
-int tremorIsRoaming(struct MobPVar* pvars);
+int tremorOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e);
+void tremorOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e);
+Moby *tremorGetNextTarget(Moby *moby);
+int tremorGetPreferredAction(Moby *moby, int *delayTicks);
+void tremorDoAction(Moby *moby);
+void tremorQuakeMobyUpdate(Moby *moby);
+void tremorSpawnQuake(Moby *moby, float speed, int jointIdx);
+void tremorDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire);
+void tremorForceLocalAction(Moby *moby, int action);
+short tremorGetArmor(Moby *moby);
+int tremorIsAttacking(Moby *moby);
+int tremorCanNonOwnerTransitionToAction(Moby *moby, int action);
+int tremorShouldForceStateUpdateOnAction(Moby *moby, int action);
+int tremorIsSpawning(struct MobPVar *pvars);
+int tremorCanAttack(struct MobPVar *pvars);
+int tremorIsFlinching(Moby *moby);
 int tremorIsIdling(struct MobPVar* pvars);
-int tremorCanAttack(struct MobPVar* pvars);
-int tremorIsFlinching(Moby* moby);
-int tremorIsDying(Moby* moby);
+int tremorIsRoaming(struct MobPVar* pvars);
+void tremorRenderPath(Moby* moby);
+int tremorCreate(struct MobCreateArgs* args);
 
 struct MobVTable TremorVTable = {
   .PreUpdate = &tremorPreUpdate,
@@ -49,7 +57,7 @@ struct MobVTable TremorVTable = {
   .OnDamage = &tremorOnDamage,
   .OnLocalDamage = &tremorOnLocalDamage,
   .OnStateUpdate = &tremorOnStateUpdate,
-  .GetNextTarget = &mobGetNextTarget,
+  .GetNextTarget = &tremorGetNextTarget,
   .GetPreferredAction = &tremorGetPreferredAction,
   .ForceLocalAction = &tremorForceLocalAction,
   .DoAction = &tremorDoAction,
@@ -61,115 +69,125 @@ struct MobVTable TremorVTable = {
 };
 
 //--------------------------------------------------------------------------
-int tremorCreate(struct MobCreateArgs* args)
+
+Moby *tremorGetQuakeMoby(Moby *moby)
 {
-  VECTOR position = {0,0,1,0};
-	struct MobSpawnEventArgs spawnArgs;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
+	Moby *quakeMoby = tremorVars->QuakeMoby;
 
-  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];
-  
-	// create guber object
-	GuberEvent * guberEvent = 0;
-	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar), &guberEvent, NULL);
-	if (guberEvent)
+	if (!quakeMoby)
+		return NULL;
+
+	if (mobyIsDestroyed(quakeMoby))
+		return NULL;
+
+	if (quakeMoby->State == 1)
+		return NULL;
+
+	if (quakeMoby->OClass != 0x210B)
+		return NULL;
+
+	struct TremorQuakePVars *quakePvars = (struct TremorQuakePVars *)quakeMoby->PVar;
+	if (!quakePvars)
+		return NULL;
+
+	if (quakePvars->CreatorMob != moby)
+		return NULL;
+
+	return quakeMoby;
+}
+
+//--------------------------------------------------------------------------
+void tremorResetActionCooldownTicks(Moby *moby, enum TremorAttackActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
+	tremorVars->ActionCooldownTicks[action] = mobGetActionCooldownTicks(moby, action);
+	tremorVars->ActionQueuedForTicks[action] = 0;
+}
+
+//--------------------------------------------------------------------------
+int tremorGetActionReady(Moby *moby, enum TremorAttackActions action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
+	return tremorVars->ActionQueuedForTicks[action] > 0;
+}
+
+//--------------------------------------------------------------------------
+void tremorPreUpdate(Moby *moby)
+{
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
+
+	mobDefaultPreUpdate(moby);
+
+	if (!mobIsFrozen(moby))
+		mobTickActionCooldowns(moby, TREMOR_ATTACK_ACTION_COUNT, tremorVars->ActionCooldownTicks, tremorVars->ActionQueuedForTicks);
+}
+
+//--------------------------------------------------------------------------
+void tremorPostUpdate(Moby *moby)
+{
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	float scale = mobGetScaleMultiplier(moby);
+
+	// adjust animSpeed by speed and by animation
+	float baseSpeed = 0.5;
+	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
+	if (moby->AnimSeqId == TREMOR_ANIM_JUMP)
 	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args->Config, args->SpawnParamsIdx, args->SpawnFromUID == -1, args->DifficultyMult);
-    }
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / TREMOR_JUMP_ANIM_DURATION, 2));
+		if (pvars->MobVars.MoveVars.Grounded)
+		{
+			animSpeed = baseSpeed;
+		}
+	}
+	else if (tremorIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded)
+	{
+		animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / TREMOR_FLINCH_ANIM_AIR_DURATION, 2));
+	}
+	else if (moby->AnimSeqId == TREMOR_ANIM_SWING)
+	{
+		animSpeed *= mobGetFloat(moby, TREMOR_PARAM_MELEE_ATTACK_SPEED_MULTIPLIER);
+	}
 
-		u8 random = (u8)rand(100);
-    int parentUid = -1;
-    if (args->Parent)
-      parentUid = guberGetUID(args->Parent);
-
-
-    // spawn slightly above point
-    vector_add(position, position, args->Position);
-    char yaw = args->Yaw * 32;
-    
-		guberEventWrite(guberEvent, position, 12);
-		guberEventWrite(guberEvent, &yaw, 1);
-		guberEventWrite(guberEvent, &args->SpawnFromUID, 4);
-		guberEventWrite(guberEvent, &parentUid, 4);
-		guberEventWrite(guberEvent, &args->Userdata, 4);
-		guberEventWrite(guberEvent, &random, 1);
-		guberEventWrite(guberEvent, &args->Behavior, 1);
-		guberEventWrite(guberEvent, &spawnArgs, sizeof(struct MobSpawnEventArgs));
+	if (mobIsFrozen(moby) || (moby->DrawDist == 0 && pvars->MobVars.Action == TREMOR_ACTION_WALK))
+	{
+		moby->AnimSpeed = 0;
 	}
 	else
 	{
-		DPRINTF("failed to guberevent mob\n");
-	}
-  
-  return guberEvent != NULL;
-}
-
-//--------------------------------------------------------------------------
-void tremorPreUpdate(Moby* moby)
-{
-  if (!moby || !moby->PVar)
-    return;
-    
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-
-  // decrement path target pos ticker
-  decTimerU8(&pvars->MobVars.MoveVars.PathTicks);
-  decTimerU8(&pvars->MobVars.MoveVars.PathCheckNearAndSeeTargetTicks);
-  decTimerU8(&pvars->MobVars.MoveVars.PathCheckSkipEndTicks);
-  decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
-
-  mobPreUpdate(moby);
-}
-
-//--------------------------------------------------------------------------
-void tremorPostUpdate(Moby* moby)
-{
-  if (!moby || !moby->PVar)
-    return;
-    
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  float scale = pvars->MobVars.Config.Scale;
-
-  // apply omega mod FX to color
-  if (pvars->MobVars.AcidEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(TREMOR_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
-  } else if (pvars->MobVars.FreezeEffectActiveTicks > 0) {
-    moby->PrimaryColor = colorLerp(TREMOR_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
-  } else {
-    moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
-  }
-
-  // adjust animSpeed by speed and by animation
-  float baseSpeed = 0.5;
-	float animSpeed = baseSpeed * (pvars->MobVars.Config.Speed / MOB_BASE_SPEED) / scale;
-  if (moby->AnimSeqId == TREMOR_ANIM_JUMP) {
-    animSpeed = baseSpeed * (1 - powf(moby->AnimSeqT / 21, 2));
-    if (pvars->MobVars.MoveVars.Grounded) {
-      animSpeed = baseSpeed;
-    }
-  } else if (tremorIsFlinching(moby) && !pvars->MobVars.MoveVars.Grounded) {
-    animSpeed = baseSpeed * 0.5 * (1 - powf(moby->AnimSeqT / 20, 2));
-  } else if (tremorIsDying(moby)) {
-    animSpeed = 1.0;
-  } else if (moby->AnimSeqId == TREMOR_ANIM_RUN || moby->AnimSeqId == TREMOR_ANIM_WALK) {
-    animSpeed *= mobGetCurrentMoveSpeed(moby);
-  }
-
-	if ((moby->DrawDist == 0 && !tremorIsAttacking(moby) && !tremorIsSpawning(pvars) && !tremorIsDying(moby) && !tremorIsFlinching(moby))) {
-		moby->AnimSpeed = 0;
-	} else {
 		moby->AnimSpeed = animSpeed;
 	}
 }
 
 //--------------------------------------------------------------------------
-void tremorPostDraw(Moby* moby)
+void tremorPostDraw(Moby *moby)
 {
-  if (!moby || !moby->PVar)
-    return;
-    
-  u32 color = TREMOR_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, TREMOR_SUBSKELETON_JOINT_RIGHT_SHOULDER); // todo
+	if (!moby || !moby->PVar)
+		return;
+
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	u32 color = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
+	mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, 1);
+}
+
+//--------------------------------------------------------------------------
+void tremorAlterTarget(VECTOR out, Moby *moby, VECTOR forward, float amount)
+{
+	VECTOR up = {0, 0, 1, 0};
+
+	vector_outerproduct(out, forward, up);
+	vector_normalize(out, out);
+	vector_scale(out, out, amount);
 }
 
 //--------------------------------------------------------------------------
@@ -179,29 +197,35 @@ void tremorMove(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void tremorOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e)
+void tremorOnSpawn(Moby *moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs *e)
 {
-  
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	float scale = mobGetScaleMultiplier(moby);
+	int i;
 
-  // set scale
-  float scale = pvars->MobVars.Config.Scale;
-  moby->Scale = 0.256339 * scale;
+	memset(pvars->AdditionalMobVarsPtr, 0, sizeof(TremorMobVars_t));
 
-  // colors by mob type
-	moby->GlowRGBA = TREMOR_GLOW_COLOR;
-	moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
+	// set scale
+	moby->Scale = 0.256339 * scale;
 
-  // targeting
-	pvars->TargetVars.targetHeight = 0.75 + (scale * 0.25);
-  
+	// colors by mob type
+	moby->GlowRGBA = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].GlowColor;
+	moby->PrimaryColor = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].BaseColor;
+
+	// targeting
+	pvars->TargetVars.targetHeight = 0.5 + (scale * 0.5);
+	pvars->MobVars.BlipType = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].BlipType;
+
 #if MOB_DAMAGETYPES
-  pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
+	pvars->TargetVars.damageTypes = MOB_DAMAGETYPES;
 #endif
 
-  // default move step
-  pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
-  vector_copy(pvars->MobVars.MoveVars.TargetPosition, moby->Position);
+	// default move step
+	pvars->MobVars.MoveVars.MoveStep = MOB_MOVE_SKIP_TICKS;
+
+	// initialize action cooldowns
+	for (i = 0; i < TREMOR_ATTACK_ACTION_COUNT; ++i)
+		tremorResetActionCooldownTicks(moby, i);
 }
 
 //--------------------------------------------------------------------------
@@ -211,7 +235,7 @@ void tremorOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource sour
     return;
     
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = TREMOR_PRIMARY_COLOR;
+	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
   mobBlowCorn(moby);
@@ -295,23 +319,30 @@ void tremorOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 }
 
 //--------------------------------------------------------------------------
-int tremorOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
+int tremorOnLocalDamage(Moby *moby, struct MobLocalDamageEventArgs *e)
 {
-  // don't filter local damage
-  return 1;
+	return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
-void tremorOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
+void tremorOnStateUpdate(Moby *moby, struct MobStateUpdateEventArgs *e)
 {
-  mobOnStateUpdate(moby, e);
+	mobOnStateUpdate(moby, e);
 }
 
 //--------------------------------------------------------------------------
-int tremorGetPreferredAction(Moby* moby, int * delayTicks)
+Moby *tremorGetNextTarget(Moby *moby)
 {
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	return mobGetNextTarget(moby);
+}
+
+//--------------------------------------------------------------------------
+int tremorGetPreferredAction(Moby *moby, int *delayTicks)
+{
 	VECTOR t;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	int canRanged = mobGetBehavior(moby) != TREMOR_BEHAVIOR_MELEE;
+	int preferRanged = mobGetBehavior(moby) == TREMOR_BEHAVIOR_RANGED;
 
 	// no preferred action
 	if (tremorIsAttacking(moby))
@@ -320,8 +351,8 @@ int tremorGetPreferredAction(Moby* moby, int * delayTicks)
 	if (tremorIsSpawning(pvars))
 		return -1;
 
-  if (tremorIsFlinching(moby))
-    return -1;
+	if (tremorIsFlinching(moby))
+		return -1;
 
   if (pvars->MobVars.Action == TREMOR_ACTION_JUMP && !pvars->MobVars.MoveVars.Grounded && !pvars->MobVars.MoveVars.IsStuck)
     return -1;
@@ -330,40 +361,62 @@ int tremorGetPreferredAction(Moby* moby, int * delayTicks)
 		return TREMOR_ACTION_WALK;
   }
 
-  // jump if we've hit a slope and are grounded
-  if (mobHitWallShouldJump(moby, TREMOR_MAX_WALKABLE_SLOPE)) {
-    return TREMOR_ACTION_JUMP;
-  }
+	// jump if we've hit a slope and are grounded
+	if (mobHitWallShouldJump(moby, TREMOR_MAX_WALKABLE_SLOPE))
+	{
+		return TREMOR_ACTION_JUMP;
+	}
 
-  // jump if we've hit a jump point on the path
-  if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
-    return TREMOR_ACTION_JUMP;
-  }
+	// jump if we've hit a jump point on the path
+	if (pvars->MobVars.MoveVars.QueueJumpSpeed)
+	{
+		return TREMOR_ACTION_JUMP;
+	}
 
 	// prevent action changing too quickly
 	if (pvars->MobVars.ActionCooldownTicks)
 		return -1;
 
 	// get next target
-	Moby * target = mobGetNextTarget(moby);
-	if (target) {
-		vector_copy(t, target->Position);
-		vector_subtract(t, t, moby->Position);
-		float distSqr = vector_sqrmag(t);
-		float attackRadiusSqr = pvars->MobVars.Config.AttackRadius * pvars->MobVars.Config.AttackRadius;
+	Moby *target = tremorGetNextTarget(moby);
+	if (target)
+	{
+		// can't attack yet so move towards target
+		if (!tremorCanAttack(pvars))
+			return preferRanged ? TREMOR_ACTION_LOOK_AT_TARGET : TREMOR_ACTION_WALK;
 
-		if (distSqr <= attackRadiusSqr) {
-			if (tremorCanAttack(pvars)) {
-        if (delayTicks) *delayTicks = pvars->MobVars.Config.ReactionTickCount;
-				return TREMOR_ACTION_ATTACK;
-      }
-			return TREMOR_ACTION_WALK;
-		} else {
+		float dist = mobGetDistanceToTarget(moby, target);
+		float attackRadius = pvars->MobVars.Config.AttackRadius;
+		float rangedAttackRadius = mobGetFloat(moby, TREMOR_PARAM_GROUND_QUAKE_MAX_DISTANCE);
+		int isQuakeState = pvars->MobVars.Action == TREMOR_ACTION_ATTACK_GROUND_QUAKE;
+
+		if (dist <= attackRadius && tremorGetActionReady(moby, TREMOR_ATTACK_ACTION_MELEE))
+		{
+			if (delayTicks)
+				*delayTicks = pvars->MobVars.Config.ReactionTickCount;
+			return TREMOR_ACTION_ATTACK;
+		}
+		else if (canRanged && pvars->MobVars.MoveVars.Grounded && dist <= rangedAttackRadius && mobCanSeeMoby(moby, target))
+		{
+			VECTOR dt;
+			vector_subtract(dt, target->Position, moby->Position);
+			float theta = acosf(vector_innerproduct(dt, moby->M0_03));
+			if (!isQuakeState && fabsf(theta) < TREMOR_QUAKE_FIRE_AT_MAX_TURN_ANGLE && tremorGetActionReady(moby, TREMOR_ATTACK_ACTION_GROUND_QUAKE))
+			{
+				if (delayTicks)
+					*delayTicks = pvars->MobVars.Config.ReactionTickCount;
+				return TREMOR_ACTION_ATTACK_GROUND_QUAKE;
+			}
+
+			return preferRanged ? TREMOR_ACTION_LOOK_AT_TARGET : TREMOR_ACTION_WALK;
+		}
+		else
+		{
 			return TREMOR_ACTION_WALK;
 		}
 	}
 
-  // if roaming, then we want to periodically stop or reroute
+	  // if roaming, then we want to periodically stop or reroute
   if (tremorIsRoaming(pvars)) {
 
     // check how close we are to target
@@ -387,59 +440,114 @@ int tremorGetPreferredAction(Moby* moby, int * delayTicks)
 }
 
 //--------------------------------------------------------------------------
-#if DEBUGPATH
-void tremorRenderPath(Moby* moby)
+void tremorDoAction(Moby *moby)
 {
-  int x,y;
-  int i;
+  struct PathGraph* path = pathGetMobyPathGraph(moby, &((struct MobPVar*)moby->PVar)->MobVars.MoveVars);
+  float speed = ((struct MobPVar*)moby->PVar)->MobVars.Config.Speed;
 
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  struct PathGraph* pathGraph = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
-  u8* path = (u8*)pvars->MobVars.MoveVars.CurrentPath;
-  int pathLen = pvars->MobVars.MoveVars.PathEdgeCount;
-  int pathIdx = pvars->MobVars.MoveVars.PathEdgeCurrent;
-
-
-  for (i = 0; i < pathLen; ++i) {
-    u8* edge = pathGraph->Edges[path[i]];
-    if (gfxWorldSpaceToScreenSpace(pathGraph->Nodes[edge[1]], &x, &y)) {
-      gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, i == pathIdx ? "o" : "-", -1, 4);
-    }
-  }
-
-  VECTOR t;
-  if (pathGetTargetPos(pathGraph, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
-    pvars->MobVars.Dirty = 1; // new path, sync with other clients
-  if (gfxWorldSpaceToScreenSpace(t, &x, &y)) {
-    gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, "+", -1, 4);
-  }
-}
-#endif
-
-//--------------------------------------------------------------------------
-void tremorDoAction(Moby* moby)
-{
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  struct PathGraph* path = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
-	Moby* target = pvars->MobVars.MoveVars.Target;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	Moby *target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
-  float difficulty = 1;
-  float speed = pvars->MobVars.Config.Speed;
-  float turnSpeed = pvars->MobVars.Config.TurnSpeed * (pvars->MobVars.MoveVars.Grounded ? TREMOR_TURN_RADIANS_PER_SEC : TREMOR_TURN_AIR_RADIANS_PER_SEC);
-  float acceleration = pvars->MobVars.MoveVars.Grounded ? TREMOR_MOVE_ACCELERATION : TREMOR_MOVE_AIR_ACCELERATION;
-  int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
-                      && (pvars->MobVars.LastAction == TREMOR_ACTION_FLINCH || pvars->MobVars.LastAction == TREMOR_ACTION_BIG_FLINCH);
+	float difficulty = 1;
+	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? TREMOR_TURN_RADIANS_PER_SEC : TREMOR_TURN_AIR_RADIANS_PER_SEC;
+	float acceleration = pvars->MobVars.MoveVars.Grounded ? TREMOR_MOVE_ACCELERATION : TREMOR_MOVE_AIR_ACCELERATION;
+	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == TREMOR_ACTION_FLINCH || pvars->MobVars.LastAction == TREMOR_ACTION_BIG_FLINCH);
+	u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
-
-#if DEBUGPATH
-  gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&tremorRenderPath, moby);
-#endif
+	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
+	if (MapConfig.State)
+		difficulty = MapConfig.State->Difficulty;
 
 	switch (pvars->MobVars.Action)
 	{
-		case TREMOR_ACTION_SPAWN:
+case TREMOR_ACTION_ATTACK:
+	{
+		int attack1AnimId = TREMOR_ANIM_SWING;
+		mobTransAnim(moby, attack1AnimId, 0);
+
+		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, TREMOR_PARAM_MELEE_DAMAGE_MULTIPLIER);
+		float lungeMult = mobGetFloat(moby, TREMOR_PARAM_MELEE_LUNGE_MULTIPLIER);
+
+		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < TREMOR_ATTACK_ANIM_LUNGE_DURATION;
+		float speed = lungeMult * clamp(difficulty * 2, 1, 5);
+		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= TREMOR_ATTACK_HIT_FRAME_START && moby->AnimSeqT < TREMOR_ATTACK_HIT_FRAME_END;
+
+		if (!isInAirFromFlinching)
+		{
+			if (target && lungeActive)
+			{
+				mobTurnTowardsPredictiveWithSpeed(moby, target, TREMOR_TURN_LUNGE_RADIANS_PER_SEC, speed);
+				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
+			}
+			else
+			{
+				// stand
+				mobStand(moby);
+			}
+		}
+
+		if (swingAttackReady && damageFlags)
+		{
+			tremorDoDamage(moby, pvars->MobVars.Config.HitRadius, damage, damageFlags, 0);
+		}
+		break;
+	}
+	case TREMOR_ACTION_ATTACK_GROUND_QUAKE:
+	{
+		int nextAnimId = moby->AnimSeqId;
+
+		float quakeSpeed = MATH_DT * mobGetFloat(moby, TREMOR_PARAM_GROUND_QUAKE_QUAKE_SPEED);
+
+		switch (moby->AnimSeqId)
+		{
+		case TREMOR_ANIM_JUMP_AND_STAB_DOWN:
+		{
+			// turn towards player
+			if (!pvars->MobVars.AnimationLooped && moby->AnimSeqT < TREMOR_ATTACK_QUAKE_SPAWN_FRAME_START)
+			{
+				// randomize quake speed by 80-100%
+				float randomizedSpeed = randRange(0.8, 1.0) * quakeSpeed;
+				mobTurnTowardsPredictiveWithSpeed(moby, target, TREMOR_QUAKE_TURN_RADIANS_PER_SEC, randomizedSpeed);
+			}
+
+			// spawn quake when animation stabs ground
+			if (!tremorGetQuakeMoby(moby) && moby->AnimSeqT >= TREMOR_ATTACK_QUAKE_SPAWN_FRAME_START)
+			{
+				tremorSpawnQuake(moby, quakeSpeed, TREMOR_SUBSKELETON_JOINT_RIGHT_HAND_CLAW);
+			}
+
+			// transition to stab ground repeat anim when start animation sequence completes
+			if (pvars->MobVars.AnimationLooped)
+			{
+				nextAnimId = TREMOR_ANIM_STAB_DOWN_POSITION_REPEAT;
+			}
+			break;
+		}
+		case TREMOR_ANIM_STAB_DOWN_POSITION_REPEAT:
+		{
+			// stay in this action until attack ends
+			int inForTicks = pvars->MobVars.CurrentActionForTicks;
+			if (inForTicks > TREMOR_ANIM_ATTACK_QUAKE_TICKS)
+				nextAnimId = TREMOR_ANIM_IDLE;
+			else if (!tremorGetQuakeMoby(moby))
+				nextAnimId = TREMOR_ANIM_IDLE;
+
+			break;
+		}
+		}
+
+		// begin animation sequence
+		if (!pvars->MobVars.CurrentActionForTicks)
+			nextAnimId = TREMOR_ANIM_JUMP_AND_STAB_DOWN;
+
+		// not moving in this action
+		if (!isInAirFromFlinching)
+			mobStand(moby);
+
+		mobTransAnim(moby, nextAnimId, 0);
+		break;
+	}
+	case TREMOR_ACTION_SPAWN:
 		{
       mobTransAnim(moby, TREMOR_ANIM_IDLE, 0);
       mobStand(moby);
@@ -569,67 +677,129 @@ void tremorDoAction(Moby* moby)
       mobStand(moby);
       break;
     }
-		case TREMOR_ACTION_ATTACK:
-		{
-      int attack1AnimId = TREMOR_ANIM_SWING;
-      int defaultAnimId = mobHasVelocity(pvars) ? TREMOR_ANIM_RUN : TREMOR_ANIM_IDLE;
-      int nextAnimId = mobGetAnimIf(moby, defaultAnimId, attack1AnimId, !pvars->MobVars.CurrentActionForTicks, 1);
-			mobTransAnim(moby, nextAnimId, 0);
-
-			float speedMult = 0;
-			int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 4 && moby->AnimSeqT < 8;
-			u32 damageFlags = 0x00081801;
-
-      if (!isInAirFromFlinching) {
-        if (target) {
-          mobTurnTowards(moby, target->Position, turnSpeed);
-          mobGetVelocityToTarget(moby, pvars->MobVars.MoveVars.Velocity, moby->Position, target->Position, speedMult * pvars->MobVars.Config.Speed, acceleration);
-        } else {
-          // stand
-          mobStand(moby);
-        }
-      }
-
-			if (swingAttackReady && damageFlags) {
-				tremorDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
-			}
-			break;
 		}
-  }
 
-  pvars->MobVars.CurrentActionForTicks ++;
+	pvars->MobVars.CurrentActionForTicks++;
 }
 
 //--------------------------------------------------------------------------
-void tremorDoDamage(Moby* moby, float radius, float amount, int damageFlags, int friendlyFire)
+void tremorQuakeMobyUpdate(Moby *moby)
 {
-  mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, TREMOR_SUBSKELETON_JOINT_RIGHT_HAND_CLAW, 1, 0);
+	struct TremorQuakePVars *pvars = (struct TremorQuakePVars *)moby->PVar;
+	if (!pvars)
+		return;
+
+	// detect when parent dies
+	Moby *parentMoby = pvars->CreatorMob;
+	if (!parentMoby || mobyIsDestroyed(parentMoby))
+	{
+		mobyDestroy(moby);
+		return;
+	}
+
+	if (moby->State == 0)
+	{
+		// seed initial action
+		if ((moby->Triggers & 1) == 0)
+		{
+			moby->Triggers |= 1;
+			pvars->LifeTicks = TREMOR_QUAKE_DURATION_TICKS;
+		}
+
+		// backup starting position
+		VECTOR lastPosition;
+		vector_copy(lastPosition, moby->Position);
+
+		// move
+		((void (*)(Moby *))0x00436aa0)(moby);
+		((void (*)(Moby *))0x00437298)(moby);
+
+		// damage
+		struct MobPVar *mobPvars = (struct MobPVar *)parentMoby->PVar;
+		float damage = mobPvars->MobVars.Config.Damage * mobGetFloat(parentMoby, TREMOR_PARAM_GROUND_QUAKE_DAMAGE_MULTIPLIER);
+		u32 damageFlags = mobGetDamageFlags(parentMoby, MOB_DAMAGE_FLAG_BASE);
+		mobDoSweepDamage(parentMoby, parentMoby, lastPosition, moby->Position, TREMOR_QUAKE_HIT_RADIUS * 0.5, TREMOR_QUAKE_HIT_RADIUS, damage, damageFlags, 0, 0, 1);
+
+		// kill when life hits 0
+		pvars->LifeTicks--;
+		if (pvars->LifeTicks <= 0)
+			mobySetState(moby, 1, -1);
+	}
+	else if (moby->State == 1)
+	{
+		mobyDestroy(moby);
+	}
 }
 
 //--------------------------------------------------------------------------
-void tremorForceLocalAction(Moby* moby, int action)
+void tremorSpawnQuake(Moby *moby, float speed, int jointIdx)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  float difficulty = 1;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
 
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
+	// get position to spawn quake from joint
+	MATRIX jointMtx;
+	VECTOR spawnAt, spawnVelocity;
+	mobyGetJointMatrix(moby, jointIdx, jointMtx);
+	vector_copy(spawnAt, &jointMtx[12]);
+
+	// angle quake direction to mob forward planar direction
+	vector_fromyaw(spawnVelocity, moby->Rotation[2]);
+	vector_scale(spawnVelocity, spawnVelocity, speed);
+
+	// find ground
+	VECTOR groundCheckFrom = {0, 0, 2, 0};
+	VECTOR groundCheckTo = {0, 0, 0, 0};
+	vector_add(groundCheckFrom, groundCheckFrom, spawnAt);
+	vector_add(groundCheckTo, groundCheckTo, spawnAt);
+	if (CollLine_Fix(groundCheckFrom, groundCheckTo, COLLISION_FLAG_IGNORE_MOBY_SPECIAL_COLLIDERS, moby, NULL))
+		vector_add(spawnAt, CollLine_Fix_GetHitPosition(), (VECTOR){0, 0, 0.1, 0});
+
+	// spawn quake moby
+	// use custom update function to drive mob damage
+	Moby *spawnedQuakeMoby = tremorVars->QuakeMoby = ((Moby * (*)(Moby *, u128 pos, u128 vel))0x004368e0)(moby, vector_read(spawnAt), vector_read(spawnVelocity));
+	if (spawnedQuakeMoby)
+		spawnedQuakeMoby->PUpdate = &tremorQuakeMobyUpdate;
+}
+
+//--------------------------------------------------------------------------
+void tremorDoDamage(Moby *moby, float radius, float amount, int damageFlags, int friendlyFire)
+{
+	mobDoDamage(moby, moby, radius, amount, damageFlags, friendlyFire, TREMOR_SUBSKELETON_JOINT_RIGHT_HAND_CLAW, 1, 0);
+}
+
+//--------------------------------------------------------------------------
+void tremorForceLocalAction(Moby *moby, int action)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
+	float difficulty = 1;
+	int stateCooldownTicks = TREMOR_ACTION_COOLDOWN_TICKS;
+
+	if (MapConfig.State)
+		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)
 	{
-		case TREMOR_ACTION_SPAWN:
-		{
-			// enable collision
-			moby->CollActive = 0;
-			break;
-		}
-    case TREMOR_ACTION_DIE:
-    {
-      // can't undie
-      return;
-    }
-    case TREMOR_ACTION_JUMP:
+	case TREMOR_ACTION_SPAWN:
+	{
+		// enable collision
+		moby->CollActive = 0;
+		break;
+	}
+	case TREMOR_ACTION_DIE:
+	{
+		// can't undie
+		return;
+	}
+	case TREMOR_ACTION_ATTACK_GROUND_QUAKE:
+	{
+		// reset ptr to quake moby
+		tremorVars->QuakeMoby = NULL;
+		break;
+	}
+	case TREMOR_ACTION_JUMP:
     {
       pvars->MobVars.MoveVars.JumpedThisAction = 0;
       break;
@@ -639,13 +809,45 @@ void tremorForceLocalAction(Moby* moby, int action)
 	// to
 	switch (action)
 	{
-		case TREMOR_ACTION_SPAWN:
-		{
-			// disable collision
-			moby->CollActive = 1;
-			break;
-		}
-    case TREMOR_ACTION_ROAM:
+	case TREMOR_ACTION_SPAWN:
+	{
+		// disable collision
+		moby->CollActive = 1;
+		stateCooldownTicks = 0;
+		break;
+	}
+	case TREMOR_ACTION_WALK:
+	{
+
+		break;
+	}
+	case TREMOR_ACTION_DIE:
+	{
+		// disable collision
+		moby->CollActive = 1;
+		break;
+	}
+	case TREMOR_ACTION_ATTACK:
+	case TREMOR_ACTION_ATTACK_GROUND_QUAKE:
+	{
+		tremorResetActionCooldownTicks(moby, TREMOR_ATTACK_ACTION_MELEE);
+		tremorResetActionCooldownTicks(moby, TREMOR_ATTACK_ACTION_GROUND_QUAKE);
+		pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
+		stateCooldownTicks = 0;
+		break;
+	}
+	case TREMOR_ACTION_FLINCH:
+	case TREMOR_ACTION_BIG_FLINCH:
+	{
+		pvars->MobVars.FlinchCooldownTicks = TREMOR_FLINCH_COOLDOWN_TICKS;
+		stateCooldownTicks = 0;
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	case TREMOR_ACTION_ROAM:
     {
       // if we're in a spawner
       // then let it determine where we roam
@@ -654,97 +856,90 @@ void tremorForceLocalAction(Moby* moby, int action)
       }
       break;
     }
-		case TREMOR_ACTION_WALK:
-		{
-			
-			break;
 		}
-		case TREMOR_ACTION_DIE:
-		{
-			// disable collision
-			moby->CollActive = 1;
-			break;
-		}
-		case TREMOR_ACTION_ATTACK:
-		{
-			pvars->MobVars.AttackCooldownTicks = pvars->MobVars.Config.AttackCooldownTickCount;
-			break;
-		}
-		case TREMOR_ACTION_FLINCH:
-		case TREMOR_ACTION_BIG_FLINCH:
-		{
-			pvars->MobVars.FlinchCooldownTicks = TREMOR_FLINCH_COOLDOWN_TICKS;
-			break;
-		}
-		default:
-		{
-			break;
-		}
-	}
 
-	// 
-  if (action != pvars->MobVars.Action)
-    pvars->MobVars.CurrentActionForTicks = 0;
+	//
+	if (action != pvars->MobVars.Action)
+		pvars->MobVars.CurrentActionForTicks = 0;
 
 	pvars->MobVars.Action = action;
 	pvars->MobVars.NextAction = -1;
-	pvars->MobVars.ActionCooldownTicks = TREMOR_ACTION_COOLDOWN_TICKS;
+	pvars->MobVars.ActionCooldownTicks = stateCooldownTicks;
 }
 
 //--------------------------------------------------------------------------
-short tremorGetArmor(Moby* moby)
+short tremorGetArmor(Moby *moby)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	float t = pvars->MobVars.Health / pvars->MobVars.Config.Health;
-  int bangles = pvars->MobVars.Config.Bangles;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	float t = pvars->MobVars.Health / pvars->MobVars.Config.MaxHealth;
+	int bangles = pvars->MobVars.Config.Bangles;
 
-  if (t < 0.3)
-    return 0x0000;
-  else if (t < 0.7)
-    return bangles & 0x1f; // remove torso bangle
+	if (t < MOB_ARMOR_THRESHOLD_LOW)
+		return bangles & ~(TREMOR_BANGLE_LEFT_ARM_ARMOR | TREMOR_BANGLE_HEAD_ARMOR | TREMOR_BANGLE_CHEST_ARMOR);
+	else if (t < MOB_ARMOR_THRESHOLD_MID)
+		return bangles & ~(TREMOR_BANGLE_LEFT_ARM_ARMOR | TREMOR_BANGLE_HEAD_ARMOR);
+	else if (t < MOB_ARMOR_THRESHOLD_HIGH)
+		return bangles & ~TREMOR_BANGLE_LEFT_ARM_ARMOR;
 
 	return bangles;
 }
 
 //--------------------------------------------------------------------------
-int tremorIsAttacking(Moby* moby)
+int tremorIsAttacking(Moby *moby)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == TREMOR_ACTION_ATTACK && !pvars->MobVars.AnimationLooped;
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+
+	switch (pvars->MobVars.Action)
+	{
+	case TREMOR_ACTION_ATTACK_GROUND_QUAKE:
+		// stop after animation exited
+		return moby->AnimSeqId == TREMOR_ANIM_JUMP_AND_STAB_DOWN || moby->AnimSeqId == TREMOR_ANIM_STAB_DOWN_POSITION_REPEAT;
+	case TREMOR_ACTION_ATTACK:
+		return !pvars->MobVars.AnimationLooped;
+	default:
+		return 0;
+	}
 }
 
 //--------------------------------------------------------------------------
-int tremorCanNonOwnerTransitionToAction(Moby* moby, int action)
+int tremorCanNonOwnerTransitionToAction(Moby *moby, int action)
 {
-  // always let non-owners simulate an action unless its the death action
-  if (action == TREMOR_ACTION_DIE) return 0;
+	// always let non-owners simulate an action unless its the death action
+	if (action == TREMOR_ACTION_DIE)
+		return 0;
 
-  return 1;
+	return 1;
 }
 
 //--------------------------------------------------------------------------
-int tremorShouldForceStateUpdateOnAction(Moby* moby, int action)
+int tremorShouldForceStateUpdateOnAction(Moby *moby, int action)
 {
-  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  
-  // only send state updates at regular intervals, unless dying or flinching
-  // or if we're entering/leaving the roaming state
-  if (action == TREMOR_ACTION_DIE || action == TREMOR_ACTION_FLINCH || action == TREMOR_ACTION_BIG_FLINCH) return 1;
-  if (pvars->MobVars.Action == TREMOR_ACTION_ROAM || action == TREMOR_ACTION_ROAM) return 1;
+  if (((struct MobPVar*)moby->PVar)->MobVars.Action == TREMOR_ACTION_ROAM || action == TREMOR_ACTION_ROAM) return 1;
 
-  return 0;
+	// only send action updates at regular intervals, unless dying or flinching
+	if (action == TREMOR_ACTION_DIE || action == TREMOR_ACTION_FLINCH || action == TREMOR_ACTION_BIG_FLINCH)
+		return 1;
+
+	return 0;
 }
 
 //--------------------------------------------------------------------------
-int tremorIsSpawning(struct MobPVar* pvars)
+int tremorIsSpawning(struct MobPVar *pvars)
 {
 	return pvars->MobVars.Action == TREMOR_ACTION_SPAWN && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
-int tremorIsRoaming(struct MobPVar* pvars)
+int tremorCanAttack(struct MobPVar *pvars)
 {
-	return pvars->MobVars.Action == TREMOR_ACTION_ROAM;
+	return pvars->MobVars.AttackCooldownTicks == 0;
+}
+
+//--------------------------------------------------------------------------
+int tremorIsFlinching(Moby *moby)
+{
+	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
+	return (moby->AnimSeqId == TREMOR_ANIM_FLINCH || moby->AnimSeqId == TREMOR_ANIM_FLINCH_FALL_GET_UP) && !pvars->MobVars.AnimationLooped;
 }
 
 //--------------------------------------------------------------------------
@@ -754,21 +949,79 @@ int tremorIsIdling(struct MobPVar* pvars)
 }
 
 //--------------------------------------------------------------------------
-int tremorCanAttack(struct MobPVar* pvars)
+int tremorIsRoaming(struct MobPVar* pvars)
 {
-	return pvars->MobVars.AttackCooldownTicks == 0 && pvars->MobVars.Action != TREMOR_ACTION_ATTACK;
+	return pvars->MobVars.Action == TREMOR_ACTION_ROAM;
 }
 
 //--------------------------------------------------------------------------
-int tremorIsFlinching(Moby* moby)
+void tremorRenderPath(Moby* moby)
 {
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return (moby->AnimSeqId == TREMOR_ANIM_FLINCH || moby->AnimSeqId == TREMOR_ANIM_FLINCH_FALL_GET_UP) && !pvars->MobVars.AnimationLooped;
+  int x,y;
+  int i;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  struct PathGraph* pathGraph = pathGetMobyPathGraph(moby, &pvars->MobVars.MoveVars);
+  u8* path = (u8*)pvars->MobVars.MoveVars.CurrentPath;
+  int pathLen = pvars->MobVars.MoveVars.PathEdgeCount;
+  int pathIdx = pvars->MobVars.MoveVars.PathEdgeCurrent;
+
+
+  for (i = 0; i < pathLen; ++i) {
+    u8* edge = pathGraph->Edges[path[i]];
+    if (gfxWorldSpaceToScreenSpace(pathGraph->Nodes[edge[1]], &x, &y)) {
+      gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, i == pathIdx ? "o" : "-", -1, 4);
+    }
+  }
+
+  VECTOR t;
+  if (pathGetTargetPos(pathGraph, t, moby, &pvars->MobVars.MoveVars) && mobAmIOwner(moby))
+    pvars->MobVars.Dirty = 1; // new path, sync with other clients
+  if (gfxWorldSpaceToScreenSpace(t, &x, &y)) {
+    gfxScreenSpaceText(x, y, 1, 1, 0x80FFFFFF, "+", -1, 4);
+  }
 }
 
 //--------------------------------------------------------------------------
-int tremorIsDying(Moby* moby)
+int tremorCreate(struct MobCreateArgs* args)
 {
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	return pvars->MobVars.Action == TREMOR_ACTION_DIE;
+  VECTOR position = {0,0,1,0};
+	struct MobSpawnEventArgs spawnArgs;
+
+  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];
+
+	// create guber object
+	GuberEvent * guberEvent = 0;
+	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(TremorMobVars_t), &guberEvent, NULL);
+	if (guberEvent)
+	{
+    if (MapConfig.PopulateSpawnArgsFunc) {
+      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args);
+    }
+
+		u8 random = (u8)rand(100);
+    int parentUid = -1;
+    if (args->Parent)
+      parentUid = guberGetUID(args->Parent);
+
+
+    // spawn slightly above point
+    vector_add(position, position, args->Position);
+    char yaw = args->Yaw * 32;
+
+		guberEventWrite(guberEvent, position, 12);
+		guberEventWrite(guberEvent, &yaw, 1);
+		guberEventWrite(guberEvent, &args->SpawnFromUID, 4);
+		guberEventWrite(guberEvent, &parentUid, 4);
+		guberEventWrite(guberEvent, &args->Userdata, 4);
+		guberEventWrite(guberEvent, &random, 1);
+		guberEventWrite(guberEvent, &args->Behavior, 1);
+		guberEventWrite(guberEvent, &spawnArgs, sizeof(struct MobSpawnEventArgs));
+	}
+	else
+	{
+		DPRINTF("failed to guberevent mob\n");
+	}
+
+  return guberEvent != NULL;
 }

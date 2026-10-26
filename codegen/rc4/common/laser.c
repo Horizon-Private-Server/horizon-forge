@@ -57,13 +57,7 @@ void laserUpdateBeam(Moby* moby)
   if (pvars->DamageType & LASER_DAMAGE_TYPE_PLAYERS) damageFlags |= 1;
   if (pvars->DamageType & LASER_DAMAGE_TYPE_MOBS) damageFlags |= 0x40;
 
-#if RAIDS
-  float difficulty = MapConfig.State ? MapConfig.State->Difficulty : 1;
-  float damage = pvars->Damage * (1 + (MOB_BASE_DAMAGE_SCALE * pvars->DamageScale * difficulty));
-#else
   float damage = pvars->Damage;
-#endif
-
   if (pvars->DamageMax > 0 && damage > pvars->DamageMax)
     damage = pvars->DamageMax;
 
