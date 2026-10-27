@@ -540,6 +540,19 @@ int bankItemIsBadge(RaidsInventoryItem_t* item)
 }
 
 //--------------------------------------------------------------------------
+int bankCanUseItem(RaidsInventoryItem_t* item)
+{
+  if (bankItemIsBadge(item)) return 1;
+  if (!bankItemIsWeapon(item) || !bankHasEquippedClass) return 0;
+
+  int slot = bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId);
+  if (slot < 0 || slot >= COUNT_OF(bankLocalBank.EquippedClass.WeaponConstraints)) return 0;
+
+  int maxRarity = (s8)bankLocalBank.EquippedClass.WeaponConstraints[slot].MaxRarity;
+  return maxRarity >= 0 && bankGetRarityFromQuality(item->Quality) <= maxRarity;
+}
+
+//--------------------------------------------------------------------------
 u32 bankGetBolts(void) { return bankLocalBank.Account.Bolts; }
 u32 bankAddBolts(u32 amount) { return bankLocalBank.Account.Bolts += amount; }
 u32 bankSubtractBolts(u32 amount)
@@ -1217,7 +1230,7 @@ void bankTickPlayer(Player * player)
   for (i = 0; i < WEAPON_SLOT_OMNI_SHIELD; ++i) {
     int gadgetId = weaponSlotToId(i+1);
     RaidsInventoryItem_t* item = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
-    if (item) {
+    if (item && bankCanUseItem(item)) {
       bankApplyItem(player, item);
     } else if (gbox->Gadgets[gadgetId].Level >= 0)  {
       bankRemoveGadget(player, gadgetId);

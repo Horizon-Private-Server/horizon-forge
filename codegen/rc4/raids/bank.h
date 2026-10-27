@@ -418,6 +418,7 @@ int bankHasPendingContractsRequest(void);
 
 int bankItemIsWeapon(RaidsInventoryItem_t* item);
 int bankItemIsBadge(RaidsInventoryItem_t* item);
+int bankCanUseItem(RaidsInventoryItem_t* item);
 void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize);
 
 u32 bankGetBolts(void);
