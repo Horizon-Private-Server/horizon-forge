@@ -429,6 +429,7 @@ u64 bankAddXP(u64 amount);
 int bankGetLevel(void);
 u64 bankGetClassXpForLevel(RaidsPlayerClass_t* playerClass, int level);
 int bankGetClassLevel(RaidsPlayerClass_t* playerClass, u64 xp);
+char* bankGetClassLevelSuffix(int level);
 float bankGetLevelProgress(void);
 double bankGetWeaponXP(int gadgetId);
 double bankAddWeaponXP(double amount, int gadgetId);

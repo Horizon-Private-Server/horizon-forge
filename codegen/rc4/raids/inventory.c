@@ -1,4 +1,3 @@
-#include <string.h>
 #include <libdl/stdio.h>
 #include <libdl/game.h>
 #include <libdl/collision.h>
@@ -10,6 +9,7 @@
 #include <libdl/utils.h>
 #include <libdl/net.h>
 #include <libdl/ui.h>
+#include <libdl/string.h>
 #include <libdl/hud.h>
 #include <libdl/graphics.h>
 #include "utils.h"
@@ -198,6 +198,50 @@ u32 inventoryDrawGetCompareColor(int compare)
 }
 
 //--------------------------------------------------------------------------
+float inventoryDrawFittedText(Window_t* window, float x, float y, float width, float scale, u32 color, char* text, enum TextAlign alignment)
+{
+  if (width <= 0) return 0;
+
+  char buf[128];
+  snprintf(buf, sizeof(buf), "%s", text);
+  if (gfxGetFontWidth(buf, -1, scale) > width) {
+    float dotsWidth = gfxGetFontWidth("...", -1, scale);
+    int length = strlen(buf);
+    while (length > 0 && (length > (int)sizeof(buf) - 4 || gfxGetFontWidth(buf, -1, scale) + dotsWidth > width)) buf[--length] = 0;
+    if (dotsWidth <= width) strcat(buf, "...");
+  }
+  windowDrawText(window, TEXT_ALIGN_TOPLEFT, x, y, scale, color, buf, -1, alignment);
+  return gfxGetFontWidth(buf, -1, scale);
+}
+
+//--------------------------------------------------------------------------
+void inventoryDrawProgressBar(Window_t* window, float x, float y, float width, double progress)
+{
+  if (progress < 0) progress = 0;
+  if (progress > 1) progress = 1;
+  windowDrawBox(window, TEXT_ALIGN_TOPLEFT, x, y, width, 6, 0x80303030, TEXT_ALIGN_TOPLEFT);
+  if (progress > 0)
+    windowDrawBox(window, TEXT_ALIGN_TOPLEFT, x, y, width * progress, 6, 0x80B0B050, TEXT_ALIGN_TOPLEFT);
+}
+
+//--------------------------------------------------------------------------
+void inventoryDrawComparisonRow(Window_t* window, char* label, char* equipped, char* selected, u32 selectedColor, int hasComparison)
+{
+  const u32 textColor = 0x80FFFFFF;
+  const float padding = 8;
+  const float valueWidth = 75;
+  const float gutter = 8;
+  float selectedRight = window->Width - padding;
+  float equippedRight = selectedRight - valueWidth - gutter;
+
+  inventoryDrawFittedText(window, padding, 2, 73, 0.7, textColor, label, TEXT_ALIGN_TOPLEFT);
+  if (hasComparison)
+    inventoryDrawFittedText(window, equippedRight, 2, valueWidth, 0.7, textColor, equipped, TEXT_ALIGN_TOPRIGHT);
+  inventoryDrawFittedText(window, selectedRight, 2, valueWidth, 0.7, selectedColor, selected, TEXT_ALIGN_TOPRIGHT);
+  windowMove(window, 0, 14);
+}
+
+//--------------------------------------------------------------------------
 void inventoryDrawSpinner(Window_t* drawWindow)
 {
   gfxSetupGifPaging(0);
@@ -307,102 +351,85 @@ void inventoryDrawBadgeInfo(Window_t* drawWindow)
 //--------------------------------------------------------------------------
 void inventoryDrawWeaponInfo(Window_t* drawWindow)
 {
-  u32 bgColor = 0x70101010; // dark gray
-  u32 textColor = 0x80FFFFFF; // white
-  u32 textRedColor = 0x804040D0; // light red
-  u32 spriteColor = 0x80808080; // gray
-  char strBuf[128];
-  float strW;
+  const u32 textColor = 0x80FFFFFF;
+  const u32 secondaryColor = 0x80B0B0B0;
+  const u32 spriteColor = 0x80808080;
+  char equippedBuf[64];
+  char selectedBuf[64];
 
   RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
   if (!selectedItem) return;
 
-  int hasComparison = 0;
-  RaidsInventoryItem_t* baseItem = NULL;
   RaidsInventoryItem_t* equippedItem = bankGetLocalEquippedWeapon(selectedItem->WeaponData.GadgetId);
-  hasComparison = equippedItem && equippedItem != selectedItem;
-  baseItem = hasComparison ? equippedItem : selectedItem;
+  int hasComparison = equippedItem && equippedItem->Uid != selectedItem->Uid;
+  int isEquipped = equippedItem && equippedItem->Uid == selectedItem->Uid;
+  RaidsInventoryItem_t* baseItem = hasComparison ? equippedItem : selectedItem;
+  float selectedRight = drawWindow->Width - 8;
+  float equippedRight = selectedRight - 75 - 8;
 
-  // stats
-  snprintf(strBuf, sizeof(strBuf), "Damage: %d", (int)bankGetWeaponDamage(baseItem));
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    snprintf(strBuf, sizeof(strBuf), "> %d", (int)bankGetWeaponDamage(selectedItem));
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, inventoryDrawGetCompareColor(bankGetWeaponDamage(selectedItem) - bankGetWeaponDamage(baseItem)), strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
+  // fixed comparison column headings
+  windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 0, 0.55, secondaryColor, "Stat", -1, TEXT_ALIGN_TOPLEFT);
+  if (hasComparison)
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, equippedRight, 0, 0.55, secondaryColor, "Equipped", -1, TEXT_ALIGN_TOPRIGHT);
+  windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, selectedRight, 0, 0.55, secondaryColor, isEquipped ? "Equipped" : "Selected", -1, TEXT_ALIGN_TOPRIGHT);
   windowMove(drawWindow, 0, 12);
-  
-  snprintf(strBuf, sizeof(strBuf), "Critical Hit: %.f%%", (baseItem->WeaponData.CritChance / 255.0) * 100);
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    snprintf(strBuf, sizeof(strBuf), "> %.f%%", (selectedItem->WeaponData.CritChance / 255.0) * 100);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, inventoryDrawGetCompareColor(selectedItem->WeaponData.CritChance - baseItem->WeaponData.CritChance), strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
-  windowMove(drawWindow, 0, 12);
-  
+
+  float baseDamage = bankGetWeaponDamage(baseItem);
+  float selectedDamage = bankGetWeaponDamage(selectedItem);
+  snprintf(equippedBuf, sizeof(equippedBuf), "%d", (int)baseDamage);
+  snprintf(selectedBuf, sizeof(selectedBuf), "%d", (int)selectedDamage);
+  inventoryDrawComparisonRow(drawWindow, "Damage", equippedBuf, selectedBuf, inventoryDrawGetCompareColor(selectedDamage - baseDamage), hasComparison);
+
+  snprintf(equippedBuf, sizeof(equippedBuf), "%.f%%", (baseItem->WeaponData.CritChance / 255.0) * 100);
+  snprintf(selectedBuf, sizeof(selectedBuf), "%.f%%", (selectedItem->WeaponData.CritChance / 255.0) * 100);
+  inventoryDrawComparisonRow(drawWindow, "Critical Hit", equippedBuf, selectedBuf, inventoryDrawGetCompareColor(selectedItem->WeaponData.CritChance - baseItem->WeaponData.CritChance), hasComparison);
+
   int baseRarity = bankGetRarityFromQuality(baseItem->Quality);
-  snprintf(strBuf, sizeof(strBuf), "Rarity: %s", inventoryRarityNames[baseRarity]);
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    int selRarity = bankGetRarityFromQuality(selectedItem->Quality);
-    snprintf(strBuf, sizeof(strBuf), "=> %s", inventoryRarityNames[selRarity]);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, inventoryDrawGetCompareColor(selRarity - baseRarity), strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
-  windowMove(drawWindow, 0, 12);
-
-  snprintf(strBuf, sizeof(strBuf), "Paint: %s", inventoryPaintNames[baseItem->WeaponData.Paint]);
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    snprintf(strBuf, sizeof(strBuf), "> %s", inventoryPaintNames[selectedItem->WeaponData.Paint]);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
-  windowMove(drawWindow, 0, 12);
-
-  snprintf(strBuf, sizeof(strBuf), "Special: %s", inventoryPaintSpecialNames[baseItem->WeaponData.PaintSpecialMask]);
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    snprintf(strBuf, sizeof(strBuf), "> %s", inventoryPaintSpecialNames[selectedItem->WeaponData.PaintSpecialMask]);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
-  windowMove(drawWindow, 0, 12);
+  int selectedRarity = bankGetRarityFromQuality(selectedItem->Quality);
+  inventoryDrawComparisonRow(drawWindow, "Rarity", inventoryRarityNames[baseRarity], inventoryRarityNames[selectedRarity], inventoryDrawGetCompareColor(selectedRarity - baseRarity), hasComparison);
+  inventoryDrawComparisonRow(drawWindow, "Paint", inventoryPaintNames[baseItem->WeaponData.Paint], inventoryPaintNames[selectedItem->WeaponData.Paint], textColor, hasComparison);
+  inventoryDrawComparisonRow(drawWindow, "Special", inventoryPaintSpecialNames[baseItem->WeaponData.PaintSpecialMask], inventoryPaintSpecialNames[selectedItem->WeaponData.PaintSpecialMask], textColor, hasComparison);
 
   int baseWeaponModRarity = bankGetRarityFromQuality(baseItem->WeaponData.ModQuality);
   int baseHasMod = baseItem->WeaponData.ModType != RAIDS_WEAPON_MOD_NONE;
-  snprintf(strBuf, sizeof(strBuf), "Mod: %s %s", inventoryModNames[baseItem->WeaponData.ModType], baseHasMod ? inventoryWeaponModLevels[baseWeaponModRarity] : "");
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    int selWeaponModRarity = bankGetRarityFromQuality(selectedItem->WeaponData.ModQuality);
-    int selHasMod = selectedItem->WeaponData.ModType != RAIDS_WEAPON_MOD_NONE;
-    snprintf(strBuf, sizeof(strBuf), "> %s %s", inventoryModNames[selectedItem->WeaponData.ModType], selHasMod ? inventoryWeaponModLevels[selWeaponModRarity] : "");
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
+  int selectedWeaponModRarity = bankGetRarityFromQuality(selectedItem->WeaponData.ModQuality);
+  int selectedHasMod = selectedItem->WeaponData.ModType != RAIDS_WEAPON_MOD_NONE;
+  snprintf(equippedBuf, sizeof(equippedBuf), "%s%s%s", inventoryModNames[baseItem->WeaponData.ModType], baseHasMod ? " " : "", baseHasMod ? inventoryWeaponModLevels[baseWeaponModRarity] : "");
+  snprintf(selectedBuf, sizeof(selectedBuf), "%s%s%s", inventoryModNames[selectedItem->WeaponData.ModType], selectedHasMod ? " " : "", selectedHasMod ? inventoryWeaponModLevels[selectedWeaponModRarity] : "");
+  inventoryDrawComparisonRow(drawWindow, "Mod", equippedBuf, selectedBuf, textColor, hasComparison);
+
+  snprintf(equippedBuf, sizeof(equippedBuf), "%d/%d", baseItem->WeaponData.Upgrades, baseItem->WeaponData.MaxUpgrades);
+  snprintf(selectedBuf, sizeof(selectedBuf), "%d/%d", selectedItem->WeaponData.Upgrades, selectedItem->WeaponData.MaxUpgrades);
+  inventoryDrawComparisonRow(drawWindow, "Upgrades", equippedBuf, selectedBuf, textColor, hasComparison);
+
+  // alpha mods keep compact, icon-based comparisons
+  windowMove(drawWindow, 0, 4);
+  windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 0, 0.55, secondaryColor, "Alpha Mods", -1, TEXT_ALIGN_TOPLEFT);
   windowMove(drawWindow, 0, 12);
-  
-  snprintf(strBuf, sizeof(strBuf), "Upgrades: %d/%d", baseItem->WeaponData.Upgrades, baseItem->WeaponData.MaxUpgrades);
-  strW = windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  if (hasComparison) {
-    snprintf(strBuf, sizeof(strBuf), "> %d/%d", selectedItem->WeaponData.Upgrades, selectedItem->WeaponData.MaxUpgrades);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 10 + strW + 5, 5, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  }
-  windowMove(drawWindow, 0, 14);
-  
-  // alpha mods
   gfxSetupGifPaging(0);
   int i;
-  float alphamodWidth = (drawWindow->Width - 10) / (ALPHA_MOD_COUNT - 1);
+  float alphamodWidth = (drawWindow->Width - 16) / (ALPHA_MOD_COUNT - 1);
   for (i = 1; i < ALPHA_MOD_COUNT; ++i) {
-      
-    // get alphamods window
     Window_t windowAlphaMod;
-    windowCreateFrom(&windowAlphaMod, drawWindow, 5 + ((i-1) * alphamodWidth), 0, alphamodWidth, alphamodWidth, TEXT_ALIGN_TOPLEFT);
+    windowCreateFrom(&windowAlphaMod, drawWindow, 8 + ((i-1) * alphamodWidth), 0, alphamodWidth, 32, TEXT_ALIGN_TOPLEFT);
+    windowDrawSprite(&windowAlphaMod, TEXT_ALIGN_TOPCENTER, 0, 0, 16, 16, inventoryAlphaModSpriteIds[i], spriteColor, TEXT_ALIGN_TOPCENTER);
 
-    // sprite
-    windowDrawSprite(&windowAlphaMod, TEXT_ALIGN_MIDDLECENTER, 0, 0, 16, 16, inventoryAlphaModSpriteIds[i], spriteColor, TEXT_ALIGN_MIDDLECENTER);
-    snprintf(strBuf, sizeof(strBuf), "%d", baseItem->WeaponData.AlphaModCounts[i-1]);
-    strW = windowDrawText(&windowAlphaMod, TEXT_ALIGN_BOTTOMLEFT, 0, 0, 0.7, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMLEFT);
-    if (hasComparison) {
-      snprintf(strBuf, sizeof(strBuf), ">%d", selectedItem->WeaponData.AlphaModCounts[i-1]);
-      windowDrawText(&windowAlphaMod, TEXT_ALIGN_BOTTOMLEFT, 2 + strW, -1, 0.6, inventoryDrawGetCompareColor(selectedItem->WeaponData.AlphaModCounts[i-1] - baseItem->WeaponData.AlphaModCounts[i-1]), strBuf, -1, TEXT_ALIGN_BOTTOMLEFT);
+    int baseCount = baseItem->WeaponData.AlphaModCounts[i-1];
+    int selectedCount = selectedItem->WeaponData.AlphaModCounts[i-1];
+    if (hasComparison && baseCount != selectedCount) {
+      snprintf(equippedBuf, sizeof(equippedBuf), "%d", baseCount);
+      snprintf(selectedBuf, sizeof(selectedBuf), ">%d", selectedCount);
+      float scale = 0.6;
+      float width = gfxGetFontWidth(equippedBuf, -1, scale) + gfxGetFontWidth(selectedBuf, -1, scale);
+      if (width > alphamodWidth - 2) scale *= (alphamodWidth - 2) / width;
+      float baseWidth = gfxGetFontWidth(equippedBuf, -1, scale);
+      width = baseWidth + gfxGetFontWidth(selectedBuf, -1, scale);
+      float x = (alphamodWidth - width) / 2;
+      windowDrawText(&windowAlphaMod, TEXT_ALIGN_TOPLEFT, x, 18, scale, textColor, equippedBuf, -1, TEXT_ALIGN_TOPLEFT);
+      windowDrawText(&windowAlphaMod, TEXT_ALIGN_TOPLEFT, x + baseWidth, 18, scale, inventoryDrawGetCompareColor(selectedCount - baseCount), selectedBuf, -1, TEXT_ALIGN_TOPLEFT);
+    } else {
+      snprintf(selectedBuf, sizeof(selectedBuf), "%d", selectedCount);
+      windowDrawText(&windowAlphaMod, TEXT_ALIGN_TOPCENTER, 0, 18, 0.7, textColor, selectedBuf, -1, TEXT_ALIGN_TOPCENTER);
     }
   }
   gfxDoGifPaging();
@@ -411,103 +438,120 @@ void inventoryDrawWeaponInfo(Window_t* drawWindow)
 //--------------------------------------------------------------------------
 void inventoryDrawItemInfo(Window_t* drawWindow)
 {
-  const u32 bgColor = 0x70101010; // dark gray
-  const u32 textColor = 0x80FFFFFF; // white
-  const u32 textRedColor = 0x804040D0; // light red
-  const u32 spriteColor = 0x80808080; // gray
-  const u32 borderColor = 0x80000020; // maroon
+  const u32 bgColor = 0x78101010;
+  const u32 textColor = 0x80FFFFFF;
+  const u32 secondaryColor = 0x80B0B0B0;
+  const u32 textRedColor = 0x804040D0;
+  const u32 borderColor = 0x80000020;
   char strBuf[128];
 
-  // draw box
   windowFill(drawWindow, bgColor);
-
-  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
-  if (!selectedItem) return;
-
-  // name
-  bankGetItemName(selectedItem, strBuf, sizeof(strBuf));
-  windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 5, 2, 0.95, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  windowMove(drawWindow, 0, 12);
-
-  // badge
-  if (bankItemIsBadge(selectedItem)) {
-    inventoryDrawBadgeInfo(drawWindow);
-  } else if (bankItemIsWeapon(selectedItem)) {
-    inventoryDrawWeaponInfo(drawWindow);
-  }
-  
-  windowReset(drawWindow);
-  windowBorder(drawWindow, borderColor, 0, 1, 0, 0);
-}
-
-//--------------------------------------------------------------------------
-void inventoryDrawInfo(Window_t* drawWindow)
-{
-  const u32 bgColor = 0x50101010; // dark gray
-  const u32 textColor = 0x80FFFFFF; // white
-  const u32 brightTextColor = 0x8000FFFF; // yellow
-  const u32 spriteColor = 0x80808080; // gray
-  const u32 borderColor = 0x80000020; // maroon
-  const float proficiencyHeight = 32;
-  const float itemInfoHeight = 60;
-  RaidsPlayerBank_t* localBank = bankGetLocalBank();
-  int i;
-  int level = bankGetLevel();
-  char strBuf[128];
-
-  if (!bankGetHasAccount()) {
+  windowBorder(drawWindow, borderColor, 1, 0, 0, 0);
+  if (!bankGetHasAccount() || !inventoryGetHasInventoryPage()) {
     inventoryDrawSpinner(drawWindow);
     return;
   }
 
-  // draw box
-  windowFill(drawWindow, bgColor);
-
-  // get stats window
-  Window_t windowStats;
-  windowCreateFrom(&windowStats, drawWindow, 0, 0, drawWindow->Width, drawWindow->Height, TEXT_ALIGN_TOPLEFT);
-
-  // stats
-  snprintf(strBuf, sizeof(strBuf), "Bolts: %'d", localBank->Account.Bolts);
-  windowDrawText(&windowStats, TEXT_ALIGN_TOPLEFT, 5, 2, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  windowMove(&windowStats, 0, 12);
-  if (level < LEVELUP_MAX_PLAYER_LEVEL) {
-    snprintf(strBuf, sizeof(strBuf), "Hero Level: %d   => %c%.1f%%", level + 1, '\x0A', bankGetLevelProgress() * 100);
-  } else {
-    snprintf(strBuf, sizeof(strBuf), "Hero Level: %d   [MAXED]", level + 1);
+  RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
+  if (!selectedItem) {
+    windowDrawText(drawWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.7, secondaryColor, "No item selected", -1, TEXT_ALIGN_MIDDLECENTER);
+    return;
   }
-  
-  windowDrawText(&windowStats, TEXT_ALIGN_TOPLEFT, 5, 2, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  windowMove(&windowStats, 0, 12);
 
-  windowMove(&windowStats, 0, 6);
-  windowDrawText(&windowStats, TEXT_ALIGN_TOPLEFT, 5, 2, 0.7, textColor, "Weapon Proficiency:", -1, TEXT_ALIGN_TOPLEFT);
-  windowMove(&windowStats, 0, 10);
+  bankGetItemName(selectedItem, strBuf, sizeof(strBuf));
+  inventoryDrawFittedText(drawWindow, 8, 8, drawWindow->Width - 16, 0.9, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  windowMove(drawWindow, 0, 26);
 
-  // item proficiency
+  RaidsInventoryItem_t* equippedItem = NULL;
+  if (bankItemIsBadge(selectedItem)) equippedItem = bankGetLocalEquippedBadge();
+  else if (bankItemIsWeapon(selectedItem)) equippedItem = bankGetLocalEquippedWeapon(selectedItem->WeaponData.GadgetId);
+
+  int canSell = 0, alreadyEquipped = 0, canEquip = 0, tooStrong = 0;
+  inventoryGetSelectedItemInteraction(&canSell, &alreadyEquipped, &canEquip, &tooStrong);
+  int classRestricted = bankItemIsWeapon(selectedItem) && bankGetHasEquippedClass() && !bankCanUseItem(selectedItem);
+
+  // Reserve this line so status changes do not move the comparison table.
+  if (tooStrong) {
+    snprintf(strBuf, sizeof(strBuf), "Must be P%d to equip%s", selectedItem->WeaponData.Proficiency + 1, classRestricted ? "; class restricted" : "");
+    inventoryDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  } else if (classRestricted) {
+    inventoryDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, "Not usable by current class", TEXT_ALIGN_TOPLEFT);
+  } else if (equippedItem && equippedItem->Uid == selectedItem->Uid) {
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 0, 0.6, secondaryColor, "Equipped", -1, TEXT_ALIGN_TOPLEFT);
+  }
+  windowMove(drawWindow, 0, 14);
+
+  if (bankItemIsBadge(selectedItem)) inventoryDrawBadgeInfo(drawWindow);
+  else if (bankItemIsWeapon(selectedItem)) inventoryDrawWeaponInfo(drawWindow);
+  windowReset(drawWindow);
+}
+
+//--------------------------------------------------------------------------
+void inventoryDrawAccountInfo(Window_t* drawWindow, float statsWidth)
+{
+  const u32 bgColor = 0x78101010;
+  const u32 textColor = 0x80FFFFFF;
+  const u32 secondaryColor = 0x80B0B0B0;
+  const u32 spriteColor = 0x80808080;
+  const u32 borderColor = 0x80000020;
+  RaidsPlayerBank_t* localBank = bankGetLocalBank();
+  char strBuf[128];
+
+  windowFill(drawWindow, bgColor);
+  windowBorder(drawWindow, borderColor, 0, 0, 1, 1);
+  if (!bankGetHasAccount()) {
+    inventoryDrawFittedText(drawWindow, 8, 4, statsWidth - 16, 0.7, secondaryColor, "Loading account...", TEXT_ALIGN_TOPLEFT);
+    return;
+  }
+
+  snprintf(strBuf, sizeof(strBuf), "Bolts: %'u", localBank->Account.Bolts);
+  inventoryDrawFittedText(drawWindow, 8, 4, statsWidth - 16, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  const float barWidth = 80;
+  float barX = statsWidth - 8 - barWidth;
+  float labelWidth = barX - 16;
+  int level = bankGetLevel();
+  if (level < LEVELUP_MAX_PLAYER_LEVEL) {
+    snprintf(strBuf, sizeof(strBuf), "Hero Level: %d", level + 1);
+  } else {
+    snprintf(strBuf, sizeof(strBuf), "Hero Level: %d  [MAXED]", level + 1);
+  }
+  inventoryDrawFittedText(drawWindow, 8, 16, labelWidth, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  inventoryDrawProgressBar(drawWindow, barX, 18, barWidth, bankGetLevelProgress());
+
+  if (bankGetHasEquippedClass() && localBank->EquippedClass.Name[0]) {
+    char suffix[16];
+    RaidsPlayerClass_t* playerClass = &localBank->EquippedClass;
+    int classLevel = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
+    snprintf(strBuf, sizeof(strBuf), "Class: %.32s", localBank->EquippedClass.Name);
+    snprintf(suffix, sizeof(suffix), " %s", bankGetClassLevelSuffix(classLevel));
+    float suffixWidth = gfxGetFontWidth(suffix, -1, 0.7);
+    float nameWidth = inventoryDrawFittedText(drawWindow, 8, 28, labelWidth - suffixWidth, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8 + nameWidth, 28, 0.7, textColor, suffix, -1, TEXT_ALIGN_TOPLEFT);
+
+    double progress = 1;
+    if (classLevel < 10) {
+      u64 startXp = bankGetClassXpForLevel(playerClass, classLevel - 1);
+      u64 nextXp = bankGetClassXpForLevel(playerClass, classLevel);
+      progress = nextXp > startXp && playerClass->CurrentExperience >= startXp
+        ? (double)(playerClass->CurrentExperience - startXp) / (double)(nextXp - startXp) : 0;
+    }
+    inventoryDrawProgressBar(drawWindow, barX, 30, barWidth, progress);
+  } else {
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 28, 0.7, secondaryColor, "Class: Loading...", -1, TEXT_ALIGN_TOPLEFT);
+  }
+
+  windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, statsWidth + 8, 4, 0.55, secondaryColor, "Weapon Proficiency", -1, TEXT_ALIGN_TOPLEFT);
+  float profWidth = (drawWindow->Width - statsWidth - 16) / (WEAPON_SLOT_COUNT - 1);
   gfxSetupGifPaging(0);
-  float profWidth = (drawWindow->Width - 10) / (WEAPON_SLOT_COUNT - 1);
+  int i;
   for (i = 1; i < WEAPON_SLOT_COUNT; ++i) {
-    int iconSpriteId = inventoryWeaponSpriteIds[i];
-
-    // get window
     Window_t windowProficiency;
-    windowCreateFrom(&windowProficiency, &windowStats, 5 + ((i-1) * profWidth), 0, profWidth, profWidth, TEXT_ALIGN_TOPLEFT);
-
-    // sprite
-    windowDrawSprite(&windowProficiency, TEXT_ALIGN_MIDDLECENTER, 0, 0, 16, 16, iconSpriteId, spriteColor, TEXT_ALIGN_MIDDLECENTER);
+    windowCreateFrom(&windowProficiency, drawWindow, statsWidth + 8 + ((i-1) * profWidth), 14, profWidth, 28, TEXT_ALIGN_TOPLEFT);
+    windowDrawSprite(&windowProficiency, TEXT_ALIGN_TOPCENTER, 0, 0, 16, 16, inventoryWeaponSpriteIds[i], spriteColor, TEXT_ALIGN_TOPCENTER);
     snprintf(strBuf, sizeof(strBuf), "%d", getProficiencyFromXp(localBank->Account.WeaponXp[i-1]) + 1);
-    windowDrawText(&windowProficiency, TEXT_ALIGN_BOTTOMCENTER, 0, 3, 0.7, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMCENTER);
+    windowDrawText(&windowProficiency, TEXT_ALIGN_TOPCENTER, 0, 18, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
   }
   gfxDoGifPaging();
-  windowMove(&windowStats, 0, 34);
-
-  // draw selected item info
-  Window_t windowItemInfo;
-  windowCreateFrom(&windowItemInfo, &windowStats, 0, 0, windowStats.Width, windowStats.Height - windowStats.Position[1], TEXT_ALIGN_TOPLEFT);
-  inventoryDrawItemInfo(&windowItemInfo);
-  
-  windowBorder(drawWindow, borderColor, 1, 1, 0, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -586,6 +630,12 @@ void inventoryDrawItem(Window_t* drawWindow, int idx)
   if (isWeapon && item->WeaponData.ModType) {
     u32 omegaColor = bankGetWeaponOmegaModColor(item);
     windowDrawSprite(drawWindow, TEXT_ALIGN_BOTTOMRIGHT, 0, 0, 8, 8, 79, omegaColor | 0x80000000, TEXT_ALIGN_BOTTOMRIGHT);
+  }
+
+  // class restriction marker (the other corners show notify, paint and mod)
+  if (isWeapon && bankGetHasEquippedClass() && !bankCanUseItem(item)) {
+    windowDrawBox(drawWindow, TEXT_ALIGN_TOPLEFT, 1, 1, 10, 10, 0x80000000, TEXT_ALIGN_TOPLEFT);
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 1, 0.6, 0x804040D0, "!", -1, TEXT_ALIGN_TOPCENTER);
   }
 
   gfxDoGifPaging();
@@ -692,12 +742,10 @@ void inventoryDrawFooter(Window_t* drawWindow)
   }
   
   // draw footer text
-  char sellPriceStrBuf[32];
   strBuf[0] = 0;
   if (!isLoading) {
     strcat(strBuf, "\x14 \x15 FILTER    ");
     if (canEquip) strcat(strBuf, "\x10 EQUIP    ");
-    if (selectedTooStrong) { snprintf(sellPriceStrBuf, sizeof(sellPriceStrBuf), "MUST BE P%d TO EQUIP    ", selectedItem->WeaponData.Proficiency+1); strcat(strBuf, sellPriceStrBuf); }
     if (selectedItem) strcat(strBuf, "\x11 FAV    ");
     if (canSell) { strcat(strBuf, "\x13 SELL    "); }
   }
@@ -705,7 +753,7 @@ void inventoryDrawFooter(Window_t* drawWindow)
   
   // draw bg
   windowFill(drawWindow, bgSolidColor);
-  windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMLEFT, 2, -2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMLEFT);
+  windowDrawText(drawWindow, TEXT_ALIGN_MIDDLELEFT, 2, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
 }
 
 //--------------------------------------------------------------------------
@@ -714,15 +762,18 @@ void inventoryDraw(void)
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
 
-  u32 bgColor = 0x60000000;
+  u32 bgColor = 0x70000000;
   u32 borderColor = 0x80000020;
   u32 textColor = 0x80FFFFFF;
-  const float windowWidth = 450;
-  const float windowHeight = 250;
+  const float windowWidth = 480;
+  const float windowHeight = 290;
   const float titleHeight = 24;
+  const float accountHeight = 44;
+  const float gridWidth = 225;
   const float tabHeaderHeight = 24;
-  const float footerHeight = 20;
-  const float itemListDetailsHeight = 180;
+  const float footerHeight = 16;
+  const float bodyY = titleHeight + accountHeight;
+  const float bodyHeight = windowHeight - bodyY - footerHeight;
   char strBuf[128];
   Window_t drawWindow;
 
@@ -747,22 +798,27 @@ void inventoryDraw(void)
 
   // draw title text
   snprintf(strBuf, sizeof(strBuf), "Inventory - %s", gs->PlayerNames[localPlayer->PlayerId]);
-  windowDrawText(&drawWindow, TEXT_ALIGN_TOPCENTER, 0, 0, 1.1, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
+  inventoryDrawFittedText(&drawWindow, windowWidth * 0.5, 0, windowWidth - 16, 1.1, textColor, strBuf, TEXT_ALIGN_TOPCENTER);
+
+  // full-width account strip
+  Window_t drawWindowAccount;
+  windowCreateFrom(&drawWindowAccount, &drawWindow, 0, titleHeight, windowWidth, accountHeight, TEXT_ALIGN_TOPLEFT);
+  inventoryDrawAccountInfo(&drawWindowAccount, gridWidth);
 
   // draw tabs
   Window_t drawWindowTabs;
-  windowCreateFrom(&drawWindowTabs, &drawWindow, 0, titleHeight, windowWidth * 0.5, tabHeaderHeight, TEXT_ALIGN_TOPLEFT);
+  windowCreateFrom(&drawWindowTabs, &drawWindow, 0, bodyY, gridWidth, tabHeaderHeight, TEXT_ALIGN_TOPLEFT);
   inventoryDrawTabs(&drawWindowTabs);
 
   // draw tab
   Window_t drawWindowTab;
-  windowCreateFrom(&drawWindowTab, &drawWindow, 0, titleHeight + tabHeaderHeight, windowWidth * 0.5, windowHeight - (tabHeaderHeight + footerHeight + titleHeight), TEXT_ALIGN_TOPLEFT);
+  windowCreateFrom(&drawWindowTab, &drawWindow, 0, bodyY + tabHeaderHeight, gridWidth, bodyHeight - tabHeaderHeight, TEXT_ALIGN_TOPLEFT);
   inventoryDrawTab(&drawWindowTab);
 
   // draw info
   Window_t drawWindowInfo;
-  windowCreateFrom(&drawWindowInfo, &drawWindow, windowWidth * 0.5, titleHeight, windowWidth * 0.5, windowHeight - (footerHeight + titleHeight), TEXT_ALIGN_TOPLEFT);
-  inventoryDrawInfo(&drawWindowInfo);
+  windowCreateFrom(&drawWindowInfo, &drawWindow, gridWidth, bodyY, windowWidth - gridWidth, bodyHeight, TEXT_ALIGN_TOPLEFT);
+  inventoryDrawItemInfo(&drawWindowInfo);
 
   // draw footer
   Window_t windowFooter;

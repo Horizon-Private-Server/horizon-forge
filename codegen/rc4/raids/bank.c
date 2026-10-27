@@ -623,6 +623,14 @@ int bankGetClassLevel(RaidsPlayerClass_t* playerClass, u64 xp)
 }
 
 //--------------------------------------------------------------------------
+char* bankGetClassLevelSuffix(int level)
+{
+  static char* suffixes[] = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
+  if (level < 1 || level > COUNT_OF(suffixes)) return "--";
+  return suffixes[level - 1];
+}
+
+//--------------------------------------------------------------------------
 float bankGetLevelProgress(void)
 {
   u64 xp = bankLocalBank.Account.Experience;
@@ -1285,7 +1293,7 @@ void bankTick(void)
       int nextLevel = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
       if (nextLevel > level) {
         char buf[64];
-        snprintf(buf, sizeof(buf), "You have reached %.31s %d", playerClass->Name, nextLevel);
+        snprintf(buf, sizeof(buf), "You have reached %.31s %s", playerClass->Name, bankGetClassLevelSuffix(nextLevel));
         pushSnack(0, buf, 120);
       }
     }
