@@ -159,7 +159,7 @@ void swamperPostDraw(Moby *moby)
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	u32 color = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-	mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, SWAMPER_SUBSKELETON_JOINT_JAW);
+	mobPostDrawQuad(moby, 0.5, color, SWAMPER_SUBSKELETON_JOINT_JAW);
 }
 
 //--------------------------------------------------------------------------

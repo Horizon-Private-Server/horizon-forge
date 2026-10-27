@@ -1269,18 +1269,20 @@ int mobHitWallShouldJump(Moby* moby, float maxSlope)
 }
 
 //--------------------------------------------------------------------------
-void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
+void mobPostDrawQuad(Moby* moby, float scale, u32 color, int jointId)
 {
+	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+	if (!pvars)
+		return;
+
 	struct QuadDef quad;
-	float size = moby->Scale * 2;
+	float size = scale * mobGetScaleMultiplier(moby);
 	MATRIX m2;
 	VECTOR pTL = {0,size,size,1};
 	VECTOR pTR = {0,-size,size,1};
 	VECTOR pBL = {0,size,-size,1};
 	VECTOR pBR = {0,-size,-size,1};
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	if (!pvars)
-		return;
+	VECTOR offset = {0,0,size};
 
 	//u32 color = MobLODColors[pvars->MobVars.Config.MobType] | (moby->Opacity << 24);
 
@@ -1301,7 +1303,7 @@ void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
   quad.VertexUVs[2] = (struct UV){0,1};
   quad.VertexUVs[3] = (struct UV){1,1};
 	quad.Clamp = 0x0000000100000001;
-	quad.Tex0 = gfxGetFrameTex(texId);
+	quad.Tex0 = gfxGetFrameTex(mobGetSpawnParams(moby)->SpriteTexId);
 	quad.Tex1 = 0xFF9000000260;
 	quad.Alpha = 0x8000000044;
 
@@ -1309,9 +1311,9 @@ void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId)
 	if (!camera)
 		return;
 	
-	// set world matrix by joint
-	mobyGetJointMatrix(moby, jointId, m2);
+	// face the camera with the bottom of the sprite at the mob's position
   memcpy(m2, camera->uMtx, sizeof(VECTOR) * 3);
+  vector_add(&m2[12], moby->Position, offset);
 
 	// draw
 	gfxDrawQuad((void*)0x00222590, &quad, m2, 1);

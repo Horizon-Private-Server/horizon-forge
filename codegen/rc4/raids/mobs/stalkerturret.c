@@ -172,7 +172,7 @@ void stalkerturretPostDraw(Moby* moby)
     return;
     
   u32 color = mobGetSpawnParams(moby)->SpriteColor | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, STALKERTURRET_SUBSKELETON_JOINT_0);
+  mobPostDrawQuad(moby, 1.0, color, STALKERTURRET_SUBSKELETON_JOINT_0);
 }
 
 //--------------------------------------------------------------------------

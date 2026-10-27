@@ -183,7 +183,7 @@ void zombiePostDraw(Moby *moby)
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	u32 color = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-	mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, 1);
+	mobPostDrawQuad(moby, 1.0, color, 1);
 }
 
 //--------------------------------------------------------------------------

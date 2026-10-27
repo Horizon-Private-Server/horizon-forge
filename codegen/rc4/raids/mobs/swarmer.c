@@ -160,7 +160,7 @@ void swarmerPostDraw(Moby *moby)
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	u32 color = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-	mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, 0);
+	mobPostDrawQuad(moby, 0.5, color, 0);
 }
 
 //--------------------------------------------------------------------------

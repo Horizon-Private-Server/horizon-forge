@@ -67,7 +67,7 @@ float mobGetCurrentWalkAngle(Moby* moby);
 void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir);
 void mobJumpTowards(Moby* moby, VECTOR targetPosition);
 int mobHitWallShouldJump(Moby* moby, float maxSlope);
-void mobPostDrawQuad(Moby* moby, int texId, u32 color, int jointId);
+void mobPostDrawQuad(Moby* moby, float scale, u32 color, int jointId);
 void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e);
 void mobPreUpdate(Moby* moby);
 void mobGetTargetCenter(Moby* target, VECTOR out);

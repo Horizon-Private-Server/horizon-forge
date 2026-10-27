@@ -231,7 +231,7 @@ void leviathanPostDraw(Moby *moby)
 
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	u32 color = MapConfig.MobSpawnParams[pvars->MobVars.SpawnParamsIdx].SpriteColor | (moby->Opacity << 24);
-	mobPostDrawQuad(moby, mobGetSpawnParams(moby)->SpriteTexId, color, LEVIATHAN_SUBSKELETON_JOINT_BODY);
+	mobPostDrawQuad(moby, 2.2, color, LEVIATHAN_SUBSKELETON_JOINT_BODY);
 }
 
 //--------------------------------------------------------------------------
