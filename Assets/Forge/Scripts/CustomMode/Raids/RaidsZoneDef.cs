@@ -22,7 +22,8 @@ public class RaidsZoneDef : MonoBehaviour
 
         sb.AppendLine("\t{");
         sb.AppendLine($"\t\t.CuboidIdx = {cuboidIdx},");
-        sb.AppendLine($"\t\t.Difficulty = {(int)this.Difficulty}");
+        sb.AppendLine($"\t\t.Difficulty = {(int)this.Difficulty},");
+        sb.AppendLine($"\t\t.Name = \"{Name.MaxLength(31).Escape()}\"");
         sb.AppendLine("\t},");
 
         return sb.ToString();

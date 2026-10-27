@@ -344,6 +344,7 @@ struct RaidsDifficultyZone
 {
   int CuboidIdx;
   int Difficulty;
+  char Name[32];
 };
 
 struct RaidsCustomMapExtraData

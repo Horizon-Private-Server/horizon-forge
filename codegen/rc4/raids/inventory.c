@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "game.h"
 #include "window.h"
+#include "menu.h"
 #include "bank.h"
 #include "inventory.h"
 #include "common.h"
@@ -166,7 +167,7 @@ void inventoryOpen(void)
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
 
-  if (gameHasEnded()) return;
+  if (shouldCloseMenu()) return;
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
 
   state->MenuOpen = RAIDS_CUSTOM_MENU_INVENTORY;
@@ -193,51 +194,24 @@ void inventoryClose(void)
 u32 inventoryDrawGetCompareColor(int compare)
 {
   if (compare < 0) return 0x800000FF; // red
-  if (compare == 0) return 0x80FFFFFF; // white
+  if (compare == 0) return RAIDS_MENU_TEXT_COLOR; // white
   return 0x8000FFFF; // yellow
-}
-
-//--------------------------------------------------------------------------
-float inventoryDrawFittedText(Window_t* window, float x, float y, float width, float scale, u32 color, char* text, enum TextAlign alignment)
-{
-  if (width <= 0) return 0;
-
-  char buf[128];
-  snprintf(buf, sizeof(buf), "%s", text);
-  if (gfxGetFontWidth(buf, -1, scale) > width) {
-    float dotsWidth = gfxGetFontWidth("...", -1, scale);
-    int length = strlen(buf);
-    while (length > 0 && (length > (int)sizeof(buf) - 4 || gfxGetFontWidth(buf, -1, scale) + dotsWidth > width)) buf[--length] = 0;
-    if (dotsWidth <= width) strcat(buf, "...");
-  }
-  windowDrawText(window, TEXT_ALIGN_TOPLEFT, x, y, scale, color, buf, -1, alignment);
-  return gfxGetFontWidth(buf, -1, scale);
-}
-
-//--------------------------------------------------------------------------
-void inventoryDrawProgressBar(Window_t* window, float x, float y, float width, double progress)
-{
-  if (progress < 0) progress = 0;
-  if (progress > 1) progress = 1;
-  windowDrawBox(window, TEXT_ALIGN_TOPLEFT, x, y, width, 6, 0x80303030, TEXT_ALIGN_TOPLEFT);
-  if (progress > 0)
-    windowDrawBox(window, TEXT_ALIGN_TOPLEFT, x, y, width * progress, 6, 0x80B0B050, TEXT_ALIGN_TOPLEFT);
 }
 
 //--------------------------------------------------------------------------
 void inventoryDrawComparisonRow(Window_t* window, char* label, char* equipped, char* selected, u32 selectedColor, int hasComparison)
 {
-  const u32 textColor = 0x80FFFFFF;
+  const u32 textColor = RAIDS_MENU_TEXT_COLOR;
   const float padding = 8;
   const float valueWidth = 75;
   const float gutter = 8;
   float selectedRight = window->Width - padding;
   float equippedRight = selectedRight - valueWidth - gutter;
 
-  inventoryDrawFittedText(window, padding, 2, 73, 0.7, textColor, label, TEXT_ALIGN_TOPLEFT);
+  menuDrawFittedText(window, padding, 2, 73, 0.7, textColor, label, TEXT_ALIGN_TOPLEFT);
   if (hasComparison)
-    inventoryDrawFittedText(window, equippedRight, 2, valueWidth, 0.7, textColor, equipped, TEXT_ALIGN_TOPRIGHT);
-  inventoryDrawFittedText(window, selectedRight, 2, valueWidth, 0.7, selectedColor, selected, TEXT_ALIGN_TOPRIGHT);
+    menuDrawFittedText(window, equippedRight, 2, valueWidth, 0.7, textColor, equipped, TEXT_ALIGN_TOPRIGHT);
+  menuDrawFittedText(window, selectedRight, 2, valueWidth, 0.7, selectedColor, selected, TEXT_ALIGN_TOPRIGHT);
   windowMove(window, 0, 14);
 }
 
@@ -250,8 +224,8 @@ void inventoryDrawSpinner(Window_t* drawWindow)
   float t = (int)(4*fastmodf(gameGetTime() / 1000.0, 1.0));
   int i = 0;
   while (i < t) {
-    windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, x, 0, 16, 16, 80, 0x80FFFFFF, TEXT_ALIGN_MIDDLECENTER);
-    //gfxHelperDrawSprite(UPGRADE_DRAW_CENTER_X, UPGRADE_DRAW_CENTER_Y, x, y, 16, 16, 64, 64, 80, 0x80FFFFFF, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
+    windowDrawSprite(drawWindow, TEXT_ALIGN_MIDDLECENTER, x, 0, 16, 16, 80, RAIDS_MENU_TEXT_COLOR, TEXT_ALIGN_MIDDLECENTER);
+    //gfxHelperDrawSprite(UPGRADE_DRAW_CENTER_X, UPGRADE_DRAW_CENTER_Y, x, y, 16, 16, 64, 64, 80, RAIDS_MENU_TEXT_COLOR, TEXT_ALIGN_MIDDLECENTER, COMMON_DZO_DRAW_NORMAL);
     ++i;
     x += 16;
   }
@@ -295,8 +269,8 @@ void inventoryGetSelectedItemInteraction(int* canSell, int* alreadyEquipped, int
 void inventoryDrawBadgeInfo(Window_t* drawWindow)
 {
   u32 bgColor = 0x70101010; // dark gray
-  u32 textColor = 0x80FFFFFF; // white
-  u32 textRedColor = 0x804040D0; // light red
+  u32 textColor = RAIDS_MENU_TEXT_COLOR; // white
+  u32 textRedColor = RAIDS_MENU_WARNING_COLOR; // light red
   u32 spriteColor = 0x80808080; // gray
   char strBuf[128];
 
@@ -351,8 +325,8 @@ void inventoryDrawBadgeInfo(Window_t* drawWindow)
 //--------------------------------------------------------------------------
 void inventoryDrawWeaponInfo(Window_t* drawWindow)
 {
-  const u32 textColor = 0x80FFFFFF;
-  const u32 secondaryColor = 0x80B0B0B0;
+  const u32 textColor = RAIDS_MENU_TEXT_COLOR;
+  const u32 secondaryColor = RAIDS_MENU_SECONDARY_COLOR;
   const u32 spriteColor = 0x80808080;
   char equippedBuf[64];
   char selectedBuf[64];
@@ -438,11 +412,11 @@ void inventoryDrawWeaponInfo(Window_t* drawWindow)
 //--------------------------------------------------------------------------
 void inventoryDrawItemInfo(Window_t* drawWindow)
 {
-  const u32 bgColor = 0x78101010;
-  const u32 textColor = 0x80FFFFFF;
-  const u32 secondaryColor = 0x80B0B0B0;
-  const u32 textRedColor = 0x804040D0;
-  const u32 borderColor = 0x80000020;
+  const u32 bgColor = RAIDS_MENU_PANEL_COLOR;
+  const u32 textColor = RAIDS_MENU_TEXT_COLOR;
+  const u32 secondaryColor = RAIDS_MENU_SECONDARY_COLOR;
+  const u32 textRedColor = RAIDS_MENU_WARNING_COLOR;
+  const u32 borderColor = RAIDS_MENU_BORDER_COLOR;
   char strBuf[128];
 
   windowFill(drawWindow, bgColor);
@@ -459,7 +433,7 @@ void inventoryDrawItemInfo(Window_t* drawWindow)
   }
 
   bankGetItemName(selectedItem, strBuf, sizeof(strBuf));
-  inventoryDrawFittedText(drawWindow, 8, 8, drawWindow->Width - 16, 0.9, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  menuDrawFittedText(drawWindow, 8, 8, drawWindow->Width - 16, 0.9, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
   windowMove(drawWindow, 0, 26);
 
   RaidsInventoryItem_t* equippedItem = NULL;
@@ -473,9 +447,9 @@ void inventoryDrawItemInfo(Window_t* drawWindow)
   // Reserve this line so status changes do not move the comparison table.
   if (tooStrong) {
     snprintf(strBuf, sizeof(strBuf), "Must be P%d to equip%s", selectedItem->WeaponData.Proficiency + 1, classRestricted ? "; class restricted" : "");
-    inventoryDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, strBuf, TEXT_ALIGN_TOPLEFT);
+    menuDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, strBuf, TEXT_ALIGN_TOPLEFT);
   } else if (classRestricted) {
-    inventoryDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, "Not usable by current class", TEXT_ALIGN_TOPLEFT);
+    menuDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, "Not usable by current class", TEXT_ALIGN_TOPLEFT);
   } else if (equippedItem && equippedItem->Uid == selectedItem->Uid) {
     windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 0, 0.6, secondaryColor, "Equipped", -1, TEXT_ALIGN_TOPLEFT);
   }
@@ -489,23 +463,23 @@ void inventoryDrawItemInfo(Window_t* drawWindow)
 //--------------------------------------------------------------------------
 void inventoryDrawAccountInfo(Window_t* drawWindow, float statsWidth)
 {
-  const u32 bgColor = 0x78101010;
-  const u32 textColor = 0x80FFFFFF;
-  const u32 secondaryColor = 0x80B0B0B0;
+  const u32 bgColor = RAIDS_MENU_PANEL_COLOR;
+  const u32 textColor = RAIDS_MENU_TEXT_COLOR;
+  const u32 secondaryColor = RAIDS_MENU_SECONDARY_COLOR;
   const u32 spriteColor = 0x80808080;
-  const u32 borderColor = 0x80000020;
+  const u32 borderColor = RAIDS_MENU_BORDER_COLOR;
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   char strBuf[128];
 
   windowFill(drawWindow, bgColor);
   windowBorder(drawWindow, borderColor, 0, 0, 1, 1);
   if (!bankGetHasAccount()) {
-    inventoryDrawFittedText(drawWindow, 8, 4, statsWidth - 16, 0.7, secondaryColor, "Loading account...", TEXT_ALIGN_TOPLEFT);
+    menuDrawFittedText(drawWindow, 8, 4, statsWidth - 16, 0.7, secondaryColor, "Loading account...", TEXT_ALIGN_TOPLEFT);
     return;
   }
 
   snprintf(strBuf, sizeof(strBuf), "Bolts: %'u", localBank->Account.Bolts);
-  inventoryDrawFittedText(drawWindow, 8, 4, statsWidth - 16, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  menuDrawFittedText(drawWindow, 8, 4, statsWidth - 16, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
   const float barWidth = 80;
   float barX = statsWidth - 8 - barWidth;
   float labelWidth = barX - 16;
@@ -515,18 +489,18 @@ void inventoryDrawAccountInfo(Window_t* drawWindow, float statsWidth)
   } else {
     snprintf(strBuf, sizeof(strBuf), "Hero Level: %d  [MAXED]", level + 1);
   }
-  inventoryDrawFittedText(drawWindow, 8, 16, labelWidth, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
-  inventoryDrawProgressBar(drawWindow, barX, 18, barWidth, bankGetLevelProgress());
+  menuDrawFittedText(drawWindow, 8, 16, labelWidth, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
+  menuDrawProgressBar(drawWindow, barX, 18, barWidth, bankGetLevelProgress());
 
   if (bankGetHasEquippedClass() && localBank->EquippedClass.Name[0]) {
-    char suffix[16];
     RaidsPlayerClass_t* playerClass = &localBank->EquippedClass;
     int classLevel = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
-    snprintf(strBuf, sizeof(strBuf), "Class: %.32s", localBank->EquippedClass.Name);
-    snprintf(suffix, sizeof(suffix), " %s", bankGetClassLevelSuffix(classLevel));
-    float suffixWidth = gfxGetFontWidth(suffix, -1, 0.7);
-    float nameWidth = inventoryDrawFittedText(drawWindow, 8, 28, labelWidth - suffixWidth, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8 + nameWidth, 28, 0.7, textColor, suffix, -1, TEXT_ALIGN_TOPLEFT);
+    int nameLength = snprintf(strBuf, sizeof(strBuf), "%.32s", playerClass->Name);
+    snprintf(strBuf, sizeof(strBuf), "Class: %.*s %s", nameLength, playerClass->Name, bankGetClassLevelSuffix(classLevel));
+    while (nameLength > 0 && gfxGetFontWidth(strBuf, -1, 0.7) > labelWidth) {
+      snprintf(strBuf, sizeof(strBuf), "Class: %.*s... %s", --nameLength, playerClass->Name, bankGetClassLevelSuffix(classLevel));
+    }
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 28, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
 
     double progress = 1;
     if (classLevel < 10) {
@@ -535,7 +509,7 @@ void inventoryDrawAccountInfo(Window_t* drawWindow, float statsWidth)
       progress = nextXp > startXp && playerClass->CurrentExperience >= startXp
         ? (double)(playerClass->CurrentExperience - startXp) / (double)(nextXp - startXp) : 0;
     }
-    inventoryDrawProgressBar(drawWindow, barX, 30, barWidth, progress);
+    menuDrawProgressBar(drawWindow, barX, 30, barWidth, progress);
   } else {
     windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 8, 28, 0.7, secondaryColor, "Class: Loading...", -1, TEXT_ALIGN_TOPLEFT);
   }
@@ -635,7 +609,7 @@ void inventoryDrawItem(Window_t* drawWindow, int idx)
   // class restriction marker (the other corners show notify, paint and mod)
   if (isWeapon && bankGetHasEquippedClass() && !bankCanUseItem(item)) {
     windowDrawBox(drawWindow, TEXT_ALIGN_TOPLEFT, 1, 1, 10, 10, 0x80000000, TEXT_ALIGN_TOPLEFT);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 1, 0.6, 0x804040D0, "!", -1, TEXT_ALIGN_TOPCENTER);
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 1, 0.6, RAIDS_MENU_WARNING_COLOR, "!", -1, TEXT_ALIGN_TOPCENTER);
   }
 
   gfxDoGifPaging();
@@ -646,10 +620,10 @@ void inventoryDrawTab(Window_t* drawWindow)
 {
   u32 bgColor = 0x50101010; // dark gray
   u32 tabBgColor = 0x80202020; // gray
-  u32 textColor = 0x80FFFFFF; // white
+  u32 textColor = RAIDS_MENU_TEXT_COLOR; // white
   u32 textFadedColor = 0x80808080; // light gray
   u32 selectedColor = 0x40008080; // yellow
-  u32 borderColor = 0x80000020; // maroon
+  u32 borderColor = RAIDS_MENU_BORDER_COLOR; // maroon
   int i,j;
 
   if (!inventoryGetHasInventoryPage()) {
@@ -681,10 +655,10 @@ void inventoryDrawTabs(Window_t* drawWindow)
 {
   u32 bgColor = 0x60404040; // dark gray
   u32 tabBgColor = 0x40101010; // gray
-  u32 textColor = 0x80FFFFFF; // white
+  u32 textColor = RAIDS_MENU_TEXT_COLOR; // white
   u32 textFadedColor = 0x80808080; // light gray
   u32 selectedColor = 0x40008080; // yellow
-  u32 borderColor = 0x80000020; // maroon
+  u32 borderColor = RAIDS_MENU_BORDER_COLOR; // maroon
   int i;
 
   // draw box
@@ -722,8 +696,6 @@ void inventoryDrawTabs(Window_t* drawWindow)
 //--------------------------------------------------------------------------
 void inventoryDrawFooter(Window_t* drawWindow)
 {
-  const u32 bgSolidColor = 0x80000000;
-  const u32 textColor = 0x80FFFFFF;
   char strBuf[128];
   int canEquip = 0;
   int selectedTooStrong = 0;
@@ -752,8 +724,7 @@ void inventoryDrawFooter(Window_t* drawWindow)
   strcat(strBuf, "\x12 CLOSE");
   
   // draw bg
-  windowFill(drawWindow, bgSolidColor);
-  windowDrawText(drawWindow, TEXT_ALIGN_MIDDLELEFT, 2, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLELEFT);
+  menuDrawFooter(drawWindow, strBuf, 0.8, TEXT_ALIGN_MIDDLELEFT, 2);
 }
 
 //--------------------------------------------------------------------------
@@ -762,16 +733,14 @@ void inventoryDraw(void)
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
 
-  u32 bgColor = 0x70000000;
-  u32 borderColor = 0x80000020;
-  u32 textColor = 0x80FFFFFF;
+  u32 borderColor = RAIDS_MENU_BORDER_COLOR;
   const float windowWidth = 480;
   const float windowHeight = 290;
-  const float titleHeight = 24;
+  const float titleHeight = RAIDS_MENU_TITLE_HEIGHT;
   const float accountHeight = 44;
   const float gridWidth = 225;
   const float tabHeaderHeight = 24;
-  const float footerHeight = 16;
+  const float footerHeight = RAIDS_MENU_FOOTER_HEIGHT;
   const float bodyY = titleHeight + accountHeight;
   const float bodyHeight = windowHeight - bodyY - footerHeight;
   char strBuf[128];
@@ -793,12 +762,9 @@ void inventoryDraw(void)
   // setup draw state
   windowCreate(&drawWindow, SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 0, 0, windowWidth, windowHeight, TEXT_ALIGN_MIDDLECENTER);
 
-  // draw frame
-  windowFill(&drawWindow, bgColor);
-
-  // draw title text
+  // draw frame and title
   snprintf(strBuf, sizeof(strBuf), "Inventory - %s", gs->PlayerNames[localPlayer->PlayerId]);
-  inventoryDrawFittedText(&drawWindow, windowWidth * 0.5, 0, windowWidth - 16, 1.1, textColor, strBuf, TEXT_ALIGN_TOPCENTER);
+  menuDrawFrame(&drawWindow, strBuf, titleHeight);
 
   // full-width account strip
   Window_t drawWindowAccount;
@@ -837,17 +803,19 @@ void inventoryDraw(void)
       return;
     }
 
-    char sellStrBuf[64];
     char sellPriceBuf[64];
     char itemNameBuf[64];
     u32 sellPrice = selectedItem->Price;
     bankGetItemName(selectedItem, itemNameBuf, sizeof(itemNameBuf));
-    snprintf(sellStrBuf, sizeof(sellStrBuf), "Sell %s?", itemNameBuf);
-    snprintf(sellPriceBuf, sizeof(sellPriceBuf), "\x0A%'d", sellPrice);
-    
+    snprintf(sellPriceBuf, sizeof(sellPriceBuf), "+%'u bolts", sellPrice);
+
+    menuDrawBackdrop(&drawWindow);
     Window_t windowSellDialog;
-    windowCreateFrom(&windowSellDialog, &drawWindow, 0, 0, 200, 75, TEXT_ALIGN_MIDDLECENTER);
-    windowDrawDialog(&windowSellDialog, sellStrBuf, NULL, sellPriceBuf, inventorySellDialogFooter);
+    windowCreateFrom(&windowSellDialog, &drawWindow, 0, 0, 280, 100, TEXT_ALIGN_MIDDLECENTER);
+    menuDrawPopupFrame(&windowSellDialog, "Sell Item", RAIDS_MENU_TEXT_COLOR, inventorySellDialogFooter);
+    menuDrawFittedText(&windowSellDialog, 12, 36, windowSellDialog.Width - 24, 0.85, RAIDS_MENU_TEXT_COLOR, itemNameBuf, TEXT_ALIGN_TOPLEFT);
+    menuDrawFittedText(&windowSellDialog, 12, 58, 112, 0.7, RAIDS_MENU_SECONDARY_COLOR, "Sale proceeds", TEXT_ALIGN_TOPLEFT);
+    menuDrawFittedText(&windowSellDialog, windowSellDialog.Width - 12, 58, windowSellDialog.Width - 144, 0.8, RAIDS_MENU_PROGRESS_COLOR, sellPriceBuf, TEXT_ALIGN_TOPRIGHT);
     return;
   }
 }
@@ -962,7 +930,7 @@ void inventoryTick(void)
   struct RaidsState* state = MapConfig.State;
   if (!state) return;
 
-  if (gameHasEnded()) {
+  if (shouldCloseMenu()) {
     inventoryClose();
     return;
   }
@@ -980,7 +948,7 @@ void inventoryTick(void)
     return;
   }
 
-  int canOpen = state->MenuOpen == RAIDS_CUSTOM_MENU_NONE && PATCH_POINTERS_PATCHMENU == 0 && !gameIsAnyStartMenuOpen() && padGetButtonDown(0, PAD_LEFT) > 0;
+  int canOpen = state->MenuOpen == RAIDS_CUSTOM_MENU_NONE && padGetButtonDown(0, PAD_LEFT) > 0;
   if (canOpen) {
     inventoryOpen();
   }

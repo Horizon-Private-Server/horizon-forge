@@ -175,6 +175,19 @@ int isOnHubWorld(void)
 }
 
 //--------------------------------------------------------------------------
+int shouldCloseMenu(void)
+{
+  return !isInGame() || gameHasEnded() || hasPendingWorldHop()
+      || gameIsAnyStartMenuOpen() || PATCH_POINTERS_PATCHMENU != 0;
+}
+
+//--------------------------------------------------------------------------
+int shouldCloseHubMenu(void)
+{
+  return !isOnHubWorld() || shouldCloseMenu();
+}
+
+//--------------------------------------------------------------------------
 int bankTryChargeLocalAccount(Player* player, u32 cost)
 {
   RaidsPlayerBank_t* bank = bankGetLocalBank();
@@ -275,39 +288,4 @@ int getAmmoRefillCost(Player* player)
   if (!MapConfig.GetAmmoRefillCostFunc) return -1;
 
   return MapConfig.GetAmmoRefillCostFunc(player);
-}
-
-//--------------------------------------------------------------------------
-void windowDrawDialog(Window_t* drawWindow, char* titleStr, char* subtitleStr, char* bodyStr, char* buttonStr)
-{
-  u32 textColor = 0x80FFFFFF; // white
-  Window_t window;
-  windowCreateFrom(&window, drawWindow, 0, 0, drawWindow->Width - 6, drawWindow->Height, TEXT_ALIGN_MIDDLECENTER);
-
-  // draw frame
-  windowFill(drawWindow, 0x80101030);
-  windowBorder(drawWindow, 0x80000000, 2, 2, 2, 2);
-
-  // draw title text
-  if (titleStr) {
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.9, textColor, titleStr, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(&window, 0, 20);
-    window.Height -= 20;
-  }
-
-  // draw subtitle text
-  if (subtitleStr) {
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 20, 0.7, textColor, subtitleStr, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(&window, 0, 14);
-    window.Height -= 14;
-  }
-  
-  // draw body text
-  if (bodyStr) {
-    windowDrawTextWindow(&window, TEXT_ALIGN_TOPCENTER, 0, 0, 0.75, textColor, bodyStr, -1, TEXT_ALIGN_TOPCENTER);
-  }
-  
-  // footer buttons
-  windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMCENTER, 0, -4, 0.9, textColor, buttonStr, -1, TEXT_ALIGN_BOTTOMCENTER);
-  windowReset(drawWindow);
 }

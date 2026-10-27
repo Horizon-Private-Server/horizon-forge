@@ -179,6 +179,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/levelselect.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/contracts.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/inventory.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/menu.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/spawner.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
