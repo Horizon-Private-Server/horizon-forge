@@ -393,6 +393,16 @@ enum CustomMessageId
     CUSTOM_MSG_ID_CLIENT_UPDATE_CUSTOM_MAP_EX_DATA_REQUEST = 72,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_EQUIPPED_CLASS_REQUEST = 73,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_GET_RAIDS_CLASSES_REQUEST = 74,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,

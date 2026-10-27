@@ -36,7 +36,7 @@ public interface IBuildHook
 
     public static void Run(BuildState state, BuildStateStage stage)
     {
-        var hooks = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponent<IBuildHook>()).Where(x => x != null).Distinct().ToArray();
+        var hooks = GameObject.FindObjectsOfType<MonoBehaviour>().Select(x => x.GetComponents<IBuildHook>()).SelectMany(x => x).Where(x => x != null).Distinct().ToArray();
         foreach (var hook in hooks)
         {
             if (!hook.IsEnabled) continue;

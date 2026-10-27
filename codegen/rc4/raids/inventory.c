@@ -472,9 +472,9 @@ void inventoryDrawInfo(Window_t* drawWindow)
   windowDrawText(&windowStats, TEXT_ALIGN_TOPLEFT, 5, 2, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
   windowMove(&windowStats, 0, 12);
   if (level < LEVELUP_MAX_PLAYER_LEVEL) {
-    snprintf(strBuf, sizeof(strBuf), "Level: %d   => %c%.1f%%", level + 1, '\x0A', bankGetLevelProgress() * 100);
+    snprintf(strBuf, sizeof(strBuf), "Hero Level: %d   => %c%.1f%%", level + 1, '\x0A', bankGetLevelProgress() * 100);
   } else {
-    snprintf(strBuf, sizeof(strBuf), "Level: %d   [MAXED]", level + 1);
+    snprintf(strBuf, sizeof(strBuf), "Hero Level: %d   [MAXED]", level + 1);
   }
   
   windowDrawText(&windowStats, TEXT_ALIGN_TOPLEFT, 5, 2, 0.7, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);

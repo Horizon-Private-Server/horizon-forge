@@ -117,7 +117,8 @@ public class RaidsMobDefEditor : Editor
         UnityHelper.FloatOverride(serializedObject.FindProperty("TurnSpeed"), difficultyField, defaults.TurnSpeed.Get(_difficulty), label: "Turn Speed");
 
         Section("Rewards");
-        UnityHelper.Int32Override(serializedObject.FindProperty("XpOverrides"), difficultyField, defaults.Xp.Get(_difficulty), label: "XP");
+        UnityHelper.Int32Override(serializedObject.FindProperty("XpOverrides"), difficultyField, defaults.Xp.Get(_difficulty), label: "Hero / Weapon XP",
+            tooltip: "Base kill XP used for both Hero XP and Weapon XP rewards.");
         UnityHelper.Int32Override(serializedObject.FindProperty("BoltsOverrides"), difficultyField, defaults.Bolts.Get(_difficulty), label: "Bolts");
 
         serializedObject.ApplyModifiedProperties();

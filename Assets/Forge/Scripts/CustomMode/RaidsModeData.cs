@@ -6,12 +6,14 @@ using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int RAIDS_VERSION = 2;
+    public static readonly int RAIDS_VERSION = 3;
     public const int MAX_ACTIONS_PER_MOB = 8;
     public const int MAX_PARAMS_PER_MOB = 16;
+    public static readonly int[] DEFAULT_CLASS_XP_REWARDS = new int[] { 250, 750, 1500, 2500, 4000 };
     [NonSerialized] private SpriteContainer _buildSprites;
 
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
@@ -47,6 +49,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public int Cost3Star = 0;
     public int Cost4Star = 0;
     public int Cost5Star = 0;
+    [HideInInspector, FormerlySerializedAs("MissionXpOverrides")] public RaidsDifficultyValues<Int32Override> ClassXpOverrides = new RaidsDifficultyValues<Int32Override>();
 
     [Header("Debug")]
     public bool DebugPath;
@@ -55,6 +58,17 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     [Header("Music")]
     public bool OverrideTrackList = false;
     public List<DLMusicTracks> TrackWhitelist = new List<DLMusicTracks>();
+
+    public int GetClassXpReward(int difficulty)
+    {
+        if (difficulty < 0 || difficulty >= 5) throw new ArgumentOutOfRangeException(nameof(difficulty));
+        if (MissionType != RAIDS_MISSION_TYPES.Raid) return 0;
+
+        var reward = ClassXpOverrides.Get(difficulty).GetValue(DEFAULT_CLASS_XP_REWARDS[difficulty]);
+        if (reward < 0)
+            throw new InvalidOperationException($"Class XP reward must be nonnegative ({difficulty + 1} stars).");
+        return reward;
+    }
 
     public T[] GetDefinitions<T>() where T : Component
     {
@@ -86,7 +100,19 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     {
         if (GetMobs().Count > 16)
             throw new InvalidOperationException("Raids supports at most 16 mob definitions, including disabled mobs. No definitions have been removed.");
-        foreach (var mob in GetMobs().Where(x => x.isActiveAndEnabled)) mob.ValidateConfig();
+        var mobs = GetMobs().Where(x => x.isActiveAndEnabled).ToList();
+        foreach (var mob in mobs) mob.ValidateConfig();
+
+        var contracts = GetContractRules();
+        if (contracts.Count > 16)
+            throw new InvalidOperationException("Raids supports at most 16 contract groups.");
+        var names = new HashSet<string>();
+        foreach (var contract in contracts)
+        {
+            contract.GetMobMask(mobs);
+            if (!names.Add(contract.ExportName))
+                throw new InvalidOperationException($"Duplicate exported contract group name: {contract.ExportName}.");
+        }
     }
 
     public Dictionary<string, long> GetMobOptions(bool asMask = false, int maxCount = int.MaxValue, bool includeNone = false)
@@ -426,30 +452,12 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("");
 
         sb.AppendLine("struct RaidsMobContractRule mobContractRules[] = {");
-        var contractMobs = new HashSet<RaidsMob>();
         foreach (var contractRule in contractRules)
         {
-            if (contractMobs.Count >= 16)
-            {
-                Debug.LogWarning($"Contract rules has more than the max of 16 entries.");
-                break;
-            }
-            if (!mobs.Any(m => m.isActiveAndEnabled && m.Mob == contractRule.Mob && m.Variant == contractRule.Variant))
-            {
-                Debug.LogWarning($"Contract rules has entry for unused mob {contractRule.Mob} variant {contractRule.Variant}");
-                continue;
-            }
-            if (contractMobs.Contains(contractRule.Mob))
-            {
-                Debug.LogWarning($"Contract rules has duplicate entry for mob {contractRule.Mob}");
-                continue;
-            }
-
-            contractMobs.Add(contractRule.Mob);
-            sb.AppendLine(contractRule.GetDef());
+            sb.AppendLine(contractRule.GetDef(mobs));
         }
         sb.AppendLine("};");
-        sb.AppendLine($"int mobContractRulesCount = {contractMobs.Count};");
+        sb.AppendLine($"int mobContractRulesCount = {contractRules.Count};");
         sb.AppendLine("");
 
         sb.AppendLine($"int musicTrackWhitelistEnabled = {(OverrideTrackList ? 1 : 0)};");
@@ -460,7 +468,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("};");
         sb.AppendLine("");
 
-        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n  MapConfig.MobContractRules = mobContractRules;\r\n  MapConfig.MobContractRulesCount = mobContractRulesCount;\r\n  MapConfig.TrackWhitelist = musicTrackWhitelist;\r\n  MapConfig.TrackWhitelistCount = musicTrackWhitelistCount;\r\n  MapConfig.TrackWhitelistEnabled = musicTrackWhitelistEnabled;\r\n}\r\n");
+        sb.AppendLine("//--------------------------------------------------------------------------\r\nvoid configInit(void)\r\n{\r\n  MapConfig.MobSpawnParams = mobSpawnParams;\r\n  MapConfig.MobSpawnParamsCount = COUNT_OF(mobSpawnParams);\r\n  MapConfig.MobContractRules = mobContractRules;\r\n  MapConfig.MobContractRulesCount = mobContractRulesCount;\r\n  MapConfig.TrackWhitelist = musicTrackWhitelist;\r\n  MapConfig.TrackWhitelistCount = musicTrackWhitelistCount;\r\n  MapConfig.TrackWhitelistEnabled = musicTrackWhitelistEnabled;\r\n");
+        for (var difficulty = 0; difficulty < 5; ++difficulty)
+            sb.AppendLine($"  MapConfig.ClassXpRewards[{difficulty}] = {GetClassXpReward(difficulty)};");
+        sb.AppendLine("}\r\n");
 
         return sb.ToString();
     }

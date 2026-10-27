@@ -127,6 +127,8 @@ void contractsComplete(RaidsContract_t* item)
   // refresh list of items
   contractsGetContracts();
   bankRequestAccountFromServer();
+  bankRequestEquippedClassFromServer();
+  bankRequestClassesFromServer();
 }
 
 //--------------------------------------------------------------------------
@@ -319,7 +321,7 @@ void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, 
     windowMove(drawWindow, 0, 16);
 
     // mob count
-    snprintf(strBuf, sizeof(strBuf), "\x0A%'d\x08 %s", contract->RequiredKills, contract->RequiredKillsMobOClass > 0 ? contract->MobName : "");
+    snprintf(strBuf, sizeof(strBuf), "\x0A%'d\x08 %s", contract->RequiredKills, contract->MobName);
     windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
     windowMove(drawWindow, 0, 20 + 4);
     
@@ -342,12 +344,20 @@ void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, 
   snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardBolts);
   windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
   windowMove(drawWindow, 0, 12);
-  snprintf(strBuf, sizeof(strBuf), "XP");
+  snprintf(strBuf, sizeof(strBuf), "Hero XP");
   windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
   snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardPlayerXp);
   windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
   windowMove(drawWindow, 0, 12);
   
+  // optional class xp reward
+  if (contract->RewardClassXp > 0) {
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 0.8, textColor, "Class XP", -1, TEXT_ALIGN_TOPLEFT);
+    snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardClassXp);
+    windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
+    windowMove(drawWindow, 0, 12);
+  }
+
   // weapon xp reward
   if (slotId > 0) {
     int spriteId = inventoryWeaponSpriteIds[slotId];

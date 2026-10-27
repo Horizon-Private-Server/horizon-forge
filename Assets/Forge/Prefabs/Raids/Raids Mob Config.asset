@@ -763,11 +763,11 @@ MonoBehaviour:
     BlipTeam: 1
     Variants:
     - Name: Normal
-      Description: Armored leviathan.
+      Description: 
       OClass: 8388
-      Bangles: 8191
+      Bangles: 7199
       SupportsTeamPalette: 0
-      SpriteTexture: {fileID: 2800000, guid: e80cc84031f88e3408c3a998561f6834, type: 3}
+      SpriteTexture: {fileID: 2800000, guid: 7e0a5c193766ae143a0cc5ac7df3b35a, type: 3}
       SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
       BossTexture: {fileID: 2800000, guid: aa9eb35cc825e6941bafcd532466fd36, type: 3}
       BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
@@ -776,12 +776,12 @@ MonoBehaviour:
       - OClass: 8388
         SourceMapId: 4
         SourceMissionId: -1
-    - Name: Normal
-      Description: 
+    - Name: King
+      Description: Armored leviathan.
       OClass: 8388
-      Bangles: 7199
+      Bangles: 8191
       SupportsTeamPalette: 0
-      SpriteTexture: {fileID: 2800000, guid: 7e0a5c193766ae143a0cc5ac7df3b35a, type: 3}
+      SpriteTexture: {fileID: 2800000, guid: e80cc84031f88e3408c3a998561f6834, type: 3}
       SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
       BossTexture: {fileID: 2800000, guid: aa9eb35cc825e6941bafcd532466fd36, type: 3}
       BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}

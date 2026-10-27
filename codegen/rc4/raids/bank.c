@@ -36,6 +36,8 @@ struct BankVTable bankVTable = {
   .RequestEquippedInventoryFromServer = &bankRequestEquippedInventoryFromServer,
   .RequestAccountFromServer = &bankRequestAccountFromServer,
   .SendAccountToServer = &bankSendAccountToServer,
+  .RequestEquippedClassFromServer = &bankRequestEquippedClassFromServer,
+  .RequestClassesFromServer = &bankRequestClassesFromServer,
   .RequestContractsFromServer = &bankRequestContractsFromServer,
   .SendContractStatsToServer = &bankSendContractStatsToServer,
   .RequestMapStats = &bankRequestMapStats,
@@ -44,6 +46,10 @@ struct BankVTable bankVTable = {
   .HasPendingEquippedInventoryRequest = &bankHasPendingEquippedInventoryRequest,
   .GetHasAccount = &bankGetHasAccount,
   .HasPendingAccountRequest = &bankHasPendingAccountRequest,
+  .GetHasEquippedClass = &bankGetHasEquippedClass,
+  .HasPendingEquippedClassRequest = &bankHasPendingEquippedClassRequest,
+  .GetHasClasses = &bankGetHasClasses,
+  .HasPendingClassesRequest = &bankHasPendingClassesRequest,
   .GetHasContracts = &bankGetHasContracts,
   .HasPendingContractsRequest = &bankHasPendingContractsRequest,
 
@@ -56,6 +62,8 @@ struct BankVTable bankVTable = {
   .GetWeaponXP = &bankGetWeaponXP,
   .AddWeaponXP = &bankAddWeaponXP,
 };
+
+RaidsPlayerClass_t bankPlayerClasses[BANK_MAX_CLASSES] = {};
 
 u32 bankRarityColors[] = {
   [RAIDS_ITEM_RARITY_COMMON] 0x80D0D0D0,
@@ -81,9 +89,13 @@ u32 bankPaintColors[] = {
 
 int bankHasEquippedInventory = 0;
 int bankHasAccount = 0;
+int bankHasEquippedClass = 0;
+int bankHasClasses = 0;
 int bankHasContracts = 0;
 long bankLastEquippedInventoryRequestTime = 0;
 long bankLastAccountRequestTime = 0;
+long bankLastEquippedClassRequestTime = 0;
+long bankLastClassesRequestTime = 0;
 long bankLastContractsRequestTime = 0;
 char bankLevelUpBuf[64];
 
@@ -202,6 +214,32 @@ int bankHasPendingAccountRequest(void)
 }
 
 //--------------------------------------------------------------------------
+int bankGetHasEquippedClass(void)
+{
+  return bankHasEquippedClass;
+}
+
+//--------------------------------------------------------------------------
+int bankHasPendingEquippedClassRequest(void)
+{
+  long dtMs = (timerGetSystemTime() - bankLastEquippedClassRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
+  return bankLastEquippedClassRequestTime && dtMs < (2*TIME_SECOND);
+}
+
+//--------------------------------------------------------------------------
+int bankGetHasClasses(void)
+{
+  return bankHasClasses;
+}
+
+//--------------------------------------------------------------------------
+int bankHasPendingClassesRequest(void)
+{
+  long dtMs = (timerGetSystemTime() - bankLastClassesRequestTime) / SYSTEM_TIME_TICKS_PER_MS;
+  return bankLastClassesRequestTime && dtMs < (2*TIME_SECOND);
+}
+
+//--------------------------------------------------------------------------
 int bankGetHasContracts(void)
 {
   return bankHasContracts;
@@ -312,6 +350,42 @@ void bankRequestAccountReset(void)
 }
 
 //--------------------------------------------------------------------------
+void bankRequestEquippedClassFromServer(void)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  bankLastEquippedClassRequestTime = timerGetSystemTime();
+  bankHasEquippedClass = 0;
+  struct RaidsGetEquippedClassRequest msg = {
+    .DestAddress = (u32)&bankLocalBank.EquippedClass,
+    .DestHasFlagAddress = (u32)&bankHasEquippedClass,
+    .DestTimeFlagAddress = (u32)&bankLastEquippedClassRequestTime
+  };
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_EQUIPPED_CLASS_REQUEST, sizeof(msg), &msg);
+  DPRINTF("request equipped class\n");
+}
+
+//--------------------------------------------------------------------------
+void bankRequestClassesFromServer(void)
+{
+  void* connection = netGetLobbyServerConnection();
+  if (!connection) return;
+
+  bankLastClassesRequestTime = timerGetSystemTime();
+  bankHasClasses = 0;
+  struct RaidsGetClassesRequest msg = {
+    .DestAddress = (u32)&bankPlayerClasses[0],
+    .DestHasFlagAddress = (u32)&bankHasClasses,
+    .DestTimeFlagAddress = (u32)&bankLastClassesRequestTime,
+    .Offset = 0,
+    .Count = BANK_MAX_CLASSES
+  };
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_CLASSES_REQUEST, sizeof(msg), &msg);
+  DPRINTF("request classes\n");
+}
+
+//--------------------------------------------------------------------------
 void bankRequestContractsFromServer(void)
 {
   void* connection = netGetLobbyServerConnection();
@@ -403,17 +477,34 @@ int bankSendMapContractRules(void)
   if (!connection) return 0;
   if (!MapConfig.State || !MapConfig.State->CurrentMapDef || !MapConfig.State->CurrentMapDef->Filename[0]) return 0;
 
+  int totalCount = MapConfig.MobContractRulesCount;
+  if (totalCount < 0 || totalCount > 16) return 0;
+  if (totalCount > 0 && !MapConfig.MobContractRules) return 0;
+
   struct RaidsBankUpdateMapContractRulesRequest
   {
     char MapFilename[64];
-    struct RaidsMobContractRule ContractRules[16];
+    int Offset;
+    int Count;
+    int TotalCount;
+    struct RaidsMobContractRule ContractRules[8];
   };
 
   struct RaidsBankUpdateMapContractRulesRequest msg;
-  memset(&msg, 0, sizeof(msg));
-  safe_strcpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
-  memcpy(msg.ContractRules, MapConfig.MobContractRules, sizeof(struct RaidsMobContractRule) * MapConfig.MobContractRulesCount);
-  netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST, sizeof(msg), &msg);
+  int offset = 0;
+  do {
+    memset(&msg, 0, sizeof(msg));
+    safe_strcpy(msg.MapFilename, MapConfig.State->CurrentMapDef->Filename, sizeof(msg.MapFilename));
+    msg.Offset = offset;
+    msg.TotalCount = totalCount;
+    msg.Count = totalCount - offset;
+    if (msg.Count > COUNT_OF(msg.ContractRules)) msg.Count = COUNT_OF(msg.ContractRules);
+    if (msg.Count > 0)
+      memcpy(msg.ContractRules, MapConfig.MobContractRules + offset, sizeof(struct RaidsMobContractRule) * msg.Count);
+    netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_UPDATE_MAP_CONTRACT_RULES_REQUEST, sizeof(msg), &msg);
+    offset += msg.Count;
+  } while (offset < totalCount);
+
   DPRINTF("bankSendMapContractRules\n");
   return 1;
 }
@@ -497,6 +588,28 @@ int bankGetLevel(void)
 }
 
 //--------------------------------------------------------------------------
+u64 bankGetClassXpForLevel(RaidsPlayerClass_t* playerClass, int level)
+{
+  // The plugin uses levels 0-9 internally and displays them as 1-10.
+  if (level <= 0) return 0;
+  if (level > 9) level = 9;
+  return (u64)(10.0 * level * level * level * level + 250.0 * level * (double)playerClass->ExperienceCurveMultiplier);
+}
+
+//--------------------------------------------------------------------------
+int bankGetClassLevel(RaidsPlayerClass_t* playerClass, u64 xp)
+{
+  // Class levels are displayed as 1-10; XP thresholds use levels 0-9.
+  int level = 1;
+  while (level < 10) {
+    u64 nextXp = bankGetClassXpForLevel(playerClass, level);
+    if (xp < nextXp) break;
+    ++level;
+  }
+  return level;
+}
+
+//--------------------------------------------------------------------------
 float bankGetLevelProgress(void)
 {
   u64 xp = bankLocalBank.Account.Experience;
@@ -538,6 +651,34 @@ double bankAddWeaponXP(double amount, int gadgetId)
 RaidsPlayerBank_t* bankGetLocalBank(void)
 {
   return &bankLocalBank;
+}
+
+//--------------------------------------------------------------------------
+int bankGetPlayerClassByIdx(int idx, RaidsPlayerClass_t* out)
+{
+  if (!bankHasClasses) return 0;
+  if (idx < 0 || idx >= BANK_MAX_CLASSES) return 0;
+  if (!bankPlayerClasses[idx].Name[0]) return 0;
+
+  if (out) memcpy(out, &bankPlayerClasses[idx], sizeof(RaidsPlayerClass_t));
+  return 1;
+}
+
+//--------------------------------------------------------------------------
+int bankFindPlayerClass(int classType, RaidsPlayerClass_t* out)
+{
+  if (!bankHasClasses) return 0;
+  if (classType < 0) return 0;
+
+  int i;
+  for (i = 0; i < BANK_MAX_CLASSES; ++i) {
+    if (bankPlayerClasses[i].ClassType == classType && bankPlayerClasses[i].Name[0]) {
+      if (out) memcpy(out, &bankPlayerClasses[i], sizeof(RaidsPlayerClass_t));
+      return 1;
+    }
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -1121,6 +1262,23 @@ void bankOnResurrectGiveMeRandomWeapons(Player* player, int weaponCount)
 void bankTick(void)
 {
   int i;
+
+  static int lastClassType = -1;
+  static u64 lastClassXp = 0;
+  if (bankHasEquippedClass && !bankHasPendingEquippedClassRequest() && bankLocalBank.EquippedClass.Name[0]) {
+    RaidsPlayerClass_t* playerClass = &bankLocalBank.EquippedClass;
+    if (playerClass->ClassType == lastClassType && playerClass->CurrentExperience > lastClassXp) {
+      int level = bankGetClassLevel(playerClass, lastClassXp);
+      int nextLevel = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
+      if (nextLevel > level) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "You have reached %.31s %d", playerClass->Name, nextLevel);
+        pushSnack(0, buf, 120);
+      }
+    }
+    lastClassType = playerClass->ClassType;
+    lastClassXp = playerClass->CurrentExperience;
+  }
 
   static int sentContractRules = 0;
   if (!sentContractRules) {

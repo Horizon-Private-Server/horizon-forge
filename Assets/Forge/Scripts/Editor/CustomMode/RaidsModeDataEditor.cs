@@ -16,6 +16,24 @@ public class RaidsModeDataEditor : Editor
     {
         var manager = (target as RaidsModeData);
         base.OnInspectorGUI();
+        if (manager.MissionType == RaidsModeData.RAIDS_MISSION_TYPES.Raid)
+        {
+            serializedObject.Update();
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Class XP", EditorStyles.boldLabel);
+            var rewards = serializedObject.FindProperty("ClassXpOverrides");
+            var fields = new[] { "OneStar", "TwoStars", "ThreeStars", "FourStars", "FiveStars" };
+            for (var difficulty = 0; difficulty < fields.Length; ++difficulty)
+            {
+                UnityHelper.Int32Override(rewards, fields[difficulty], RaidsModeData.DEFAULT_CLASS_XP_REWARDS[difficulty],
+                    label: difficulty == 0 ? "1 Star" : $"{difficulty + 1} Stars",
+                    tooltip: "Class XP awarded on successful raid completion. Leave unchecked for the normal reward; override with 0 for no completion XP.");
+                var value = rewards.FindPropertyRelative(fields[difficulty]);
+                if (value.FindPropertyRelative("HasOverride").boolValue && value.FindPropertyRelative("OverrideValue").intValue < 0)
+                    EditorGUILayout.HelpBox("Class XP rewards must be nonnegative.", MessageType.Error);
+            }
+            serializedObject.ApplyModifiedProperties();
+        }
         if (manager.GetMobs().Count > 16)
             EditorGUILayout.HelpBox("Raids supports at most 16 mob definitions, including disabled mobs. Builds will be rejected until the count is reduced.", MessageType.Error);
         CheckForMissingMobAssets(manager);

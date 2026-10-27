@@ -24,9 +24,9 @@ public static class StringHelper
             return str;
 
         return str
+            .Replace("\\", "\\\\")
             .Replace("\"", "\\\"")
             .Replace("\'", "\\\'")
-            .Replace("\\", "\\\\")
             ;
     }
 
