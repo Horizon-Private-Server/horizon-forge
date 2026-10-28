@@ -125,7 +125,7 @@ enum GameNetMessage
   CUSTOM_MSG_SET_PLAYER_ACCOUNT,
   CUSTOM_MSG_SET_MISSION_FAILED,
   CUSTOM_MSG_USE_LIFE,
-  CUSTOM_MSG_SET_PLAYER_EQUIPPED_CLASS,
+  CUSTOM_MSG_SET_PLAYER_EQUIPPED_CLASS_PROGRESS,
 };
 
 enum RaidsCustomMenus
@@ -138,6 +138,7 @@ enum RaidsCustomMenus
   RAIDS_CUSTOM_MENU_UPGRADE,
   RAIDS_CUSTOM_MENU_CONTRACTS,
   RAIDS_CUSTOM_MENU_WELCOME,
+  RAIDS_CUSTOM_MENU_DEBUG,
   RAIDS_CUSTOM_MENU_RESERVED_FOR_MAP = 100,
 };
 
@@ -215,7 +216,6 @@ typedef void (*FrameTick_func)(void);
 struct RaidsPlayerState
 {
   u32 Bolts;
-  float Experience;
 	int Level;
 	int Kills;
 	int Deaths;
@@ -239,8 +239,8 @@ struct RaidsPlayer
 	char IsDoubleXP;
   char LastEquipslots[3];
 	char HealthBarStrBuf[8];
-  RaidsPlayerClass_t EquippedClass;
-  int HasEquippedClass;
+  RaidsPlayerClassProgress_t EquippedClassProgress;
+  u64 EquippedClassXp;
 };
 
 struct RaidsMobStats

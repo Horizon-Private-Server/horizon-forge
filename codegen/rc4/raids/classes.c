@@ -340,7 +340,7 @@ int classesValidateDefinitions(void)
   int hasDefault = 0;
   for (i = 0; i < count; ++i) {
     const RaidsClassDef_t* def = &classDefinitions[i];
-    if (def->ClassType < 0 || def->ClassType > 255 || def->Tier < 1 || def->Tier > 3 || !def->Name || !def->Name[0]
+    if (def->ClassType < 0 || def->ClassType >= RAIDS_MAX_CLASSES || def->Tier < 1 || def->Tier > 3 || !def->Name || !def->Name[0]
         || strlen(def->Name) > 31 || !(def->ExperienceCurveMultiplier > 0)
         || def->UnlockRulesCount < 0 || def->UnlockRulesCount > RAIDS_MAX_CLASS_UNLOCK_RULES) return 0;
     for (j = 0; j < i; ++j) {

@@ -442,7 +442,7 @@ void inventoryDrawItemInfo(Window_t* drawWindow)
 
   int canSell = 0, alreadyEquipped = 0, canEquip = 0, tooStrong = 0;
   inventoryGetSelectedItemInteraction(&canSell, &alreadyEquipped, &canEquip, &tooStrong);
-  int classRestricted = bankItemIsWeapon(selectedItem) && bankGetHasEquippedClass() && !bankCanUseItem(selectedItem);
+  int classRestricted = bankItemIsWeapon(selectedItem) && bankGetHasEquippedClassProgress() && !bankCanUseItem(selectedItem);
 
   // Reserve this line so status changes do not move the comparison table.
   if (tooStrong) {
@@ -492,10 +492,10 @@ void inventoryDrawAccountInfo(Window_t* drawWindow, float statsWidth)
   menuDrawFittedText(drawWindow, 8, 16, labelWidth, 0.7, textColor, strBuf, TEXT_ALIGN_TOPLEFT);
   menuDrawProgressBar(drawWindow, barX, 18, barWidth, bankGetLevelProgress());
 
-  const RaidsClassDef_t* classDef = classesGetDefinition(localBank->EquippedClass.ClassType);
-  if (bankGetHasEquippedClass() && classDef) {
-    RaidsPlayerClass_t* playerClass = &localBank->EquippedClass;
-    int classLevel = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
+  const RaidsClassDef_t* classDef = classesGetDefinition(localBank->EquippedClassProgress.ClassType);
+  if (bankGetHasEquippedClassProgress() && classDef) {
+    RaidsPlayerClassProgress_t* playerClass = &localBank->EquippedClassProgress;
+    int classLevel = bankGetClassLevel(playerClass, bankGetClassXP(playerClass->ClassType));
     int nameLength = snprintf(strBuf, sizeof(strBuf), "%.32s", classDef->Name);
     snprintf(strBuf, sizeof(strBuf), "Class: %.*s%s%s", nameLength, classDef->Name, classLevel > 0 ? " " : "", bankGetClassLevelSuffix(classLevel));
     while (nameLength > 0 && gfxGetFontWidth(strBuf, -1, 0.7) > labelWidth) {
@@ -507,8 +507,8 @@ void inventoryDrawAccountInfo(Window_t* drawWindow, float statsWidth)
     if (classLevel < RAIDS_CLASS_MAX_LEVEL) {
       u64 startXp = bankGetClassXpForLevel(playerClass, classLevel);
       u64 nextXp = bankGetClassXpForLevel(playerClass, classLevel + 1);
-      progress = nextXp > startXp && playerClass->CurrentExperience >= startXp
-        ? (double)(playerClass->CurrentExperience - startXp) / (double)(nextXp - startXp) : 0;
+      progress = nextXp > startXp && bankGetClassXP(playerClass->ClassType) >= startXp
+        ? (double)(bankGetClassXP(playerClass->ClassType) - startXp) / (double)(nextXp - startXp) : 0;
     }
     menuDrawProgressBar(drawWindow, barX, 30, barWidth, progress);
   } else {
@@ -608,7 +608,7 @@ void inventoryDrawItem(Window_t* drawWindow, int idx)
   }
 
   // class restriction marker (the other corners show notify, paint and mod)
-  if (isWeapon && bankGetHasEquippedClass() && !bankCanUseItem(item)) {
+  if (isWeapon && bankGetHasEquippedClassProgress() && !bankCanUseItem(item)) {
     windowDrawBox(drawWindow, TEXT_ALIGN_TOPLEFT, 1, 1, 10, 10, 0x80000000, TEXT_ALIGN_TOPLEFT);
     windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 1, 0.6, RAIDS_MENU_WARNING_COLOR, "!", -1, TEXT_ALIGN_TOPCENTER);
   }

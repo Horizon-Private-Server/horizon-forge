@@ -113,11 +113,17 @@ void contractsComplete(RaidsContract_t* item)
   RaidsPlayerBank_t* bank = bankGetLocalBank();
   if (!bank) return;
 
+  if (!bankGetHasAccount()) return;
+  if (item->RewardClassXp > 0 && !classesGetDefinition(item->CompletedClassType)) return;
+
   // apply
   bankAddBolts(item->RewardBolts);
   bankAddXP(item->RewardPlayerXp);
   if (item->RequiredKillsGadgetId > 0)
     bankAddWeaponXP(item->RewardWeaponXp, item->RequiredKillsGadgetId);
+  if (item->RewardClassXp > 0)
+    bankAddClassXP(item->RewardClassXp, item->CompletedClassType);
+  bankSendAccountToServer();
 
   // pass to server
   struct RaidsActionContractRequest msg = {
@@ -130,8 +136,8 @@ void contractsComplete(RaidsContract_t* item)
   // refresh list of items
   contractsGetContracts();
   bankRequestAccountFromServer();
-  bankRequestEquippedClassFromServer();
-  bankRequestClassesFromServer();
+  bankRequestEquippedClassProgressFromServer();
+  bankRequestAllClassProgressFromServer();
 }
 
 //--------------------------------------------------------------------------

@@ -12,10 +12,37 @@ using UnityEngine.UIElements;
 [CustomEditor(typeof(RaidsModeData))]
 public class RaidsModeDataEditor : Editor
 {
+    private SerializedProperty m_DebugEnabledProperty;
+    private SerializedProperty m_DebugMenuProperty;
+    private SerializedProperty m_DebugPathProperty;
+    private SerializedProperty m_DebugMoveProperty;
+
+    private void OnEnable()
+    {
+        m_DebugEnabledProperty = serializedObject.FindProperty("DebugEnabled");
+        m_DebugMenuProperty = serializedObject.FindProperty("DebugMenu");
+        m_DebugPathProperty = serializedObject.FindProperty("DebugPath");
+        m_DebugMoveProperty = serializedObject.FindProperty("DebugMove");
+    }
+
     public override void OnInspectorGUI()
     {
         var manager = (target as RaidsModeData);
         base.OnInspectorGUI();
+
+        serializedObject.Update();
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(m_DebugEnabledProperty, new GUIContent("Debug"));
+        if (m_DebugEnabledProperty.boolValue)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(m_DebugMenuProperty, new GUIContent("Debug Menu", "Open with L1 + R1 + L2 + R2."));
+            EditorGUILayout.PropertyField(m_DebugPathProperty, new GUIContent("Mob Pathfinding"));
+            EditorGUILayout.PropertyField(m_DebugMoveProperty, new GUIContent("Mob Move"));
+            EditorGUI.indentLevel--;
+        }
+        serializedObject.ApplyModifiedProperties();
+
         if (manager.MissionType == RaidsModeData.RAIDS_MISSION_TYPES.Raid)
         {
             serializedObject.Update();

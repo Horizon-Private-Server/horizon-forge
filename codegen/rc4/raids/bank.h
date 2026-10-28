@@ -154,6 +154,7 @@ typedef struct RaidsContract {
   // stats
   u32 Kills;
   u32 CompletedTimeMs;
+  int CompletedClassType;
 
   // map
   char MapFilename[64];
@@ -182,6 +183,7 @@ typedef struct RaidsPlayerAccount
   u64 Experience;
   u32 Bolts;
   int EquippedClass;
+  u64 ClassXp[BANK_MAX_CLASSES];
 } RaidsPlayerAccount_t;
 
 typedef struct RaidsPlayerClassSkill
@@ -190,13 +192,11 @@ typedef struct RaidsPlayerClassSkill
   u8 AppliedRank;
 } RaidsPlayerClassSkill_t;
 
-typedef struct RaidsPlayerClass
+typedef struct RaidsPlayerClassProgress
 {
-  u64 CurrentExperience;
-  int CurrentSkillPoints;
   int ClassType;
   RaidsPlayerClassSkill_t Skills[BANK_MAX_CLASS_SKILLS];
-} RaidsPlayerClass_t;
+} RaidsPlayerClassProgress_t;
 
 typedef struct RaidsPlayerEquippedInventory
 {
@@ -208,7 +208,7 @@ typedef struct RaidsPlayerEquippedInventory
 typedef struct RaidsPlayerBank
 {
   RaidsPlayerAccount_t Account;
-  RaidsPlayerClass_t EquippedClass;
+  RaidsPlayerClassProgress_t EquippedClassProgress;
   RaidsPlayerEquippedInventory_t EquippedInventory;
   RaidsContract_t Contracts[BANK_MAX_CONTRACTS];
 } RaidsPlayerBank_t;
@@ -249,6 +249,7 @@ struct RaidsUpdateContractStatsRequest
   u32 ContractUid;
   u32 Kills;
   u32 CompletedTimeMs;
+  int CompletedClassType;
 };
 
 struct RaidsGetContractsRequest
@@ -320,18 +321,20 @@ struct RaidsBankSetPlayerEquippedInventoryMsg
 struct RaidsBankSetPlayerAccountMsg
 {
   int ClientId;
-  RaidsPlayerAccount_t Account;
+  int Level;
+  u32 Bolts;
 };
 
 struct RaidsBankSetPlayerEquippedClassMsg
 {
   int ClientId;
   int AccountId;
-  RaidsPlayerClass_t EquippedClass;
+  RaidsPlayerClassProgress_t EquippedClassProgress;
+  u64 EquippedClassXp;
 };
 
 typedef RaidsPlayerBank_t* (*BankGetLocalBank_func)(void);
-typedef RaidsPlayerClass_t* (*BankGetPlayerEquippedClass_func)(int playerId);
+typedef RaidsPlayerClassProgress_t* (*BankGetPlayerEquippedClass_func)(int playerId);
 typedef int (*BankGetPlayerClassSkillRank_func)(int playerId, enum RaidsClassSkillId skillId);
 typedef float (*BankGetPlayerClassSkillMultiplier_func)(int playerId, enum RaidsClassSkillId skillId);
 typedef void (*BankGetItemName_func)(RaidsInventoryItem_t* item, char* buf, int bufSize);
@@ -345,8 +348,8 @@ typedef void (*BankSendInventoryItemToServer_func)(RaidsInventoryItem_t* item, e
 typedef void (*BankRequestEquippedInventoryFromServer_func)(void);
 typedef void (*BankRequestAccountFromServer_func)(void);
 typedef void (*BankSendAccountToServer_func)(void);
-typedef void (*BankRequestEquippedClassFromServer_func)(void);
-typedef void (*BankRequestClassesFromServer_func)(void);
+typedef void (*BankRequestEquippedClassProgressFromServer_func)(void);
+typedef void (*BankRequestAllClassProgressFromServer_func)(void);
 typedef int (*BankSpendClassSkillPoint_func)(enum RaidsClassSkillId skillId);
 typedef int (*BankResetClassSkills_func)(void);
 typedef void (*BankRequestContractsFromServer_func)(void);
@@ -357,10 +360,10 @@ typedef int (*BankGetHasEquippedInventory_func)(void);
 typedef int (*BankHasPendingEquippedInventoryRequest_func)(void);
 typedef int (*BankGetHasAccount_func)(void);
 typedef int (*BankHasPendingAccountRequest_func)(void);
-typedef int (*BankGetHasEquippedClass_func)(void);
-typedef int (*BankHasPendingEquippedClassRequest_func)(void);
-typedef int (*BankGetHasClasses_func)(void);
-typedef int (*BankHasPendingClassesRequest_func)(void);
+typedef int (*BankGetHasEquippedClassProgress_func)(void);
+typedef int (*BankHasPendingEquippedClassProgressRequest_func)(void);
+typedef int (*BankGetHasAllClassProgress_func)(void);
+typedef int (*BankHasPendingAllClassProgressRequest_func)(void);
 typedef int (*BankGetHasContracts_func)(void);
 typedef int (*BankHasPendingContractsRequest_func)(void);
 
@@ -373,6 +376,8 @@ typedef u32 (*BankAddBolts_func)(u32 amt);
 typedef u32 (*BankSubBolts_func)(u32 amt);
 typedef double (*BankGetWeaponXP_func)(int gadgetId);
 typedef double (*BankAddWeaponXP_func)(double amt, int gadgetId);
+typedef u64 (*BankGetClassXP_func)(int classType);
+typedef u64 (*BankAddClassXP_func)(u64 amount, int classType);
 
 struct BankVTable
 {
@@ -391,8 +396,8 @@ struct BankVTable
   BankRequestEquippedInventoryFromServer_func RequestEquippedInventoryFromServer;
   BankRequestAccountFromServer_func RequestAccountFromServer;
   BankSendAccountToServer_func SendAccountToServer;
-  BankRequestEquippedClassFromServer_func RequestEquippedClassFromServer;
-  BankRequestClassesFromServer_func RequestClassesFromServer;
+  BankRequestEquippedClassProgressFromServer_func RequestEquippedClassProgressFromServer;
+  BankRequestAllClassProgressFromServer_func RequestAllClassProgressFromServer;
   BankSpendClassSkillPoint_func SpendClassSkillPoint;
   BankResetClassSkills_func ResetClassSkills;
   BankRequestContractsFromServer_func RequestContractsFromServer;
@@ -403,10 +408,10 @@ struct BankVTable
   BankHasPendingEquippedInventoryRequest_func HasPendingEquippedInventoryRequest;
   BankGetHasAccount_func GetHasAccount;
   BankHasPendingAccountRequest_func HasPendingAccountRequest;
-  BankGetHasEquippedClass_func GetHasEquippedClass;
-  BankHasPendingEquippedClassRequest_func HasPendingEquippedClassRequest;
-  BankGetHasClasses_func GetHasClasses;
-  BankHasPendingClassesRequest_func HasPendingClassesRequest;
+  BankGetHasEquippedClassProgress_func GetHasEquippedClassProgress;
+  BankHasPendingEquippedClassProgressRequest_func HasPendingEquippedClassProgressRequest;
+  BankGetHasAllClassProgress_func GetHasAllClassProgress;
+  BankHasPendingAllClassProgressRequest_func HasPendingAllClassProgressRequest;
   BankGetHasContracts_func GetHasContracts;
   BankHasPendingContractsRequest_func HasPendingContractsRequest;
   
@@ -418,23 +423,25 @@ struct BankVTable
   BankSubBolts_func SubBolts;
   BankGetWeaponXP_func GetWeaponXP;
   BankAddWeaponXP_func AddWeaponXP;
+  BankGetClassXP_func GetClassXP;
+  BankAddClassXP_func AddClassXP;
 };
 
 int bankGetHasEquippedInventory(void);
 int bankHasPendingEquippedInventoryRequest(void);
 int bankGetHasAccount(void);
 int bankHasPendingAccountRequest(void);
-int bankGetHasEquippedClass(void);
-int bankHasPendingEquippedClassRequest(void);
-int bankGetHasClasses(void);
-int bankHasPendingClassesRequest(void);
+int bankGetHasEquippedClassProgress(void);
+int bankHasPendingEquippedClassProgressRequest(void);
+int bankGetHasAllClassProgress(void);
+int bankHasPendingAllClassProgressRequest(void);
 int bankGetHasContracts(void);
 int bankHasPendingContractsRequest(void);
 
 int bankItemIsWeapon(RaidsInventoryItem_t* item);
 int bankItemIsBadge(RaidsInventoryItem_t* item);
 int bankCanUseItem(RaidsInventoryItem_t* item);
-int bankGetClassWeaponMaxRarity(RaidsPlayerClass_t* playerClass, int weaponSlot);
+int bankGetClassWeaponMaxRarity(RaidsPlayerClassProgress_t* playerClass, int weaponSlot);
 void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize);
 
 u32 bankGetBolts(void);
@@ -442,24 +449,31 @@ u32 bankAddBolts(u32 amount);
 u32 bankSubtractBolts(u32 amount);
 u64 bankGetXP(void);
 u64 bankAddXP(u64 amount);
+u64 bankAddClassXP(u64 amount, int classType);
+u64 bankGetClassXP(int classType);
+u64 bankGetPlayerClassXP(int playerId, int classType);
+int bankGetClassSkillPoints(RaidsPlayerClassProgress_t* playerClass);
 int bankGetLevel(void);
-u64 bankGetClassXpForLevel(RaidsPlayerClass_t* playerClass, int level);
-int bankGetClassLevel(RaidsPlayerClass_t* playerClass, u64 xp);
+u64 bankGetClassXpForLevel(RaidsPlayerClassProgress_t* playerClass, int level);
+int bankGetClassLevel(RaidsPlayerClassProgress_t* playerClass, u64 xp);
 char* bankGetClassLevelSuffix(int level);
 float bankGetLevelProgress(void);
 double bankGetWeaponXP(int gadgetId);
 double bankAddWeaponXP(double amount, int gadgetId);
 float bankGetWeaponDamage(RaidsInventoryItem_t* item);
 
-void bankBroadcastEquippedClass(void);
+void bankBroadcastAccount(void);
+void bankBroadcastEquippedInventory(void);
+void bankBroadcastEquippedClassProgress(void);
 
 void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page);
 void bankSendInventoryItemToServer(RaidsInventoryItem_t* item, enum RaidsItemUpdateAction action);
 void bankRequestEquippedInventoryFromServer(void);
 void bankRequestAccountFromServer(void);
 void bankSendAccountToServer(void);
-void bankRequestEquippedClassFromServer(void);
-void bankRequestClassesFromServer(void);
+void bankCacheEquippedClassProgress(void);
+void bankRequestEquippedClassProgressFromServer(void);
+void bankRequestAllClassProgressFromServer(void);
 void bankRequestAccountReset(void);
 void bankRequestContractsFromServer(void);
 void bankSendContractStatsToServer(RaidsContract_t* contract);
@@ -468,13 +482,13 @@ void bankSendMapStats(struct RaidsBankMapStats* mapStats);
 void bankSendMapMobMetadata(int mobOClass, int difficultyStars);
 
 RaidsPlayerBank_t* bankGetLocalBank(void);
-RaidsPlayerClass_t* bankGetPlayerEquippedClass(int playerId);
+RaidsPlayerClassProgress_t* bankGetPlayerEquippedClass(int playerId);
 int bankGetPlayerClassSkillRank(int playerId, enum RaidsClassSkillId skillId);
-int bankGetClassSkillRank(RaidsPlayerClass_t* playerClass, enum RaidsClassSkillId skillId);
-float bankGetClassSkillMultiplier(RaidsPlayerClass_t* playerClass, enum RaidsClassSkillId skillId);
+int bankGetClassSkillRank(RaidsPlayerClassProgress_t* playerClass, enum RaidsClassSkillId skillId);
+float bankGetClassSkillMultiplier(RaidsPlayerClassProgress_t* playerClass, enum RaidsClassSkillId skillId);
 float bankGetPlayerClassSkillMultiplier(int playerId, enum RaidsClassSkillId skillId);
-int bankClassSkillIsUnlocked(RaidsPlayerClass_t* playerClass, int skillIdx);
-int bankClassIsUnlocked(RaidsPlayerClass_t* playerClass);
+int bankClassSkillIsUnlocked(RaidsPlayerClassProgress_t* playerClass, int skillIdx);
+int bankClassIsUnlocked(RaidsPlayerClassProgress_t* playerClass);
 int bankSpendClassSkillPoint(enum RaidsClassSkillId skillId);
 int bankResetClassSkills(void);
 int bankEquipItem(RaidsInventoryItem_t* item);
@@ -490,8 +504,8 @@ enum RaidsItemRarity bankGetRarityFromQuality(int quality);
 float bankGetEquippedBadgeEffectStrength(int playerId, enum RaidsBadgeType effect);
 enum RaidsItemRarity bankGetEquippedWeaponModRarity(int playerId, int gadgetId, enum RaidsWeaponModType modType);
 u32 bankGetWeaponOmegaModColor(RaidsInventoryItem_t* item);
-int bankGetPlayerClassByIdx(int idx, RaidsPlayerClass_t* out);
-int bankFindPlayerClass(int classType, RaidsPlayerClass_t* out);
+int bankGetPlayerClassByIdx(int idx, RaidsPlayerClassProgress_t* out);
+int bankFindPlayerClass(int classType, RaidsPlayerClassProgress_t* out);
 
 void bankStart(void);
 void bankTick(void);

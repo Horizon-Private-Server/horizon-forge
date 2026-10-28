@@ -51,9 +51,10 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public int Cost5Star = 0;
     [HideInInspector, FormerlySerializedAs("MissionXpOverrides")] public RaidsDifficultyValues<Int32Override> ClassXpOverrides = new RaidsDifficultyValues<Int32Override>();
 
-    [Header("Debug")]
-    public bool DebugPath;
-    public bool DebugMove;
+    [HideInInspector] public bool DebugEnabled;
+    [HideInInspector] public bool DebugMenu;
+    [HideInInspector] public bool DebugPath;
+    [HideInInspector] public bool DebugMove;
 
     [Header("Music")]
     public bool OverrideTrackList = false;
@@ -159,6 +160,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
     public void Configure(string buildFolder, CodeGenState state)
     {
+        state.Debug = DebugEnabled; // override build settings
         ValidateDefinitionLimits();
         var mapConfig = FindObjectOfType<MapConfig>();
         var srcFolder = Path.Combine(buildFolder, FolderNames.CodeBuildSrcFolder);
@@ -193,6 +195,16 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/pathfind.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/utils.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/ammodrop.o");
+
+        if (state.Debug && DebugMenu)
+        {
+            state.LDFlags.Add("-DDEBUG_MENU");
+            state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/debugmenu.o");
+            state.Includes.Add("#include \"debugmenu.h\"");
+            state.InitBody.Add("debugmenuInit();");
+            state.CleanupBody.Add("debugmenuClose();");
+            state.DrawBody.Add("debugmenuFrameTick();");
+        }
 
         state.LDFlags.Add("-DRAIDS");
         state.LDFlags.Add($"-DRAIDS_VERSION={RAIDS_VERSION}");
@@ -318,6 +330,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         {
             state.MainBody.Add("mapTick();");
             state.MainBody.Add("bankTick();");
+            if (state.Debug && DebugMenu) state.MainBody.Add("debugmenuTick();");
             state.MainBody.Add("inventoryTick();");
             state.MainBody.Add("contractsTick();");
             state.MainBody.Add("mobTick();");
