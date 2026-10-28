@@ -378,6 +378,8 @@ typedef double (*BankGetWeaponXP_func)(int gadgetId);
 typedef double (*BankAddWeaponXP_func)(double amt, int gadgetId);
 typedef u64 (*BankGetClassXP_func)(int classType);
 typedef u64 (*BankAddClassXP_func)(u64 amount, int classType);
+typedef int (*BankGetClassLevel_func)(RaidsPlayerClassProgress_t* playerClass, u64 xp);
+typedef const RaidsClassDef_t* (*BankGetClassDefinition_func)(int classType);
 
 struct BankVTable
 {
@@ -425,6 +427,8 @@ struct BankVTable
   BankAddWeaponXP_func AddWeaponXP;
   BankGetClassXP_func GetClassXP;
   BankAddClassXP_func AddClassXP;
+  BankGetClassLevel_func GetClassLevel;
+  BankGetClassDefinition_func GetClassDefinition;
 };
 
 int bankGetHasEquippedInventory(void);

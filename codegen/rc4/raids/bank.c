@@ -68,6 +68,8 @@ struct BankVTable bankVTable = {
   .AddWeaponXP = &bankAddWeaponXP,
   .GetClassXP = &bankGetClassXP,
   .AddClassXP = &bankAddClassXP,
+  .GetClassLevel = &bankGetClassLevel,
+  .GetClassDefinition = &classesGetDefinition,
 };
 
 RaidsPlayerClassProgress_t bankLocalPlayerClassProgress[BANK_MAX_CLASSES] = {};
