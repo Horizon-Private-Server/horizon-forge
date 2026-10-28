@@ -1506,25 +1506,20 @@ void bankUpdateLocalState(Player * player)
 //--------------------------------------------------------------------------
 int bankSellItem(RaidsInventoryItem_t* item)
 {
-  int isEquipped = 0;
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
   if (!localBank) return 0;
+  if (!bankGetHasAccount() || bankHasPendingAccountRequest()) return 0;
+  if (!bankGetHasEquippedInventory() || bankHasPendingEquippedInventoryRequest()) return 0;
   if (!item) return 0;
   if (!item->Type) return 0;
+  if (item->Notify == RAIDS_ITEM_NOTIFY_FAV) return 0;
 
   if (bankItemIsBadge(item)) {
     RaidsInventoryItem_t* badge = bankGetLocalEquippedBadge();
-    if (badge != NULL && badge->Uid == item->Uid) {
-      isEquipped = 1;
-      memset(&localBank->EquippedInventory.Badge, 0, sizeof(localBank->EquippedInventory.Badge));
-    }
+    if (badge != NULL && badge->Uid == item->Uid) return 0;
   } else if (bankItemIsWeapon(item)) {
-    int slotId = bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId);
     RaidsInventoryItem_t* weapon = bankGetLocalEquippedWeapon(item->WeaponData.GadgetId);
-    if (weapon != NULL && weapon->Uid == item->Uid) {
-      isEquipped = 1;
-      memset(&localBank->EquippedInventory.Items[slotId], 0, sizeof(RaidsInventoryItem_t));
-    }
+    if (weapon != NULL && weapon->Uid == item->Uid) return 0;
   }
 
   // broadcast
@@ -1533,11 +1528,6 @@ int bankSellItem(RaidsInventoryItem_t* item)
   // apply sell
   localBank->Account.Bolts += item->Price;
   memset(item, 0, sizeof(RaidsInventoryItem_t));
-
-  // refresh equipped inventory
-  if (isEquipped) {
-    localBank->EquippedInventory.RefreshLocalInventory = 1;
-  }
 
   return 1;
 }

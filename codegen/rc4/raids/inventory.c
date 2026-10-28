@@ -246,16 +246,18 @@ void inventoryGetSelectedItemInteraction(int* canSell, int* alreadyEquipped, int
 #if DEBUG
       *tooStrong = 0;
 #endif
-      *alreadyEquipped = equippedWeapon == selectedItem;
+      *alreadyEquipped = equippedWeapon && equippedWeapon->Uid == selectedItem->Uid;
       *canEquip = !*tooStrong && selectedItem->WeaponData.GadgetId && !*alreadyEquipped; // already equipped
-      *canSell = selectedItem->WeaponData.GadgetId && equippedWeapon != selectedItem && selectedItem->Notify != RAIDS_ITEM_NOTIFY_FAV; // can't sell equipped
+      *canSell = bankGetHasEquippedInventory() && !bankHasPendingEquippedInventoryRequest()
+        && selectedItem->WeaponData.GadgetId && !*alreadyEquipped && selectedItem->Notify != RAIDS_ITEM_NOTIFY_FAV; // can't sell equipped
     } else {
       RaidsInventoryItem_t* equippedBadge = bankGetLocalEquippedBadge();
       int badgeAndMissionActive = missionIsActive() && missionIsBossRaid();
       *tooStrong = 0;
-      *alreadyEquipped = equippedBadge == selectedItem;
+      *alreadyEquipped = equippedBadge && equippedBadge->Uid == selectedItem->Uid;
       *canEquip = !*alreadyEquipped && !badgeAndMissionActive; // already equipped
-      *canSell = equippedBadge != selectedItem && selectedItem->Notify != RAIDS_ITEM_NOTIFY_FAV; // can't sell equipped
+      *canSell = bankGetHasEquippedInventory() && !bankHasPendingEquippedInventoryRequest()
+        && !*alreadyEquipped && selectedItem->Notify != RAIDS_ITEM_NOTIFY_FAV; // can't sell equipped
     }
   } else {
     *tooStrong = 0;
@@ -843,7 +845,7 @@ void inventoryHandleInput(void)
       return;
     } else if (padGetButtonDown(0, PAD_CROSS) > 0) {
       inventoryDrawState.ShowSellDialog = 0;
-      if (bankSellItem(&inventoryPage.Items[inventoryDrawState.SelectedIdx])) {
+      if (inventoryGetHasInventoryPage() && bankSellItem(inventoryGetLocalItem(inventoryDrawState.SelectedIdx))) {
         //inventoryPage.RefreshLocalInventory = 1;
         inventoryRequestPage();
       }
