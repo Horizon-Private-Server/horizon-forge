@@ -125,6 +125,7 @@ enum GameNetMessage
   CUSTOM_MSG_SET_PLAYER_ACCOUNT,
   CUSTOM_MSG_SET_MISSION_FAILED,
   CUSTOM_MSG_USE_LIFE,
+  CUSTOM_MSG_SET_PLAYER_EQUIPPED_CLASS,
 };
 
 enum RaidsCustomMenus
@@ -238,6 +239,8 @@ struct RaidsPlayer
 	char IsDoubleXP;
   char LastEquipslots[3];
 	char HealthBarStrBuf[8];
+  RaidsPlayerClass_t EquippedClass;
+  int HasEquippedClass;
 };
 
 struct RaidsMobStats

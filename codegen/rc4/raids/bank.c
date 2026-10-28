@@ -25,6 +25,9 @@ void bankUpdateLocalState(Player * player);
 RaidsPlayerBank_t bankLocalBank = {};
 struct BankVTable bankVTable = {
   .GetLocalBank = &bankGetLocalBank,
+  .GetPlayerEquippedClass = &bankGetPlayerEquippedClass,
+  .GetPlayerClassSkillRank = &bankGetPlayerClassSkillRank,
+  .GetPlayerClassSkillMultiplier = &bankGetPlayerClassSkillMultiplier,
   .GetItemName = &bankGetItemName,
   .GetRarityFromQuality = &bankGetRarityFromQuality,
   .GetEquippedBadgeEffectStrength = &bankGetEquippedBadgeEffectStrength,
@@ -38,6 +41,8 @@ struct BankVTable bankVTable = {
   .SendAccountToServer = &bankSendAccountToServer,
   .RequestEquippedClassFromServer = &bankRequestEquippedClassFromServer,
   .RequestClassesFromServer = &bankRequestClassesFromServer,
+  .SpendClassSkillPoint = &bankSpendClassSkillPoint,
+  .ResetClassSkills = &bankResetClassSkills,
   .RequestContractsFromServer = &bankRequestContractsFromServer,
   .SendContractStatsToServer = &bankSendContractStatsToServer,
   .RequestMapStats = &bankRequestMapStats,
@@ -106,6 +111,48 @@ char bankRarityCode[] = {
   [RAIDS_ITEM_RARITY_LEGENDARY] '\x0B',
   [RAIDS_ITEM_RARITY_MYTHIC] '\x0E'
 };
+
+//--------------------------------------------------------------------------
+int bankOnSetPlayerEquippedClassRemote(void * connection, void * data)
+{
+  struct RaidsBankSetPlayerEquippedClassMsg msg;
+  memcpy(&msg, data, sizeof(msg));
+
+  struct RaidsState* state = MapConfig.State;
+  GameSettings* gs = gameGetSettings();
+  if (!state || !gs || msg.ClientId < 0 || msg.AccountId <= 0 || !classesGetDefinition(msg.EquippedClass.ClassType)) return sizeof(msg);
+  if (msg.ClientId == gameGetMyClientId()) return sizeof(msg);
+
+  int i;
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    if ((s8)gs->PlayerClients[i] != msg.ClientId || gs->PlayerAccountIds[i] != msg.AccountId) continue;
+
+    struct RaidsPlayer* playerState = &state->PlayerStates[i];
+    memcpy(&playerState->EquippedClass, &msg.EquippedClass, sizeof(playerState->EquippedClass));
+    playerState->HasEquippedClass = 1;
+  }
+  return sizeof(msg);
+}
+
+//--------------------------------------------------------------------------
+void bankBroadcastEquippedClass(void)
+{
+  if (!bankHasEquippedClass || bankHasPendingEquippedClassRequest() || !classesGetDefinition(bankLocalBank.EquippedClass.ClassType)) return;
+
+  Player* player = playerGetFromSlot(0);
+  if (!player) return;
+
+  GameSettings* gs = gameGetSettings();
+  void* connection = netGetDmeServerConnection();
+  if (!gs || !connection) return;
+
+  struct RaidsBankSetPlayerEquippedClassMsg msg = {
+    .ClientId = gameGetMyClientId(),
+    .AccountId = gs->PlayerAccountIds[player->PlayerId]
+  };
+  memcpy(&msg.EquippedClass, &bankLocalBank.EquippedClass, sizeof(msg.EquippedClass));
+  netBroadcastCustomAppMessage(NET_DELIVERY_CRITICAL | NET_ORDER_CRITICAL, connection, CUSTOM_MSG_SET_PLAYER_EQUIPPED_CLASS, sizeof(msg), &msg);
+}
 
 //--------------------------------------------------------------------------
 int bankOnSetPlayerEquippedInventoryRemote(void * connection, void * data)
@@ -540,16 +587,29 @@ int bankItemIsBadge(RaidsInventoryItem_t* item)
 }
 
 //--------------------------------------------------------------------------
-int bankCanUseItem(RaidsInventoryItem_t* item)
+int bankGetClassWeaponMaxRarity(RaidsPlayerClass_t* playerClass, int weaponSlot)
+{
+  const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
+  if (!def || weaponSlot < 0 || weaponSlot >= COUNT_OF(def->WeaponMaxRarities)) return -1;
+  int rarity = def->WeaponMaxRarities[weaponSlot];
+  if (rarity < 0) return -1;
+  if (bankGetClassLevel(playerClass, playerClass->CurrentExperience) >= RAIDS_CLASS_MAX_LEVEL) ++rarity;
+  return rarity > RAIDS_ITEM_RARITY_MYTHIC ? RAIDS_ITEM_RARITY_MYTHIC : rarity;
+}
+
+//--------------------------------------------------------------------------
+int bankClassCanUseItem(RaidsPlayerClass_t* playerClass, RaidsInventoryItem_t* item)
 {
   if (bankItemIsBadge(item)) return 1;
-  if (!bankItemIsWeapon(item) || !bankHasEquippedClass) return 0;
-
-  int slot = bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId);
-  if (slot < 0 || slot >= COUNT_OF(bankLocalBank.EquippedClass.WeaponConstraints)) return 0;
-
-  int maxRarity = (s8)bankLocalBank.EquippedClass.WeaponConstraints[slot].MaxRarity;
+  if (!bankItemIsWeapon(item)) return 0;
+  int maxRarity = bankGetClassWeaponMaxRarity(playerClass, bankGetEquipSlotFromGadgetId(item->WeaponData.GadgetId));
   return maxRarity >= 0 && bankGetRarityFromQuality(item->Quality) <= maxRarity;
+}
+
+//--------------------------------------------------------------------------
+int bankCanUseItem(RaidsInventoryItem_t* item)
+{
+  return bankClassCanUseItem(bankHasEquippedClass ? &bankLocalBank.EquippedClass : NULL, item);
 }
 
 //--------------------------------------------------------------------------
@@ -603,19 +663,22 @@ int bankGetLevel(void)
 //--------------------------------------------------------------------------
 u64 bankGetClassXpForLevel(RaidsPlayerClass_t* playerClass, int level)
 {
-  // The plugin uses levels 0-9 internally and displays them as 1-10.
+  // Class levels and cumulative XP thresholds both use levels 0-10.
   if (level <= 0) return 0;
-  if (level > 9) level = 9;
-  return (u64)(10.0 * level * level * level * level + 250.0 * level * (double)playerClass->ExperienceCurveMultiplier);
+  if (level > RAIDS_CLASS_MAX_LEVEL) level = RAIDS_CLASS_MAX_LEVEL;
+  const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
+  if (!def) return 0;
+  return (u64)((10.0 * level * level * level * level + 250.0 * level) * (double)def->ExperienceCurveMultiplier);
 }
 
 //--------------------------------------------------------------------------
 int bankGetClassLevel(RaidsPlayerClass_t* playerClass, u64 xp)
 {
-  // Class levels are displayed as 1-10; XP thresholds use levels 0-9.
-  int level = 1;
-  while (level < 10) {
-    u64 nextXp = bankGetClassXpForLevel(playerClass, level);
+  // A class starts at level 0 and earns one point for each level gained.
+  if (!playerClass || !classesGetDefinition(playerClass->ClassType)) return 0;
+  int level = 0;
+  while (level < RAIDS_CLASS_MAX_LEVEL) {
+    u64 nextXp = bankGetClassXpForLevel(playerClass, level + 1);
     if (xp < nextXp) break;
     ++level;
   }
@@ -626,7 +689,8 @@ int bankGetClassLevel(RaidsPlayerClass_t* playerClass, u64 xp)
 char* bankGetClassLevelSuffix(int level)
 {
   static char* suffixes[] = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
-  if (level < 1 || level > COUNT_OF(suffixes)) return "--";
+  if (level == 0) return "";
+  if (level < 0 || level > COUNT_OF(suffixes)) return "--";
   return suffixes[level - 1];
 }
 
@@ -675,11 +739,175 @@ RaidsPlayerBank_t* bankGetLocalBank(void)
 }
 
 //--------------------------------------------------------------------------
+RaidsPlayerClass_t* bankGetPlayerEquippedClass(int playerId)
+{
+  struct RaidsState* state = MapConfig.State;
+  GameSettings* gs = gameGetSettings();
+  if (!state || !gs || playerId < 0 || playerId >= GAME_MAX_PLAYERS) return NULL;
+
+  struct RaidsPlayer* playerState = &state->PlayerStates[playerId];
+  if (!playerState->HasEquippedClass || (s8)gs->PlayerClients[playerId] < 0) return NULL;
+  return &playerState->EquippedClass;
+}
+
+//--------------------------------------------------------------------------
+int bankGetClassSkillMask(RaidsPlayerClass_t* playerClass, const RaidsClassDef_t* def, u8* ranks)
+{
+  int level = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
+  int i, j, pass;
+  // Resolve saved skill IDs into definition slots and apply caps without editing saved data.
+  memset(ranks, 0, BANK_MAX_CLASS_SKILLS);
+  for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
+    const RaidsClassSkillDef_t* skill = &def->Skills[i];
+    if (!skill->SkillId || level < skill->MinClassLevel) continue;
+    for (j = 0; j < BANK_MAX_CLASS_SKILLS; ++j) {
+      if (playerClass->Skills[j].SkillId != skill->SkillId) continue;
+      int rank = playerClass->Skills[j].AppliedRank;
+      int maxRank = classesGetSkillMaxRank(def, i);
+      ranks[i] = rank > maxRank ? maxRank : rank;
+      break;
+    }
+  }
+
+  // Only invested tiles connected to the center are effective. Loops cannot seed themselves.
+  int connected = 0;
+  for (pass = 0; pass < BANK_MAX_CLASS_SKILLS; ++pass) {
+    int previous = connected;
+    for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
+      if (!ranks[i] || (connected & (1 << i))) continue;
+      const RaidsClassSkillDef_t* skill = &def->Skills[i];
+      if (classesGridIsAdjacent(skill->X, skill->Y, RAIDS_CLASS_GRID_CENTER, RAIDS_CLASS_GRID_CENTER)) {
+        connected |= 1 << i;
+        continue;
+      }
+      for (j = 0; j < BANK_MAX_CLASS_SKILLS; ++j) {
+        if ((connected & (1 << j)) && classesGridIsAdjacent(skill->X, skill->Y, def->Skills[j].X, def->Skills[j].Y)) {
+          connected |= 1 << i;
+          break;
+        }
+      }
+    }
+    if (connected == previous) break;
+  }
+  return connected;
+}
+
+//--------------------------------------------------------------------------
+int bankGetClassSkillRank(RaidsPlayerClass_t* playerClass, enum RaidsClassSkillId skillId)
+{
+  if (!playerClass || !skillsIsValid(skillId)) return 0;
+  const RaidsClassDef_t* def = classesGetDefinition(playerClass->ClassType);
+  if (!def) return 0;
+
+  // Saved ranks use global skill IDs; the connectivity mask uses definition slots.
+  u8 ranks[BANK_MAX_CLASS_SKILLS];
+  int connected = bankGetClassSkillMask(playerClass, def, ranks);
+  int i;
+  for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
+    if (def->Skills[i].SkillId == skillId) return (connected & (1 << i)) ? ranks[i] : 0;
+  }
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+int bankGetPlayerClassSkillRank(int playerId, enum RaidsClassSkillId skillId)
+{
+  return bankGetClassSkillRank(bankGetPlayerEquippedClass(playerId), skillId);
+}
+
+//--------------------------------------------------------------------------
+float bankGetClassSkillMultiplier(RaidsPlayerClass_t* playerClass, enum RaidsClassSkillId skillId)
+{
+  const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
+  if (!def || !skillsIsValid(skillId)) return 1.0f;
+  int i;
+  for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
+    if (def->Skills[i].SkillId == skillId) return def->Skills[i].Multiplier;
+  }
+  return 1.0f;
+}
+
+//--------------------------------------------------------------------------
+float bankGetPlayerClassSkillMultiplier(int playerId, enum RaidsClassSkillId skillId)
+{
+  return bankGetClassSkillMultiplier(bankGetPlayerEquippedClass(playerId), skillId);
+}
+
+//--------------------------------------------------------------------------
+int bankClassSkillIsUnlocked(RaidsPlayerClass_t* playerClass, int skillIdx)
+{
+  if (!playerClass || skillIdx < 0 || skillIdx >= BANK_MAX_CLASS_SKILLS) return 0;
+  const RaidsClassDef_t* def = classesGetDefinition(playerClass->ClassType);
+  if (!def || !def->Skills[skillIdx].SkillId) return 0;
+  const RaidsClassSkillDef_t* skill = &def->Skills[skillIdx];
+  if (bankGetClassLevel(playerClass, playerClass->CurrentExperience) < skill->MinClassLevel) return 0;
+  if (classesGridIsAdjacent(skill->X, skill->Y, RAIDS_CLASS_GRID_CENTER, RAIDS_CLASS_GRID_CENTER)) return 1;
+  u8 ranks[BANK_MAX_CLASS_SKILLS];
+  int connected = bankGetClassSkillMask(playerClass, def, ranks);
+  int i;
+  for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
+    if ((connected & (1 << i)) && classesGridIsAdjacent(skill->X, skill->Y, def->Skills[i].X, def->Skills[i].Y)) return 1;
+  }
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+int bankClassIsUnlocked(RaidsPlayerClass_t* playerClass)
+{
+  const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
+  if (!def) return -1;
+  int availability = 1;
+  int i;
+  for (i = 0; i < def->UnlockRulesCount; ++i) {
+    RaidsPlayerClass_t requiredClass;
+    const RaidsClassUnlockRule_t* rule = &def->UnlockRules[i];
+    if (!bankFindPlayerClass(rule->ClassType, &requiredClass)) availability = -1;
+    else if (bankGetClassLevel(&requiredClass, requiredClass.CurrentExperience) < rule->RequiredLevel) return 0;
+  }
+  return availability;
+}
+
+//--------------------------------------------------------------------------
+int bankSpendClassSkillPoint(enum RaidsClassSkillId skillId)
+{
+  if (!bankHasAccount || !bankHasEquippedClass || bankHasPendingEquippedClassRequest()
+      || shouldCloseHubMenu() || bankLocalBank.Account.EquippedClass != bankLocalBank.EquippedClass.ClassType
+      || bankLocalBank.EquippedClass.CurrentSkillPoints <= 0) return 0;
+  const RaidsClassDef_t* def = classesGetDefinition(bankLocalBank.EquippedClass.ClassType);
+  void* connection = netGetLobbyServerConnection();
+  if (!def || !connection || bankClassIsUnlocked(&bankLocalBank.EquippedClass) != 1) return 0;
+  int i;
+  for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
+    if (def->Skills[i].SkillId != skillId || !skillId) continue;
+    if (!bankClassSkillIsUnlocked(&bankLocalBank.EquippedClass, i)
+        || bankGetClassSkillRank(&bankLocalBank.EquippedClass, skillId) >= classesGetSkillMaxRank(def, i)) return 0;
+    struct RaidsClassSkillRequest msg = { .ClassType = def->ClassType, .SkillId = skillId };
+    netSendCustomAppMessage(NET_DELIVERY_CRITICAL | NET_ORDER_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_SPEND_CLASS_SKILL_POINT_REQUEST, sizeof(msg), &msg);
+    bankRequestEquippedClassFromServer();
+    return 1;
+  }
+  return 0;
+}
+
+//--------------------------------------------------------------------------
+int bankResetClassSkills(void)
+{
+  if (!bankHasAccount || !bankHasEquippedClass || bankHasPendingEquippedClassRequest()
+      || shouldCloseHubMenu() || bankLocalBank.Account.EquippedClass != bankLocalBank.EquippedClass.ClassType) return 0;
+  void* connection = netGetLobbyServerConnection();
+  if (!connection || !classesGetDefinition(bankLocalBank.EquippedClass.ClassType)) return 0;
+  struct RaidsClassSkillRequest msg = { .ClassType = bankLocalBank.EquippedClass.ClassType };
+  netSendCustomAppMessage(NET_DELIVERY_CRITICAL | NET_ORDER_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_RAIDS_RESET_CLASS_SKILLS_REQUEST, sizeof(msg), &msg);
+  bankRequestEquippedClassFromServer();
+  return 1;
+}
+
+//--------------------------------------------------------------------------
 int bankGetPlayerClassByIdx(int idx, RaidsPlayerClass_t* out)
 {
   if (!bankHasClasses) return 0;
   if (idx < 0 || idx >= BANK_MAX_CLASSES) return 0;
-  if (!bankPlayerClasses[idx].Name[0]) return 0;
+  if (!classesGetDefinition(bankPlayerClasses[idx].ClassType)) return 0;
 
   if (out) memcpy(out, &bankPlayerClasses[idx], sizeof(RaidsPlayerClass_t));
   return 1;
@@ -693,7 +921,7 @@ int bankFindPlayerClass(int classType, RaidsPlayerClass_t* out)
 
   int i;
   for (i = 0; i < BANK_MAX_CLASSES; ++i) {
-    if (bankPlayerClasses[i].ClassType == classType && bankPlayerClasses[i].Name[0]) {
+    if (bankPlayerClasses[i].ClassType == classType && classesGetDefinition(classType)) {
       if (out) memcpy(out, &bankPlayerClasses[i], sizeof(RaidsPlayerClass_t));
       return 1;
     }
@@ -1089,15 +1317,22 @@ void bankRemoveGadget(Player* player, int gadgetId)
   player->GadgetBox->Gadgets[gadgetId].Level = -1;
 
   if (player->IsLocal) {
-    if (playerGetLocalEquipslot(player->LocalPlayerIndex, 0) == gadgetId) {
-      playerSetLocalEquipslot(player->LocalPlayerIndex, 0, playerGetLocalEquipslot(player->LocalPlayerIndex, 1));
-      playerSetLocalEquipslot(player->LocalPlayerIndex, 1, playerGetLocalEquipslot(player->LocalPlayerIndex, 2));
-      playerSetLocalEquipslot(player->LocalPlayerIndex, 2, 0);
-    } else if (playerGetLocalEquipslot(player->LocalPlayerIndex, 1) == gadgetId) {
-      playerSetLocalEquipslot(player->LocalPlayerIndex, 1, playerGetLocalEquipslot(player->LocalPlayerIndex, 2));
-      playerSetLocalEquipslot(player->LocalPlayerIndex, 2, 0);
-    } else if (playerGetLocalEquipslot(player->LocalPlayerIndex, 2) == gadgetId) {
-      playerSetLocalEquipslot(player->LocalPlayerIndex, 2, 0);
+    struct RaidsState* state = MapConfig.State;
+    int slot = 0;
+    int savedSlot = 0;
+    int i;
+    // Remove stale quickselect entries even if the gadget was already unavailable.
+    for (i = 0; i < 3; ++i) {
+      int id = playerGetLocalEquipslot(player->LocalPlayerIndex, i);
+      if (id && id != gadgetId) playerSetLocalEquipslot(player->LocalPlayerIndex, slot++, id);
+      if (state) {
+        id = state->PlayerStates[player->PlayerId].LastEquipslots[i];
+        if (id && id != gadgetId) state->PlayerStates[player->PlayerId].LastEquipslots[savedSlot++] = id;
+      }
+    }
+    while (slot < 3) playerSetLocalEquipslot(player->LocalPlayerIndex, slot++, 0);
+    if (state) {
+      while (savedSlot < 3) state->PlayerStates[player->PlayerId].LastEquipslots[savedSlot++] = 0;
     }
   }
 }
@@ -1233,18 +1468,19 @@ void bankTickPlayer(Player * player)
     playerSetLocalEquipslot(player->LocalPlayerIndex, 2, state->PlayerStates[player->PlayerId].LastEquipslots[2]);
   }
 
-  // apply items
+  // Apply each player's own confirmed class, including level-X mastery.
+  RaidsPlayerClass_t* playerClass = player->IsLocal ? (bankHasEquippedClass ? &bankLocalBank.EquippedClass : NULL) : bankGetPlayerEquippedClass(player->PlayerId);
   int i;
   for (i = 0; i < WEAPON_SLOT_OMNI_SHIELD; ++i) {
     int gadgetId = weaponSlotToId(i+1);
     RaidsInventoryItem_t* item = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
-    if (item && bankCanUseItem(item)) {
+    if (item && bankClassCanUseItem(playerClass, item)) {
       bankApplyItem(player, item);
-    } else if (gbox->Gadgets[gadgetId].Level >= 0)  {
+    } else {
       bankRemoveGadget(player, gadgetId);
     }
   }
-  
+
   if (gbox->Gadgets[WEAPON_ID_HACKER_RAY].Level < 0)
     playerGiveWeapon(gbox, WEAPON_ID_HACKER_RAY, 0, 0); // give hacker ray
 }
@@ -1280,23 +1516,58 @@ void bankOnResurrectGiveMeRandomWeapons(Player* player, int weaponCount)
 }
 
 //--------------------------------------------------------------------------
+void bankStart(void)
+{
+  static int sentEquippedClass = 0;
+  if (sentEquippedClass || !bankHasEquippedClass || bankHasPendingEquippedClassRequest() || !classesGetDefinition(bankLocalBank.EquippedClass.ClassType)) return;
+
+  Player* player = playerGetFromSlot(0);
+  if (!playerIsValid(player) || !bankGetPlayerEquippedClass(player->PlayerId) || !netGetDmeServerConnection()) return;
+  sentEquippedClass = 1;
+  bankBroadcastEquippedClass();
+}
+
+//--------------------------------------------------------------------------
 void bankTick(void)
 {
   int i;
+  struct RaidsState* state = MapConfig.State;
+  GameSettings* gs = gameGetSettings();
 
+  // check for class level up
   static int lastClassType = -1;
   static u64 lastClassXp = 0;
-  if (bankHasEquippedClass && !bankHasPendingEquippedClassRequest() && bankLocalBank.EquippedClass.Name[0]) {
+  if (bankHasEquippedClass && !bankHasPendingEquippedClassRequest() && classesGetDefinition(bankLocalBank.EquippedClass.ClassType)) {
     RaidsPlayerClass_t* playerClass = &bankLocalBank.EquippedClass;
     if (playerClass->ClassType == lastClassType && playerClass->CurrentExperience > lastClassXp) {
       int level = bankGetClassLevel(playerClass, lastClassXp);
       int nextLevel = bankGetClassLevel(playerClass, playerClass->CurrentExperience);
       if (nextLevel > level) {
         char buf[64];
-        snprintf(buf, sizeof(buf), "You have reached %.31s %s", playerClass->Name, bankGetClassLevelSuffix(nextLevel));
+        snprintf(buf, sizeof(buf), "You have reached %.31s %s", classesGetDefinition(playerClass->ClassType)->Name, bankGetClassLevelSuffix(nextLevel));
         pushSnack(0, buf, 120);
+        // Mastery changes equipment restrictions; publish this confirmed level-up once.
+        if (nextLevel >= RAIDS_CLASS_MAX_LEVEL) bankBroadcastEquippedClass();
       }
     }
+
+    // update cached player classes with latest EquippedClass
+    if (bankHasClasses) {
+      for (i = 0; i < BANK_MAX_CLASSES; ++i) {
+        if (bankPlayerClasses[i].ClassType == playerClass->ClassType) memcpy(&bankPlayerClasses[i], playerClass, sizeof(*playerClass));
+      }
+    }
+
+    // Keep the confirmed local snapshot current.
+    Player* player = playerGetFromSlot(0);
+    if (state && gs && playerIsValid(player)) {
+      struct RaidsPlayer* playerState = &state->PlayerStates[player->PlayerId];
+      if (!playerState->HasEquippedClass || memcmp(&playerState->EquippedClass, playerClass, sizeof(*playerClass)) != 0) {
+        memcpy(&playerState->EquippedClass, playerClass, sizeof(*playerClass));
+        playerState->HasEquippedClass = 1;
+      }
+    }
+
     lastClassType = playerClass->ClassType;
     lastClassXp = playerClass->CurrentExperience;
   }
@@ -1329,6 +1600,7 @@ void bankInit(void)
 
   netInstallCustomMsgHandler(CUSTOM_MSG_SET_PLAYER_EQUIPPED_INVENTORY, &bankOnSetPlayerEquippedInventoryRemote);
   netInstallCustomMsgHandler(CUSTOM_MSG_SET_PLAYER_ACCOUNT, &bankOnSetPlayerAccountRemote);
+  netInstallCustomMsgHandler(CUSTOM_MSG_SET_PLAYER_EQUIPPED_CLASS, &bankOnSetPlayerEquippedClassRemote);
 
   // hooks
   POKE_U32(0x005DDF98, 0); // disable player ambient color affecting child mobys
@@ -1399,4 +1671,17 @@ void bankInit(void)
 
   //bankTick();
   MapConfig.BankVTable = &bankVTable;
+}
+
+//--------------------------------------------------------------------------
+void bankCleanup(void)
+{
+  netUninstallCustomMsgHandler(CUSTOM_MSG_SET_PLAYER_EQUIPPED_INVENTORY, &bankOnSetPlayerEquippedInventoryRemote);
+  netUninstallCustomMsgHandler(CUSTOM_MSG_SET_PLAYER_ACCOUNT, &bankOnSetPlayerAccountRemote);
+  netUninstallCustomMsgHandler(CUSTOM_MSG_SET_PLAYER_EQUIPPED_CLASS, &bankOnSetPlayerEquippedClassRemote);
+
+  struct RaidsState* state = MapConfig.State;
+  if (!state) return;
+  int i;
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) state->PlayerStates[i].HasEquippedClass = 0;
 }

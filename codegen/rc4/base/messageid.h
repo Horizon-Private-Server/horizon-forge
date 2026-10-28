@@ -403,6 +403,16 @@ enum CustomMessageId
     CUSTOM_MSG_ID_GET_RAIDS_CLASSES_REQUEST = 74,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_SPEND_CLASS_SKILL_POINT_REQUEST = 75,
+
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_RESET_CLASS_SKILLS_REQUEST = 76,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,

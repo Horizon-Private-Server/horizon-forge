@@ -10,7 +10,7 @@ using UnityEngine.Serialization;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int RAIDS_VERSION = 3;
+    public static readonly int RAIDS_VERSION = 4;
     public const int MAX_ACTIONS_PER_MOB = 8;
     public const int MAX_PARAMS_PER_MOB = 16;
     public static readonly int[] DEFAULT_CLASS_XP_REWARDS = new int[] { 250, 750, 1500, 2500, 4000 };
@@ -184,6 +184,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/vendor.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skills.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/classes.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/npc.o");
@@ -233,6 +235,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"collectible.h\"");
         state.Includes.Add("#include \"levelselect.h\"");
         state.Includes.Add("#include \"contracts.h\"");
+        state.Includes.Add("#include \"classes.h\"");
 
         // declarations
         {
@@ -255,8 +258,14 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"badgesInit();");
             state.InitBody.Add($"collectibleInit();");
             state.InitBody.Add($"npcInit();");
+            state.InitBody.Add($"classesInit();");
 
             state.InitBody.Add("respawnAllPlayers();");
+        }
+
+        // cleanup
+        {
+            state.CleanupBody.Add("bankCleanup();");
         }
 
         // get gubers
@@ -294,6 +303,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         // ready
         {
             state.MainBodyReady.Add("mapStart();");
+            state.MainBodyReady.Add("bankStart();");
             state.MainBodyReady.Add("levelselectStart();");
             state.MainBodyReady.Add("spawnerStart();");
             state.MainBodyReady.Add("vendorStart();");
