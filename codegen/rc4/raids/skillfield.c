@@ -23,6 +23,7 @@
 #define SKILLFIELD_HILL_COLOR_HEALING (0x0000E080)
 #define SKILLFIELD_HILL_COLOR_AMMO (0x0000FFFF)
 #define SKILLFIELD_HILL_COLOR_ALL (0x00E0E080)
+#define SKILLFIELD_ICON_SIZE (0.5f)
 
 //--------------------------------------------------------------------------
 int skillfieldArgsAreValid(struct SkillFieldSpawnArgs* args)
@@ -182,21 +183,22 @@ void skillfieldPostDraw(Moby* moby)
   struct SkillFieldPVar* pvars = (struct SkillFieldPVar*)moby->PVar;
   if (!pvars || !pvars->Initialized || pvars->Expired || mobyIsDestroyed(moby)) return;
 
-  int i;
   skillfieldDrawHillRing(moby);
+
+  int iconCount = pvars->IconCount;
+  if (iconCount > SKILLFIELD_MAX_ICONS) iconCount = SKILLFIELD_MAX_ICONS;
+  if (iconCount <= 0) return;
 
   VECTOR position;
   vector_copy(position, moby->Position);
-  position[2] += 1.5f;
+  position[2] += 0.5f;
 
-  for (i = 0; i < pvars->IconCount && i < SKILLFIELD_MAX_ICONS; ++i) {
+  int i;
+  for (i = 0; i < iconCount; ++i) {
     struct SkillFieldIcon* icon = &pvars->Icons[i];
-    enum TextAlign alignment = TEXT_ALIGN_MIDDLECENTER;
-    if (pvars->IconCount == 2)
-      alignment = i == 0 ? TEXT_ALIGN_MIDDLERIGHT : TEXT_ALIGN_MIDDLELEFT;
-
-    gfxHelperDrawSprite_WS(position, 24, 24, 32, 32, icon->TexId,
-      icon->Color, alignment, COMMON_DZO_DRAW_NORMAL);
+    float offset = (i - (iconCount - 1) * 0.5f) * SKILLFIELD_ICON_SIZE;
+    gfxHelperDrawBillboardQuad(position, offset, 0, SKILLFIELD_ICON_SIZE, SKILLFIELD_ICON_SIZE,
+      icon->TexId, icon->Color);
   }
 }
 
