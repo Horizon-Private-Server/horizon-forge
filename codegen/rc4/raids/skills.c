@@ -35,7 +35,7 @@
 
 int skillsPlayerHasMovementInput(Player* player);
 
-// Extra jumps and hoverboots have per-player, per-class transient state.
+// Movement skills have per-player, per-class transient state.
 struct SkillsMovementState
 {
   Player* Player;
@@ -44,6 +44,7 @@ struct SkillsMovementState
   int ExtraJumpLimit;
   int HoverTicks;
   int HoverDuration;
+  int ChargebootExtraTicks;
 } skillsMovementStates[GAME_MAX_PLAYERS];
 
 // Damage Immunity tracks the extended timer, never a particular countdown value.
@@ -147,7 +148,7 @@ float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float mul
     case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES:
       return 1.0f + 0.10f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH:
-      return 1.0f + 0.15f * skillPoints * multiplier;
+      return 1.0f + 0.25f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE:
       return 1.0f + 0.20f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_BLAST_REACH:
@@ -241,6 +242,10 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
       break;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE:
       snprintf(buf, bufSize, "+%.0f%% crit", bonus);
+      break;
+    case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH:
+      snprintf(buf, bufSize, "+%.1f sec",
+        floorf(TPS * (skillsGetFactor(skillId, skillPoints, multiplier) - 1.0f) + 0.5f) / TPS);
       break;
     case RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY:
       snprintf(buf, bufSize, "+%.1f sec", bonus / TPS);
@@ -936,6 +941,29 @@ struct SkillsMovementState* skillsSyncMovementState(Player* player)
 }
 
 //--------------------------------------------------------------------------
+void skillsChargebootUpdate(Player* player, struct SkillsMovementState* state)
+{
+  if (player->PlayerState != PLAYER_STATE_CHARGE) {
+    state->ChargebootExtraTicks = -1; // Only a new charge can receive a fresh budget.
+    return;
+  }
+
+  if (state->ChargebootExtraTicks < 0) {
+    float factor = skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH);
+    state->ChargebootExtraTicks = (int)floorf(TPS * (factor - 1.0f) + 0.5f);
+  }
+
+  // The ramp ends at 50 and the normal exit is at 61. Extend full-speed travel.
+  if (state->ChargebootExtraTicks > 0 && player->timers.state > 55 && player->timers.state < 61) {
+    int ticks = player->timers.state - 55;
+    if (ticks > state->ChargebootExtraTicks)
+      ticks = state->ChargebootExtraTicks;
+    player->timers.state -= ticks;
+    state->ChargebootExtraTicks -= ticks;
+  }
+}
+
+//--------------------------------------------------------------------------
 int skillsPlayerHasMovementInput(Player* player)
 {
   return skillsPlayerIsReady(player) && player->IsLocal && !playerIsDead(player)
@@ -1021,6 +1049,7 @@ void skillsOnPlayerUpdate(Player* player)
   }
 
   struct SkillsMovementState* state = skillsSyncMovementState(player);
+  skillsChargebootUpdate(player, state);
   skillsDamageImmunityUpdate(player);
   if (player->IsLocal)
     skillsSyncAmmoState(player);
