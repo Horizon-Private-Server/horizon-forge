@@ -1608,6 +1608,15 @@ void bankTickPlayer(Player * player)
     }
   }
 
+  // Retry after removals free slots, including gadgets that were already given.
+  if (player->IsLocal) {
+    for (i = 0; i < WEAPON_SLOT_OMNI_SHIELD && !playerGetLocalEquipslot(player->LocalPlayerIndex, 2); ++i) {
+      int gadgetId = weaponSlotToId(i+1);
+      if (gbox->Gadgets[gadgetId].Level >= 0)
+        bankTryAddGadgetToQuickSelect(player, gadgetId);
+    }
+  }
+
   if (gbox->Gadgets[WEAPON_ID_HACKER_RAY].Level < 0)
     playerGiveWeapon(gbox, WEAPON_ID_HACKER_RAY, 0, 0); // give hacker ray
 }
