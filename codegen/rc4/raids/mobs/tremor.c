@@ -556,6 +556,7 @@ case TREMOR_ACTION_ATTACK:
 		case TREMOR_ACTION_FLINCH:
 		case TREMOR_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       int animFlinchId = pvars->MobVars.Action == TREMOR_ACTION_BIG_FLINCH ? TREMOR_ANIM_FLINCH_FALL_GET_UP : TREMOR_ANIM_FLINCH;
 
       mobTransAnim(moby, animFlinchId, 0);

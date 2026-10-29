@@ -264,17 +264,23 @@ int mobDoDamageTryHit(Moby* mobMoby, Moby* sourceMoby, Moby* hitMoby, VECTOR joi
   vector_subtract(mobToJoint, jointPosition, sourceMoby->Position);
   vector_subtract(jointToHitMoby, hitMobyCenter, jointPosition);
 
-  // ignore if hit behind
-  if (!isAoE && vector_innerproduct(mobToHitMoby, mobToJoint) < 0)
-    return 0;
+  if (isAoE) {
+		// ensure target is in radius of AoE
+    if (vector_sqrmag(jointToHitMoby) > powf(hitMobyCollRadius + hitRadius, 2))
+      return 0;
+  } else {
+    // ignore if hit behind
+    if (vector_innerproduct(mobToHitMoby, mobToJoint) < 0)
+      return 0;
 
-  // clamp within arbitrary vertical limit
-  if (!isAoE && fabsf(jointToHitMoby[2]) > hitHeight)
-    return 0;
+    // clamp within arbitrary vertical limit
+    if (fabsf(jointToHitMoby[2]) > hitHeight)
+      return 0;
 
-  // ignore if past attack radius
-  if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_sqrmag(jointToHitMoby) > powf(hitMobyCollRadius + hitRadius, 2))
-    return 0;
+    // ignore if past attack radius
+    if (vector_innerproduct(mobToHitMoby, jointToHitMoby) > 0 && vector_sqrmag(jointToHitMoby) > powf(hitMobyCollRadius + hitRadius, 2))
+      return 0;
+  }
 
   vector_write(in.Momentum, 0);
   in.Damager = mobMoby;
@@ -304,6 +310,17 @@ int mobDoSweepDamage(Moby* mobMoby, Moby* sourceMoby, VECTOR from, VECTOR to, fl
   // get total distance to travel
   vector_subtract(delta, to, from);
   float len = vector_length(delta);
+
+	// if no length just run once at start position
+	if (len == 0)
+	{
+		len = 1;
+		step = 1;
+	}
+
+	// prevent very small step
+	if (step < 0.1)
+		step = 0.1;
 
   for (t = 0; t < len; t += step)
   {
@@ -371,9 +388,13 @@ int mobDoDamage(Moby* mobMoby, Moby* sourceMoby, float radius, float amount, int
   float firstPassRadius = 5 + radius;
   float firstPassSqrRadius = powf(5 + radius, 2);
 
-  // get position of right spike joint
-  mobyGetJointMatrix(sourceMoby, jointId, jointMtx);
-  vector_copy(p, &jointMtx[12]);
+  // get position of joint or source moby
+  if (jointId < 0) {
+    vector_copy(p, sourceMoby->Position);
+  } else {
+    mobyGetJointMatrix(sourceMoby, jointId, jointMtx);
+    vector_copy(p, &jointMtx[12]);
+  }
 
   // if no friendly fire just check hit on players
   // otherwise check all mobys
@@ -712,7 +733,38 @@ float mobGetFreezeSpeedFactor(Moby* moby)
 //--------------------------------------------------------------------------
 void mobForceIntoMapBounds(Moby* moby)
 {
-  
+  if (!moby || !moby->PVar)
+    return;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  int escaped = 0;
+  int i;
+  for (i = 0; i < 3; ++i) {
+    if (moby->Position[i] < 1 || moby->Position[i] > 1023
+        || pvars->MobVars.MoveVars.LastPosition[i] < 1 || pvars->MobVars.MoveVars.LastPosition[i] > 1023
+        || pvars->MobVars.MoveVars.NextPosition[i] < 1 || pvars->MobVars.MoveVars.NextPosition[i] > 1023) {
+      escaped = 1;
+    }
+    moby->Position[i] = clamp(moby->Position[i], 1, 1023);
+  }
+
+  if (!escaped)
+    return;
+
+  // Keep interpolation endpoints inside the safe moby grid too.
+  vector_copy(pvars->MobVars.MoveVars.LastPosition, moby->Position);
+  vector_copy(pvars->MobVars.MoveVars.NextPosition, moby->Position);
+  vector_write(pvars->MobVars.MoveVars.Velocity, 0);
+  vector_write(pvars->MobVars.MoveVars.AddVelocity, 0);
+  pvars->MobVars.MoveVars.MoveSkipTicks = 0;
+
+  // Spawners and NPCs handle respawning; standalone mobs have no recovery handler.
+  if (mobAmIOwner(moby)) {
+    if (mobyIsNpc(moby) || (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS))
+      pvars->MobVars.Respawn = 1;
+    else
+      pvars->MobVars.Destroy = 2;
+  }
 }
 
 //--------------------------------------------------------------------------

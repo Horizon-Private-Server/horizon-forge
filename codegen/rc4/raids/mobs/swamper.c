@@ -497,6 +497,7 @@ case SWAMPER_ACTION_ATTACK:
 		case SWAMPER_ACTION_FLINCH:
 		case SWAMPER_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       int animFlinchId = pvars->MobVars.Action == SWAMPER_ACTION_BIG_FLINCH ? SWAMPER_ANIM_FALL_BACKWARDS : SWAMPER_ANIM_JUMP_BACKWARDS;
 
       mobTransAnim(moby, animFlinchId, 0);

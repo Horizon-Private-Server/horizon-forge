@@ -758,6 +758,7 @@ void dzstrikerDoAction(Moby* moby)
 		case DZSTRIKER_ACTION_FLINCH:
 		case DZSTRIKER_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       if (pvars->MobVars.Action == DZSTRIKER_ACTION_BIG_FLINCH) {
         dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_FLINCH_FALL_DOWN, DZSTRIKER_TORSO_ANIM_FLINCH_3_BAD_ANIM, 0);
       } else {

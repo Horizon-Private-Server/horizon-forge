@@ -586,6 +586,7 @@ case REAPER_ACTION_AGGRO:
 		case REAPER_ACTION_FLINCH:
 		case REAPER_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       int animFlinchId = pvars->MobVars.Action == REAPER_ACTION_BIG_FLINCH ? REAPER_ANIM_FLINCH_KNOCKBACK : REAPER_ANIM_FLINCH;
 
       mobTransAnim(moby, animFlinchId, 0);

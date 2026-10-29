@@ -560,6 +560,7 @@ case EXECUTIONER_ACTION_ATTACK:
 		case EXECUTIONER_ACTION_FLINCH:
 		case EXECUTIONER_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       int animFlinchId = pvars->MobVars.Action == EXECUTIONER_ACTION_BIG_FLINCH ? EXECUTIONER_ANIM_BIG_FLINCH : EXECUTIONER_ANIM_BIG_FLINCH;
 
       mobTransAnim(moby, animFlinchId, 0);

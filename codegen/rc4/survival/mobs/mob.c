@@ -489,7 +489,7 @@ int mobDoDamageTryHit(Moby *moby, Moby *hitMoby, VECTOR jointPosition, int isAoE
 	if (isAoE)
 	{
 		// ensure target is in radius of AoE
-		if (vector_length(jointToHitMoby) > (hitMobyCollRadius + hitRadius))
+    if (vector_sqrmag(jointToHitMoby) > powf(hitMobyCollRadius + hitRadius, 2))
 			return 0;
 	}
 	else

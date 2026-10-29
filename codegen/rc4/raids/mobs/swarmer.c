@@ -594,6 +594,7 @@ case SWARMER_ACTION_DODGE:
 		case SWARMER_ACTION_FLINCH:
 		case SWARMER_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       int animFlinchId = pvars->MobVars.Action == SWARMER_ACTION_BIG_FLINCH ? SWARMER_ANIM_FLINCH_SPIN_AND_STAND2 : SWARMER_ANIM_FLINCH_SPIN_AND_STAND;
 
       mobTransAnim(moby, animFlinchId, 0);

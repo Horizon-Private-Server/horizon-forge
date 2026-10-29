@@ -906,6 +906,7 @@ case LEVIATHAN_ACTION_CHASE:
 		case LEVIATHAN_ACTION_FLINCH:
 		case LEVIATHAN_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       int animFlinchId = pvars->MobVars.Action == LEVIATHAN_ACTION_BIG_FLINCH ? LEVIATHAN_ANIM_BIG_FLINCH : LEVIATHAN_ANIM_BIG_FLINCH;
 
       mobTransAnim(moby, animFlinchId, 0);
