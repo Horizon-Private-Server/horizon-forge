@@ -95,7 +95,7 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
 
       // Projectile handling.
-      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 3.0f },
 
       // Ammo supply.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
@@ -206,7 +206,7 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 3.0f },
       { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 5.0f },
       { .SkillId = RAIDS_CLASS_SKILL_VISIBOMB, .MaxRank = 1, .X = 1, .Y = 1, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_CLUSTER_BOMBS, .MaxRank = 2, .X = 5, .Y = 1, .Multiplier = 1.0f },
 

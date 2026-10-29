@@ -35,6 +35,16 @@
 
 int skillsPlayerHasMovementInput(Player* player);
 
+// Native B6 ball PVars; only the flight step uses this view.
+struct SkillsB6ProjectileVars
+{
+  u8 Sticky[0x40];
+  VECTOR Velocity;        // 0x40: native velocity, in units per flight tick
+  u8 Unused50[0x30];
+  VECTOR Gravity;         // 0x80: gravity applied by the native flight step
+  Player* Player;         // 0x90: shooter, including remote players
+};
+
 // Movement skills have per-player, per-class transient state.
 struct SkillsMovementState
 {
@@ -414,6 +424,33 @@ Moby* skillsViperShotSpawn(float damage, Moby* weaponMoby, Player* player, VECTO
   // Scale primary shots only; V10 secondary shots inherit their parent's speed.
   return ((Moby* (*)(float, Moby*, Player*, VECTOR, VECTOR, int, int, int, int, int))0x003C08E8)(
     damage, weaponMoby, player, position, velocity, damageFlags, jointId, specialShot, immediateHit, ricochetMode);
+}
+
+//--------------------------------------------------------------------------
+void skillsB6ProjectileMove(Moby* moby)
+{
+  struct SkillsB6ProjectileVars* pvars = (struct SkillsB6ProjectileVars*)moby->PVar;
+  float factor = skillsGetPlayerFactor(pvars->Player, RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED);
+  if (!(factor > 1.0f)) {
+    ((void (*)(Moby*))0x003F61F0)(moby);
+    return;
+  }
+
+  // Advance this ball's flight time, retaining native aiming, gravity direction,
+  // previous position (for collision sweeps), and external velocity orientation.
+  vector_scale(pvars->Velocity, pvars->Velocity, factor);
+  ((void (*)(Moby*))0x003F61F0)(moby);
+
+  // Native integration is p += v; v += g. Its arc is p(t) = p0 + t*v0
+  // + t*(t-1)*g/2. Advance by factor ticks, then store velocity in native units
+  // again so boosts never compound and rank changes need no saved state.
+  float positionCorrection = 0.5f * factor * (factor - 1.0f);
+  float velocityCorrection = factor * factor - 1.0f;
+  int i;
+  for (i = 0; i < 3; ++i) {
+    moby->Position[i] += positionCorrection * pvars->Gravity[i];
+    pvars->Velocity[i] = (pvars->Velocity[i] + velocityCorrection * pvars->Gravity[i]) / factor;
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -1130,6 +1167,7 @@ void skillsInit(void)
   memset(&skillsGoldBoltState, 0, sizeof(skillsGoldBoltState));
   HOOK_JAL(0x0060C660, &skillsExtraJumpsOnDoubleJump);
   HOOK_JAL(0x003B6B88, &skillsViperShotSpawn);
+  HOOK_JAL(0x003F6310, &skillsB6ProjectileMove);
 }
 
 //--------------------------------------------------------------------------
