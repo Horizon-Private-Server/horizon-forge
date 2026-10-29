@@ -1528,7 +1528,7 @@ void mobOnStateUpdate(Moby* moby, struct MobStateUpdateEventArgs* e)
 //--------------------------------------------------------------------------
 void mobInit(void)
 {
-  MapConfig.OnMobSpawnedFunc = &mobOnSpawned;
+  MapConfig.Functions.OnMobSpawnedFunc = &mobOnSpawned;
 }
 
 //--------------------------------------------------------------------------

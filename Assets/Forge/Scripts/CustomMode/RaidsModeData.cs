@@ -187,6 +187,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skills.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/classes.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/mobs/mob.o");
@@ -248,6 +249,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"levelselect.h\"");
         state.Includes.Add("#include \"contracts.h\"");
         state.Includes.Add("#include \"classes.h\"");
+        state.Includes.Add("#include \"interop.h\"");
+        state.Includes.Add("#include \"skills.h\"");
 
         // declarations
         {
@@ -271,12 +274,16 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"collectibleInit();");
             state.InitBody.Add($"npcInit();");
             state.InitBody.Add($"classesInit();");
+            state.InitBody.Add("interopInit();");
+            state.InitBody.Add("skillsInit();");
 
             state.InitBody.Add("respawnAllPlayers();");
         }
 
         // cleanup
         {
+            state.CleanupBody.Add("skillsCleanup();");
+            state.CleanupBody.Add("interopCleanup();");
             state.CleanupBody.Add("bankCleanup();");
         }
 
@@ -292,17 +299,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
             // if (mobTypes.Contains(RaidsMob.DZStriker))
                 // state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
-        }
-
-        // raids hooks
-        {
-            state.InitBody.Add($"MapConfig.OnMobCreateFunc = &mapCreateMob;");
-            state.InitBody.Add($"MapConfig.OnMobUpdateFunc = &mapOnMobUpdate;");
-            state.InitBody.Add($"MapConfig.OnMobDamagedFunc = &mapOnMobDamaged;");
-            state.InitBody.Add($"MapConfig.OnMobKilledFunc = &mapOnMobKilled;");
-            state.InitBody.Add($"MapConfig.OnMobDestroyedFunc = &mapOnMobDestroyed;");
-            state.InitBody.Add($"MapConfig.OnMobSpawnedFunc = &mapOnMobSpawned;");
-            state.InitBody.Add($"MapConfig.CreateAmmoDropAtFunc = &ammodropCreateAt;");
         }
 
         // draw functions
@@ -330,6 +326,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         {
             state.MainBody.Add("mapTick();");
             state.MainBody.Add("bankTick();");
+            state.MainBody.Add("skillsTick();");
             if (state.Debug && DebugMenu) state.MainBody.Add("debugmenuTick();");
             state.MainBody.Add("inventoryTick();");
             state.MainBody.Add("contractsTick();");

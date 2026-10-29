@@ -66,7 +66,7 @@ int debugmenuActionIsEnabled(int action)
       && bankGetClassLevel(playerClass, bankGetClassXP(playerClass->ClassType)) < RAIDS_CLASS_MAX_LEVEL;
   }
   if (action == DEBUGMENU_BOLTS) return bankGetBolts() < 0xFFFFFFFFU;
-  if (action == DEBUGMENU_LOOT) return MapConfig.RequestPrestigeLootFunc != NULL;
+  if (action == DEBUGMENU_LOOT) return MapConfig.Functions.ModeRequestPrestigeLootFunc != NULL;
   return action == 0;
 }
 
@@ -112,7 +112,7 @@ void debugmenuAction(int action)
     bankSendAccountToServer();
     snprintf(debugmenuState.Message, sizeof(debugmenuState.Message), "Granted %'u bolts.", amount);
   } else if (action == DEBUGMENU_LOOT) {
-    MapConfig.RequestPrestigeLootFunc(weaponSlotToId(1 + rand(WEAPON_SLOT_COUNT - 1)));
+    MapConfig.Functions.ModeRequestPrestigeLootFunc(weaponSlotToId(1 + rand(WEAPON_SLOT_COUNT - 1)));
     safe_strcpy(debugmenuState.Message, "Random loot requested.", sizeof(debugmenuState.Message));
   }
 }

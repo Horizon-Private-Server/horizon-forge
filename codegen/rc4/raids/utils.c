@@ -285,7 +285,7 @@ double getXpForProficiency(int proficiency)
 int getAmmoRefillCost(Player* player)
 {
   if (!player || !player->GadgetBox) return -1;
-  if (!MapConfig.GetAmmoRefillCostFunc) return -1;
+  if (!MapConfig.Functions.ModeGetAmmoRefillCostFunc) return -1;
 
-  return MapConfig.GetAmmoRefillCostFunc(player);
+  return MapConfig.Functions.ModeGetAmmoRefillCostFunc(player);
 }

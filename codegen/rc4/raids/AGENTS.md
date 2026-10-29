@@ -1,6 +1,7 @@
 # Raids C
 
 - Codegen/export wiring: `Assets/Forge/Scripts/CustomMode/RaidsModeData.cs`. Matching runtime/server code: `../horizon-deadlocked-patch/raids` and `../horizon-deadlocked-plugin`. These paths are relative to the Forge repo root.
+- Map code and patch runtime are separate link units. Mirror shared ABI definitions (enums, structs, callback typedefs and function tables), not entire headers. Ordinary function declarations belong only on the side that links their implementations: patch `include/skills.h` needs only the skill enum, `include/classes.h` needs only shared class definitions, and `include/interop.h` declares runtime helpers rather than map initialization/cleanup. Access map-owned functions from the patch through interop or `BankVTable`.
 - Guard `MapConfig.State` and bank readiness (`bankGetHas...`). Reuse bank helpers for XP, levels, rarity, and class restrictions. Hero, Weapon, and Class XP are independent; Hero levels display as `bankGetLevel() + 1`, classes use `bankGetClassLevel()` and Roman suffixes from `bankGetClassLevelSuffix()`.
 - Use `menu.h` drawing helpers with `Window_t`; use `windowDrawTextWindow()` for wrapped paragraphs. Use `shouldCloseMenu()` or hub-only `shouldCloseHubMenu()`, calling the owning menu's Close function to restore input. Preserve forced Planet Select opening after mission failure; mark it handled only once visible.
 - Split screen is disabled. Use local player slot 0. Hub network IDs start at 190; 200+ is patch-reserved. Check existing enums before assigning IDs.

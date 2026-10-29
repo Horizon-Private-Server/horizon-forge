@@ -132,8 +132,8 @@ void levelselectGo(LevelselectDrawState_t* drawState)
 
   // hop
   int isHub = strncmp(drawState->SelectedMapFilename, RAIDS_HUB_MAPFILENAME, sizeof(drawState->SelectedMapFilename)) == 0;
-  if (MapConfig.BeginWorldHopFunc) {
-    MapConfig.BeginWorldHopFunc(drawState->SelectedMapFilename, isHub ? 0 : drawState->SelectedDifficulty, isHub ? 0 : cost, 5 * TIME_SECOND);
+  if (MapConfig.Functions.ModeBeginWorldHopFunc) {
+    MapConfig.Functions.ModeBeginWorldHopFunc(drawState->SelectedMapFilename, isHub ? 0 : drawState->SelectedDifficulty, isHub ? 0 : cost, 5 * TIME_SECOND);
   }
 
   levelselectClose();

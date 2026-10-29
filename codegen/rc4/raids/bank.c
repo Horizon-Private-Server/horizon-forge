@@ -1254,6 +1254,8 @@ int bankGetAlphaModCount(GadgetBox* gadgetBox, int gadgetId, int alphaModId)
   //   case ALPHA_MOD_IMPACT: extra = (int)ceilf(BADGE_IMPACT_MOD_BUFF_AMOUNT * bankGetEquippedBadgeEffectStrength(pIdx, RAIDS_BADGE_TYPE_ALPHA_IMPACT_BUFF)); break;
   // }
 
+  if (pIdx >= 0 && pIdx < GAME_MAX_PLAYERS)
+    extra += skillsGetAlphaModBonus(playerGetAll()[pIdx], alphaModId);
   return extra + bankWeapon->WeaponData.AlphaModCounts[alphaModId-1];
 }
 

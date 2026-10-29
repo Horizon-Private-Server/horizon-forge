@@ -1,7 +1,30 @@
 #include <float.h>
 #include <libdl/stdio.h>
 #include <libdl/math.h>
+#include <libdl/math3d.h>
+#include <libdl/game.h>
+#include <libdl/moby.h>
+#include <libdl/pad.h>
+#include <libdl/string.h>
+#include <libdl/utils.h>
 #include "skills.h"
+#include "game.h"
+#include "bank.h"
+#include "utils.h"
+
+// Extra jumps and hoverboots have per-player, per-class transient state.
+struct SkillsMovementState
+{
+  Player* Player;
+  int ClassType;
+  int ExtraJumps;
+  int ExtraJumpLimit;
+  int HoverTicks;
+  int HoverDuration;
+} skillsMovementStates[GAME_MAX_PLAYERS];
+
+u32 skillsExtraJumpOriginalInstruction;
+int skillsExtraJumpHookInstalled;
 
 //--------------------------------------------------------------------------
 float skillsGetDamageFactor(int skillPoints)
@@ -26,7 +49,6 @@ float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float mul
     case RAIDS_CLASS_SKILL_MOVEMENT_SPEED: return 1.0f + (skillsGetMovementSpeedFactor(skillPoints) - 1.0f) * multiplier;
     case RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE:
     case RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE:
-    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE:
     case RAIDS_CLASS_SKILL_VEHICLE_DAMAGE:
     case RAIDS_CLASS_SKILL_VEHICLE_HEALTH:
     case RAIDS_CLASS_SKILL_MAX_HEALTH:
@@ -64,6 +86,7 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
     case RAIDS_CLASS_SKILL_AMMO_FIELD:
       // Normal ammo-pickup equivalents per pulse, using ammodrop's per-weapon tuning.
       return 0.25f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return 2.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_DEADEYE:
       // Percentage points while stationary with Fusion; total critical chance caps at 100%.
@@ -115,6 +138,7 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
       break;
     case RAIDS_CLASS_SKILL_HEALING_FIELD: snprintf(buf, bufSize, "+%.0f HP/pulse", bonus); break;
     case RAIDS_CLASS_SKILL_AMMO_FIELD: snprintf(buf, bufSize, "%.2fx drop/pulse", bonus); break;
+    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: snprintf(buf, bufSize, "+%.0f%% drop chance", bonus); break;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: snprintf(buf, bufSize, "+%.0f%% crit", bonus); break;
     case RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY: snprintf(buf, bufSize, "+%.0f ticks", bonus); break;
     case RAIDS_CLASS_SKILL_HOVERBOOTS:
@@ -201,7 +225,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_EXTRA_JUMPS: return "Add extra jumps before landing.";
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH: return "Extend chargeboot travel duration.";
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE: return "Increase wrench damage.";
-    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Increase the base chance of an ammo drop.";
+    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Add percentage points to the chance of an ammo drop.";
     case RAIDS_CLASS_SKILL_HEALING_FIELD: return "Heal nearby allies per pulse. Has a cooldown.";
     case RAIDS_CLASS_SKILL_AMMO_FIELD: return "Refill allies per pulse. Uses ammo drops. Has cooldown.";
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return "Add percentage points to critical hit chance.";
@@ -230,4 +254,274 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS: return "Primary B6 blasts spawn extra B6 bombs. Secondary bombs cannot cluster.";
     default: return "No description available.";
   }
+}
+
+//--------------------------------------------------------------------------
+// Runtime skills use confirmed, effective bank ranks (including mastery).
+int skillsPlayerIsReady(Player* player)
+{
+  if (!MapConfig.State || !playerIsValid(player) || !playerIsConnected(player)) return 0;
+  if (player->PlayerId < 0 || player->PlayerId >= GAME_MAX_PLAYERS) return 0;
+
+  if (player->IsLocal) {
+    if (!bankGetHasAccount() || bankHasPendingAccountRequest()
+        || !bankGetHasEquippedClassProgress() || bankHasPendingEquippedClassProgressRequest()) return 0;
+
+    RaidsPlayerBank_t* bank = bankGetLocalBank();
+    if (!bank || bank->Account.EquippedClass != bank->EquippedClassProgress.ClassType) return 0;
+  }
+  return bankGetPlayerEquippedClass(player->PlayerId) != NULL;
+}
+
+//--------------------------------------------------------------------------
+float skillsGetPlayerFactor(Player* player, enum RaidsClassSkillId skillId)
+{
+  if (!skillsPlayerIsReady(player)) return 1.0f;
+
+  return skillsGetFactor(skillId, bankGetPlayerClassSkillRank(player->PlayerId, skillId),
+    bankGetPlayerClassSkillMultiplier(player->PlayerId, skillId));
+}
+
+//--------------------------------------------------------------------------
+float skillsGetPlayerBonus(Player* player, enum RaidsClassSkillId skillId)
+{
+  if (!skillsPlayerIsReady(player)) return 0;
+
+  return skillsGetBonus(skillId, bankGetPlayerClassSkillRank(player->PlayerId, skillId),
+    bankGetPlayerClassSkillMultiplier(player->PlayerId, skillId));
+}
+
+//--------------------------------------------------------------------------
+// Ammo-drop bonuses are percentage points.
+float skillsGetAmmoDropChance(Player* player, float baseChance)
+{
+  return baseChance + skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE) / 100.0f;
+}
+
+//--------------------------------------------------------------------------
+// Damage, movement speed and maximum health are applied to fresh baselines.
+void skillsFinalizePlayerDamage(struct RaidsPlayerDamageContext* context)
+{
+  if (!context) return;
+
+  context->Damage *= skillsGetPlayerFactor(context->Attacker, RAIDS_CLASS_SKILL_DAMAGE);
+}
+
+//--------------------------------------------------------------------------
+void skillsModifyPlayerStats(Player* player, struct RaidsPlayerStats* stats)
+{
+  if (!stats) return;
+
+  stats->Speed *= skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_MOVEMENT_SPEED);
+  stats->MaxHealth *= skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_MAX_HEALTH);
+}
+
+//--------------------------------------------------------------------------
+// Critical chance bonuses are percentage points, not multipliers.
+void skillsModifyPlayerCritChance(struct RaidsPlayerDamageContext* context)
+{
+  if (!context) return;
+
+  context->CritChance += skillsGetPlayerBonus(context->Attacker, RAIDS_CLASS_SKILL_CRITICAL_CHANCE) / 100.0f;
+}
+
+//--------------------------------------------------------------------------
+void skillsModifyPlayerCritDamage(struct RaidsPlayerDamageContext* context)
+{
+  // No current skill changes the critical multiplier. Keep this extension point.
+}
+
+//--------------------------------------------------------------------------
+// Keep bankGetAlphaModCount as the sole owner of the game's alpha-mod hook.
+int skillsGetAlphaModBonus(Player* player, int alphaModId)
+{
+  enum RaidsClassSkillId skillId;
+
+  switch (alphaModId) {
+    case ALPHA_MOD_AMMO: skillId = RAIDS_CLASS_SKILL_ALPHA_AMMO; break;
+    case ALPHA_MOD_AREA: skillId = RAIDS_CLASS_SKILL_ALPHA_AREA; break;
+    case ALPHA_MOD_SPEED: skillId = RAIDS_CLASS_SKILL_ALPHA_SPEED; break;
+    case ALPHA_MOD_NANOLEECH: skillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH; break;
+    default: return 0;
+  }
+  return (int)skillsGetPlayerBonus(player, skillId);
+}
+
+//--------------------------------------------------------------------------
+// Second Wind is processed by the killer's client, once per replicated kill.
+void skillsOnMobKilled(Moby* moby, int killedByPlayerId)
+{
+  if (killedByPlayerId < 0 || killedByPlayerId >= GAME_MAX_PLAYERS) return;
+
+  Player* player = playerGetAll()[killedByPlayerId];
+  if (!playerIsValid(player) || !player->IsLocal || playerIsDead(player)
+      || player->Health <= 0 || player->MaxHealth <= 0 || player->Health >= player->MaxHealth * 0.25f) return;
+
+  float heal = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_SECOND_WIND);
+  if (heal > 0) playerSetHealth(player, minf(player->MaxHealth, player->Health + heal));
+}
+
+//--------------------------------------------------------------------------
+void skillsResetPlayer(Player* player)
+{
+  if (!player || player->PlayerId < 0 || player->PlayerId >= GAME_MAX_PLAYERS) return;
+
+  struct SkillsMovementState* state = &skillsMovementStates[player->PlayerId];
+  memset(state, 0, sizeof(*state));
+  state->ClassType = -1;
+  state->HoverTicks = -1; // Landing arms hover; switching classes in midair does not.
+}
+
+//--------------------------------------------------------------------------
+struct SkillsMovementState* skillsSyncMovementState(Player* player)
+{
+  if (!skillsPlayerIsReady(player)) return NULL;
+
+  struct SkillsMovementState* state = &skillsMovementStates[player->PlayerId];
+  RaidsPlayerClassProgress_t* playerClass = bankGetPlayerEquippedClass(player->PlayerId);
+  int extraJumps = (int)skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_EXTRA_JUMPS);
+  int hoverDuration = (int)(TPS * skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_HOVERBOOTS));
+
+  if (state->Player != player || state->ClassType != playerClass->ClassType
+      || state->ExtraJumpLimit != extraJumps || state->HoverDuration != hoverDuration) {
+    skillsResetPlayer(player);
+    state->Player = player;
+    state->ClassType = playerClass->ClassType;
+    state->ExtraJumpLimit = extraJumps;
+    state->HoverDuration = hoverDuration;
+  }
+  return state;
+}
+
+//--------------------------------------------------------------------------
+int skillsPlayerHasMovementInput(Player* player)
+{
+  return skillsPlayerIsReady(player) && player->IsLocal && !playerIsDead(player)
+    && player->Health > 0 && !player->InVehicle && !player->timers.noInput
+    && MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_NONE && !shouldCloseMenu();
+}
+
+//--------------------------------------------------------------------------
+void skillsExtraJumpsOnDoubleJump(Player* player, int stateId, int a2, int a3, int t0)
+{
+  PlayerVTable* vtable = playerGetVTable(player);
+  if (!vtable || !vtable->UpdateState) return;
+
+  struct SkillsMovementState* state = skillsPlayerHasMovementInput(player) ? skillsSyncMovementState(player) : NULL;
+  if (state && state->ExtraJumpLimit > 0
+      && (player->PlayerState == PLAYER_STATE_JUMP || player->PlayerState == PLAYER_STATE_RUN_JUMP)
+      && (state->ExtraJumps < state->ExtraJumpLimit || player->timers.state < 6)) {
+    POKE_U8((u32)player + 0x1CA0 + 0xFF, 0); // Survival's double-jump/flip flag.
+    return;
+  }
+  if (state) state->ExtraJumps = 0;
+  vtable->UpdateState(player, stateId, a2, a3, t0);
+}
+
+//--------------------------------------------------------------------------
+void skillsExtraJumpsUpdate(Player* player, struct SkillsMovementState* state)
+{
+  if (player->Ground.onGood || (player->PlayerState != PLAYER_STATE_JUMP && player->PlayerState != PLAYER_STATE_RUN_JUMP)) {
+    state->ExtraJumps = 0;
+    return;
+  }
+
+  if (state->ExtraJumpLimit <= 0) return;
+
+  int mappedJump = padGetMappedPad(0x40, player->PlayerId);
+  PlayerVTable* vtable = playerGetVTable(player);
+  if (mappedJump > 0 && vtable && vtable->UpdateState && player->timers.state > 6
+      && playerPadGetAnyButtonDown(player, mappedJump << 8) > 0) {
+    if (state->ExtraJumps < state->ExtraJumpLimit) {
+      ++state->ExtraJumps;
+      vtable->UpdateState(player, PLAYER_STATE_JUMP, 1, 1, 1);
+      POKE_U8((u32)player + 0x1CA0 + 0xFF, 0);
+    } else {
+      POKE_U8((u32)player + 0x1CA0 + 0xFF, 1);
+    }
+  }
+}
+
+//--------------------------------------------------------------------------
+void skillsHoverbootsUpdate(Player* player, struct SkillsMovementState* state)
+{
+  if (player->Ground.onGood) {
+    state->HoverTicks = 0;
+    return;
+  }
+
+  int canHover = player->PlayerState == PLAYER_STATE_WALK || player->PlayerState == PLAYER_STATE_IDLE
+    || player->PlayerState == PLAYER_STATE_FALL || player->PlayerState == PLAYER_STATE_GET_HIT;
+  if (!canHover) {
+    state->HoverTicks = -1;
+    return;
+  }
+
+  if (state->HoverDuration > 0 && state->HoverTicks >= 0 && state->HoverTicks < state->HoverDuration) {
+    player->Ground.offGood = 0;
+    ++state->HoverTicks;
+
+    if ((state->HoverTicks % 10) == 0) {
+      mobySpawnExplosion(vector_read(player->PlayerPosition), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0x80003080, 0, NULL, NULL, 0, 0.5, 0, 0, 0);
+    }
+  }
+}
+
+//--------------------------------------------------------------------------
+void skillsOnPlayerUpdate(Player* player)
+{
+  if (!skillsPlayerIsReady(player) || playerIsDead(player)) {
+    skillsResetPlayer(player);
+    return;
+  }
+
+  struct SkillsMovementState* state = skillsSyncMovementState(player);
+  if (!skillsPlayerHasMovementInput(player)) {
+    if (!player->Ground.onGood) state->HoverTicks = -1;
+    return;
+  }
+  skillsHoverbootsUpdate(player, state);
+}
+
+//--------------------------------------------------------------------------
+void skillsTick(void)
+{
+  int i;
+  Player** players = playerGetAll();
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* player = players[i];
+    if (!skillsPlayerIsReady(player) || playerIsDead(player)) {
+      memset(&skillsMovementStates[i], 0, sizeof(skillsMovementStates[i]));
+      skillsMovementStates[i].ClassType = -1;
+      skillsMovementStates[i].HoverTicks = -1;
+      continue;
+    }
+
+    struct SkillsMovementState* state = skillsSyncMovementState(player);
+    if (!skillsPlayerHasMovementInput(player)) continue;
+
+    // Poll in the map tick, before dlPostUpdate advances the map's pad history.
+    skillsExtraJumpsUpdate(player, state);
+  }
+}
+
+//--------------------------------------------------------------------------
+void skillsInit(void)
+{
+  memset(skillsMovementStates, 0, sizeof(skillsMovementStates));
+  if (skillsExtraJumpHookInstalled) return;
+
+  skillsExtraJumpOriginalInstruction = *(u32*)0x0060C660;
+  HOOK_JAL(0x0060C660, &skillsExtraJumpsOnDoubleJump);
+  skillsExtraJumpHookInstalled = 1;
+}
+
+//--------------------------------------------------------------------------
+void skillsCleanup(void)
+{
+  u32 hookInstruction = 0x0C000000 | ((u32)&skillsExtraJumpsOnDoubleJump >> 2);
+  if (skillsExtraJumpHookInstalled && *(u32*)0x0060C660 == hookInstruction)
+    POKE_U32(0x0060C660, skillsExtraJumpOriginalInstruction);
+  skillsExtraJumpHookInstalled = 0;
+  memset(skillsMovementStates, 0, sizeof(skillsMovementStates));
 }

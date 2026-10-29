@@ -75,8 +75,8 @@ int stalkerturretCreate(struct MobCreateArgs* args)
 	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(StalkerTurretMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args);
+    if (MapConfig.Functions.ModePopulateSpawnArgsFunc) {
+      MapConfig.Functions.ModePopulateSpawnArgsFunc(&spawnArgs, args);
     }
 
 		u8 random = (u8)rand(100);

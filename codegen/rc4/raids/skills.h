@@ -1,6 +1,11 @@
 #ifndef RAIDS_SKILLS_H
 #define RAIDS_SKILLS_H
 
+#include <libdl/player.h>
+
+struct RaidsPlayerStats;
+struct RaidsPlayerDamageContext;
+
 enum RaidsClassSkillId
 {
   RAIDS_CLASS_SKILL_NONE = 0,
@@ -43,9 +48,6 @@ enum RaidsClassSkillId
 
 // Factors are multipliers; unlearned and unknown skills return 1.
 float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float multiplier);
-// Base curves; the dispatcher applies each class node's multiplier.
-float skillsGetDamageFactor(int skillPoints);
-float skillsGetMovementSpeedFactor(int skillPoints);
 
 // Flat bonuses use the skill's units (counts, seconds, ticks, HP, pickups, or percentage points).
 float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float multiplier);
@@ -55,5 +57,20 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
 
 char* skillsGetName(enum RaidsClassSkillId skillId);
 char* skillsGetDescription(enum RaidsClassSkillId skillId);
+
+float skillsGetPlayerFactor(Player* player, enum RaidsClassSkillId skillId);
+float skillsGetPlayerBonus(Player* player, enum RaidsClassSkillId skillId);
+float skillsGetAmmoDropChance(Player* player, float baseChance);
+int skillsGetAlphaModBonus(Player* player, int alphaModId);
+void skillsModifyPlayerStats(Player* player, struct RaidsPlayerStats* stats);
+void skillsModifyPlayerCritChance(struct RaidsPlayerDamageContext* context);
+void skillsModifyPlayerCritDamage(struct RaidsPlayerDamageContext* context);
+void skillsFinalizePlayerDamage(struct RaidsPlayerDamageContext* context);
+void skillsOnMobKilled(Moby* moby, int killedByPlayerId);
+void skillsResetPlayer(Player* player);
+void skillsOnPlayerUpdate(Player* player);
+void skillsTick(void);
+void skillsInit(void);
+void skillsCleanup(void);
 
 #endif // RAIDS_SKILLS_H

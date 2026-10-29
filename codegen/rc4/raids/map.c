@@ -14,7 +14,6 @@
 #include <libdl/hud.h>
 #include <libdl/utils.h>
 #include <libdl/spawnpoint.h>
-#include "spawner.h"
 #include "mover.h"
 #include "gate.h"
 #include "dummy.h"
@@ -24,7 +23,6 @@
 #include "checkpoint.h"
 #include "mobs/mob.h"
 #include "game.h"
-#include "badges.h"
 #include "shared.h"
 #include "utils.h"
 
@@ -53,72 +51,6 @@ Moby* mapBossMoby = NULL;
 float mapBossLastHealth = -1;
 
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
-
-//--------------------------------------------------------------------------
-void mapOnMobUpdate(Moby* moby)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (mapBossMoby == moby && (pvars->MobVars.Health <= 0 || pvars->MobVars.Respawn))
-    mapBossMoby = NULL;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobUpdate(moby->PParent, moby, pvars->MobVars.Userdata);
-  }
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobDamaged(Moby* moby, struct MobDamageEventArgs* args)
-{
-  if (!moby || !moby->PVar) return;
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobKilled(moby->PParent, moby, pvars->MobVars.Userdata, killedByPlayerId, source);
-  }
-
-  if (killedByPlayerId >= 0) {
-    Player* killedByPlayer = playerGetAll()[killedByPlayerId];
-    int weaponId = getWeaponIdFromDamageSource(source);
-    int modStrength = bankGetEquippedWeaponModRarity(killedByPlayerId, weaponId, RAIDS_WEAPON_MOD_WILL_O_WISP) + 1;
-    if (killedByPlayer && modStrength > 0) {
-      u32 damageFlags = mobAmIOwner(moby) ? 0x00081801 : 0;
-      float radius = modStrength * BADGES_EXPLODINGENEMIES_RADIUS_MULT;
-      float damage = pvars->MobVars.LastHitByDamage * modStrength * BADGES_EXPLODINGENEMIES_DAMAGE_MULT;
-      spawnExplosionDamage(moby->Position, radius, 0x800000C0, killedByPlayer->PlayerMoby, damage, damageFlags);
-    }
-  }
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobDestroyed(Moby* moby)
-{
-  if (mapBossMoby == moby)
-    mapBossMoby = NULL;
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobDestroyed(moby->PParent, moby, pvars->MobVars.Userdata);
-  }
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobSpawned(Moby* moby)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobSpawned(moby->PParent, moby, pvars->MobVars.Userdata);
-  }
-}
 
 //--------------------------------------------------------------------------
 int mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)
@@ -270,23 +202,6 @@ void mapGetResurrectPoint(Player* player, VECTOR outPos, VECTOR outRot, int firs
   playerGetSpawnpoint(player, outPos, outRot, firstRes);
 
   playerSetHealth(player, player->MaxHealth);
-}
-
-//--------------------------------------------------------------------------
-int mapCreateMob(struct MobCreateArgs* args)
-{
-  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount)
-  {
-    DPRINTF("unhandled create spawnParamsIdx %d\n", args->SpawnParamsIdx);
-    return 0;
-  }
-  
-  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];
-  if (spawnParams->MobCreate)
-    return spawnParams->MobCreate(args);
-    
-  DPRINTF("unhandled create spawnParamsIdx %d\n", args->SpawnParamsIdx);
-  return 0;
 }
 
 //--------------------------------------------------------------------------

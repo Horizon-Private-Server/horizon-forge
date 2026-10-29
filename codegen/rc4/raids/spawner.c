@@ -232,7 +232,7 @@ int spawnerGetRandomSpawnPoint(Moby* moby, int mobParamsIdx, VECTOR outPos, floa
 //--------------------------------------------------------------------------
 int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
 {
-  if (!MapConfig.TryCreateMobFunc) return 0;
+  if (!MapConfig.Functions.ModeTryCreateMobFunc) return 0;
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
   struct SpawnerMobParams* mobParams = &pvars->SpawnableMobParam[mobParamsIdx];
   struct MobSpawnParams* mobSpawnParams = &MapConfig.MobSpawnParams[mobParams->MobParamIdx];
@@ -254,7 +254,7 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
     spawnerRequestSpawn(moby, &args);
     DLOG(moby, "request spawn %d\n", gameGetTime());
     return 1;
-    // if (MapConfig.TryCreateMobFunc(&args)) {
+    // if (MapConfig.Functions.ModeTryCreateMobFunc(&args)) {
     //   pvars->State.NumSpawned[mobParamsIdx]++;
     //   pvars->State.NumTotalSpawned++;
     //   return 1;
@@ -877,7 +877,7 @@ void spawnerStart(void)
     int isRespawn = request->SpawnArgs.SpawnFromUID > 0;
     if (isRespawn) {
       //vector_copy(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition());
-      if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
+      if (MapConfig.Functions.ModeTryCreateMobFunc(&request->SpawnArgs)) {
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;
       }
@@ -985,7 +985,7 @@ void spawnerStart(void)
     }
 
     vector_add(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition(), up);
-    if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
+    if (MapConfig.Functions.ModeTryCreateMobFunc(&request->SpawnArgs)) {
       pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
       pvars->State.NumTotalSpawned++;
       pvars->State.NumAlive[request->SpawnArgs.Userdata]++;

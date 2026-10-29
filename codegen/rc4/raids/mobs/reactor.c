@@ -1516,8 +1516,8 @@ int reactorCreate(struct MobCreateArgs* args)
 	guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(ReactorMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args);
+    if (MapConfig.Functions.ModePopulateSpawnArgsFunc) {
+      MapConfig.Functions.ModePopulateSpawnArgsFunc(&spawnArgs, args);
     }
 
 		reactorOnSpawning(args->SpawnParamsIdx, position, &args->Yaw, &args->SpawnFromUID, NULL, NULL, &spawnArgs);
