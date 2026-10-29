@@ -2,6 +2,7 @@
 #include <libdl/stdio.h>
 #include <libdl/math.h>
 #include <libdl/math3d.h>
+#include <libdl/random.h>
 #include <libdl/game.h>
 #include <libdl/moby.h>
 #include <libdl/pad.h>
@@ -36,14 +37,19 @@
 
 int skillsPlayerHasMovementInput(Player* player);
 
-// Native B6 ball PVars; only the flight step uses this view.
+// Native B6 ball PVars used by the flight and detonation hooks.
 struct SkillsB6ProjectileVars
 {
   u8 Sticky[0x40];
   VECTOR Velocity;        // 0x40: native velocity, in units per flight tick
-  u8 Unused50[0x30];
+  u8 Unused50[0x20];
+  VECTOR ImpactNormal;    // 0x70: outward collision normal (up before impact)
   VECTOR Gravity;         // 0x80: gravity applied by the native flight step
   Player* Player;         // 0x90: shooter, including remote players
+  Moby* PlayerMoby;       // 0x94: shooter collision exclusion
+  u8 Unused98[0x0C];
+  int ShotUID;            // 0xA4: native explosion damage metadata
+  int NapalmArg;          // 0xA8: forwarded to the native napalm constructor
 };
 
 // Movement skills have per-player, per-class transient state.
@@ -461,6 +467,54 @@ float skillsGetPlayerBonus(Player* player, enum RaidsClassSkillId skillId)
 
   return skillsGetBonus(skillId, bankGetPlayerClassSkillRank(player->PlayerId, skillId),
     bankGetPlayerClassSkillMultiplier(player->PlayerId, skillId));
+}
+
+//--------------------------------------------------------------------------
+void skillsB6SecondaryUpdate(Moby* moby)
+{
+  // Callback identity marks this ball as secondary without borrowing native PVars.
+  ((void (*)(Moby*))0x003F6298)(moby);
+}
+
+//--------------------------------------------------------------------------
+void skillsB6OnExplode(Moby* moby)
+{
+  struct SkillsB6ProjectileVars* pvars = (struct SkillsB6ProjectileVars*)moby->PVar;
+  int count = moby->PUpdate == &skillsB6SecondaryUpdate ? 0
+    : (int)skillsGetPlayerBonus(pvars->Player, RAIDS_CLASS_SKILL_CLUSTER_BOMBS);
+
+  if (count > 0) {
+    VECTOR normal = {0, 0, 1, 0};
+    VECTOR position, velocity;
+    float startAngle = randRadian();
+
+    if (vector_sqrmag(pvars->ImpactNormal) > 0.0001f) {
+      vector_normalize(normal, pvars->ImpactNormal);
+    }
+
+    int i, j;
+    for (i = 0; i < count; ++i) {
+      // Randomize the first heading, then space bombs evenly around vertical.
+      float angle = startAngle + i * (MATH_TAU / count);
+      vector_fromyaw(velocity, angle);
+      vector_scale(velocity, velocity, 0.08f);
+      velocity[2] = 0.12f;
+
+      vector_copy(position, moby->Position);
+      for (j = 0; j < 3; ++j) {
+        position[j] += 0.25f * normal[j];
+      }
+
+      Moby* secondary = ((Moby* (*)(Moby*, VECTOR, VECTOR, int, Moby*, Player*, int, int))0x003F5F80)(
+        moby->PParent, position, velocity, pvars->ShotUID, pvars->PlayerMoby, pvars->Player, pvars->NapalmArg, 0);
+      if (secondary) {
+        secondary->PUpdate = &skillsB6SecondaryUpdate;
+      }
+    }
+  }
+
+  // This call site runs once after all native primary/V10 explosion work.
+  ((void (*)(Moby*))0x003F6170)(moby);
 }
 
 //--------------------------------------------------------------------------
@@ -1199,6 +1253,7 @@ void skillsInit(void)
   HOOK_JAL(0x0060C660, &skillsExtraJumpsOnDoubleJump);
   HOOK_JAL(0x003B6B88, &skillsViperShotSpawn);
   HOOK_JAL(0x003F6310, &skillsB6ProjectileMove);
+  HOOK_JAL(0x003F7138, &skillsB6OnExplode);
 }
 
 //--------------------------------------------------------------------------
