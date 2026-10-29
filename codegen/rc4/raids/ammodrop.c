@@ -34,9 +34,21 @@
 #include "shared.h"
 #include "ammodrop.h"
 #include "game.h"
+#include "skills.h"
 
 Moby* ammoDropMobyList[MAX_MOB_AMMO_DROPS];
 int ammoDropMobyListRollingIndex = 0;
+
+//--------------------------------------------------------------------------
+float ammodropGetPickupAmount(Player* player, int weaponId)
+{
+  int slot = weaponIdToSlot(weaponId);
+  if (!player || !player->GadgetBox || slot <= 0 || slot >= WEAPON_SLOT_COUNT
+      || player->GadgetBox->Gadgets[weaponId].Level < 0) return 0;
+
+  int maxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, weaponId);
+  return maxAmmo > 0 ? maxf(1, (int)(maxAmmo * AMMODROP_AMMO_FRACTION)) : 0;
+}
 
 //--------------------------------------------------------------------------
 int ammodropTargetGetGadgetMaxAmmo(GadgetBox* gbox, int gadgetId)
@@ -54,12 +66,29 @@ int ammodropTargetGetGadgetMaxAmmo(GadgetBox* gbox, int gadgetId)
 //--------------------------------------------------------------------------
 void ammodropUpdate(Moby* moby)
 {
-  // configure it to be pickup-able
-  if (moby->PVar) {
-    *(char*)(moby->PVar + 0x5C) = 1; // state
+  int i;
+  int ammoBefore[WEAPON_SLOT_COUNT] = {0};
+  Player* player = playerGetFromSlot(0);
+  GadgetBox* gbox = playerIsValid(player) && player->IsLocal && !playerIsDead(player) && player->Health > 0 ? player->GadgetBox : NULL;
+  if (gbox) {
+    for (i = 1; i < WEAPON_SLOT_COUNT; ++i)
+      ammoBefore[i] = gbox->Gadgets[weaponSlotToId(i)].Ammo;
   }
 
+  // Spawned drops stay pickup-able; authored pickups retain the game's respawn state.
+  if (moby->PVar) *(char*)(moby->PVar + 0x5C) = 1;
+
+  // base update function
   ((void (*)(Moby*))0x003ac050)(moby);
+
+  // Only the vanilla pickup's actual grant receives Efficient Supplies.
+  if (gbox && player->GadgetBox == gbox) {
+    for (i = 1; i < WEAPON_SLOT_COUNT; ++i) {
+      int weaponId = weaponSlotToId(i);
+      int amount = gbox->Gadgets[weaponId].Ammo - ammoBefore[i];
+      if (amount > 0) skillsOnAmmoPickup(player, weaponId, amount);
+    }
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -98,7 +127,7 @@ void ammodropCreateAt(Moby* moby)
     ammoMoby->Bangles |= 1;
     ammoMoby->DrawDist = 255;
     ammoMoby->UpdateDist = 255;
-    ammoMoby->PUpdate = ammodropUpdate;
+    ammoMoby->PUpdate = &ammodropUpdate;
     
     // configure it to be pickup-able
     if (ammoMoby->PVar) {
@@ -127,7 +156,7 @@ void ammodropInit(void)
   HOOK_JAL(0x003aca8c, &ammodropTargetGetGadgetMaxAmmo);
 
   // double ammo pickup amount
-  POKE_F32(0x003978C0, 0.3);
+  POKE_F32(0x003978C0, AMMODROP_AMMO_FRACTION);
 
   // disable b6 halving of ammo amount
   POKE_U16(0x003ac2c4, 0x0);

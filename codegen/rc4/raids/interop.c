@@ -1,5 +1,8 @@
 #include <libdl/string.h>
 #include <libdl/stdio.h>
+#include <libdl/utils.h>
+#include <libdl/player.h>
+#include <libdl/vehicle.h>
 #include "game.h"
 #include "interop.h"
 #include "skills.h"
@@ -15,6 +18,22 @@
 struct RaidsMapData mapData;
 
 extern Moby* mapBossMoby;
+
+//--------------------------------------------------------------------------
+void mapOnVehicleReinit(void)
+{
+  Vehicle* vehicle;
+
+	// pointer to vehicle is stored in $s1
+  asm volatile ("move %0, $s1" : "=r" (vehicle));
+  skillsOnVehicleInitialized(vehicle);
+}
+
+//--------------------------------------------------------------------------
+void mapOnHealthboxHeal(Player* player, float amount)
+{
+  skillsOnHealthboxHeal(player, amount);
+}
 
 //--------------------------------------------------------------------------
 int mapCreateMob(struct MobCreateArgs* args)
@@ -175,6 +194,12 @@ void interopInit(void)
 {
   MapConfig.MapData = &mapData;
   memset(MapConfig.MapData, 0, sizeof(*MapConfig.MapData));
+
+  HOOK_J(0x004546EC, &mapOnVehicleReinit); // puma
+  HOOK_J(0x00465244, &mapOnVehicleReinit); // hoverbike
+  HOOK_J(0x0047DA18, &mapOnVehicleReinit); // landstalker
+  HOOK_J(0x0046ED14, &mapOnVehicleReinit); // hovership
+  HOOK_JAL(0x004130F4, &mapOnHealthboxHeal);
 
   MapConfig.Functions.OnMobCreateFunc = &mapCreateMob;
   MapConfig.Functions.OnMobSpawnedFunc = &mapOnMobSpawned;

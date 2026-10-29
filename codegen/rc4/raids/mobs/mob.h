@@ -52,6 +52,7 @@ struct MobStateUpdateEventArgs;
 
 typedef void (*MobGenericCallback_func)(Moby* moby);
 typedef Moby* (*MobGetNextTarget_func)(Moby* moby);
+typedef int (*MobCanAcquireTarget_func)(Moby* moby, Moby* target);
 typedef int (*MobGetPreferredAction_func)(Moby* moby, int * delayTicks);
 typedef void (*MobOnSpawn_func)(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, char random, struct MobSpawnEventArgs* e);
 typedef void (*MobOnDestroy_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
@@ -438,6 +439,7 @@ float mobGetScaleMultiplier(Moby* moby);
 float mobGetTargetRadius(Moby* target);
 float mobGetDistanceToTarget(Moby* moby, Moby* target);
 int mobCanSeeMoby(Moby* moby, Moby* target);
+Moby* mobGetNextTargetFiltered(Moby* moby, int playersOnly, MobCanAcquireTarget_func canAcquireTarget);
 int mobGetPathTargetPos(VECTOR output, Moby* moby);
 struct MobActionConfig* mobGetActionConfig(Moby* moby, int action);
 int mobGetActionCooldownTicks(Moby* moby, int action);

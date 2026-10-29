@@ -19,6 +19,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int NPC_OCLASS = 0x4006;
     public static readonly int GOLDBOLT_OCLASS = 0x400E;
+    public static readonly int SKILLFIELD_OCLASS = 0x4013;
 
     public static readonly float[] DIFFICULTY_FACTORS = new float[]
     {
@@ -187,6 +188,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skills.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skillfield.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/classes.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
@@ -251,6 +253,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"classes.h\"");
         state.Includes.Add("#include \"interop.h\"");
         state.Includes.Add("#include \"skills.h\"");
+        state.Includes.Add("#include \"skillfield.h\"");
 
         // declarations
         {
@@ -275,6 +278,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"npcInit();");
             state.InitBody.Add($"classesInit();");
             state.InitBody.Add("interopInit();");
+            state.InitBody.Add("skillfieldInit();");
             state.InitBody.Add("skillsInit();");
 
             state.InitBody.Add("respawnAllPlayers();");
@@ -290,6 +294,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         // get gubers
         {
             state.GetGuberCase.Add("case SPAWNER_OCLASS: return spawnerGetGuber(moby);");
+            state.GetGuberCase.Add("case SKILLFIELD_OCLASS: return skillfieldGetGuber(moby);");
             // if (mobTypes.Contains(RaidsMob.DZStriker))
                 // state.GetGuberCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: return (moby->PParent ? moby->PParent->Guber : moby->Guber);");
         }
@@ -297,6 +302,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         // handle events
         {
             state.HandleGuberEventCase.Add("case SPAWNER_OCLASS: spawnerHandleEvent(moby, event); break;");
+            state.HandleGuberEventCase.Add("case SKILLFIELD_OCLASS: skillfieldHandleEvent(moby, event); break;");
             // if (mobTypes.Contains(RaidsMob.DZStriker))
                 // state.HandleGuberEventCase.Add("case MOBY_ID_DZ_STRIKER_TORSO_RED: dzstrikerTorsoOnSpawn(moby, event); break;");
         }
@@ -306,6 +312,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.DrawBody.Add("levelselectFrameTick();");
             state.DrawBody.Add("contractsFrameTick();");
             state.DrawBody.Add("inventoryFrameTick();");
+            state.DrawBody.Add("skillsFrameTick();");
         }
 
         // ready
@@ -355,6 +362,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.MobyOClasses.Add(6898); // health box (for health sound; nanoleech)
         state.MobyOClasses.Add(9278); // weapon pickup (for loot drops)
         state.MobyOClasses.Add(13);   // bolt (for gold bolt)
+        state.MobyOClasses.Add(SKILLFIELD_OCLASS);
         if (GetMobs().Any(x => x.isActiveAndEnabled && x.Mob == RaidsMob.Reactor))
             state.MobyOClasses.Add(0x01F8); // Reactor trailshot
 

@@ -27,6 +27,7 @@
 #include "spawner.h"
 #include "pathfind.h"
 #include "dummy.h"
+#include "skills.h"
 
 Moby* mobOtherTargets[MOB_MAX_OTHER_TARGETS];
 Moby* mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
@@ -1390,54 +1391,58 @@ int mobCanSeeMoby(Moby* moby, Moby* canSeeMoby)
 }
 
 //--------------------------------------------------------------------------
-Moby* mobGetNextTarget(Moby* moby)
+Moby* mobGetNextTargetFiltered(Moby* moby, int playersOnly, MobCanAcquireTarget_func canAcquireTarget)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-	Player ** players = playerGetAll();
-	int i;
-	VECTOR delta;
+  Player** players = playerGetAll();
+  int i;
+  VECTOR delta;
   VECTOR forward;
-	Moby * currentTarget = pvars->MobVars.MoveVars.Target;
-	Moby * bestTargetMoby = NULL;
+  Moby* currentTarget = pvars->MobVars.MoveVars.Target;
+  Moby* bestTargetMoby = NULL;
   int bestHasAggroZone = 0;
-	float closestTargetDist = 100000;
+  float closestTargetDist = 100000;
 
-  // check other targets first
-  for (i = 0; i < MOB_MAX_OTHER_TARGETS; ++i) {
-    Moby* otherTarget = mobOtherTargets[i];
-    if (!otherTarget) break;
-    if (otherTarget->OClass != DUMMY_OCLASS) break;
+  // check other targets first unless the caller only targets players
+  if (!playersOnly) {
+    for (i = 0; i < MOB_MAX_OTHER_TARGETS; ++i) {
+      Moby* otherTarget = mobOtherTargets[i];
+      if (!otherTarget) break;
+      if (otherTarget->OClass != DUMMY_OCLASS) break;
 
-    struct DummyPVar* otherPVars = (struct DummyPVar*)otherTarget->PVar;
-    if ((!currentTarget || currentTarget == otherTarget) && otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_ALWAYS) {
-      return otherTarget;
-    }
+      struct DummyPVar* otherPVars = (struct DummyPVar*)otherTarget->PVar;
+      if ((!currentTarget || currentTarget == otherTarget) && otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_ALWAYS) {
+        return otherTarget;
+      }
 
-    vector_subtract(delta, otherTarget->Position, moby->Position);
-    float dist = vector_length(delta);
-    float maxDist = otherPVars->Config.MobTargetDistance*otherPVars->Config.MobTargetDistance;
-    if (otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_IN_RANGE && dist < maxDist) {
-      bestTargetMoby = otherTarget;
-      closestTargetDist = dist;
+      vector_subtract(delta, otherTarget->Position, moby->Position);
+      float dist = vector_length(delta);
+      float maxDist = otherPVars->Config.MobTargetDistance*otherPVars->Config.MobTargetDistance;
+      if (otherPVars->Config.MobTargetType == DUMMY_MOB_AGGRO_IN_RANGE && dist < maxDist) {
+        bestTargetMoby = otherTarget;
+        closestTargetDist = dist;
+      }
     }
   }
 
   vector_fromyaw(forward, moby->Rotation[2]);
-	for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
-		Player * p = players[i];
-		if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
-			vector_subtract(delta, p->PlayerPosition, moby->Position);
-			float dist = vector_length(delta);
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* p = players[i];
+    if (p && p->SkinMoby && !playerIsDead(p) && p->Health > 0 && p->SkinMoby->Opacity >= 0x80) {
+      vector_subtract(delta, p->PlayerPosition, moby->Position);
+      float dist = vector_length(delta);
       Moby* pTargetMoby = playerGetTargetMoby(p);
       int isCurrentTarget = pTargetMoby == currentTarget;
       
       // determine angle from mob forward to player
       float theta = acosf(vector_innerproduct(forward, delta));
-			int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
+      int inAggroZone = moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS && spawnerOnChildIsTargetInAggroZone(moby->PParent, moby, pvars->MobVars.Userdata, pTargetMoby);
 
       // skip if not in sight, unless already targeted
       if (!isCurrentTarget && !inAggroZone) {
-        if (dist > pvars->MobVars.Config.AutoAggroMaxRange && (dist > pvars->MobVars.Config.VisionRange || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
+        float detection = skillsGetDetectionFactor(p);
+        if (dist > pvars->MobVars.Config.AutoAggroMaxRange * detection && (dist > pvars->MobVars.Config.VisionRange * detection || fabsf(theta) > pvars->MobVars.Config.PeripheryRangeTheta)) continue;
+        if (canAcquireTarget && !canAcquireTarget(moby, pTargetMoby)) continue;
       }
 
       // favor existing target
@@ -1450,13 +1455,19 @@ Moby* mobGetNextTarget(Moby* moby)
         bestHasAggroZone = inAggroZone;
         closestTargetDist = dist;
       }
-		}
-	}
+    }
+  }
 
-	if (bestTargetMoby)
-		return bestTargetMoby;
+  if (bestTargetMoby)
+    return bestTargetMoby;
 
-	return NULL;
+  return NULL;
+}
+
+//--------------------------------------------------------------------------
+Moby* mobGetNextTarget(Moby* moby)
+{
+  return mobGetNextTargetFiltered(moby, 0, NULL);
 }
 
 //--------------------------------------------------------------------------

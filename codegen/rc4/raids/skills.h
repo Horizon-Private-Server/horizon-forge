@@ -5,6 +5,7 @@
 
 struct RaidsPlayerStats;
 struct RaidsPlayerDamageContext;
+struct VehicleBase;
 
 enum RaidsClassSkillId
 {
@@ -58,18 +59,27 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
 char* skillsGetName(enum RaidsClassSkillId skillId);
 char* skillsGetDescription(enum RaidsClassSkillId skillId);
 
+int skillsPlayerIsReady(Player* player);
 float skillsGetPlayerFactor(Player* player, enum RaidsClassSkillId skillId);
 float skillsGetPlayerBonus(Player* player, enum RaidsClassSkillId skillId);
 float skillsGetAmmoDropChance(Player* player, float baseChance);
 int skillsGetAlphaModBonus(Player* player, int alphaModId);
+float skillsGetDetectionFactor(Player* player);
+void skillsOnHealthboxHeal(Player* player, float amount);
+void skillsGiveAmmo(Player* player, int weaponId, float amount);
+void skillsOnAmmoPickup(Player* player, int weaponId, int amount);
+void skillsOnVehicleInitialized(struct VehicleBase* vehicle);
 void skillsModifyPlayerStats(Player* player, struct RaidsPlayerStats* stats);
 void skillsModifyPlayerCritChance(struct RaidsPlayerDamageContext* context);
 void skillsModifyPlayerCritDamage(struct RaidsPlayerDamageContext* context);
 void skillsFinalizePlayerDamage(struct RaidsPlayerDamageContext* context);
 void skillsOnMobKilled(Moby* moby, int killedByPlayerId);
+void skillsRegisterCooldown(enum RaidsClassSkillId skillId, int iconTexId, u32 color, float cooldown, int showCooldownBar);
+void skillsDrawCooldowns(void);
 void skillsResetPlayer(Player* player);
 void skillsOnPlayerUpdate(Player* player);
 void skillsTick(void);
+void skillsFrameTick(void);
 void skillsInit(void);
 void skillsCleanup(void);
 

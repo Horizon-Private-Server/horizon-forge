@@ -205,14 +205,6 @@ void mapGetResurrectPoint(Player* player, VECTOR outPos, VECTOR outRot, int firs
 }
 
 //--------------------------------------------------------------------------
-void mapOnHealthboxHeal(Player* player, float amount)
-{
-  if (amount > 100) amount = 100;
-
-  playerIncHealth(player, amount);
-}
-
-//--------------------------------------------------------------------------
 Moby* mapOnSetPlayerTargetMoby(void)
 {
   Moby* targetMoby = CollLine_Fix_GetHitMoby();
@@ -460,9 +452,6 @@ void mapInit(void)
   // hook spawn
   HOOK_JAL(0x00610724, &mapGetResurrectPoint);
   HOOK_JAL(0x005e2d44, &mapGetResurrectPoint);
-
-  // hook healthbox heal
-  HOOK_JAL(0x004130F4, &mapOnHealthboxHeal);
 
   // hook set player target moby
   HOOK_JAL(0x005f7dcc, &mapOnSetPlayerTargetMoby);
