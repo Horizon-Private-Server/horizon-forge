@@ -252,7 +252,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 1
     Description: 
     BlipType: 4
@@ -441,7 +441,7 @@ MonoBehaviour:
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 2
     Description: 
     BlipType: 4
@@ -581,7 +581,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 3
     Description: Stationary dual-gatling turret. Firing starts after its barrels
       reach the configured activation speed.
@@ -755,7 +755,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 0
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 4
     Description: Setting Attributes to Boss overrides behavior to transition between
       an evasive ranged and aggressive melee depending on % health remaining.
@@ -992,7 +992,7 @@ MonoBehaviour:
     CollRadius: 2
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.1
   - Mob: 5
     Description: Deadlocked striker with separate melee and ranged attacks. Variants
       retain their native projectile patterns.
@@ -1215,7 +1215,7 @@ MonoBehaviour:
     CollRadius: 1.25
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 10
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 6
     Description: 
     BlipType: 3
@@ -1565,7 +1565,7 @@ MonoBehaviour:
     CollRadius: 1.25
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.1
   - Mob: 8
     Description: 
     BlipType: 4
@@ -1763,7 +1763,7 @@ MonoBehaviour:
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
-    DamageCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 9
     Description: Setting Attributes to Boss increases StartHealth by 300 per player
       in lobby.
