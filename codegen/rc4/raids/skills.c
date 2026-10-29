@@ -23,6 +23,7 @@
 #include "common.h"
 #include "collectible.h"
 #include "skillfield.h"
+#include "wallwalk.h"
 #include "menu.h"
 
 #define SKILLS_FIELD_RADIUS (5.0)
@@ -195,7 +196,7 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
       return 20.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY: return floorf(15.0f * skillPoints * multiplier);
     case RAIDS_CLASS_SKILL_HOVERBOOTS: return 1.5f * skillPoints * multiplier;
-    case RAIDS_CLASS_SKILL_WALL_WALKING: return 2.0f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_WALL_WALKING: return 1.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_SECOND_WIND: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return 50.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS:
@@ -363,7 +364,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_FLINCH_IMMUNITY: return "Prevent hit flinching. Damage still applies.";
     case RAIDS_CLASS_SKILL_HOVERBOOTS: return "Walk off ledges and hover briefly before falling.";
     case RAIDS_CLASS_SKILL_VISIBOMB: return "Toggle Arbiter rocket control or fire normally.";
-    case RAIDS_CLASS_SKILL_WALL_WALKING: return "Walk on walls for a limited time.";
+    case RAIDS_CLASS_SKILL_WALL_WALKING: return "Hold jump into a wall to walk on it. Release to drop. Land on a floor to recharge.";
     case RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR: return "Show an indicator near uncollected gold bolts.";
     case RAIDS_CLASS_SKILL_VEHICLE_DAMAGE: return "Increase damage from vehicles you operate.";
     case RAIDS_CLASS_SKILL_VEHICLE_HEALTH: return "Increase vehicle maximum health while driving.";
@@ -965,6 +966,7 @@ void skillsResetPlayer(Player* player)
 {
   if (!player || player->PlayerId < 0 || player->PlayerId >= GAME_MAX_PLAYERS) return;
 
+  wallwalkResetPlayer(player);
   memset(&skillsImmunityStates[player->PlayerId], 0, sizeof(skillsImmunityStates[0]));
   memset(&skillsAmmoStates[player->PlayerId], 0, sizeof(skillsAmmoStates[0]));
   struct SkillsMovementState* state = &skillsMovementStates[player->PlayerId];
@@ -985,7 +987,15 @@ struct SkillsMovementState* skillsSyncMovementState(Player* player)
 
   if (state->Player != player || state->ClassType != playerClass->ClassType
       || state->ExtraJumpLimit != extraJumps || state->HoverDuration != hoverDuration) {
-    skillsResetPlayer(player);
+    // Movement-rank refreshes must not refill wall walking in midair.
+    if (state->Player != player || state->ClassType != playerClass->ClassType)
+      skillsResetPlayer(player);
+    else {
+      memset(&skillsImmunityStates[player->PlayerId], 0, sizeof(skillsImmunityStates[0]));
+      memset(&skillsAmmoStates[player->PlayerId], 0, sizeof(skillsAmmoStates[0]));
+      memset(state, 0, sizeof(*state));
+      state->HoverTicks = -1;
+    }
     state->Player = player;
     state->ClassType = playerClass->ClassType;
     state->ExtraJumpLimit = extraJumps;
@@ -1032,6 +1042,7 @@ void skillsExtraJumpsOnDoubleJump(Player* player, int stateId, int a2, int a3, i
   if (!vtable || !vtable->UpdateState) return;
 
   struct SkillsMovementState* state = skillsPlayerHasMovementInput(player) ? skillsSyncMovementState(player) : NULL;
+  if (wallwalkIsActive(player)) return;
   if (state && state->ExtraJumpLimit > 0
       && (player->PlayerState == PLAYER_STATE_JUMP || player->PlayerState == PLAYER_STATE_RUN_JUMP)
       && (state->ExtraJumps < state->ExtraJumpLimit || player->timers.state < 6)) {
@@ -1046,6 +1057,7 @@ void skillsExtraJumpsOnDoubleJump(Player* player, int stateId, int a2, int a3, i
 //--------------------------------------------------------------------------
 void skillsExtraJumpsUpdate(Player* player, struct SkillsMovementState* state)
 {
+  if (wallwalkIsActive(player)) return;
   if (player->Ground.onGood || (player->PlayerState != PLAYER_STATE_JUMP && player->PlayerState != PLAYER_STATE_RUN_JUMP)) {
     state->ExtraJumps = 0;
     return;
@@ -1070,6 +1082,10 @@ void skillsExtraJumpsUpdate(Player* player, struct SkillsMovementState* state)
 //--------------------------------------------------------------------------
 void skillsHoverbootsUpdate(Player* player, struct SkillsMovementState* state)
 {
+  if (wallwalkIsActive(player)) {
+    state->HoverTicks = -1;
+    return;
+  }
   if (player->Ground.onGood) {
     state->HoverTicks = 0;
     return;
@@ -1116,6 +1132,17 @@ void skillsOnPlayerUpdate(Player* player)
 }
 
 //--------------------------------------------------------------------------
+void skillsWallWalkTick(Player* player, struct SkillsMovementState* state)
+{
+  float duration = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_WALL_WALKING);
+  wallwalkUpdate(player, state->ClassType, duration, skillsPlayerHasMovementInput(player));
+
+  if (player->IsLocal && player->Health > 0 && duration > 0)
+    skillsRegisterCooldown(RAIDS_CLASS_SKILL_WALL_WALKING, 60, 0x80FFB060,
+      wallwalkGetCooldown(player), 1);
+}
+
+//--------------------------------------------------------------------------
 void skillsTick(void)
 {
   // reset each tick
@@ -1125,9 +1152,11 @@ void skillsTick(void)
   int i;
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = playerGetFromIndex(i);
-    if (!playerIsValid(player) || !playerIsConnected(player))
+    if (!playerIsValid(player) || !playerIsConnected(player)) {
       memset(&skillsFieldCasters[i], 0, sizeof(skillsFieldCasters[i]));
+    }
     if (!skillsPlayerIsReady(player) || playerIsDead(player)) {
+      wallwalkResetPlayer(player);
       memset(&skillsMovementStates[i], 0, sizeof(skillsMovementStates[i]));
       memset(&skillsImmunityStates[i], 0, sizeof(skillsImmunityStates[i]));
       memset(&skillsAmmoStates[i], 0, sizeof(skillsAmmoStates[i]));
@@ -1137,6 +1166,7 @@ void skillsTick(void)
     }
 
     struct SkillsMovementState* state = skillsSyncMovementState(player);
+    skillsWallWalkTick(player, state);
     if (skillsPlayerHasMovementInput(player)) {
       // Poll in the map tick, before dlPostUpdate advances the map's pad history.
       skillsExtraJumpsUpdate(player, state);
@@ -1158,6 +1188,7 @@ void skillsTick(void)
 //--------------------------------------------------------------------------
 void skillsInit(void)
 {
+  wallwalkInit();
   memset(skillsMovementStates, 0, sizeof(skillsMovementStates));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
   memset(skillsAmmoStates, 0, sizeof(skillsAmmoStates));
@@ -1173,6 +1204,7 @@ void skillsInit(void)
 //--------------------------------------------------------------------------
 void skillsCleanup(void)
 {
+  wallwalkCleanup();
   memset(skillsFieldCasters, 0, sizeof(skillsFieldCasters));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
   memset(skillsAmmoStates, 0, sizeof(skillsAmmoStates));
