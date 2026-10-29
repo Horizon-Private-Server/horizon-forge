@@ -26,6 +26,7 @@
 #include "collectible.h"
 #include "skillfield.h"
 #include "wallwalk.h"
+#include "visibomb.h"
 #include "menu.h"
 
 #define SKILLS_FIELD_RADIUS (5.0)
@@ -383,7 +384,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_ALPHA_NANOLEECH: return "Add Nanoleech alpha mods to your equipped weapon.";
     case RAIDS_CLASS_SKILL_FLINCH_IMMUNITY: return "Prevent flinching from hits dealing less than 25% of max HP per rank. Damage still applies.";
     case RAIDS_CLASS_SKILL_HOVERBOOTS: return "Walk off ledges and hover briefly before falling.";
-    case RAIDS_CLASS_SKILL_VISIBOMB: return "Toggle Arbiter rocket control or fire normally.";
+    case RAIDS_CLASS_SKILL_VISIBOMB: return "Fire the Arbiter while standing still on the ground to guide its rocket. Moving or jumping stops guidance.";
     case RAIDS_CLASS_SKILL_WALL_WALKING: return "Hold jump into a wall to walk on it. Release to drop. Land on a floor to recharge.";
     case RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR: return "Show an indicator near uncollected gold bolts.";
     case RAIDS_CLASS_SKILL_VEHICLE_DAMAGE: return "Increase damage from vehicles you operate.";
@@ -1123,6 +1124,7 @@ void skillsResetPlayer(Player* player)
   if (!player || player->PlayerId < 0 || player->PlayerId >= GAME_MAX_PLAYERS) return;
 
   wallwalkResetPlayer(player);
+  visibombResetPlayer(player);
   memset(&skillsImmunityStates[player->PlayerId], 0, sizeof(skillsImmunityStates[0]));
   memset(&skillsAmmoStates[player->PlayerId], 0, sizeof(skillsAmmoStates[0]));
   struct SkillsMovementState* state = &skillsMovementStates[player->PlayerId];
@@ -1338,6 +1340,7 @@ void skillsTick(void)
   }
 
   // misc ticks
+  visibombTick();
   skillsVehiclesTick();
 }
 
@@ -1345,6 +1348,7 @@ void skillsTick(void)
 void skillsInit(void)
 {
   wallwalkInit();
+  visibombInit();
 
   memset(skillsMovementStates, 0, sizeof(skillsMovementStates));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
