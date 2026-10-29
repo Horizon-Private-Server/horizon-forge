@@ -72,9 +72,12 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE, .MaxRank = 5, .X = 3, .Y = 1, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
 
-      // Ammo supply and fire rate.
+      // Ammo supply.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 1.0f },
+
+      // Fire rate and projectile speed.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 3, .X = 5, .Y = 3, .Multiplier = 2.0f },
     },
   },
   {
@@ -181,8 +184,8 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 4, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 3, .X = 5, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 3, .X = 5, .Y = 3, .Multiplier = 3.0f },
 
       // Survival and concealment.
       { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },

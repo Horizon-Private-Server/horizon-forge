@@ -142,11 +142,12 @@ float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float mul
     case RAIDS_CLASS_SKILL_VEHICLE_DAMAGE:
     case RAIDS_CLASS_SKILL_VEHICLE_HEALTH:
     case RAIDS_CLASS_SKILL_MAX_HEALTH:
-    case RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED:
     case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED:
     case RAIDS_CLASS_SKILL_AIR_SUPERIORITY:
     case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES:
       return 1.0f + 0.10f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED:
+      return 1.0f + 0.20f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH:
       return 1.0f + 0.25f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE:
@@ -397,6 +398,22 @@ float skillsGetPlayerFactor(Player* player, enum RaidsClassSkillId skillId)
 
   return skillsGetFactor(skillId, bankGetPlayerClassSkillRank(player->PlayerId, skillId),
     bankGetPlayerClassSkillMultiplier(player->PlayerId, skillId));
+}
+
+//--------------------------------------------------------------------------
+Moby* skillsViperShotSpawn(float damage, Moby* weaponMoby, Player* player, VECTOR position,
+  VECTOR velocity, int damageFlags, int jointId, int specialShot, int immediateHit, int ricochetMode)
+{
+  VECTOR scaledVelocity;
+  float factor = skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED);
+  if (factor > 1.0f) {
+    vector_scale(scaledVelocity, velocity, factor);
+    velocity = scaledVelocity;
+  }
+
+  // Scale primary shots only; V10 secondary shots inherit their parent's speed.
+  return ((Moby* (*)(float, Moby*, Player*, VECTOR, VECTOR, int, int, int, int, int))0x003C08E8)(
+    damage, weaponMoby, player, position, velocity, damageFlags, jointId, specialShot, immediateHit, ricochetMode);
 }
 
 //--------------------------------------------------------------------------
@@ -1112,6 +1129,7 @@ void skillsInit(void)
   memset(skillsCooldownHud, 0, sizeof(skillsCooldownHud));
   memset(&skillsGoldBoltState, 0, sizeof(skillsGoldBoltState));
   HOOK_JAL(0x0060C660, &skillsExtraJumpsOnDoubleJump);
+  HOOK_JAL(0x003B6B88, &skillsViperShotSpawn);
 }
 
 //--------------------------------------------------------------------------
