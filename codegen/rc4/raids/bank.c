@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "game.h"
 #include "bank.h"
+#include "skills.h"
 #include "common.h"
 
 extern struct RaidsState State;
@@ -1348,11 +1349,29 @@ void bankSpawnMinibombs(Moby* pParent, int count, VECTOR rootVel, float randSpee
 //--------------------------------------------------------------------------
 float bankGetGadgetDamage(GadgetBox* gbox, int gadgetId, int damageType, int multiplier)
 {
-  RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
-  if (bankWeapon) return bankGetWeaponDamage(bankWeapon) * multiplier;
-
+  float (*getNativeDamage)(int, int, int, int) = (float (*)(int, int, int, int))0x00627520;
   int level = gbox->Gadgets[gadgetId].Level;
-  return ((float (*)(int gadgetId, int level, int damageType, int multiplier))0x00627520)(gadgetId, level, damageType, multiplier);
+  RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
+  if (!bankWeapon) return getNativeDamage(gadgetId, level, damageType, multiplier);
+
+  float fullDamage = bankGetWeaponDamage(bankWeapon);
+  if (damageType == 0) return fullDamage * multiplier;
+
+  // Keep native damage-type ratios while using the upgraded raid damage.
+  // Raid level 9 enables V10 behavior, but its multiplayer damage entries are
+  // empty. Use base-weapon ratios; the native getter maps types 0/1 to 2/3.
+  float nativeFullDamage = getNativeDamage(gadgetId, 0, 0, 1);
+  float damage = getNativeDamage(gadgetId, 0, damageType, 1);
+  if (!(nativeFullDamage > 0)) return damage * multiplier;
+  damage *= fullDamage / nativeFullDamage;
+
+  if (damageType == 1) {
+    int playerIdx = bankGetPlayerIdxFromGadgetBox(gbox);
+    Player* player = playerIdx >= 0 && playerIdx < GAME_MAX_PLAYERS ? playerGetFromIndex(playerIdx) : NULL;
+    damage = skillsGetExplosionMinDamage(player, gadgetId, fullDamage, damage);
+  }
+
+  return damage * multiplier;
 }
 
 //--------------------------------------------------------------------------

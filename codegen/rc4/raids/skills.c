@@ -418,6 +418,20 @@ float skillsGetPlayerFactor(Player* player, enum RaidsClassSkillId skillId)
 }
 
 //--------------------------------------------------------------------------
+float skillsGetExplosionMinDamage(Player* player, int weaponId, float fullDamage, float minDamage)
+{
+  if (weaponId != WEAPON_ID_ARBITER && weaponId != WEAPON_ID_MINE_LAUNCHER && weaponId != WEAPON_ID_B6)
+    return minDamage;
+
+  float factor = skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_BLAST_REACH);
+  if (factor >= 1.0f || minDamage >= fullDamage) return minDamage;
+
+  // Native explosions interpolate between full and minimum damage by distance.
+  // Raising only this shooter's minimum reduces the loss without changing radius.
+  return minDamage + (fullDamage - minDamage) * (1.0f - factor);
+}
+
+//--------------------------------------------------------------------------
 Moby* skillsViperShotSpawn(float damage, Moby* weaponMoby, Player* player, VECTOR position,
   VECTOR velocity, int damageFlags, int jointId, int specialShot, int immediateHit, int ricochetMode)
 {

@@ -62,6 +62,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId);
 int skillsPlayerIsReady(Player* player);
 float skillsGetPlayerFactor(Player* player, enum RaidsClassSkillId skillId);
 float skillsGetPlayerBonus(Player* player, enum RaidsClassSkillId skillId);
+float skillsGetExplosionMinDamage(Player* player, int weaponId, float fullDamage, float minDamage);
 float skillsGetAmmoDropChance(Player* player, float baseChance);
 int skillsGetAlphaModBonus(Player* player, int alphaModId);
 float skillsGetDetectionFactor(Player* player);
