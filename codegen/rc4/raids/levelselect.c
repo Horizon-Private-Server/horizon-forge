@@ -430,7 +430,7 @@ void levelselectDrawFooter(Window_t* drawWindow)
   if (levelselectDrawState.SelectedMapDef && levelselectDrawState.SelectedMapExtraData.MissionType == RAIDS_MISSION_RAID)
     strcat(strBuf, "\x1A \x1B STARS    ");
   strcat(strBuf, "\x13 REFRESH    \x12 CLOSE");
-  menuDrawFooter(drawWindow, strBuf, 0.7, TEXT_ALIGN_MIDDLELEFT, RAIDS_MENU_PADDING);
+  menuDrawFooter(drawWindow, strBuf);
 }
 
 //--------------------------------------------------------------------------

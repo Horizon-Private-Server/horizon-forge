@@ -727,7 +727,7 @@ void inventoryDrawFooter(Window_t* drawWindow)
   strcat(strBuf, "\x12 CLOSE");
   
   // draw bg
-  menuDrawFooter(drawWindow, strBuf, 0.8, TEXT_ALIGN_MIDDLELEFT, 2);
+  menuDrawFooter(drawWindow, strBuf);
 }
 
 //--------------------------------------------------------------------------

@@ -177,8 +177,8 @@ void debugmenuDraw(void)
     menuDrawFittedText(&window, 472, y + 2, 120, 0.6, color, value, TEXT_ALIGN_TOPRIGHT);
   }
   menuDrawFittedText(&window, 8, 264, 464, 0.6, RAIDS_MENU_PROGRESS_COLOR, debugmenuState.Message, TEXT_ALIGN_TOPLEFT);
-  windowCreateFrom(&footer, &window, 0, 0, 480, 16, TEXT_ALIGN_BOTTOMLEFT);
-  menuDrawFooter(&footer, "\x1D \x1C OPTION    \x10 APPLY    \x12 CLOSE", 0.7, TEXT_ALIGN_MIDDLECENTER, 8);
+  windowCreateFrom(&footer, &window, 0, 0, 480, RAIDS_MENU_FOOTER_HEIGHT, TEXT_ALIGN_BOTTOMLEFT);
+  menuDrawFooter(&footer, "\x1D \x1C OPTION    \x10 APPLY    \x12 CLOSE");
   if (debugmenuState.ResetConfirm)
     menuDrawPopup(&window, "Reset account?", "Reset all Raids progression, inventory and contracts?", "\x10 RESET    \x12 CANCEL", 340, 140);
 }

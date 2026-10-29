@@ -392,7 +392,7 @@ void contractsDrawFooter(Window_t* drawWindow)
     }
   }
   strcat(strBuf, "\x12 CLOSE");
-  menuDrawFooter(drawWindow, strBuf, 0.7, TEXT_ALIGN_MIDDLELEFT, RAIDS_MENU_PADDING);
+  menuDrawFooter(drawWindow, strBuf);
 }
 
 //--------------------------------------------------------------------------

@@ -29,14 +29,19 @@ void menuDrawFrame(Window_t* window, char* title, float titleHeight)
 }
 
 //--------------------------------------------------------------------------
-void menuDrawFooter(Window_t* window, char* buttons, float scale, enum TextAlign alignment, float padding)
+void menuDrawFooter(Window_t* window, char* buttons)
 {
-  float x = padding;
-  if (alignment == TEXT_ALIGN_MIDDLECENTER) x = window->Width * 0.5;
-  else if (alignment == TEXT_ALIGN_MIDDLERIGHT) x = window->Width - padding;
-
   windowFill(window, RAIDS_MENU_FOOTER_COLOR);
-  menuDrawFittedText(window, x, window->Height * 0.5, window->Width - 2*padding, scale, RAIDS_MENU_TEXT_COLOR, buttons, alignment);
+  menuDrawFittedText(window, RAIDS_MENU_PADDING, window->Height * 0.5, window->Width - 2*RAIDS_MENU_PADDING,
+    RAIDS_MENU_FOOTER_TEXT_SCALE, RAIDS_MENU_TEXT_COLOR, buttons, TEXT_ALIGN_MIDDLELEFT);
+}
+
+//--------------------------------------------------------------------------
+void menuDrawPopupFooter(Window_t* window, char* buttons)
+{
+  windowFill(window, RAIDS_MENU_FOOTER_COLOR);
+  menuDrawFittedText(window, window->Width * 0.5, window->Height * 0.5, window->Width - 2*RAIDS_MENU_PADDING,
+    RAIDS_MENU_FOOTER_TEXT_SCALE, RAIDS_MENU_TEXT_COLOR, buttons, TEXT_ALIGN_MIDDLECENTER);
 }
 
 //--------------------------------------------------------------------------
@@ -51,7 +56,7 @@ void menuDrawPopupFrame(Window_t* window, char* title, u32 titleColor, char* but
 
   Window_t footerWindow;
   windowCreateFrom(&footerWindow, window, 0, 0, window->Width, RAIDS_MENU_POPUP_FOOTER_HEIGHT, TEXT_ALIGN_BOTTOMCENTER);
-  menuDrawFooter(&footerWindow, buttons, 0.7, TEXT_ALIGN_MIDDLECENTER, padding);
+  menuDrawPopupFooter(&footerWindow, buttons);
   windowBorder(window, RAIDS_MENU_BORDER_COLOR, 1, 1, 1, 1);
 }
 

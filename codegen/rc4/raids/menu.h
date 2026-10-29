@@ -18,15 +18,17 @@
 #define RAIDS_MENU_PADDING              (8)
 #define RAIDS_MENU_TITLE_HEIGHT         (24)
 #define RAIDS_MENU_FOOTER_HEIGHT        (16)
+#define RAIDS_MENU_FOOTER_TEXT_SCALE    (0.7)
 #define RAIDS_MENU_POPUP_PADDING        (12)
 #define RAIDS_MENU_POPUP_TITLE_HEIGHT   (28)
-#define RAIDS_MENU_POPUP_FOOTER_HEIGHT  (20)
+#define RAIDS_MENU_POPUP_FOOTER_HEIGHT  (RAIDS_MENU_FOOTER_HEIGHT)
 #define RAIDS_MENU_PROGRESS_HEIGHT      (6)
 
 // Drawing helpers do not change the supplied window or handle input/state.
 void menuDrawFrame(Window_t* window, char* title, float titleHeight);
-// Use a middle-left, middle-center, or middle-right alignment for controls.
-void menuDrawFooter(Window_t* window, char* buttons, float scale, enum TextAlign alignment, float padding);
+// Menu and submenu controls are left aligned; dialog controls are centered.
+void menuDrawFooter(Window_t* window, char* buttons);
+void menuDrawPopupFooter(Window_t* window, char* buttons);
 void menuDrawPopupFrame(Window_t* window, char* title, u32 titleColor, char* buttons);
 void menuDrawPopup(Window_t* parent, char* title, char* body, char* buttons, float width, float height);
 void menuDrawBackdrop(Window_t* window);
