@@ -118,6 +118,9 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 2, .Y = 1, .Multiplier = 1.0f },
 
+      // Commit to a hyperstrike or flail aerial smash without flinching.
+      { .SkillId = RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH, .MaxRank = 4, .X = 4, .Y = 2, .Multiplier = 1.0f },
+
       // Health, vehicle durability and damage immunity.
       { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_HEALTH, .MaxRank = 3, .X = 2, .Y = 4, .Multiplier = 1.0f },
@@ -246,7 +249,7 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 3.0f },
       { .SkillId = RAIDS_CLASS_SKILL_SECOND_WIND, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 1, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_FLINCH_IMMUNITY, .MaxRank = 1, .X = 4, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FLINCH_IMMUNITY, .MaxRank = 4, .X = 4, .Y = 5, .Multiplier = 1.0f },
 
       // Pickups.
       { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },

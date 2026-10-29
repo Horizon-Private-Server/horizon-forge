@@ -209,6 +209,8 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
       // Primary B6 explosions only; secondary bombs must not produce more clusters.
       return minf(2.0f, floorf(skillPoints * multiplier));
     case RAIDS_CLASS_SKILL_FLINCH_IMMUNITY:
+    case RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH:
+      return minf(100.0f, 25.0f * skillPoints * multiplier);
     case RAIDS_CLASS_SKILL_VISIBOMB:
     case RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR:
       return 1.0f;
@@ -225,7 +227,7 @@ int skillsIsValid(enum RaidsClassSkillId skillId)
 //--------------------------------------------------------------------------
 int skillsIsUnlock(enum RaidsClassSkillId skillId)
 {
-  return skillId == RAIDS_CLASS_SKILL_FLINCH_IMMUNITY || skillId == RAIDS_CLASS_SKILL_VISIBOMB
+  return skillId == RAIDS_CLASS_SKILL_VISIBOMB
     || skillId == RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR;
 }
 
@@ -285,6 +287,9 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
       snprintf(buf, bufSize, "+%d B6 bomb%s", (int)bonus, bonus == 1 ? "" : "s");
       break;
     case RAIDS_CLASS_SKILL_FLINCH_IMMUNITY:
+    case RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH:
+      snprintf(buf, bufSize, "<%.0f%% max HP", bonus);
+      break;
     case RAIDS_CLASS_SKILL_VISIBOMB:
     case RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR:
       snprintf(buf, bufSize, "%s", skillPoints > 0 ? "Unlocked" : "Not learned");
@@ -343,6 +348,7 @@ char* skillsGetName(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_DEADEYE: return "Deadeye";
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return "Combat Medic";
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS: return "Cluster Bombs";
+    case RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH: return "Unstoppable Smash";
     default: return "Unknown skill";
   }
 }
@@ -367,7 +373,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_ALPHA_AREA: return "Add Area alpha mods to your equipped weapon.";
     case RAIDS_CLASS_SKILL_ALPHA_SPEED: return "Add Speed alpha mods to your equipped weapon.";
     case RAIDS_CLASS_SKILL_ALPHA_NANOLEECH: return "Add Nanoleech alpha mods to your equipped weapon.";
-    case RAIDS_CLASS_SKILL_FLINCH_IMMUNITY: return "Prevent hit flinching. Damage still applies.";
+    case RAIDS_CLASS_SKILL_FLINCH_IMMUNITY: return "Prevent flinching from hits dealing less than 25% of max HP per rank. Damage still applies.";
     case RAIDS_CLASS_SKILL_HOVERBOOTS: return "Walk off ledges and hover briefly before falling.";
     case RAIDS_CLASS_SKILL_VISIBOMB: return "Toggle Arbiter rocket control or fire normally.";
     case RAIDS_CLASS_SKILL_WALL_WALKING: return "Hold jump into a wall to walk on it. Release to drop. Land on a floor to recharge.";
@@ -386,6 +392,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_DEADEYE: return "Gain critical chance while standing still with Fusion. Total caps at 100%.";
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return "Direct Fusion hits heal living teammates up to max HP. Uses normal ammo.";
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS: return "Primary B6 blasts spawn extra B6 bombs. Secondary bombs cannot cluster.";
+    case RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH: return "During hyperstrike or flail aerial smash, prevent flinching from hits under 25% of max HP per rank. Damage still applies.";
     default: return "No description available.";
   }
 }
@@ -635,6 +642,38 @@ void skillsOnMobKilled(Moby* moby, int killedByPlayerId)
 float skillsGetDetectionFactor(Player* player)
 {
   return skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_STEALTH);
+}
+
+//--------------------------------------------------------------------------
+void skillsOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0)
+{
+  PlayerVTable* vtable = playerGetVTable(player);
+  if (!vtable || !vtable->UpdateState) return;
+
+  // The owner measures actual HP lost; remote state updates follow that owner.
+  if (stateId == PLAYER_STATE_GET_HIT && player->IsLocal && !playerIsDead(player)
+      && (u8)player->PlayerMoby->CollDamage != 0xFF) {
+    float threshold = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_FLINCH_IMMUNITY);
+    if (player->PlayerState == PLAYER_STATE_JUMP_ATTACK)
+      threshold = maxf(threshold, skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH));
+    threshold = player->MaxHealth * threshold / 100.0f;
+    MobyColDamage* damage = threshold > 0 ? mobyGetDamage(player->PlayerMoby, 1, 0) : NULL;
+    if (damage) {
+      // Native GET_HIT (0x00605724) applies damage as part of entering the state.
+      // Measure its final damage, including armor/scaling/rounding, exactly once.
+      float health = player->Health;
+      playerDecHealth(player, damage->DamageHp);
+      player->PlayerMoby->CollDamage = -1;
+      if (player->Health > 0 && health - player->Health < threshold) {
+        player->timers.postHitInvinc = 47;
+        return;
+      }
+
+      // Unprotected and lethal hits retain native flinch/death handling with damage consumed.
+    }
+  }
+
+  vtable->UpdateState(player, stateId, a2, a3, t0);
 }
 
 //--------------------------------------------------------------------------
@@ -1257,6 +1296,7 @@ void skillsTick(void)
 void skillsInit(void)
 {
   wallwalkInit();
+
   memset(skillsMovementStates, 0, sizeof(skillsMovementStates));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
   memset(skillsAmmoStates, 0, sizeof(skillsAmmoStates));
@@ -1264,6 +1304,8 @@ void skillsInit(void)
   memset(skillsFieldCasters, 0, sizeof(skillsFieldCasters));
   memset(skillsCooldownHud, 0, sizeof(skillsCooldownHud));
   memset(&skillsGoldBoltState, 0, sizeof(skillsGoldBoltState));
+
+  HOOK_JAL(0x005E1DEC, &skillsOnPlayerGetHit);
   HOOK_JAL(0x0060C660, &skillsExtraJumpsOnDoubleJump);
   HOOK_JAL(0x003B6B88, &skillsViperShotSpawn);
   HOOK_JAL(0x003F6310, &skillsB6ProjectileMove);
@@ -1274,6 +1316,7 @@ void skillsInit(void)
 void skillsCleanup(void)
 {
   wallwalkCleanup();
+  
   memset(skillsFieldCasters, 0, sizeof(skillsFieldCasters));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
   memset(skillsAmmoStates, 0, sizeof(skillsAmmoStates));
