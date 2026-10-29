@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[AddComponentMenu("Forge/Raids/Challenge Definition")]
+[AddComponentMenu("Forge/Raids/Raids Challenge Definition")]
 [DisallowMultipleComponent]
 public class RaidsChallengeDef : MonoBehaviour
 {

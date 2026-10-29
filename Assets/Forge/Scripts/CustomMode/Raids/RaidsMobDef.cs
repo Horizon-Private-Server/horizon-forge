@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-[AddComponentMenu("Forge/Raids/Mob Definition")]
+[AddComponentMenu("Forge/Raids/Raids Mob Definition")]
 [DisallowMultipleComponent]
 public class RaidsMobDef : MonoBehaviour
 {

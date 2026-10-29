@@ -2,7 +2,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-[AddComponentMenu("Forge/Raids/Zone Definition")]
+[AddComponentMenu("Forge/Raids/Raids Zone Definition")]
 [DisallowMultipleComponent]
 public class RaidsZoneDef : MonoBehaviour
 {

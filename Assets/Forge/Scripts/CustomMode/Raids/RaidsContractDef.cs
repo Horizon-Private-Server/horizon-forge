@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-[AddComponentMenu("Forge/Raids/Contract Definition")]
+[AddComponentMenu("Forge/Raids/Raids Contract Definition")]
 [DisallowMultipleComponent]
 public class RaidsContractDef : MonoBehaviour
 {

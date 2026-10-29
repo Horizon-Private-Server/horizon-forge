@@ -574,13 +574,44 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     [MenuItem("GameObject/Forge/Deadlocked/Raids/Create Raids Data", priority = 10)]
     public static void CreateRaidsData()
     {
-        var go = new GameObject("Raids");
-        var raidsData = go.AddComponent<RaidsModeData>();
+        if (FindObjectOfType<RaidsModeData>())
+        {
+            EditorUtility.DisplayDialog("Raids Setup", "Raids data already exists for this map! Delete the existing Raids data before creating it again.", "Okay");
+            return;
+        }
 
-        OnAfterCreateGameObject(go);
+        var mapConfig = FindObjectOfType<MapConfig>();
+        var codeManager = FindObjectOfType<CodeManager>();
+
+        Undo.IncrementCurrentGroup();
+        var undoGroup = Undo.GetCurrentGroup();
+        Undo.SetCurrentGroupName("Create Raids Data");
+
+        CreateRaidsComponent<RaidsModeData>("Raids", raidsData =>
+        {
+            var root = raidsData.transform;
+            var mob = CreateRaidsDefinitionGroup<RaidsMobDef>(root, "Mobs", "Zombie");
+            mob.Mob = RaidsMob.Zombie;
+
+            CreateRaidsDefinitionGroup<RaidsZoneDef>(root, "Zones", "Sample Zone");
+            var challenge = CreateRaidsDefinitionGroup<RaidsChallengeDef>(root, "Challenges", "Sample Challenge");
+            challenge.Description = "Complete the sample challenge.";
+
+            var contract = CreateRaidsDefinitionGroup<RaidsContractDef>(root, "Contracts", "Sample Contract");
+            contract.MobDefinitions.Add(mob);
+
+            Undo.RecordObjects(new UnityEngine.Object[] { mapConfig, codeManager }, "Create Raids Data");
+            mapConfig.DLForceCustomMode = DLCustomModeIds.Raids;
+            codeManager.Enabled = true;
+
+            if (!FindObjectOfType<CommonCodeGen>())
+                raidsData.gameObject.AddComponent<CommonCodeGen>();
+        });
+
+        Undo.CollapseUndoOperations(undoGroup);
     }
 
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Mob Spawner Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Mob Spawner Moby", priority = 50)]
     public static void CreateSpawnerMoby()
     {
         var go = new GameObject("Raids Mob Spawner");
@@ -593,7 +624,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/NPC Controller Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/NPC Controller Moby", priority = 51)]
     public static void CreateNpcControllerMoby()
     {
         var go = new GameObject("NPC Controller");
@@ -606,7 +637,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/Gold Bolt Moby", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Gold Bolt Moby", priority = 52)]
     public static void CreateGoldBoltMoby()
     {
         var go = new GameObject("Gold Bolt Moby");
@@ -622,7 +653,31 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
-    [MenuItem("GameObject/Forge/Deadlocked/Raids/PathGraph", priority = 10)]
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Raids Contract Definition", priority = 30)]
+    public static void CreateContractDefinition()
+    {
+        CreateRaidsComponent<RaidsContractDef>("Raids Contract Definition");
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Raids Zone Definition", priority = 31)]
+    public static void CreateZoneDefinition()
+    {
+        CreateRaidsComponent<RaidsZoneDef>("Raids Zone Definition");
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Raids Mob Definition", priority = 32)]
+    public static void CreateMobDefinition()
+    {
+        CreateRaidsComponent<RaidsMobDef>("Raids Mob Definition");
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/Raids Challenge Definition", priority = 33)]
+    public static void CreateChallengeDefinition()
+    {
+        CreateRaidsComponent<RaidsChallengeDef>("Raids Challenge Definition");
+    }
+
+    [MenuItem("GameObject/Forge/Deadlocked/Raids/PathGraph", priority = 34)]
     public static void CreatePathGraph()
     {
         var prefab = UnityHelper.GetRaidsPrefab("PathGraph");
@@ -636,15 +691,41 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         OnAfterCreateGameObject(go);
     }
 
+    private static T CreateRaidsComponent<T>(string objectName, Action<T> initialize = null) where T : Component
+    {
+        var go = new GameObject(objectName);
+        var component = go.AddComponent<T>();
+        initialize?.Invoke(component);
+        OnAfterCreateGameObject(go);
+        return component;
+    }
+
+    private static T CreateRaidsDefinitionGroup<T>(Transform parent, string groupName, string sampleName) where T : Component
+    {
+        var group = new GameObject(groupName);
+        group.transform.SetParent(parent, false);
+
+        var sample = new GameObject(sampleName);
+        sample.transform.SetParent(group.transform, false);
+        return sample.AddComponent<T>();
+    }
+
     private static void OnAfterCreateGameObject(GameObject go)
     {
         // place under selected object
         // or try and spawn on top of scene camera
         if (Selection.activeGameObject)
             go.transform.SetParent(Selection.activeGameObject.transform, false);
-        else if (SceneView.lastActiveSceneView.camera)
-            go.transform.position = SceneView.lastActiveSceneView.camera.transform.position + (SceneView.lastActiveSceneView.camera.transform.forward * 5);
+        else
+        {
+            var sceneView = SceneView.lastActiveSceneView;
+            if (sceneView && sceneView.camera)
+                go.transform.position = sceneView.camera.transform.position + (sceneView.camera.transform.forward * 5);
+            else
+                go.transform.position = Vector3.zero;
+        }
 
+        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
         Selection.activeGameObject = go;
     }
 
