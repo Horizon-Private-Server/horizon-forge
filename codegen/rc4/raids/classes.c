@@ -299,7 +299,7 @@ const RaidsClassDef_t classDefinitions[] = {
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 3.0f },
       { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_AMMO_FIELD, .MaxRank = 3, .X = 5, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_FIELD, .MaxRank = 3, .X = 5, .Y = 1, .Multiplier = 2.0f },
       { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 5, .Y = 4, .Multiplier = 1.0f },
 
       // Movement and concealment.

@@ -175,7 +175,7 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
     case RAIDS_CLASS_SKILL_HEALING_FIELD: return 10.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_AMMO_FIELD:
       // Normal ammo-pickup equivalents per pulse, using ammodrop's per-weapon tuning.
-      return 0.5f * skillPoints * multiplier;
+      return 0.25f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_DEADEYE:
