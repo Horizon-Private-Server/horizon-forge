@@ -461,6 +461,26 @@ int dummyHandleEvent(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
+int dummyMineCanAcquireTarget(Moby* moby)
+{
+  if (!moby || !moby->Guber) return 0;
+
+  // Dummies inherit their visible object's PClass, which can be scenery.
+  if (moby->OClass == DUMMY_OCLASS) {
+    struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+    return pvars && moby->State == DUMMY_STATE_ACTIVATED
+        && pvars->Config.IsOnEnemyTeam && pvars->Config.Targetable
+        && pvars->TargetVars.hitPoints > 0 && pvars->Config.TargetMoby
+        && !mobyIsDestroyed(pvars->Config.TargetMoby);
+  }
+
+  // Preserve the native category filter for every other target.
+  if (!moby->PClass) return 0;
+  int category = *(u8*)((u32)moby->PClass + 0x46);
+  return category == 5 || category == 0xD || category == 1 || category == 0x10;
+}
+
+//--------------------------------------------------------------------------
 void dummyStart(void)
 {
 
@@ -495,6 +515,15 @@ void dummyInit(void)
 
 		++moby;
 	}
+
+  // Mine acquisition's Guber/category gate, including its loop back-edge.
+  // Keep the native exclusion at 0x003CCEF8 and subsequent team/range/LOS checks.
+  // These sites are in code.0006 and reload with the map.
+  HOOK_JAL_OP(0x003CCEC8, &dummyMineCanAcquireTarget, 0x0200202D); // move a0, s0
+  POKE_U32(0x003CCED0, 0x104000AA); // beq v0, zero, 0x003CD17C (next target)
+  POKE_U32(0x003CCED4, 0); // branch delay slot
+  POKE_U32(0x003CCED8, 0x10000007); // b 0x003CCEF8 (eligible target)
+  POKE_U32(0x003CCEDC, 0); // branch delay slot
 
   DPRINTF("dummy pvar size %d\n", sizeof(struct DummyPVar));
 }
