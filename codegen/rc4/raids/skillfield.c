@@ -7,6 +7,7 @@
 #include <libdl/time.h>
 #include <libdl/graphics.h>
 #include <libdl/camera.h>
+#include <libdl/utils.h>
 #include <libdl/stdio.h>
 
 #include "skillfield.h"
@@ -150,30 +151,52 @@ void skillfieldDrawHillRing(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void skillfieldUpdateIcons(struct SkillFieldPVar* pvars, int age)
+{
+  pvars->IconCount = 0;
+  memset(pvars->Icons, 0, sizeof(pvars->Icons));
+  if (!pvars->Initialized || pvars->Expired || age < 0 || age >= pvars->Config.DurationMs) return;
+
+  const struct {
+    int Type;
+    int TexId;
+    u32 Color;
+  } icons[] = {
+    { SKILLFIELD_TYPE_HEALING, 94, 0x80000000 | SKILLFIELD_HILL_COLOR_HEALING },
+    { SKILLFIELD_TYPE_AMMO, 90, 0x80000000 | SKILLFIELD_HILL_COLOR_AMMO }
+  };
+
+  int i;
+  for (i = 0; i < COUNT_OF(icons) && pvars->IconCount < SKILLFIELD_MAX_ICONS; ++i) {
+    if (!(pvars->Config.Type & icons[i].Type)) continue;
+
+    struct SkillFieldIcon* icon = &pvars->Icons[pvars->IconCount++];
+    icon->TexId = icons[i].TexId;
+    icon->Color = icons[i].Color;
+  }
+}
+
+//--------------------------------------------------------------------------
 void skillfieldPostDraw(Moby* moby)
 {
   struct SkillFieldPVar* pvars = (struct SkillFieldPVar*)moby->PVar;
   if (!pvars || !pvars->Initialized || pvars->Expired || mobyIsDestroyed(moby)) return;
 
-  struct SkillFieldSpawnArgs* config = &pvars->Config;
   int i;
-  u32 color;
   skillfieldDrawHillRing(moby);
 
   VECTOR position;
   vector_copy(position, moby->Position);
   position[2] += 1.5f;
 
-  for (i = SKILLFIELD_TYPE_HEALING; i <= SKILLFIELD_TYPE_ALL; i <<= 1) {
-    if (!(config->Type & i)) continue;
-
+  for (i = 0; i < pvars->IconCount && i < SKILLFIELD_MAX_ICONS; ++i) {
+    struct SkillFieldIcon* icon = &pvars->Icons[i];
     enum TextAlign alignment = TEXT_ALIGN_MIDDLECENTER;
-    if (config->Type == SKILLFIELD_TYPE_ALL)
-      alignment = i == SKILLFIELD_TYPE_HEALING ? TEXT_ALIGN_MIDDLERIGHT : TEXT_ALIGN_MIDDLELEFT;
-    color = i == SKILLFIELD_TYPE_HEALING ? 0x8000E080 : (0x80000000 | SKILLFIELD_HILL_COLOR_AMMO);
+    if (pvars->IconCount == 2)
+      alignment = i == 0 ? TEXT_ALIGN_MIDDLERIGHT : TEXT_ALIGN_MIDDLELEFT;
 
-    gfxHelperDrawSprite_WS(position, 24, 24, 32, 32, i == SKILLFIELD_TYPE_HEALING ? 94 : 90,
-      color, alignment, COMMON_DZO_DRAW_NORMAL);
+    gfxHelperDrawSprite_WS(position, 24, 24, 32, 32, icon->TexId,
+      icon->Color, alignment, COMMON_DZO_DRAW_NORMAL);
   }
 }
 
@@ -189,6 +212,8 @@ void skillfieldUpdate(Moby* moby)
   pvars->HillColor = skillfieldGetHillColor(moby, age);
   if (age >= config->DurationMs)
     pvars->Expired = 1;
+  // Publish icons independently of PS2 draw callbacks for DZO.
+  skillfieldUpdateIcons(pvars, age);
 
   if (pvars->Expired) {
     guberMobyDestroy(moby);
@@ -224,6 +249,7 @@ int skillfieldHandleEvent_Spawn(Moby* moby, GuberEvent* event)
   pvars->Initialized = 1;
   pvars->LastPulse = -1;
   pvars->CreatorClientId = event->NetEvent.OriginClientIdx;
+  skillfieldUpdateIcons(pvars, (int)((u32)gameGetTime() - (u32)args.StartTime));
   memcpy(moby->Position, args.Position, sizeof(args.Position));
   moby->PUpdate = &skillfieldUpdate;
   moby->ModeBits = MOBY_MODE_BIT_HIDDEN | MOBY_MODE_BIT_NO_POST_UPDATE;

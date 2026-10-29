@@ -7,6 +7,7 @@
 #include <libdl/guber.h>
 
 #define SKILLFIELD_OCLASS (0x4013)
+#define SKILLFIELD_MAX_ICONS (8)
 
 enum SkillFieldType
 {
@@ -38,6 +39,12 @@ struct SkillFieldSpawnArgs
 
 typedef char SkillFieldSpawnArgsSizeCheck[sizeof(struct SkillFieldSpawnArgs) == 40 ? 1 : -1];
 
+struct SkillFieldIcon
+{
+  int TexId;
+  u32 Color;
+};
+
 struct SkillFieldPVar
 {
   struct SkillFieldSpawnArgs Config;
@@ -45,10 +52,15 @@ struct SkillFieldPVar
   int LastPulse;
   int CreatorClientId;
   int Expired;
-  u32 HillColor; // +0x38: current 0xAABBGGRR for DZO; alpha 0x80 = full opacity.
+  u32 HillColor;
+  int IconCount;
+  struct SkillFieldIcon Icons[SKILLFIELD_MAX_ICONS]; // for dzo
 };
 
 typedef char SkillFieldHillColorOffsetCheck[offsetof(struct SkillFieldPVar, HillColor) == 0x38 ? 1 : -1];
+typedef char SkillFieldIconSizeCheck[sizeof(struct SkillFieldIcon) == 8 ? 1 : -1];
+typedef char SkillFieldIconCountOffsetCheck[offsetof(struct SkillFieldPVar, IconCount) == 0x3C ? 1 : -1];
+typedef char SkillFieldIconsOffsetCheck[offsetof(struct SkillFieldPVar, Icons) == 0x40 ? 1 : -1];
 
 int skillfieldCreate(struct SkillFieldSpawnArgs* args);
 struct Guber* skillfieldGetGuber(Moby* moby);
