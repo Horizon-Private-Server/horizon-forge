@@ -44,6 +44,7 @@ typedef void (*ModeRequestPrestigeLoot_func)(int gadgetId);
 typedef void (*ModeOnMissionComplete_func)(int cuboidIdx);
 typedef void (*ModeOnMissionFail_func)(void);
 typedef void (*ModeProcessPlayerDamage_func)(Moby* target, Moby* source, float* damage, u32* damageFlags);
+typedef void (*ModeDrawHud_func)(void);
 
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
@@ -79,6 +80,7 @@ struct RaidsInteropTable
   ModeOnMissionComplete_func ModeOnMissionCompleteFunc;
   ModeOnMissionFail_func ModeOnMissionFailFunc;
   ModeProcessPlayerDamage_func ModeProcessPlayerDamageFunc;
+  ModeDrawHud_func ModeDrawHudFunc;
 
   // map: populated by the loaded map
   MapOnMobCreate_func OnMobCreateFunc;
@@ -104,12 +106,14 @@ struct RaidsInteropTable
 };
 
 typedef char RaidsInteropPointerSizeCheck[sizeof(void*) == 4 ? 1 : -1];
-typedef char RaidsInteropSizeCheck[sizeof(struct RaidsInteropTable) == 180 ? 1 : -1];
-typedef char RaidsInteropMapOffsetCheck[offsetof(struct RaidsInteropTable, OnMobCreateFunc) == 52 ? 1 : -1];
-typedef char RaidsInteropAmmoDropOffsetCheck[offsetof(struct RaidsInteropTable, GetAmmoDropChanceFunc) == 116 ? 1 : -1];
+typedef char RaidsInteropSizeCheck[sizeof(struct RaidsInteropTable) == 184 ? 1 : -1];
+typedef char RaidsInteropMapOffsetCheck[offsetof(struct RaidsInteropTable, OnMobCreateFunc) == 56 ? 1 : -1];
+typedef char RaidsInteropAmmoDropOffsetCheck[offsetof(struct RaidsInteropTable, GetAmmoDropChanceFunc) == 120 ? 1 : -1];
 typedef char RaidsInteropPlayerDamageOffsetCheck[offsetof(struct RaidsInteropTable, ModeProcessPlayerDamageFunc) == 48 ? 1 : -1];
-typedef char RaidsInteropReservedOffsetCheck[offsetof(struct RaidsInteropTable, PlaceholderForFutureUseFuncs) == 120 ? 1 : -1];
+typedef char RaidsInteropDrawHudOffsetCheck[offsetof(struct RaidsInteropTable, ModeDrawHudFunc) == 52 ? 1 : -1];
+typedef char RaidsInteropReservedOffsetCheck[offsetof(struct RaidsInteropTable, PlaceholderForFutureUseFuncs) == 124 ? 1 : -1];
 
+void mapDrawHud(void);
 void interopInit(void);
 void interopCleanup(void);
 

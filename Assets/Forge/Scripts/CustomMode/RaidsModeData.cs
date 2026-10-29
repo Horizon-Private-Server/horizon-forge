@@ -311,6 +311,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 
         // draw functions
         {
+            state.DrawBody.Insert(0, "mapDrawHud();");
             state.DrawBody.Add("levelselectFrameTick();");
             state.DrawBody.Add("contractsFrameTick();");
             state.DrawBody.Add("inventoryFrameTick();");

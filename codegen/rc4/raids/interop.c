@@ -20,6 +20,13 @@ struct RaidsMapData mapData;
 extern Moby* mapBossMoby;
 
 //--------------------------------------------------------------------------
+void mapDrawHud(void)
+{
+  if (MapConfig.State && MapConfig.Functions.ModeDrawHudFunc)
+    MapConfig.Functions.ModeDrawHudFunc();
+}
+
+//--------------------------------------------------------------------------
 void mapOnVehicleReinit(void)
 {
   Vehicle* vehicle;
