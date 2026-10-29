@@ -21,6 +21,7 @@
 #include "game.h"
 #include "bank.h"
 #include "utils.h"
+#include "maputils.h"
 #include "common.h"
 #include "collectible.h"
 #include "skillfield.h"
@@ -36,6 +37,13 @@
 #define SKILLS_COOLDOWN_HUD_BOTTOM (5)
 
 int skillsPlayerHasMovementInput(Player* player);
+
+// Read-only view of the native Fusion shooter's pointer.
+struct SkillsFusionProjectileVars
+{
+  u8 Native00[0x64];
+  Player* Player;         // 0x64: shooter, including remote players
+};
 
 // Native B6 ball PVars used by the flight and detonation hooks.
 struct SkillsB6ProjectileVars
@@ -488,6 +496,47 @@ float skillsGetPlayerBonus(Player* player, enum RaidsClassSkillId skillId)
 
   return skillsGetBonus(skillId, bankGetPlayerClassSkillRank(player->PlayerId, skillId),
     bankGetPlayerClassSkillMultiplier(player->PlayerId, skillId));
+}
+
+//--------------------------------------------------------------------------
+int skillsFusionGetHits(Moby* shot, u128 from, u128 to)
+{
+  int count = ((int (*)(Moby*, u128, u128))0x003FBBE8)(shot, from, to);
+  const struct SkillsFusionProjectileVars* pvars = (const struct SkillsFusionProjectileVars*)shot->PVar;
+  Player* shooter = pvars->Player;
+  float heal = skillsGetPlayerBonus(shooter, RAIDS_CLASS_SKILL_COMBAT_MEDIC);
+  if (!(heal > 0)) return count;
+
+  // Raids already uses the native piercing beam query, clipped by world geometry.
+  // Its list includes teammates; leave it intact for native damage and networking.
+  // Each recipient's owner heals; every client shows the healing splash.
+  Moby** hits = (Moby**)0x00373BF0;
+  VECTOR* hitPositions = (VECTOR*)0x00373B50;
+  Player** players = playerGetAll();
+  int i, j;
+  for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
+    Player* target = players[i];
+    if (!playerIsValid(target) || target == shooter
+        || target->PlayerId < 0 || target->PlayerId >= GAME_MAX_PLAYERS
+        || playerIsDead(target) || target->Health <= 0
+        || (shot->Xp & (1 << target->PlayerId)))
+      continue;
+
+    for (j = 0; j < count; ++j) {
+      if (hits[j] != target->PlayerMoby) continue;
+
+      // Fusion leaves Xp (0xB6) unused; native spawning clears the whole Moby.
+      // Its 16 bits deduplicate both owner healing and feedback on each client.
+      shot->Xp |= 1 << target->PlayerId;
+      if (target->Health < target->MaxHealth) {
+        if (target->IsLocal)
+          playerSetHealth(target, minf(target->MaxHealth, target->Health + heal));
+        spawnExplosion(hitPositions[j], 1.5f, 0x8000E080);
+      }
+      break;
+    }
+  }
+  return count;
 }
 
 //--------------------------------------------------------------------------
@@ -1308,6 +1357,7 @@ void skillsInit(void)
   HOOK_JAL(0x005E1DEC, &skillsOnPlayerGetHit);
   HOOK_JAL(0x0060C660, &skillsExtraJumpsOnDoubleJump);
   HOOK_JAL(0x003B6B88, &skillsViperShotSpawn);
+  HOOK_JAL(0x003FC434, &skillsFusionGetHits);
   HOOK_JAL(0x003F6310, &skillsB6ProjectileMove);
   HOOK_JAL(0x003F7138, &skillsB6OnExplode);
 }
