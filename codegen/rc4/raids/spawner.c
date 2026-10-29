@@ -435,7 +435,8 @@ void spawnerUpdate(Moby* moby)
     return;
   }
 
-  if (!missionIsActive()) return;
+  // only allow during active mission or if on hub world
+  if (!missionIsActive() && !isOnHubWorld()) return;
   if (moby->State != SPAWNER_STATE_ACTIVATED) return;
 
   // update closest player dist
@@ -880,10 +881,21 @@ void spawnerStart(void)
       if (MapConfig.Functions.ModeTryCreateMobFunc(&request->SpawnArgs)) {
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;
+        // The old mob's destroy event removes it from the alive counts.
+        pvars->State.NumAlive[request->SpawnArgs.Userdata]++;
+        pvars->State.NumTotalAlive++;
       }
       //DPRINTF("respawning mob %08X %04X for spawner %d (alive:%d spawning:%d)\n", request->SpawnArgs.SpawnFromUID, MapConfig.MobSpawnParams[request->SpawnArgs.SpawnParamsIdx].OClass, moby->UID, MapConfig.State->MobStats.TotalAlive, MapConfig.State->MobStats.TotalSpawning);
       continue;
     }
+
+    // Queued requests may outlive the conditions that allowed them to spawn.
+    struct SpawnerMobParams* mobParams = &pvars->SpawnableMobParam[request->SpawnArgs.Userdata];
+    if (!spawnerCanSpawn(moby)) continue;
+    if (mobParams->MaxCanSpawnOrUnlimited > 0 && pvars->State.NumSpawned[request->SpawnArgs.Userdata] >= mobParams->MaxCanSpawnOrUnlimited)
+      continue;
+    if (mobParams->MaxCanAliveAtOnce > 0 && pvars->State.NumAlive[request->SpawnArgs.Userdata] >= mobParams->MaxCanAliveAtOnce)
+      continue;
 
     // check priority
     float priority = (pvars->State.ClosestPlayerDistSqr - spawnerMinClosestDistToPlayerSqr) / ((spawnerMaxClosestDistToPlayerSqr-spawnerMinClosestDistToPlayerSqr) + 1);
