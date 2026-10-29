@@ -1075,7 +1075,7 @@ void mobGetVelocityToTargetWithDirection(Moby* moby, VECTOR velocity, VECTOR fro
 
   Moby* target = pvars->MobVars.MoveVars.Target;
   if (target) {
-    targetRadius = (target->BSphere[3] / 1024) * 1;
+    targetRadius = mobGetTargetRadius(target);
   }
 
   // target velocity from rotation

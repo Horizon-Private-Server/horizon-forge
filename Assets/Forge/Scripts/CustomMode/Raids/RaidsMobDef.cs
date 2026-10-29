@@ -75,7 +75,7 @@ public class RaidsMobDef : MonoBehaviour
         sb.AppendLine($"\t\t\t.Speed = {{ {GetStatValues(defaults.Speed, SpeedOverrides)} }},");
         sb.AppendLine($"\t\t\t.Health = {{ {GetStatValues(defaults.Health, HealthOverrides)} }},");
         sb.AppendLine($"\t\t\t.TurnSpeed = {{ {GetStatValues(defaults.TurnSpeed, TurnSpeed)} }},");
-        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius * SizeMultiplier).ToInvariantCulture()},");
+        sb.AppendLine($"\t\t\t.AttackRadius = {(defaults.AttackRadius + (SizeMultiplier * defaults.CollRadius)).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.HitRadius = {(defaults.HitRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.CollRadius = {(defaults.CollRadius * SizeMultiplier).ToInvariantCulture()},");
         sb.AppendLine($"\t\t\t.AutoAggroMaxRange = {ForceAggroRange.GetValue(defaults.ForceAggroRange).ToInvariantCulture()},");
