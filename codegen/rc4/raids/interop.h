@@ -43,6 +43,7 @@ typedef int (*ModeTryCreateMob_func)(struct MobCreateArgs* args);
 typedef void (*ModeRequestPrestigeLoot_func)(int gadgetId);
 typedef void (*ModeOnMissionComplete_func)(int cuboidIdx);
 typedef void (*ModeOnMissionFail_func)(void);
+typedef void (*ModeProcessPlayerDamage_func)(Moby* target, Moby* source, float* damage, u32* damageFlags);
 
 typedef int (*MapOnMobCreate_func)(struct MobCreateArgs* args);
 typedef void (*MapOnMobSpawned_func)(Moby* moby);
@@ -77,6 +78,7 @@ struct RaidsInteropTable
   ModeRequestPrestigeLoot_func ModeRequestPrestigeLootFunc;
   ModeOnMissionComplete_func ModeOnMissionCompleteFunc;
   ModeOnMissionFail_func ModeOnMissionFailFunc;
+  ModeProcessPlayerDamage_func ModeProcessPlayerDamageFunc;
 
   // map: populated by the loaded map
   MapOnMobCreate_func OnMobCreateFunc;
@@ -97,15 +99,16 @@ struct RaidsInteropTable
   MapMobAfterDamage_func MobAfterDamageFunc;
   MapGetAmmoDropChance_func GetAmmoDropChanceFunc;
 
-  // Consume reserved slots for additions; never reorder published fields.
+  // Reserved for future callbacks.
   void* PlaceholderForFutureUseFuncs[15];
 };
 
 typedef char RaidsInteropPointerSizeCheck[sizeof(void*) == 4 ? 1 : -1];
-typedef char RaidsInteropSizeCheck[sizeof(struct RaidsInteropTable) == 176 ? 1 : -1];
-typedef char RaidsInteropMapOffsetCheck[offsetof(struct RaidsInteropTable, OnMobCreateFunc) == 48 ? 1 : -1];
-typedef char RaidsInteropAmmoDropOffsetCheck[offsetof(struct RaidsInteropTable, GetAmmoDropChanceFunc) == 112 ? 1 : -1];
-typedef char RaidsInteropReservedOffsetCheck[offsetof(struct RaidsInteropTable, PlaceholderForFutureUseFuncs) == 116 ? 1 : -1];
+typedef char RaidsInteropSizeCheck[sizeof(struct RaidsInteropTable) == 180 ? 1 : -1];
+typedef char RaidsInteropMapOffsetCheck[offsetof(struct RaidsInteropTable, OnMobCreateFunc) == 52 ? 1 : -1];
+typedef char RaidsInteropAmmoDropOffsetCheck[offsetof(struct RaidsInteropTable, GetAmmoDropChanceFunc) == 116 ? 1 : -1];
+typedef char RaidsInteropPlayerDamageOffsetCheck[offsetof(struct RaidsInteropTable, ModeProcessPlayerDamageFunc) == 48 ? 1 : -1];
+typedef char RaidsInteropReservedOffsetCheck[offsetof(struct RaidsInteropTable, PlaceholderForFutureUseFuncs) == 120 ? 1 : -1];
 
 void interopInit(void);
 void interopCleanup(void);

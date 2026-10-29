@@ -14,6 +14,16 @@ enum DummyEventType {
 	DUMMY_EVENT_SPAWN,
   DUMMY_EVENT_SET_STATE,
   DUMMY_EVENT_SET_HEALTH,
+  DUMMY_EVENT_DAMAGE,
+};
+
+// Final damage is applied by the event on every client, including the sender.
+struct DummyDamageEventArgs
+{
+  float Damage;
+  u32 DamageFlags;
+  int SourceUID;
+  int PlayerUID;
 };
 
 enum DummyState {
