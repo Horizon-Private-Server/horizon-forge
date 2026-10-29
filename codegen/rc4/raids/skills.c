@@ -937,8 +937,7 @@ void skillsFieldsActivate(Player* player)
     .DurationMs = SKILLS_FIELD_DURATION_MS,
     .PulseIntervalMs = TIME_SECOND,
     .CasterPlayerId = player->PlayerId,
-    .CasterClassType = bankGetPlayerEquippedClass(player->PlayerId)->ClassType,
-    .Team = player->Team
+    .CasterClassType = bankGetPlayerEquippedClass(player->PlayerId)->ClassType
   };
 
   VECTOR position;

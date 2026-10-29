@@ -53,7 +53,6 @@ void skillfieldPulse(Moby* moby)
   for (i = 0; i < GAME_MAX_PLAYERS; ++i) {
     Player* player = players[i];
     if (!playerIsValid(player) || !player->IsLocal || playerIsDead(player) || player->Health <= 0
-        || player->Team != config->Team
         || !(vector_sqrdistance(player->PlayerPosition, moby->Position) <= config->Radius * config->Radius))
       continue;
 

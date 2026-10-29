@@ -33,7 +33,6 @@ struct SkillFieldSpawnArgs
   int PulseIntervalMs;
   u8 CasterPlayerId;
   u8 CasterClassType;
-  u8 Team;
   u8 Type;
 };
 
