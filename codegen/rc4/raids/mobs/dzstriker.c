@@ -205,7 +205,7 @@ void dzstrikerPostDraw(Moby* moby)
     return;
     
   u32 color = mobGetSpawnParams(moby)->SpriteColor | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 1.5, color, DZSTRIKER_LEGS_SUBSKELETON_JOINT_HIPS);
+  mobPostDrawQuad(moby, 1.75, color, DZSTRIKER_LEGS_SUBSKELETON_JOINT_HIPS);
 }
 
 //--------------------------------------------------------------------------
