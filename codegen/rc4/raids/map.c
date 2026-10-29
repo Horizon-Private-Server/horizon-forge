@@ -7,7 +7,9 @@
  */
 
 #include <libdl/moby.h>
+#include <libdl/guber.h>
 #include <libdl/stdio.h>
+#include <libdl/string.h>
 #include <libdl/game.h>
 #include <libdl/collision.h>
 #include <libdl/ui.h>
@@ -144,6 +146,28 @@ void mapCustomMineMobyUpdate(Moby* moby)
 	
 	// call base
 	((void (*)(Moby*))0x003C6C28)(moby);
+}
+
+//--------------------------------------------------------------------------
+int mapPlayerOnSpawnHoloshield(int playerId)
+{
+  // Each player has four holoshields, ordered from oldest to newest.
+  Moby** cacheList = (Moby**)0x003360e0 + (playerId * 4);
+  int i;
+  int count = 0;
+  for (i = 0; i < 4; ++i) {
+    if (cacheList[i])
+      ++count;
+  }
+
+  // Make room for the new shield by destroying the oldest one.
+  if (count == 4) {
+    guberMobyDestroy(cacheList[0]);
+    memmove(&cacheList[0], &cacheList[1], 3 * sizeof(Moby*));
+    cacheList[3] = NULL;
+  }
+
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -352,6 +376,10 @@ void mapInit(void)
 
   // disable holoshields from disappearing
   //*(u16*)0x00401478 = 2;
+
+  // Allow firing at the shield limit, replacing the oldest shield on spawn.
+  HOOK_JAL(0x00400A48, &mapPlayerOnSpawnHoloshield);
+  POKE_U32(0x003CF04C, 0x0000102D);
 
   // disable ammo drop despawn
   //POKE_U32(0x004FE814, 0);
