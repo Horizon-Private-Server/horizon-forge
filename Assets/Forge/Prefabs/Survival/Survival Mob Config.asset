@@ -398,8 +398,8 @@ MonoBehaviour:
       Description: 
       MinCooldownSeconds: 2
       MaxCooldownSeconds: 20
-      Probability: 1
-      QueuedForTicks: 0
+      Probability: 0.5
+      QueuedForTicks: 1
     Parameters:
     - Name: Swing Damage Multiplier
       Description: 
@@ -426,9 +426,10 @@ MonoBehaviour:
       ValueType: 0
       DefaultValue: 3
     - Name: Laser Cooldown Reset Health Divisions
-      Description: Number of equal maximum health bands for laser cooldown resets. 4 resets every 25%, 10 every 10%; 0 or 1 disables damage-triggered resets.
+      Description: Number of equal maximum health bands for laser cooldown resets.
+        4 resets every 25%, 10 every 10%; 0 or 1 disables damage-triggered resets.
       ValueType: 1
-      DefaultValue: 4
+      DefaultValue: 0
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
