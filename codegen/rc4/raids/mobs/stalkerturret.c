@@ -283,7 +283,7 @@ void stalkerturretOnDamage(Moby* moby, struct MobDamageEventArgs* e)
   float newHp = pvars->MobVars.Health - damage;
 
   int isShock = e->DamageFlags & 0x40;
-  int isShortFreeze = e->DamageFlags & 0x40000000;
+  int isShortFreeze = e->DamageFlags & RAIDS_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0) {

@@ -367,7 +367,7 @@ void reactorOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 #endif
 
 	int isShock = e->DamageFlags & MOB_DAMAGE_FLAG_SHOCK;
-	int isShortFreeze = e->DamageFlags & MOB_DAMAGE_FLAG_SHORT_FREEZE;
+	int isShortFreeze = e->DamageFlags & RAIDS_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// take more damage in crouch action
 	if (pvars->MobVars.Action == REACTOR_ACTION_ATTACK_CHARGE && moby->AnimSeqId == REACTOR_ANIM_KNEE_DOWN)

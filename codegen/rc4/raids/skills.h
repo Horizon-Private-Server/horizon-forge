@@ -45,6 +45,15 @@ enum RaidsClassSkillId
   RAIDS_CLASS_SKILL_COMBAT_MEDIC = 33,
   RAIDS_CLASS_SKILL_CLUSTER_BOMBS = 34,
   RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH = 35,
+  RAIDS_CLASS_SKILL_VIPER_MAX_RARITY = 36,
+  RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY = 37,
+  RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY = 38,
+  RAIDS_CLASS_SKILL_FUSION_MAX_RARITY = 39,
+  RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY = 40,
+  RAIDS_CLASS_SKILL_B6_MAX_RARITY = 41,
+  RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY = 42,
+  RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY = 43,
+  RAIDS_CLASS_SKILL_ALPHA_IMPACT = 44,
   RAIDS_CLASS_SKILL_COUNT
 };
 
@@ -55,6 +64,7 @@ float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float mul
 float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float multiplier);
 int skillsIsValid(enum RaidsClassSkillId skillId);
 int skillsIsUnlock(enum RaidsClassSkillId skillId);
+enum RaidsClassSkillId skillsGetWeaponRaritySkillId(int weaponSlot);
 void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float multiplier, char* buf, int bufSize);
 
 char* skillsGetName(enum RaidsClassSkillId skillId);

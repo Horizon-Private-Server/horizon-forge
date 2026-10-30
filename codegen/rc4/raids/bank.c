@@ -21,6 +21,7 @@
 extern struct RaidsState State;
 
 void bankUpdateLocalState(Player * player);
+int bankGetClassSkillRankAtLevel(RaidsPlayerClassProgress_t* playerClass, enum RaidsClassSkillId skillId, int level);
 
 // send as binary payload from server
 RaidsPlayerBank_t bankLocalBank = {};
@@ -627,8 +628,7 @@ int bankGetClassWeaponMaxRarityAtLevel(RaidsPlayerClassProgress_t* playerClass, 
   const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
   if (!def || weaponSlot < 0 || weaponSlot >= COUNT_OF(def->WeaponMaxRarities)) return -1;
   int rarity = def->WeaponMaxRarities[weaponSlot];
-  if (rarity < 0) return -1;
-  if (level >= RAIDS_CLASS_MAX_LEVEL) ++rarity;
+  rarity += bankGetClassSkillRankAtLevel(playerClass, skillsGetWeaponRaritySkillId(weaponSlot), level);
   return rarity > RAIDS_ITEM_RARITY_MYTHIC ? RAIDS_ITEM_RARITY_MYTHIC : rarity;
 }
 
@@ -1594,7 +1594,7 @@ void bankTickPlayer(Player * player)
     playerSetLocalEquipslot(player->LocalPlayerIndex, 2, state->PlayerStates[player->PlayerId].LastEquipslots[2]);
   }
 
-  // Apply each player's own confirmed class, including level-X mastery.
+  // Apply each player's own confirmed class and effective weapon rarity skills.
   RaidsPlayerClassProgress_t* playerClass = bankGetPlayerEquippedClass(player->PlayerId);
   int classLevel = playerClass ? bankGetClassLevel(playerClass, bankGetPlayerClassXP(player->PlayerId, playerClass->ClassType)) : 0;
   int i;

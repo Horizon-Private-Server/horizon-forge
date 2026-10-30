@@ -32,7 +32,7 @@ struct RaidsPlayerDamageContext
 };
 
 typedef void (*ModePushSnack_func)(char* string, int ticksAlive, int localPlayerIdx);
-typedef void (*ModePushDamageBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int team);
+typedef void (*ModePushDamageBubble_func)(VECTOR position, float randomRadius, float damage, int isLocal, int team, float popScale, char suffix);
 typedef long (*ModeGetAmmoRefillCost_func)(Player* player);
 typedef void (*ModeBeginWorldHop_func)(char* mapFilename, int difficulty, int cost, int delayMs);
 typedef void (*ModePopulateSpawnArgs_func)(struct MobSpawnEventArgs* output, struct MobCreateArgs* args);

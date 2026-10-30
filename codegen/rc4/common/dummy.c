@@ -189,12 +189,19 @@ void dummyDrawDamageBubble(Moby* moby, float damage, u32 damageFlags, int isLoca
   if (MapConfig.Functions.ModePushBubbleFunc)
     MapConfig.Functions.ModePushBubbleFunc(pos, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
 #elif RAIDS
+  int isCrit = pvars->Config.IsOnEnemyTeam && (damageFlags & RAIDS_DAMAGE_FLAG_CRITICAL);
+  int isSuperCrit = pvars->Config.IsOnEnemyTeam && (damageFlags & RAIDS_DAMAGE_FLAG_SUPER_CRITICAL);
   int team = TEAM_GREEN;
-  if (pvars->Config.IsOnEnemyTeam)
-    team = (damageFlags & 0x20000000) ? TEAM_RED : TEAM_YELLOW;
+  if (pvars->Config.IsOnEnemyTeam) {
+    team = isSuperCrit ? TEAM_RED
+      : isCrit ? TEAM_ORANGE : TEAM_YELLOW;
+  }
+  float popScale = isSuperCrit ? RAIDS_DAMAGE_BUBBLE_SUPER_CRIT_POP_SCALE
+    : isCrit ? RAIDS_DAMAGE_BUBBLE_CRIT_POP_SCALE : 0;
 
   if (MapConfig.Functions.ModePushDamageBubbleFunc)
-    MapConfig.Functions.ModePushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, isLocal, team);
+    MapConfig.Functions.ModePushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, isLocal, team,
+      popScale, isSuperCrit ? '!' : 0);
 #endif
 }
 

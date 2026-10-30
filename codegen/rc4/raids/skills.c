@@ -142,48 +142,43 @@ struct SkillsGoldBoltState
 } skillsGoldBoltState;
 
 //--------------------------------------------------------------------------
-float skillsGetDamageFactor(int skillPoints)
-{
-  if (skillPoints <= 0) return 1.0f;
-  return 1.0f + 0.10f * skillPoints;
-}
-
-//--------------------------------------------------------------------------
-float skillsGetMovementSpeedFactor(int skillPoints)
-{
-  if (skillPoints <= 0) return 1.0f;
-  return 1.0f + 0.05f * skillPoints;
-}
-
-//--------------------------------------------------------------------------
 float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float multiplier)
 {
   if (skillPoints <= 0 || !(multiplier > 0 && multiplier <= FLT_MAX)) return 1.0f;
   switch (skillId)
   {
-    case RAIDS_CLASS_SKILL_DAMAGE: return 1.0f + (skillsGetDamageFactor(skillPoints) - 1.0f) * multiplier;
-    case RAIDS_CLASS_SKILL_MOVEMENT_SPEED: return 1.0f + (skillsGetMovementSpeedFactor(skillPoints) - 1.0f) * multiplier;
-    case RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE:
-    case RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE:
-    case RAIDS_CLASS_SKILL_VEHICLE_DAMAGE:
-    case RAIDS_CLASS_SKILL_VEHICLE_HEALTH:
-    case RAIDS_CLASS_SKILL_MAX_HEALTH:
-    case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED:
-    case RAIDS_CLASS_SKILL_AIR_SUPERIORITY:
-    case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES:
-      return 1.0f + 0.10f * skillPoints * multiplier;
-    case RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED:
+    case RAIDS_CLASS_SKILL_DAMAGE:
+      return 1.0f + 0.25f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_MOVEMENT_SPEED:
       return 1.0f + 0.20f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE:
+      return 1.0f + 0.5f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE:
+      return 1.0f + 0.5f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_VEHICLE_DAMAGE:
+      return 1.0f + 0.5f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_VEHICLE_HEALTH:
+      return 1.0f + 0.25f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_MAX_HEALTH:
+      return 1.0f + 0.25f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED:
+      return 1.0f + 2.0f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_AIR_SUPERIORITY:
+      return 1.0f + 0.50f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES:
+      return 1.0f + 0.25f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED:
+      return 1.0f + 2.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH:
       return 1.0f + 0.25f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE:
       return 1.0f + 0.20f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_BLAST_REACH:
-      return maxf(0.0f, 1.0f - 0.10f * skillPoints * multiplier);
+      return maxf(0.0f, 1.0f - 0.25f * skillPoints * multiplier);
     case RAIDS_CLASS_SKILL_STEALTH:
       // Ordinary vision and proximity detection only. Existing targets, retaliation,
       // and map-authored forced aggro remain effective.
-      return maxf(0.5f, 1.0f - 0.10f * skillPoints * multiplier);
+      return maxf(0.5f, 1.0f - 0.20f * skillPoints * multiplier);
     default: return 1.0f;
   }
 }
@@ -199,7 +194,17 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
     case RAIDS_CLASS_SKILL_ALPHA_SPEED:
     case RAIDS_CLASS_SKILL_ALPHA_NANOLEECH:
     case RAIDS_CLASS_SKILL_ALPHA_AMMO:
+    case RAIDS_CLASS_SKILL_ALPHA_IMPACT:
       return floorf(skillPoints * multiplier);
+    case RAIDS_CLASS_SKILL_VIPER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_FUSION_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_B6_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY:
+      return skillPoints;
     case RAIDS_CLASS_SKILL_HEALING_FIELD: return 10.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_AMMO_FIELD:
       // Normal ammo-pickup equivalents per pulse, using ammodrop's per-weapon tuning.
@@ -207,8 +212,8 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
     case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_DEADEYE:
-      // Percentage points while stationary with Fusion; total critical chance caps at 100%.
-      return 20.0f * skillPoints * multiplier;
+      // Chance to upgrade a normal crit while stationary with Fusion.
+      return 10.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY: return floorf(15.0f * skillPoints * multiplier);
     case RAIDS_CLASS_SKILL_HOVERBOOTS: return 1.5f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_WALL_WALKING: return 1.0f * skillPoints * multiplier;
@@ -241,6 +246,23 @@ int skillsIsUnlock(enum RaidsClassSkillId skillId)
 }
 
 //--------------------------------------------------------------------------
+enum RaidsClassSkillId skillsGetWeaponRaritySkillId(int weaponSlot)
+{
+  const enum RaidsClassSkillId skills[] = {
+    RAIDS_CLASS_SKILL_VIPER_MAX_RARITY,
+    RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY,
+    RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY,
+    RAIDS_CLASS_SKILL_FUSION_MAX_RARITY,
+    RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY,
+    RAIDS_CLASS_SKILL_B6_MAX_RARITY,
+    RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY,
+    RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY,
+  };
+  if (weaponSlot < 0 || weaponSlot >= COUNT_OF(skills)) return RAIDS_CLASS_SKILL_NONE;
+  return skills[weaponSlot];
+}
+
+//--------------------------------------------------------------------------
 void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float multiplier, char* buf, int bufSize)
 {
   if (!buf || bufSize <= 0) return;
@@ -254,10 +276,21 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
     case RAIDS_CLASS_SKILL_EXTRA_JUMPS:
       snprintf(buf, bufSize, "+%d jump%s", (int)bonus, bonus == 1 ? "" : "s");
       break;
+    case RAIDS_CLASS_SKILL_VIPER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_FUSION_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_B6_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY:
+      snprintf(buf, bufSize, "+%d rarity step%s", (int)bonus, bonus == 1 ? "" : "s");
+      break;
     case RAIDS_CLASS_SKILL_ALPHA_AREA:
     case RAIDS_CLASS_SKILL_ALPHA_SPEED:
     case RAIDS_CLASS_SKILL_ALPHA_NANOLEECH:
     case RAIDS_CLASS_SKILL_ALPHA_AMMO:
+    case RAIDS_CLASS_SKILL_ALPHA_IMPACT:
       snprintf(buf, bufSize, "+%d mod%s", (int)bonus, bonus == 1 ? "" : "s");
       break;
     case RAIDS_CLASS_SKILL_HEALING_FIELD:
@@ -287,7 +320,7 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
       snprintf(buf, bufSize, "+%.0f HP/kill", bonus);
       break;
     case RAIDS_CLASS_SKILL_DEADEYE:
-      snprintf(buf, bufSize, "+%.0f%% crit chance", bonus);
+      snprintf(buf, bufSize, "%.0f%% super crit", bonus);
       break;
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC:
       snprintf(buf, bufSize, "+%.0f HP/hit", bonus);
@@ -347,6 +380,7 @@ char* skillsGetName(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_VEHICLE_HEALTH: return "Vehicle Health";
     case RAIDS_CLASS_SKILL_MAX_HEALTH: return "Maximum Health";
     case RAIDS_CLASS_SKILL_ALPHA_AMMO: return "Ammo Mods";
+    case RAIDS_CLASS_SKILL_ALPHA_IMPACT: return "Impact Mods";
     case RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED: return "Viper Projectile Speed";
     case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED: return "B6 Projectile Speed";
     case RAIDS_CLASS_SKILL_BLAST_REACH: return "Blast Reach";
@@ -358,6 +392,14 @@ char* skillsGetName(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return "Combat Medic";
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS: return "Cluster Bombs";
     case RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH: return "Unstoppable Smash";
+    case RAIDS_CLASS_SKILL_VIPER_MAX_RARITY: return "Dual Vipers Max Rarity";
+    case RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY: return "Magma Cannon Max Rarity";
+    case RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY: return "Arbiter Max Rarity";
+    case RAIDS_CLASS_SKILL_FUSION_MAX_RARITY: return "Fusion Max Rarity";
+    case RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY: return "Mine Launcher Max Rarity";
+    case RAIDS_CLASS_SKILL_B6_MAX_RARITY: return "B6 Max Rarity";
+    case RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY: return "Flail Max Rarity";
+    case RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY: return "Holoshield Max Rarity";
     default: return "Unknown skill";
   }
 }
@@ -375,8 +417,8 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH: return "Extend chargeboot travel duration.";
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE: return "Increase wrench damage.";
     case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Add percentage points to the chance of an ammo drop.";
-    case RAIDS_CLASS_SKILL_HEALING_FIELD: return "Wrench hyperstrike creates a healing field. Has a cooldown.";
-    case RAIDS_CLASS_SKILL_AMMO_FIELD: return "Wrench hyperstrike creates an ammo field. Uses ammo drops. Has cooldown.";
+    case RAIDS_CLASS_SKILL_HEALING_FIELD: return "Wrench hyperstrike creates a healing field. Has cooldown.";
+    case RAIDS_CLASS_SKILL_AMMO_FIELD: return "Wrench hyperstrike creates an ammo field. Has cooldown.";
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return "Add percentage points to critical hit chance.";
     case RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY: return "Extend the damage immunity after getting hit.";
     case RAIDS_CLASS_SKILL_ALPHA_AREA: return "Add Area alpha mods to your equipped weapon.";
@@ -391,6 +433,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_VEHICLE_HEALTH: return "Increase vehicle maximum health while driving.";
     case RAIDS_CLASS_SKILL_MAX_HEALTH: return "Increase hero maximum health.";
     case RAIDS_CLASS_SKILL_ALPHA_AMMO: return "Add Ammo alpha mods to your equipped weapon.";
+    case RAIDS_CLASS_SKILL_ALPHA_IMPACT: return "Add Impact alpha mods to your equipped weapon.";
     case RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED: return "Increase Dual Vipers projectile speed.";
     case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED: return "Increase B6 projectile speed.";
     case RAIDS_CLASS_SKILL_BLAST_REACH: return "Retain more damage at the edges of explosions.";
@@ -398,10 +441,19 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_AIR_SUPERIORITY: return "Increase damage while airborne.";
     case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES: return "Health and ammo pickups restore more.";
     case RAIDS_CLASS_SKILL_STEALTH: return "Reduce detection ranges. Mobs can still retaliate.";
-    case RAIDS_CLASS_SKILL_DEADEYE: return "Gain critical chance while standing still with Fusion. Total caps at 100%.";
+    case RAIDS_CLASS_SKILL_DEADEYE: return "While standing still with Fusion, critical hits can become red super crits for 6x damage instead of 3x.";
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return "Direct Fusion hits heal living teammates up to max HP. Uses normal ammo.";
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS: return "Primary B6 blasts spawn extra B6 bombs. Secondary bombs cannot cluster.";
     case RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH: return "During hyperstrike or flail aerial smash, prevent flinching from hits under 25% of max HP per rank. Damage still applies.";
+    case RAIDS_CLASS_SKILL_VIPER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_FUSION_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_B6_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY:
+    case RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY:
+      return "Increase this weapon's maximum rarity in this class by one step per rank, up to Mythic. If locked, the first rank unlocks Common.";
     default: return "No description available.";
   }
 }
@@ -596,28 +648,32 @@ float skillsGetAmmoDropChance(Player* player, float baseChance)
 }
 
 //--------------------------------------------------------------------------
-// Damage, movement speed and maximum health are applied to fresh baselines.
+// Add applicable class damage bonuses, then multiply the incoming damage once.
 void skillsFinalizePlayerDamage(struct RaidsPlayerDamageContext* context)
 {
   if (!context) return;
 
   Player* player = context->Attacker;
-  context->Damage *= skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_DAMAGE);
   if (!skillsPlayerIsReady(player)) return;
+  float damageFactor = skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_DAMAGE);
 
   if (context->Target) {
     float distance = sqrtf(vector_sqrdistance(player->PlayerPosition, context->Target->Position));
     if (distance >= 0 && distance <= FLT_MAX) {
       float closeWeight = clamp(1 - distance / 15.0f, 0, 1);
       float longWeight = clamp((distance - 25.0f) / 25.0f, 0, 1);
-      context->Damage *= 1 + (skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE) - 1) * closeWeight;
-      context->Damage *= 1 + (skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE) - 1) * longWeight;
+      damageFactor += (skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE) - 1) * closeWeight;
+      damageFactor += (skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE) - 1) * longWeight;
     }
   }
+
   if (context->WeaponId == WEAPON_ID_WRENCH)
-    context->Damage *= skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_WRENCH_DAMAGE);
-  if (!player->InVehicle && !player->Ground.onGood)
-    context->Damage *= skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_AIR_SUPERIORITY);
+    damageFactor += skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_WRENCH_DAMAGE) - 1;
+  
+    if (!player->InVehicle && !player->Ground.onGood)
+    damageFactor += skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_AIR_SUPERIORITY) - 1;
+  
+    context->Damage *= damageFactor;
 }
 
 //--------------------------------------------------------------------------
@@ -636,17 +692,23 @@ void skillsModifyPlayerCritChance(struct RaidsPlayerDamageContext* context)
   if (!context) return;
 
   context->CritChance += skillsGetPlayerBonus(context->Attacker, RAIDS_CLASS_SKILL_CRITICAL_CHANCE) / 100.0f;
-  Player* player = context->Attacker;
-  if (skillsPlayerIsReady(player) && !player->InVehicle && player->Ground.onGood
-      && player->WeaponHeldId == WEAPON_ID_FUSION_RIFLE && context->WeaponId == WEAPON_ID_FUSION_RIFLE
-      && player->Velocity[0] * player->Velocity[0] + player->Velocity[1] * player->Velocity[1] < 0.0001f)
-    context->CritChance += skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_DEADEYE) / 100.0f;
 }
 
 //--------------------------------------------------------------------------
 void skillsModifyPlayerCritDamage(struct RaidsPlayerDamageContext* context)
 {
-  // No current skill changes the critical multiplier. Keep this extension point.
+  if (!context || !context->IsCritical) return;
+
+  Player* player = context->Attacker;
+  if (skillsPlayerIsReady(player) && !player->InVehicle && player->Ground.onGood
+      && player->WeaponHeldId == WEAPON_ID_FUSION_RIFLE && context->WeaponId == WEAPON_ID_FUSION_RIFLE
+      && player->Velocity[0] * player->Velocity[0] + player->Velocity[1] * player->Velocity[1] < 0.0001f) {
+    float chance = clamp(skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_DEADEYE) / 100.0f, 0, 1);
+    if (chance > 0 && randRange(0, 1) < chance) {
+      context->CritMultiplier = 6;
+      context->DamageFlags |= RAIDS_DAMAGE_FLAG_SUPER_CRITICAL;
+    }
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -667,6 +729,9 @@ int skillsGetAlphaModBonus(Player* player, int alphaModId)
       break;
     case ALPHA_MOD_NANOLEECH:
       skillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH;
+      break;
+    case ALPHA_MOD_IMPACT:
+      skillId = RAIDS_CLASS_SKILL_ALPHA_IMPACT;
       break;
     default: return 0;
   }

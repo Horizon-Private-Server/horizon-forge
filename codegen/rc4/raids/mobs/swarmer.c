@@ -239,7 +239,7 @@ void swarmerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 #endif
 
   int isShock = e->DamageFlags & 0x40;
-  int isShortFreeze = e->DamageFlags & 0x40000000;
+  int isShortFreeze = e->DamageFlags & RAIDS_DAMAGE_FLAG_SHORT_FREEZE;
 
 	// destroy
 	if (newHp <= 0) {

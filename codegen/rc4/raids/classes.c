@@ -13,14 +13,22 @@ const RaidsClassDef_t classDefinitions[] = {
     .ExperienceCurveMultiplier = 1.0f,
     .WeaponMaxRarities = { RAIDS_ITEM_RARITY_UNCOMMON, -1, -1, -1, -1, -1, -1, -1 },
     .Skills = {
-      // Damage.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 1.0f },
+      // Vipers: speed mods, area mods, projectile speed, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo drops.
+      // Fusion: damage, critical chance, then weapon access and rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FUSION_MAX_RARITY, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+
+      // Ammo: drops and capacity branch into pickup efficiency or Holoshield access.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
-
-      // Projectile speed.
-      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 4, .Multiplier = 1.0f },
     },
   },
   {
@@ -30,14 +38,21 @@ const RaidsClassDef_t classDefinitions[] = {
     .ExperienceCurveMultiplier = 1.0f,
     .WeaponMaxRarities = { -1, -1, -1, -1, -1, RAIDS_ITEM_RARITY_UNCOMMON, -1, -1 },
     .Skills = {
-      // Damage.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 1.0f },
+      // B6: impact mods, area mods, projectile speed, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_IMPACT, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo drops.
+      // Arbiter: damage, blast reach, then weapon access and rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+
+      // Ammo: drops, capacity, then pickup efficiency.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
-
-      // Projectile handling.
-      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
     },
   },
   {
@@ -47,15 +62,23 @@ const RaidsClassDef_t classDefinitions[] = {
     .ExperienceCurveMultiplier = 1.0f,
     .WeaponMaxRarities = { -1, -1, -1, -1, -1, -1, RAIDS_ITEM_RARITY_UNCOMMON, -1 },
     .Skills = {
-      // Damage, then melee specialization.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_WRENCH_DAMAGE, .MaxRank = 5, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      // Flail: damage, area mods, critical chance, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 2, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY, .MaxRank = 1, .X = 3, .Y = 5, .Multiplier = 1.0f },
 
-      // Health.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      // Wrench: nanoleech mods, movement, then wrench damage.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_WRENCH_DAMAGE, .MaxRank = 5, .X = 2, .Y = 1, .Multiplier = 1.0f },
 
-      // Movement.
-      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
+      // Ammo: drops and capacity branch into Magma Cannon, pickup efficiency, or Holoshield access.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY, .MaxRank = 3, .X = 5, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY, .MaxRank = 1, .X = 6, .Y = 3, .Multiplier = 1.0f },
     },
   },
   {
@@ -67,17 +90,22 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_GUNNER, 10 } },
     .Skills = {
-      // Damage, range and critical hits.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 2.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE, .MaxRank = 5, .X = 3, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      // Vipers: speed mods, area mods, projectile speed, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo supply.
-      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      // Fusion: damage, range, critical chance, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FUSION_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 1, .Multiplier = 1.0f },
 
-      // Fire rate and projectile speed.
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 4, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 3, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      // Ammo: drops, capacity, then pickup efficiency.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
     },
   },
   {
@@ -89,19 +117,25 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_BOMBER, 10 } },
     .Skills = {
-      // Explosion damage, area and falloff.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 2.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      // B6: impact mods, area mods, projectile speed, rarity, then cluster bombs.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_IMPACT, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CLUSTER_BOMBS, .MaxRank = 1, .X = 1, .Y = 4, .Multiplier = 1.0f },
 
-      // Projectile handling.
-      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 3.0f },
+      // Arbiter: damage and blast reach branch into rocket guidance or vehicles.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VISIBOMB, .MaxRank = 1, .X = 1, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_DAMAGE, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_HEALTH, .MaxRank = 3, .X = 5, .Y = 1, .Multiplier = 1.0f },
 
-      // Ammo supply.
+      // Ammo: drops, capacity, then pickup efficiency.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
-
-      // Vehicle firepower.
-      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_DAMAGE, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 4, .Multiplier = 1.0f },
     },
   },
   {
@@ -113,18 +147,23 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_BRAWLER, 10 } },
     .Skills = {
-      // Melee damage, then weapon healing.
-      { .SkillId = RAIDS_CLASS_SKILL_WRENCH_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 2.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      // Flail: damage and close-range damage branch into rarity or smash protection.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH, .MaxRank = 4, .X = 4, .Y = 5, .Multiplier = 1.0f },
 
-      // Commit to a hyperstrike or flail aerial smash without flinching.
-      { .SkillId = RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH, .MaxRank = 4, .X = 4, .Y = 2, .Multiplier = 1.0f },
+      // Wrench: health, nanoleech mods, movement, then wrench damage.
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 4, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_WRENCH_DAMAGE, .MaxRank = 5, .X = 1, .Y = 1, .Multiplier = 2.0f },
 
-      // Health, vehicle durability and damage immunity.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_HEALTH, .MaxRank = 3, .X = 2, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 1.0f },
+      // Ammo: drops, capacity, then branch into Magma Cannon or pickup efficiency.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
     },
   },
   {
@@ -136,15 +175,21 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 2,
     .UnlockRules = { { RAIDS_CLASS_GUNNER, 5 }, { RAIDS_CLASS_BRAWLER, 5 } },
     .Skills = {
-      // Movement and chargeboots.
-      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      // Flail: movement and chargeboots branch into rarity or concealment.
+      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 1.5f },
       { .SkillId = RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_STEALTH, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 1.0f },
 
-      // Extra jumps.
+      // Vipers: extra jumps, airborne damage, then rarity.
       { .SkillId = RAIDS_CLASS_SKILL_EXTRA_JUMPS, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_AIR_SUPERIORITY, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
 
-      // Concealment.
-      { .SkillId = RAIDS_CLASS_SKILL_STEALTH, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
+      // Ammo: drops, capacity, then pickup efficiency.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
     },
   },
   {
@@ -156,15 +201,22 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 2,
     .UnlockRules = { { RAIDS_CLASS_BOMBER, 5 }, { RAIDS_CLASS_GUNNER, 5 } },
     .Skills = {
-      // Health, area and team ammo refills.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_AMMO_FIELD, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      // Mines: impact mods, area mods, blast reach, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_IMPACT, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo drops, capacity and efficient pickups.
+      // Shields: health, damage immunity, then Holoshield rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 1, .Multiplier = 1.0f },
+
+      // Ammo: drops and capacity branch into pickup efficiency or team resupply.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 2.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_FIELD, .MaxRank = 3, .X = 5, .Y = 4, .Multiplier = 1.0f },
     },
   },
   {
@@ -176,24 +228,27 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_MARKSMAN, 10 } },
     .Skills = {
-      // Damage, range and advanced precision.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE, .MaxRank = 5, .X = 3, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_DEADEYE, .MaxRank = 3, .X = 1, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_AIR_SUPERIORITY, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 1.0f },
+      // Vipers: speed mods, area mods, projectile speed, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo supply, capacity and weapon handling.
-      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 4, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_VIPER_PROJECTILE_SPEED, .MaxRank = 3, .X = 5, .Y = 3, .Multiplier = 3.0f },
+      // Fusion: damage, range, critical chance, rarity, then Deadeye.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FUSION_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_DEADEYE, .MaxRank = 3, .X = 1, .Y = 2, .Multiplier = 1.0f },
 
-      // Survival and concealment.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 1, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_STEALTH, .MaxRank = 5, .X = 1, .Y = 2, .Multiplier = 1.0f },
+      // Ammo: drops and capacity branch into pickup efficiency or Arbiter rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 4, .Multiplier = 1.0f },
+
+      // Survival.
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 2.0f },
     },
   },
   {
@@ -205,26 +260,27 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_GRENADIER, 10 } },
     .Skills = {
-      // Explosives, then projectile handling and rocket control.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 5.0f },
+      // B6: impact mods, area mods, projectile speed, rarity, then two cluster bombs.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_IMPACT, .MaxRank = 2, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED, .MaxRank = 1, .X = 4, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_B6_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CLUSTER_BOMBS, .MaxRank = 2, .X = 5, .Y = 2, .Multiplier = 1.0f },
+
+      // Arbiter: damage and blast reach branch into rocket guidance or vehicles.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 2, .X = 1, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 2, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_VISIBOMB, .MaxRank = 1, .X = 1, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CLUSTER_BOMBS, .MaxRank = 2, .X = 5, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_DAMAGE, .MaxRank = 3, .X = 1, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_HEALTH, .MaxRank = 3, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo drops, capacity and efficient pickups.
+      // Ammo: capacity branches into Magma rarity or efficient supplies leading to health.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 4, .Multiplier = 1.0f },
-
-      // Vehicle damage and durability.
-      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_DAMAGE, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_HEALTH, .MaxRank = 3, .X = 1, .Y = 3, .Multiplier = 1.0f },
-
-      // Health and damage immunity.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 4, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 4, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 4, .Multiplier = 1.0f },
     },
   },
   {
@@ -236,23 +292,24 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_MELEE, 10 } },
     .Skills = {
-      // Damage, melee specialization, critical hits and area.
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_WRENCH_DAMAGE, .MaxRank = 5, .X = 3, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 1, .Y = 1, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 4, .Y = 1, .Multiplier = 1.0f },
-
-      // Health, immunity, healing and vehicle durability.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_VEHICLE_HEALTH, .MaxRank = 3, .X = 2, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_SECOND_WIND, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 1, .Y = 5, .Multiplier = 1.0f },
+      // Flail: damage and close-range damage branch into rarity or flinch immunity.
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE, .MaxRank = 3, .X = 3, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CLOSE_RANGE_DAMAGE, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 5, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_FLINCH_IMMUNITY, .MaxRank = 4, .X = 4, .Y = 5, .Multiplier = 1.0f },
 
-      // Pickups.
-      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      // Wrench: health, nanoleech, movement, wrench damage, then low-health kill healing.
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 4, .X = 3, .Y = 2, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 3, .Y = 1, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_WRENCH_DAMAGE, .MaxRank = 5, .X = 1, .Y = 1, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_SECOND_WIND, .MaxRank = 3, .X = 1, .Y = 2, .Multiplier = 1.0f },
+
+      // Ammo: drops and capacity branch into Magma rarity or pickup efficiency.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MAGMA_CANNON_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 1.0f },
     },
   },
   {
@@ -264,24 +321,28 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_SCOUT, 10 } },
     .Skills = {
-      // Movement and chargeboots lead to wall walking.
-      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 5, .X = 3, .Y = 2, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_WALL_WALKING, .MaxRank = 3, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      // Flail: movement, chargeboot length, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH, .MaxRank = 3, .X = 5, .Y = 3, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 2, .Multiplier = 1.0f },
 
-      // Jumps, hovering and critical hits.
+      // Vipers: jumps and hovering branch into wall walking and rarity or airborne damage.
       { .SkillId = RAIDS_CLASS_SKILL_EXTRA_JUMPS, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 1.0f },
       { .SkillId = RAIDS_CLASS_SKILL_HOVERBOOTS, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_CRITICAL_CHANCE, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_WALL_WALKING, .MaxRank = 3, .X = 4, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_VIPER_MAX_RARITY, .MaxRank = 1, .X = 5, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_AIR_SUPERIORITY, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 2.0f },
 
-      // Concealment, range and scouting.
-      { .SkillId = RAIDS_CLASS_SKILL_STEALTH, .MaxRank = 5, .X = 2, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_LONG_RANGE_DAMAGE, .MaxRank = 3, .X = 1, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR, .MaxRank = 1, .X = 1, .Y = 2, .Multiplier = 1.0f },
+      // Ammo: drops and capacity branch into pickup efficiency or Arbiter rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 1, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 1, .Y = 4, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ARBITER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 2, .Multiplier = 1.0f },
 
-      // Supply efficiency and capacity.
-      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 1.0f },
+      // Recon: health, concealment, then gold bolt detection.
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_STEALTH, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_GOLD_BOLT_INDICATOR, .MaxRank = 1, .X = 2, .Y = 1, .Multiplier = 1.0f },
     },
   },
   {
@@ -293,24 +354,28 @@ const RaidsClassDef_t classDefinitions[] = {
     .UnlockRulesCount = 1,
     .UnlockRules = { { RAIDS_CLASS_SUPPORT, 10 } },
     .Skills = {
-      // Health and immunity lead to weapon and team healing.
-      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 5, .X = 3, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 2, .Y = 5, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_HEALING_FIELD, .MaxRank = 3, .X = 1, .Y = 5, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_COMBAT_MEDIC, .MaxRank = 3, .X = 1, .Y = 4, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 4, .Y = 5, .Multiplier = 1.0f },
+      // Mines: impact mods, area mods, blast reach, then rarity.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_IMPACT, .MaxRank = 2, .X = 3, .Y = 4, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AREA, .MaxRank = 2, .X = 3, .Y = 5, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_BLAST_REACH, .MaxRank = 3, .X = 2, .Y = 5, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_MINE_LAUNCHER_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 5, .Multiplier = 1.0f },
 
-      // Ammo supply and efficiency lead to team refills.
+      // Defense: health and immunity branch into Holoshield rarity or team healing.
+      { .SkillId = RAIDS_CLASS_SKILL_MAX_HEALTH, .MaxRank = 3, .X = 3, .Y = 2, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_DAMAGE_IMMUNITY, .MaxRank = 3, .X = 3, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY, .MaxRank = 1, .X = 2, .Y = 1, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_HEALING_FIELD, .MaxRank = 3, .X = 4, .Y = 1, .Multiplier = 3.0f },
+
+      // Fusion: nanoleech, rarity, then direct-hit teammate healing.
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_NANOLEECH, .MaxRank = 2, .X = 2, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_FUSION_MAX_RARITY, .MaxRank = 1, .X = 1, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_COMBAT_MEDIC, .MaxRank = 3, .X = 1, .Y = 2, .Multiplier = 1.0f },
+
+      // Ammo: drops and capacity branch into pickup efficiency or team resupply.
       { .SkillId = RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE, .MaxRank = 3, .X = 4, .Y = 3, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 3.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_AMMO_FIELD, .MaxRank = 3, .X = 5, .Y = 1, .Multiplier = 2.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_SPEED, .MaxRank = 2, .X = 5, .Y = 4, .Multiplier = 1.0f },
-
-      // Movement and concealment.
-      { .SkillId = RAIDS_CLASS_SKILL_MOVEMENT_SPEED, .MaxRank = 3, .X = 2, .Y = 3, .Multiplier = 1.0f },
-      { .SkillId = RAIDS_CLASS_SKILL_STEALTH, .MaxRank = 3, .X = 1, .Y = 3, .Multiplier = 1.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_ALPHA_AMMO, .MaxRank = 2, .X = 5, .Y = 3, .Multiplier = 2.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES, .MaxRank = 3, .X = 5, .Y = 4, .Multiplier = 3.0f },
+      { .SkillId = RAIDS_CLASS_SKILL_AMMO_FIELD, .MaxRank = 3, .X = 5, .Y = 2, .Multiplier = 2.0f },
     },
   },
 };
@@ -325,7 +390,7 @@ int classesGetSkillMaxRank(const RaidsClassDef_t* def, int skillIdx)
   if (!skillsIsValid(skill->SkillId) || !skill->MaxRank) return 0;
   if (skillsIsUnlock(skill->SkillId)) return 1;
   int maxRank = skill->MaxRank;
-  if (skill->SkillId == RAIDS_CLASS_SKILL_STEALTH && maxRank > 5) maxRank = 5;
+  if (skill->SkillId == RAIDS_CLASS_SKILL_STEALTH && maxRank > 3) maxRank = 3;
   return maxRank;
 }
 
@@ -380,7 +445,7 @@ int classesValidateDefinitions(void)
           || skill->X >= RAIDS_CLASS_GRID_SIZE || skill->Y >= RAIDS_CLASS_GRID_SIZE
           || (skill->X == RAIDS_CLASS_GRID_CENTER && skill->Y == RAIDS_CLASS_GRID_CENTER)) return 0;
       if (skillsIsUnlock(skill->SkillId) && (skill->MaxRank != 1 || skill->Multiplier != 1)) return 0;
-      if (skill->SkillId == RAIDS_CLASS_SKILL_STEALTH && skill->MaxRank > 5) return 0;
+      if (skill->SkillId == RAIDS_CLASS_SKILL_STEALTH && skill->MaxRank > 3) return 0;
       for (k = 0; k < j; ++k) {
         if (def->Skills[k].SkillId == skill->SkillId
             || (def->Skills[k].SkillId && def->Skills[k].X == skill->X && def->Skills[k].Y == skill->Y)) return 0;
