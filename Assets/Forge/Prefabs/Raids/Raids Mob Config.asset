@@ -872,17 +872,17 @@ MonoBehaviour:
         FourStars: 20
         FiveStars: 20
       Probability:
+        OneStar: 0.5
+        TwoStars: 0.5
+        ThreeStars: 0.5
+        FourStars: 0.5
+        FiveStars: 0.5
+      QueuedForTicks:
         OneStar: 1
         TwoStars: 1
         ThreeStars: 1
         FourStars: 1
         FiveStars: 1
-      QueuedForTicks:
-        OneStar: 0
-        TwoStars: 0
-        ThreeStars: 0
-        FourStars: 0
-        FiveStars: 0
     Parameters:
     - Name: Swing Damage Multiplier
       Description: 
@@ -952,11 +952,11 @@ MonoBehaviour:
         4 resets every 25%, 10 every 10%; 0 or 1 disables damage-triggered resets.
       ValueType: 1
       DefaultValue:
-        OneStar: 2
-        TwoStars: 2
-        ThreeStars: 2
-        FourStars: 2
-        FiveStars: 2
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}

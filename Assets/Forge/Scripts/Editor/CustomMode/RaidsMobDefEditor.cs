@@ -75,10 +75,10 @@ public class RaidsMobDefEditor : Editor
             if (property.isExpanded)
             {
                 Help(config.Description);
-                UnityHelper.FloatOverride(property.FindPropertyRelative("MinCooldownSeconds"), difficultyField, config.MinCooldownSeconds.Get(_difficulty), label: "Min Cooldown (sec)");
-                UnityHelper.FloatOverride(property.FindPropertyRelative("MaxCooldownSeconds"), difficultyField, config.MaxCooldownSeconds.Get(_difficulty), label: "Max Cooldown (sec)");
-                Probability(property.FindPropertyRelative("Probability").FindPropertyRelative(difficultyField), config.Probability.Get(_difficulty), "Probability", "0 = never; 1 = always");
-                UnityHelper.Int32Override(property.FindPropertyRelative("QueuedForTicks"), difficultyField, config.QueuedForTicks.Get(_difficulty), label: "Queued Ticks", tooltip: "0 = unlimited");
+                UnityHelper.FloatOverride(property.FindPropertyRelative("MinCooldownSeconds"), difficultyField, config.MinCooldownSeconds.Get(_difficulty), label: "Min Cooldown (sec)", tooltip: RaidsMobActionDrawer.MinCooldownTooltip);
+                UnityHelper.FloatOverride(property.FindPropertyRelative("MaxCooldownSeconds"), difficultyField, config.MaxCooldownSeconds.Get(_difficulty), label: "Max Cooldown (sec)", tooltip: RaidsMobActionDrawer.MaxCooldownTooltip);
+                Probability(property.FindPropertyRelative("Probability").FindPropertyRelative(difficultyField), config.Probability.Get(_difficulty), "Probability", RaidsMobActionDrawer.ProbabilityTooltip);
+                UnityHelper.Int32Override(property.FindPropertyRelative("QueuedForTicks"), difficultyField, config.QueuedForTicks.Get(_difficulty), label: "Queued Ticks", tooltip: RaidsMobActionDrawer.QueuedTicksTooltip);
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
         }

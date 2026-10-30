@@ -53,10 +53,15 @@ public class RaidsMobsScriptableObjectEditor : Editor
 [CustomPropertyDrawer(typeof(RaidsMobsScriptableObject.RaidsMobAction))]
 public class RaidsMobActionDrawer : PropertyDrawer
 {
-    private static readonly GUIContent MinCooldownLabel = new GUIContent("Min Cooldown (sec)");
-    private static readonly GUIContent MaxCooldownLabel = new GUIContent("Max Cooldown (sec)");
-    private static readonly GUIContent ProbabilityLabel = new GUIContent("Probability", "0 = never; 1 = always");
-    private static readonly GUIContent QueuedTicksLabel = new GUIContent("Queued Ticks", "0 = unlimited");
+    internal const string MinCooldownTooltip = "Minimum wait in seconds before rolling this action's probability. Each cooldown is chosen randomly between Min and Max. A failed roll, an expired queue, or use of the action starts a new cooldown.";
+    internal const string MaxCooldownTooltip = "Maximum wait in seconds before rolling this action's probability. Set Min and Max equal for a fixed cooldown. If both are 0, failed rolls retry every game tick (60 ticks per second).";
+    internal const string ProbabilityTooltip = "Chance to queue this action each time its cooldown expires: 0 = never, 0.2 = 20%, 1 = always. A failed roll starts a new cooldown before trying again. Success makes the action ready; execution still depends on range, current state, and other action conditions. No further rolls occur while queued.";
+    internal const string QueuedTicksTooltip = "How long a successful probability roll keeps this action ready while waiting for its conditions to allow execution (60 ticks = 1 second). 0 = stay ready until used. If a positive limit expires before use, readiness is cleared and a new cooldown starts. This is not the action's duration.";
+
+    private static readonly GUIContent MinCooldownLabel = new GUIContent("Min Cooldown (sec)", MinCooldownTooltip);
+    private static readonly GUIContent MaxCooldownLabel = new GUIContent("Max Cooldown (sec)", MaxCooldownTooltip);
+    private static readonly GUIContent ProbabilityLabel = new GUIContent("Probability", ProbabilityTooltip);
+    private static readonly GUIContent QueuedTicksLabel = new GUIContent("Queued Ticks", QueuedTicksTooltip);
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
