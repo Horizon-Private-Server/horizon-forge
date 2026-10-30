@@ -40,6 +40,7 @@
 #include "shared.h"
 #include "pathfind.h"
 #include "window.h"
+#include "menu.h"
 #include "utils.h"
 
 #define CONTRACTS_REROLL_COST (50000)
@@ -70,6 +71,8 @@ extern char* inventoryPaintNames[];
 extern char* inventoryPaintSpecialNames[];
 extern char* inventoryModNames[];
 extern char bankRarityCode[];
+
+int contractsIsContractExpired(RaidsContract_t* contract);
 
 //--------------------------------------------------------------------------
 void contractsGetContracts(void)
@@ -110,11 +113,17 @@ void contractsComplete(RaidsContract_t* item)
   RaidsPlayerBank_t* bank = bankGetLocalBank();
   if (!bank) return;
 
+  if (!bankGetHasAccount()) return;
+  if (item->RewardClassXp > 0 && !classesGetDefinition(item->CompletedClassType)) return;
+
   // apply
   bankAddBolts(item->RewardBolts);
   bankAddXP(item->RewardPlayerXp);
   if (item->RequiredKillsGadgetId > 0)
     bankAddWeaponXP(item->RewardWeaponXp, item->RequiredKillsGadgetId);
+  if (item->RewardClassXp > 0)
+    bankAddClassXP(item->RewardClassXp, item->CompletedClassType);
+  bankSendAccountToServer();
 
   // pass to server
   struct RaidsActionContractRequest msg = {
@@ -127,21 +136,27 @@ void contractsComplete(RaidsContract_t* item)
   // refresh list of items
   contractsGetContracts();
   bankRequestAccountFromServer();
+  bankRequestEquippedClassProgressFromServer();
+  bankRequestAllClassProgressFromServer();
 }
 
 //--------------------------------------------------------------------------
 void contractsReroll(RaidsContract_t* item)
 {
+  if (!item || !item->Uid) return;
+
   void* connection = netGetLobbyServerConnection();
   if (!connection) return;
 
   RaidsPlayerBank_t* bank = bankGetLocalBank();
   if (!bank) return;
 
-  // not enough money
+  // Expired contracts can be dismissed for free; other buyouts cost bolts.
 #if !DEV_BUILD
-  if (bankGetBolts() < CONTRACTS_REROLL_COST) return;
-  bankSubtractBolts(CONTRACTS_REROLL_COST);
+  if (!contractsIsContractExpired(item)) {
+    if (bankGetBolts() < CONTRACTS_REROLL_COST) return;
+    bankSubtractBolts(CONTRACTS_REROLL_COST);
+  }
 #endif
 
   // tell server we bought the item
@@ -163,7 +178,7 @@ void contractsOpen(int allowInteract)
   struct RaidsState* state = MapConfig.State;
 
   if (!state) return;
-  if (gameHasEnded()) return;
+  if (shouldCloseMenu() || (allowInteract && !isOnHubWorld())) return;
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
 
   state->MenuOpen = RAIDS_CUSTOM_MENU_CONTRACTS;
@@ -217,296 +232,251 @@ int contractsIsContractExpired(RaidsContract_t* contract)
 }
 
 //--------------------------------------------------------------------------
+void contractsDrawRewardRow(Window_t* window, float y, char* label, u32 value)
+{
+  const float padding = RAIDS_MENU_PADDING;
+  const float labelWidth = 55;
+  char strBuf[32];
+  snprintf(strBuf, sizeof(strBuf), "+%'u", value);
+  menuDrawFittedText(window, padding, y, labelWidth, 0.65, RAIDS_MENU_TEXT_COLOR, label, TEXT_ALIGN_TOPLEFT);
+  menuDrawFittedText(window, window->Width - padding, y, window->Width - 2*padding - labelWidth - 8, 0.65, 0x8000E0E0, strBuf, TEXT_ALIGN_TOPRIGHT);
+}
+
+//--------------------------------------------------------------------------
 void contractsDrawContractInfo(Window_t* drawWindow, RaidsContract_t* contract, int idx)
 {
-  u32 selectedColor = 0x40008080; // yellow
-  u32 progressColor = 0x40008000; // green
-  u32 textColor = 0x80FFFFFF; // white
-  u32 spriteColor = 0x80808080; // gray
-  u32 starColor = 0x80008080; // yellow
-  const u32 contractBorderColor = 0x80202020; // gray
-  const u32 contractSelectedBorderColor = 0x80008080; // yellow
-  const u32 bgColor = 0x70303030; // dark gray
-  const u32 contractActivatedBgColor = 0x40206020; // green
-  const u32 contractExpiredBgColor = 0x40202060; // red
-  const u32 rewardTextColor = 0x8000E0E0; // yellow
-  const int titlePadding = 5;
-  const int lineHeight = 12;
+  const float padding = RAIDS_MENU_PADDING;
+  const float contentWidth = drawWindow->Width - 2*padding;
+  const u32 textColor = RAIDS_MENU_TEXT_COLOR;
+  const u32 secondaryColor = RAIDS_MENU_SECONDARY_COLOR;
+  const u32 completedColor = 0x8060C080;
   char strBuf[128];
-  char progBuf[32];
-  float strW = 0;
-  float progress = 0;
-  int i;
-  int isSelected = contractsState.SelectedIndex == idx && contractsState.CanInteract;
-  u32 borderColor = contractBorderColor;
-  
-  // bg
-  windowFill(drawWindow, bgColor);
+  char progressBuf[64];
+  int isSelected = contractsState.CanInteract && contractsState.SelectedIndex == idx;
+  u32 borderColor = isSelected ? 0x80008080 : RAIDS_MENU_BORDER_COLOR;
 
-  RaidsPlayerBank_t* bank = bankGetLocalBank();
-  if (!bank) return;
-  if (!contract || !contract->Uid) return;
+  windowFill(drawWindow, RAIDS_MENU_PANEL_COLOR);
+  windowBorder(drawWindow, borderColor, 1, 1, 1, 1);
+  if (!contract || !contract->Uid) {
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 8, contentWidth, 0.8, secondaryColor, "Empty slot", TEXT_ALIGN_TOPCENTER);
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, drawWindow->Height * 0.5, contentWidth, 0.7, secondaryColor, "No contract", TEXT_ALIGN_MIDDLECENTER);
+    return;
+  }
 
-  int contractIsActivated = contract->Activated;
-  int contractIsExpired = contractsIsContractExpired(contract);
-  int contractIsCompleted = contractsIsContractCompleted(contract);
+  int isCompleted = contractsIsContractCompleted(contract);
+  int isExpired = contractsIsContractExpired(contract);
+  int isRaid = contract->RequiredRaidTimeMs > 0;
   int slotId = weaponIdToSlot(contract->RequiredKillsGadgetId);
-
-  if (contractIsCompleted) {
-    windowFill(drawWindow, contractActivatedBgColor);
-    borderColor = colorLerp(contractActivatedBgColor, 0x80000000, 0.5);
-  } else if (contractIsExpired) {
-    windowFill(drawWindow, contractExpiredBgColor);
-    borderColor = colorLerp(contractExpiredBgColor, 0x80000000, 0.5);
-  } else if (contractIsActivated) {
-    windowFill(drawWindow, contractActivatedBgColor);
-    borderColor = colorLerp(contractActivatedBgColor, 0x80000000, 0.5);
+  int hasWeapon = slotId > 0 && slotId < WEAPON_SLOT_COUNT;
+  char* status = !contract->Activated ? "Available" : "Active";
+  u32 statusColor = contract->Activated ? 0x80B0B050 : textColor;
+  if (isCompleted) {
+    status = "Completed";
+    statusColor = completedColor;
+  } else if (isExpired) {
+    status = "Expired";
+    statusColor = RAIDS_MENU_WARNING_COLOR;
+  } else if (!contract->Activated && contract->RefreshInMinutes <= 0) {
+    status = "Refreshing";
+    statusColor = secondaryColor;
   }
 
-  // 
-  Window_t progressWindow;
-  windowCreateFrom(&progressWindow, drawWindow, 0, 0, drawWindow->Width, 30, TEXT_ALIGN_BOTTOMCENTER);
+  menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 8, contentWidth, 0.85, textColor, contract->MapName[0] ? contract->MapName : "Any Map", TEXT_ALIGN_TOPCENTER);
+  float statusWidth = gfxGetFontWidth(status, -1, 0.55) + 12;
+  windowDrawBox(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 26, statusWidth, 14, RAIDS_MENU_TRACK_COLOR, TEXT_ALIGN_TOPCENTER);
+  windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 28, 0.55, statusColor, status, -1, TEXT_ALIGN_TOPCENTER);
+  menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 48, contentWidth, 0.55, secondaryColor, "Objective", TEXT_ALIGN_TOPCENTER);
 
-  // map
-  snprintf(strBuf, sizeof(strBuf), "%s", contract->MapName[0] ? contract->MapName : "Any Map");
-  windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 2, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-  windowMove(drawWindow, 0, 12);
-  if (contract->RequiredRaidTimeMs > 0) {
-
-    int seconds = (contract->RequiredRaidTimeMs / 1000);
-      
-    // difficulty
+  float progress = 0;
+  if (isRaid) {
     if (contract->RequiredDifficultyStars >= 0) {
+      int stars = contract->RequiredDifficultyStars + 1;
+      if (stars > RAIDS_DIFFICULTY_COUNT) stars = RAIDS_DIFFICULTY_COUNT;
+      float starsWidth = stars*16 + (stars - 1)*4;
+      int i;
       gfxSetupGifPaging(0);
-      float starWidth = 20;
-      float starsWidth = contract->RequiredDifficultyStars * starWidth;
-      for (i = 0; i <= contract->RequiredDifficultyStars; ++i) {
-        windowDrawSprite(drawWindow, TEXT_ALIGN_TOPCENTER, (i*starWidth) - (starsWidth/2), 6, 16, 16, 88, starColor, TEXT_ALIGN_TOPCENTER);
-      }
+      for (i = 0; i < stars; ++i)
+        windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, (drawWindow->Width - starsWidth)*0.5 + i*20, 62, 16, 16, 88, 0x8000C0C0, TEXT_ALIGN_TOPLEFT);
       gfxDoGifPaging();
+    } else {
+      menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 64, contentWidth, 0.65, textColor, "Any difficulty", TEXT_ALIGN_TOPCENTER);
     }
-    windowMove(drawWindow, 0, 20);
-
-    // raid time
-    snprintf(strBuf, sizeof(strBuf), "Complete in under");
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(drawWindow, 0, 16);
-    snprintf(strBuf, sizeof(strBuf), "\x0A%d:%02d\x08 min", seconds / 60, seconds % 60);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(drawWindow, 0, 20);
-
-    // progress
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 82, contentWidth, 0.65, secondaryColor, "Finish under", TEXT_ALIGN_TOPCENTER);
+    snprintf(strBuf, sizeof(strBuf), "%u:%02u.%03u", contract->RequiredRaidTimeMs / 60000, (contract->RequiredRaidTimeMs / 1000) % 60, contract->RequiredRaidTimeMs % 1000);
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 96, contentWidth, 0.85, textColor, strBuf, TEXT_ALIGN_TOPCENTER);
     progress = contract->CompletedTimeMs > 0 && contract->CompletedTimeMs < contract->RequiredRaidTimeMs ? 1 : 0;
-    snprintf(progBuf, sizeof(progBuf), "%.1f%%", 100 * progress);
-
+    if (contract->CompletedTimeMs > 0)
+      snprintf(progressBuf, sizeof(progressBuf), "Best %u:%02u.%03u", contract->CompletedTimeMs / 60000, (contract->CompletedTimeMs / 1000) % 60, contract->CompletedTimeMs % 1000);
+    else
+      snprintf(progressBuf, sizeof(progressBuf), "Not completed");
   } else if (contract->RequiredKills > 0) {
-
-    windowMove(drawWindow, 0, 16);
-
-    // weapon
-    float killsOffsetX = 0;
-    if (slotId > 0) {
-      int spriteId = inventoryWeaponSpriteIds[slotId];
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 62, contentWidth, 0.85, textColor, contract->MobName, TEXT_ALIGN_TOPCENTER);
+    snprintf(strBuf, sizeof(strBuf), "Kill %'u", contract->RequiredKills);
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 82, contentWidth, 0.8, textColor, strBuf, TEXT_ALIGN_TOPCENTER);
+    if (hasWeapon) {
+      struct GadgetDef* gadgetDef = weaponGetDef(contract->RequiredKillsGadgetId, 0);
+      char* weaponName = gadgetDef ? uiMsgString(gadgetDef->quickSelectTag) : "Required weapon";
       gfxSetupGifPaging(0);
-      windowDrawSprite(drawWindow, TEXT_ALIGN_TOPCENTER, -14, 0, 16, 16, spriteId, textColor, TEXT_ALIGN_TOPCENTER);
+      windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, padding, 100, 16, 16, inventoryWeaponSpriteIds[slotId], textColor, TEXT_ALIGN_TOPLEFT);
       gfxDoGifPaging();
-      killsOffsetX += 10;
+      menuDrawFittedText(drawWindow, padding + 22, 103, contentWidth - 22, 0.65, textColor, weaponName, TEXT_ALIGN_TOPLEFT);
+    } else {
+      menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 103, contentWidth, 0.65, secondaryColor, "Any weapon", TEXT_ALIGN_TOPCENTER);
     }
-
-    // kills
-    snprintf(strBuf, sizeof(strBuf), "Kills");
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, killsOffsetX, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(drawWindow, 0, 16);
-
-    // mob count
-    snprintf(strBuf, sizeof(strBuf), "\x0A%'d\x08 %s", contract->RequiredKills, contract->RequiredKillsMobOClass > 0 ? contract->MobName : "");
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(drawWindow, 0, 20 + 4);
-    
-    // progress
     progress = contract->Kills / (float)contract->RequiredKills;
-    snprintf(progBuf, sizeof(progBuf), "%'d - %.1f%%", contract->Kills, 100 * progress);
-
+    snprintf(progressBuf, sizeof(progressBuf), "%'u / %'u", contract->Kills, contract->RequiredKills);
   } else {
-    
-    // invalid
+    menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, 82, contentWidth, 0.7, secondaryColor, "Unavailable", TEXT_ALIGN_TOPCENTER);
+    snprintf(progressBuf, sizeof(progressBuf), "--");
   }
 
-  // rewards
-  snprintf(strBuf, sizeof(strBuf), "Rewards");
-  windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-  windowMove(drawWindow, 0, 14);
-  gfxSetupGifPaging(0);
-  windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 12, 12, inventoryAlphaModSpriteIds[ALPHA_MOD_JACKPOT], textColor, TEXT_ALIGN_TOPLEFT);
-  gfxDoGifPaging();
-  snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardBolts);
-  windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
-  windowMove(drawWindow, 0, 12);
-  snprintf(strBuf, sizeof(strBuf), "XP");
-  windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-  snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardPlayerXp);
-  windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
-  windowMove(drawWindow, 0, 12);
-  
-  // weapon xp reward
-  if (slotId > 0) {
-    int spriteId = inventoryWeaponSpriteIds[slotId];
-    gfxSetupGifPaging(0);
-    windowDrawSprite(drawWindow, TEXT_ALIGN_TOPLEFT, 6, 2, 12, 12, spriteId, textColor, TEXT_ALIGN_TOPLEFT);
-    gfxDoGifPaging();
-    snprintf(strBuf, sizeof(strBuf), " XP");
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPLEFT, 12+6, 2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPLEFT);
-    snprintf(strBuf, sizeof(strBuf), "+%'d", contract->RewardWeaponXp);
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPRIGHT, -6, 2, 0.8, rewardTextColor, strBuf, -1, TEXT_ALIGN_TOPRIGHT);
+  windowDrawBox(drawWindow, TEXT_ALIGN_TOPLEFT, padding, 120, contentWidth, 1, RAIDS_MENU_TRACK_COLOR, TEXT_ALIGN_TOPLEFT);
+  menuDrawFittedText(drawWindow, padding, 126, contentWidth, 0.55, secondaryColor, "Rewards", TEXT_ALIGN_TOPLEFT);
+  contractsDrawRewardRow(drawWindow, 140, "Bolts", contract->RewardBolts);
+  contractsDrawRewardRow(drawWindow, 154, "Hero XP", contract->RewardPlayerXp);
+  float rewardY = 168;
+  if (contract->RewardClassXp > 0) {
+    contractsDrawRewardRow(drawWindow, rewardY, "Class XP", contract->RewardClassXp);
+    rewardY += 14;
   }
+  if (hasWeapon)
+    contractsDrawRewardRow(drawWindow, rewardY, "Weapon XP", contract->RewardWeaponXp);
 
-  // progress bar
-  windowFill(&progressWindow, bgColor);
-  windowDrawBox(&progressWindow, TEXT_ALIGN_MIDDLELEFT, 0, 0, ceilf(progress * progressWindow.Width), progressWindow.Height, progressColor, TEXT_ALIGN_MIDDLELEFT);
-  windowBorder(&progressWindow, borderColor, 0, 1, 0, 0);
-
-  // progress text
-  windowDrawText(&progressWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.7, textColor, progBuf, -1, TEXT_ALIGN_MIDDLECENTER);
-
-  // expiration
-  windowReset(drawWindow);
   if (!contract->Activated) {
-    snprintf(strBuf, sizeof(strBuf), "refresh in %d:%02d hours", contract->RefreshInMinutes / 60, contract->RefreshInMinutes % 60);
-  } else if (contractIsCompleted) {
-    snprintf(strBuf, sizeof(strBuf), "%cCOMPLETED", '\x0A');
-  } else if (contractIsExpired) {
-    snprintf(strBuf, sizeof(strBuf), "%cEXPIRED", '\x0E');
+    int minutes = contract->RefreshInMinutes > 0 ? contract->RefreshInMinutes : 0;
+    snprintf(strBuf, sizeof(strBuf), "Refresh in %dh %02dm", minutes / 60, minutes % 60);
+  } else if (isCompleted) {
+    snprintf(strBuf, sizeof(strBuf), "Ready to claim");
+  } else if (isExpired) {
+    snprintf(strBuf, sizeof(strBuf), "Expired");
   } else {
-    snprintf(strBuf, sizeof(strBuf), "expires in \x0E%d\x08 minutes", contract->ExpiresInMinutes);
+    snprintf(strBuf, sizeof(strBuf), "Expires in %d min", contract->ExpiresInMinutes);
   }
-  windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMCENTER, 0, -32, 0.7, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMCENTER);
-  
-  // border
-  windowBorder(drawWindow, isSelected ? contractSelectedBorderColor : borderColor, 1, 1, 1, 1);
+  menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, drawWindow->Height - 46, contentWidth, 0.6, statusColor, strBuf, TEXT_ALIGN_TOPCENTER);
+  menuDrawFittedText(drawWindow, drawWindow->Width * 0.5, drawWindow->Height - 30, contentWidth, 0.65, textColor, progressBuf, TEXT_ALIGN_TOPCENTER);
+  menuDrawProgressBar(drawWindow, padding, drawWindow->Height - 14, contentWidth, progress);
 }
 
 //--------------------------------------------------------------------------
 void contractsDrawContractList(Window_t* drawWindow, int selectedIdx, RaidsContract_t* items, int count)
 {
-  const u32 bgColor = 0x50101010; // dark gray
-  const u32 textColor = 0x80FFFFFF; // white
-  const u32 selectedColor = 0x40008080; // yellow
-  const int lineHeight = 12;
-  char strBuf[64];
-  RaidsPlayerBank_t* bank = bankGetLocalBank();
-  u32 bolts = bankGetBolts();
-
-  // draw box
-  windowFill(drawWindow, bgColor);
-
-  // draw contracts
+  const float padding = RAIDS_MENU_PADDING;
+  const float gap = 8;
+  float contractWidth = (drawWindow->Width - 2*padding - (count - 1)*gap) / count;
   int i;
-  float padding = 8;
-  float contractWidth = drawWindow->Width / BANK_MAX_CONTRACTS;
-  float contractHeight = drawWindow->Height;
-  for (i = 0; i < BANK_MAX_CONTRACTS; ++i) {
+  for (i = 0; i < count; ++i) {
     Window_t contractWindow;
-    windowCreateFrom(&contractWindow, drawWindow, ((i-(BANK_MAX_CONTRACTS/2)) * contractWidth), 0, contractWidth - padding, contractHeight - padding, TEXT_ALIGN_MIDDLECENTER);
-    contractsDrawContractInfo(&contractWindow, &bank->Contracts[i], i);
+    windowCreateFrom(&contractWindow, drawWindow, padding + i*(contractWidth + gap), padding, contractWidth, drawWindow->Height - 2*padding, TEXT_ALIGN_TOPLEFT);
+    contractsDrawContractInfo(&contractWindow, &items[i], i);
   }
 }
 
 //--------------------------------------------------------------------------
 void contractsDrawFooter(Window_t* drawWindow)
 {
-  const u32 bgSolidColor = 0x80000000;
-  const u32 textColor = 0x80FFFFFF;
   char strBuf[128];
   RaidsPlayerBank_t* bank = bankGetLocalBank();
-
-  // draw bg
-  windowFill(drawWindow, bgSolidColor);
-
-  // get selected item
-  RaidsContract_t* selectedContract = &bank->Contracts[contractsState.SelectedIndex];
+  RaidsContract_t* selectedContract = bank ? &bank->Contracts[contractsState.SelectedIndex] : NULL;
   int hasSelected = selectedContract && selectedContract->Uid != 0;
-  int isSelectedCompleted = contractsIsContractCompleted(selectedContract);
-  int isSelectedExpired = contractsIsContractExpired(selectedContract);
-  int isSelectedActivated = selectedContract->Activated;
 
   strBuf[0] = 0;
   if (contractsState.CanInteract && bankGetHasContracts() && contractsIsPlayerHighEnoughLevel()) {
-    if (!isSelectedActivated) strcat(strBuf, "\x10 ACCEPT    ");
-    else if (isSelectedCompleted) strcat(strBuf, "\x10 CLAIM    ");
-    else if (isSelectedExpired) strcat(strBuf, "\x10 DISMISS    ");
-    if (hasSelected && !isSelectedCompleted && !isSelectedExpired) strcat(strBuf, "\x13 BUYOUT    ");
+    strcat(strBuf, "\x1A \x1B CONTRACT    ");
+    if (hasSelected) {
+      int isCompleted = contractsIsContractCompleted(selectedContract);
+      int isExpired = contractsIsContractExpired(selectedContract);
+      if (!selectedContract->Activated && selectedContract->RefreshInMinutes > 0) strcat(strBuf, "\x10 ACCEPT    ");
+      else if (isCompleted) strcat(strBuf, "\x10 CLAIM    ");
+      else if (isExpired) strcat(strBuf, "\x10 DISMISS    ");
+      if (!isCompleted && !isExpired) strcat(strBuf, "\x13 BUYOUT    ");
+    }
   }
   strcat(strBuf, "\x12 CLOSE");
-  windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMLEFT, 2, -2, 0.8, textColor, strBuf, -1, TEXT_ALIGN_BOTTOMLEFT);
+  menuDrawFooter(drawWindow, strBuf);
 }
 
 //--------------------------------------------------------------------------
 void contractsDrawRerollDialog(Window_t* drawWindow, int contractInfoHeight)
 {
-  char buttonBuf[64];
+  char strBuf[64];
   RaidsPlayerBank_t* bank = bankGetLocalBank();
   RaidsContract_t* selectedContract = &bank->Contracts[contractsState.SelectedIndex];
+  u32 cost = contractsIsContractExpired(selectedContract) ? 0 : CONTRACTS_REROLL_COST;
+  const float padding = RAIDS_MENU_POPUP_PADDING;
+  const float detailsX = 192;
+  float detailsWidth = drawWindow->Width - detailsX - padding;
 
-  snprintf(buttonBuf, sizeof(buttonBuf), "\x10 \x0E%'d\x08 PAY        \x12 CANCEL", contractsIsContractExpired(selectedContract) ? 0 : CONTRACTS_REROLL_COST);
-  windowDrawDialog(drawWindow, "Buyout Contract", NULL, "", buttonBuf);
-
+  menuDrawPopupFrame(drawWindow, "Buyout Contract", RAIDS_MENU_TEXT_COLOR, "\x10 PAY        \x12 CANCEL");
   Window_t windowContractInfo;
-  windowCreateFrom(&windowContractInfo, drawWindow, 0, 0, 150, contractInfoHeight, TEXT_ALIGN_MIDDLECENTER);
+  windowCreateFrom(&windowContractInfo, drawWindow, padding, 40, 168, contractInfoHeight, TEXT_ALIGN_TOPLEFT);
   contractsDrawContractInfo(&windowContractInfo, selectedContract, -1);
+
+  Window_t costWindow;
+  windowCreateFrom(&costWindow, drawWindow, detailsX, 40, detailsWidth, 144, TEXT_ALIGN_TOPLEFT);
+  windowFill(&costWindow, RAIDS_MENU_TRACK_COLOR);
+  menuDrawFittedText(&costWindow, detailsWidth * 0.5, 12, detailsWidth - 16, 0.55, RAIDS_MENU_SECONDARY_COLOR, "Buyout cost", TEXT_ALIGN_TOPCENTER);
+  snprintf(strBuf, sizeof(strBuf), "%'u bolts", cost);
+  menuDrawFittedText(&costWindow, detailsWidth * 0.5, 30, detailsWidth - 16, 0.95, bankGetBolts() < cost ? RAIDS_MENU_WARNING_COLOR : RAIDS_MENU_TEXT_COLOR, strBuf, TEXT_ALIGN_TOPCENTER);
+  menuDrawFittedText(&costWindow, detailsWidth * 0.5, 66, detailsWidth - 16, 0.55, RAIDS_MENU_SECONDARY_COLOR, "Bolts available", TEXT_ALIGN_TOPCENTER);
+  snprintf(strBuf, sizeof(strBuf), "%'u", bankGetBolts());
+  menuDrawFittedText(&costWindow, detailsWidth * 0.5, 84, detailsWidth - 16, 0.8, RAIDS_MENU_TEXT_COLOR, strBuf, TEXT_ALIGN_TOPCENTER);
+  if (bankGetBolts() < cost)
+    menuDrawFittedText(&costWindow, detailsWidth * 0.5, 116, detailsWidth - 16, 0.65, RAIDS_MENU_WARNING_COLOR, "Not enough bolts", TEXT_ALIGN_TOPCENTER);
 }
 
 //--------------------------------------------------------------------------
 void contractsDraw(void)
 {
-  u32 bgColor = 0x60000000;
-  u32 bgSolidColor = 0x80000000;
-  u32 borderColor = 0x80000020;
-  u32 textColor = 0x80FFFFFF;
-  const float footerHeight = 20;
-  const float itemListDetailsHeight = 180;
+  const float windowWidth = 480;
+  const float windowHeight = 328;
+  const float titleHeight = RAIDS_MENU_TITLE_HEIGHT;
+  const float summaryHeight = 24;
+  const float footerHeight = RAIDS_MENU_FOOTER_HEIGHT;
+  const float bodyHeight = windowHeight - titleHeight - summaryHeight - footerHeight;
   struct RaidsState* state = MapConfig.State;
   RaidsPlayerBank_t* bank = bankGetLocalBank();
-  float x,y;
   char strBuf[64];
   Window_t drawWindow;
 
   if (!state) return;
 
-  // setup draw state
-  windowCreate(&drawWindow, SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 0, 0, 450, itemListDetailsHeight + 40, TEXT_ALIGN_MIDDLECENTER);
+  windowCreate(&drawWindow, SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.5, 0, 0, windowWidth, windowHeight, TEXT_ALIGN_MIDDLECENTER);
+  menuDrawFrame(&drawWindow, contractsState.CanInteract ? "Manage Contracts" : "Contracts", titleHeight);
 
-  // draw frame
-  windowFill(&drawWindow, bgColor);
+  Window_t summaryWindow;
+  windowCreateFrom(&summaryWindow, &drawWindow, 0, titleHeight, windowWidth, summaryHeight, TEXT_ALIGN_TOPLEFT);
+  windowFill(&summaryWindow, RAIDS_MENU_PANEL_COLOR);
+  if (bank && bankGetHasAccount()) snprintf(strBuf, sizeof(strBuf), "Bolts: %'u", bankGetBolts());
+  else snprintf(strBuf, sizeof(strBuf), "Bolts: --");
+  menuDrawFittedText(&summaryWindow, 8, 6, 164, 0.7, RAIDS_MENU_TEXT_COLOR, strBuf, TEXT_ALIGN_TOPLEFT);
+  if (bank && bankGetHasAccount()) snprintf(strBuf, sizeof(strBuf), "Hero Level: %d", bankGetLevel() + 1);
+  else snprintf(strBuf, sizeof(strBuf), "Hero Level: --");
+  menuDrawFittedText(&summaryWindow, windowWidth * 0.5, 6, 112, 0.7, RAIDS_MENU_TEXT_COLOR, strBuf, TEXT_ALIGN_TOPCENTER);
+  menuDrawFittedText(&summaryWindow, windowWidth - 8, 6, 120, 0.6, RAIDS_MENU_SECONDARY_COLOR, contractsState.CanInteract ? "Select a contract" : "View only", TEXT_ALIGN_TOPRIGHT);
 
-  // draw title text
-  windowDrawText(&drawWindow, TEXT_ALIGN_TOPCENTER, 0, 0, 1.1, textColor, "Contracts", -1, TEXT_ALIGN_TOPCENTER);
-
-  //snprintf(strBuf, sizeof(strBuf), "Store Refresh in %d:%02d:%02d", (itemRotationInSeconds / (60*60)), (itemRotationInSeconds / 60) % 60, itemRotationInSeconds % 60);
-  //windowDrawText(&drawWindow, TEXT_ALIGN_TOPCENTER, 0, 20, 0.8, textColor, strBuf, -1, TEXT_ALIGN_TOPCENTER);
-
-  // draw footer
-  Window_t windowFooter;
-  windowCreateFrom(&windowFooter, &drawWindow, 0, 0, drawWindow.Width, footerHeight, TEXT_ALIGN_BOTTOMCENTER);
-  contractsDrawFooter(&windowFooter);
-
-  // draw contracts
-  Window_t drawWindowContractList;
-  windowCreateFrom(&drawWindowContractList, &drawWindow, 0, -footerHeight, 450, itemListDetailsHeight, TEXT_ALIGN_BOTTOMLEFT);
-  if (contractsIsPlayerHighEnoughLevel()) {
-    contractsDrawContractList(&drawWindowContractList, contractsState.SelectedIndex, bank->Contracts, BANK_MAX_CONTRACTS);
+  Window_t listWindow;
+  windowCreateFrom(&listWindow, &drawWindow, 0, titleHeight + summaryHeight, windowWidth, bodyHeight, TEXT_ALIGN_TOPLEFT);
+  if (!bank || !bankGetHasAccount()) {
+    windowDrawText(&listWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.7, RAIDS_MENU_SECONDARY_COLOR, "Loading account...", -1, TEXT_ALIGN_MIDDLECENTER);
+  } else if (!contractsIsPlayerHighEnoughLevel()) {
+    snprintf(strBuf, sizeof(strBuf), "Requires Hero Level %d to collect contracts", CONTRACTS_MIN_LEVEL + 1);
+    menuDrawFittedText(&listWindow, windowWidth * 0.5, bodyHeight * 0.5, windowWidth - 16, 0.8, RAIDS_MENU_WARNING_COLOR, strBuf, TEXT_ALIGN_MIDDLECENTER);
+  } else if (!bankGetHasContracts()) {
+    windowDrawText(&listWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.7, RAIDS_MENU_SECONDARY_COLOR, bankHasPendingContractsRequest() ? "Loading contracts..." : "Contracts unavailable", -1, TEXT_ALIGN_MIDDLECENTER);
   } else {
-    snprintf(strBuf, sizeof(strBuf), "You must be at least level %d to collect Contracts.", CONTRACTS_MIN_LEVEL + 1);
-    windowDrawText(&drawWindowContractList, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.8, textColor, strBuf, -1, TEXT_ALIGN_MIDDLECENTER);
+    contractsDrawContractList(&listWindow, contractsState.SelectedIndex, bank->Contracts, BANK_MAX_CONTRACTS);
   }
-    
-  // draw border
-  windowBorder(&drawWindow, borderColor, 1, 1, 1, 1);
-  
-  // draw reroll dialog
+
+  Window_t footerWindow;
+  windowCreateFrom(&footerWindow, &drawWindow, 0, 0, windowWidth, footerHeight, TEXT_ALIGN_BOTTOMCENTER);
+  contractsDrawFooter(&footerWindow);
+  windowBorder(&drawWindow, RAIDS_MENU_BORDER_COLOR, 1, 1, 1, 1);
+
   if (contractsState.ShowRerollDialog) {
-    Window_t windowRerollDialog;
-    windowCreateFrom(&windowRerollDialog, &drawWindow, 0, 0, 300, itemListDetailsHeight + 40, TEXT_ALIGN_MIDDLECENTER);
-    contractsDrawRerollDialog(&windowRerollDialog, itemListDetailsHeight);
+    menuDrawBackdrop(&drawWindow);
+    Window_t popupWindow;
+    windowCreateFrom(&popupWindow, &drawWindow, 0, 0, 400, 328, TEXT_ALIGN_MIDDLECENTER);
+    contractsDrawRerollDialog(&popupWindow, bodyHeight - 2*RAIDS_MENU_PADDING);
   }
 }
 
@@ -524,7 +494,8 @@ void contractsHandleInput(void)
       contractsState.ShowRerollDialog = 0;
       return;
     } else if (padGetButtonDown(0, PAD_CROSS) > 0) {
-      if (bankGetBolts() < CONTRACTS_REROLL_COST) {
+      u32 cost = contractsIsContractExpired(selectedContract) ? 0 : CONTRACTS_REROLL_COST;
+      if (bankGetBolts() < cost) {
         playEquipRejectSound(localPlayer);
         return;
       }
@@ -594,10 +565,10 @@ int contractsPlayerIsLookingAtVendor(Player* player, float radius, float radians
 void contractsTick(void)
 {
   if (!MapConfig.State) return;
-  if (!isInGame()) return;
 
-  // force close if game has ended
-  if (gameHasEnded()) {
+  if (shouldCloseMenu()
+      || (MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_CONTRACTS
+          && contractsState.CanInteract && !isOnHubWorld())) {
     contractsClose();
     return;
   }
@@ -608,12 +579,6 @@ void contractsTick(void)
     contractsGetContracts();
   }
 
-  // handle close input
-  if (MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_CONTRACTS && gameIsAnyStartMenuOpen()) {
-    contractsClose();
-    return;
-  }
-
   if (MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_CONTRACTS) {
     contractsHandleInput();
     return;
@@ -621,7 +586,6 @@ void contractsTick(void)
 
   // check for open
   if (MapConfig.State->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
-  if (PATCH_POINTERS_PATCHMENU != 0 || gameIsAnyStartMenuOpen()) return;
 
   Player* localPlayer = playerGetFromSlot(0);
   if (!localPlayer) return;

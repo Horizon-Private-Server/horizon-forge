@@ -9,6 +9,9 @@
 #include <libdl/math3d.h>
 #include "game.h"
 
+#define AMMODROP_AMMO_FRACTION (0.3f)
+
+float ammodropGetPickupAmount(Player* player, int weaponId);
 void ammodropCreateAt(Moby* moby);
 void ammodropStart(void);
 void ammodropInit(void);

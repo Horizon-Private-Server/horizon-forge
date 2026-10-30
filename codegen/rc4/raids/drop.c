@@ -193,6 +193,7 @@ void dropUpdate(Moby* moby)
 
 	// handle auto destruct
 	if (pvars->DestroyAtTime && gameGetTime() > pvars->DestroyAtTime) {
+		pvars->DestroyAtTime = 0;
 		dropDestroy(moby);
 	}
 }

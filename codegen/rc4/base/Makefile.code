@@ -2,6 +2,7 @@ EE_LIBS = -ldl
 EE_OBJS = ##EEOBJS##
 EE_ELF = out.elf
 EE_BIN = out.bin
+EE_SEPARATE_CODE = 1
 OUT_BUILD_DIR = $(CURDIR)/../../build/dl
 OUT_CODE_DIR = $(CURDIR)/../code
 OUT_MAPNAME = ##MAPNAME##
@@ -21,7 +22,7 @@ else ifeq ($(BUILD_CONFIG),RELEASE)
 EE_DEFS := -DRELEASE
 endif
 
-all: $(EE_BIN) clean
+all: check-size clean
 	# payload and definition
 	cp -rf "$(CURDIR)/out.bin" "$(OUT_BUILD_DIR)/$(OUT_MAPNAME).code"
 	rm -rf "$(OUT_CODE_DIR)/code.0008.*"

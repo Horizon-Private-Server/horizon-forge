@@ -58,8 +58,8 @@ struct Guber* mapGetGuber(Moby* moby)
       #endif
     
       #if RAIDS
-        if (MapConfig.OnGetGuberFunc) {
-          struct Guber* guber = MapConfig.OnGetGuberFunc(moby);
+        if (MapConfig.Functions.ModeOnGetGuberFunc) {
+          struct Guber* guber = MapConfig.Functions.ModeOnGetGuberFunc(moby);
           if (guber) return guber;
         }
       #endif
@@ -100,8 +100,8 @@ void mapHandleEvent(Moby* moby, GuberEvent* event)
         #endif
       
         #if RAIDS
-          if (MapConfig.OnGuberEventFunc) {
-            MapConfig.OnGuberEventFunc(moby, event);
+          if (MapConfig.Functions.ModeOnGuberEventFunc) {
+            MapConfig.Functions.ModeOnGuberEventFunc(moby, event);
             return;
           }
         #endif

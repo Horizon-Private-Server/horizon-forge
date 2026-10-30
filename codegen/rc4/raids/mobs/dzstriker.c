@@ -87,8 +87,8 @@ int dzstrikerCreate(struct MobCreateArgs* args)
 	int guberUid = guberMobyCreateSpawned(spawnParams->OClass, sizeof(struct MobPVar) + sizeof(DZStrikerMobVars_t), &guberEvent, NULL);
 	if (guberEvent)
 	{
-    if (MapConfig.PopulateSpawnArgsFunc) {
-      MapConfig.PopulateSpawnArgsFunc(&spawnArgs, args->Config, args->SpawnParamsIdx, args->SpawnFromUID == -1, args->DifficultyMult);
+    if (MapConfig.Functions.ModePopulateSpawnArgsFunc) {
+      MapConfig.Functions.ModePopulateSpawnArgsFunc(&spawnArgs, args);
     }
 
 		u8 random = (u8)rand(100);
@@ -134,6 +134,9 @@ void dzstrikerPreUpdate(Moby* moby)
   decTimerU8(&pvars->MobVars.MoveVars.PathNewTicks);
 
   mobPreUpdate(moby);
+
+  mobTickActionCooldowns(moby, DZSTRIKER_ATTACK_ACTION_COUNT, dzstrikerVars->ActionCooldownTicks, dzstrikerVars->ActionQueuedForTicks);
+  if (dzstrikerVars->ShotCooldownTicks) --dzstrikerVars->ShotCooldownTicks;
 }
 
 //--------------------------------------------------------------------------
@@ -150,11 +153,11 @@ void dzstrikerPostUpdate(Moby* moby)
 
   // apply omega mod FX to color
   if (pvars->MobVars.AcidEffectActiveTicks > 0) {
-    torsoMoby->PrimaryColor = moby->PrimaryColor = colorLerp(DZSTRIKER_PRIMARY_COLOR, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
+    torsoMoby->PrimaryColor = moby->PrimaryColor = colorLerp(mobGetSpawnParams(moby)->BaseColor, MOB_POSTFX_ACID_COLOR, MOB_POSTFX_FACTOR);
   } else if (pvars->MobVars.FreezeEffectActiveTicks > 0) {
-    torsoMoby->PrimaryColor = moby->PrimaryColor = colorLerp(DZSTRIKER_PRIMARY_COLOR, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
+    torsoMoby->PrimaryColor = moby->PrimaryColor = colorLerp(mobGetSpawnParams(moby)->BaseColor, MOB_POSTFX_FREEZE_COLOR, MOB_POSTFX_FACTOR);
   } else {
-    torsoMoby->PrimaryColor = moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
+    torsoMoby->PrimaryColor = moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   }
   
   // apply draw dist
@@ -180,7 +183,7 @@ void dzstrikerPostUpdate(Moby* moby)
     torsoMoby->AnimSpeed = 0;
 	} else {
 		moby->AnimSpeed = animSpeed;
-		torsoMoby->AnimSpeed = animSpeed;
+		torsoMoby->AnimSpeed = animSpeed * (pvars->MobVars.Action == DZSTRIKER_ACTION_ATTACK ? mobGetFloat(moby, DZSTRIKER_PARAM_MELEE_SPEED) : 1);
 	}
 
   // attach torso to legs hip
@@ -201,8 +204,8 @@ void dzstrikerPostDraw(Moby* moby)
   if (!moby || !moby->PVar)
     return;
     
-  u32 color = DZSTRIKER_LOD_COLOR | (moby->Opacity << 24);
-  mobPostDrawQuad(moby, 127, color, DZSTRIKER_LEGS_SUBSKELETON_JOINT_HIPS);
+  u32 color = mobGetSpawnParams(moby)->SpriteColor | (moby->Opacity << 24);
+  mobPostDrawQuad(moby, 1.75, color, DZSTRIKER_LEGS_SUBSKELETON_JOINT_HIPS);
 }
 
 //--------------------------------------------------------------------------
@@ -229,8 +232,8 @@ void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
   moby->Scale = 0.256339 * scale;
 
   // colors by mob type
-	moby->GlowRGBA = DZSTRIKER_GLOW_COLOR;
-	moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
+	moby->GlowRGBA = mobGetSpawnParams(moby)->GlowColor;
+	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
 
   // set hold position to start position
   vector_copy(dzstrikerVars->HoldPosition, moby->Position);
@@ -259,6 +262,11 @@ void dzstrikerOnSpawn(Moby* moby, VECTOR position, float yaw, u32 spawnFromUID, 
   }
 
   dzstrikerTorsoOnSpawn(moby, torsoMoby);
+  torsoMoby->GlowRGBA = mobGetSpawnParams(moby)->GlowColor;
+
+  memset(dzstrikerVars->ActionCooldownTicks, 0, sizeof(dzstrikerVars->ActionCooldownTicks));
+  memset(dzstrikerVars->ActionQueuedForTicks, 0, sizeof(dzstrikerVars->ActionQueuedForTicks));
+  dzstrikerVars->ShotCooldownTicks = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -268,7 +276,7 @@ void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource s
     return;
     
 	// set colors before death so that the corn has the correct color
-	moby->PrimaryColor = DZSTRIKER_PRIMARY_COLOR;
+	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
   mobBlowCorn(moby);
@@ -361,8 +369,7 @@ void dzstrikerOnDamage(Moby* moby, struct MobDamageEventArgs* e)
 //--------------------------------------------------------------------------
 int dzstrikerOnLocalDamage(Moby* moby, struct MobLocalDamageEventArgs* e)
 {
-  // don't filter local damage
-  return 1;
+  return mobDefaultOnLocalDamage(moby, e);
 }
 
 //--------------------------------------------------------------------------
@@ -384,7 +391,7 @@ int dzstrikerIsTargetOutOfRange(Moby* moby)
   vector_subtract(dt, target->Position, moby->Position);
   dt[2] = 0;
   float distSqr = vector_sqrmag(dt);
-  float rangedAttackRadiusSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+  float rangedAttackRadiusSqr = powf(mobGetFloat(moby, DZSTRIKER_PARAM_FIRE_MAX_DISTANCE), 2);
   return distSqr > rangedAttackRadiusSqr;
 }
 
@@ -409,7 +416,7 @@ enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
   if (distSqr > attackRadiusSqr) {
 
     // check if in range
-    if (!dzstrikerIsTargetOutOfRange(moby)) {
+    if (!dzstrikerIsTargetOutOfRange(moby) && dzstrikerVars->ActionQueuedForTicks[DZSTRIKER_ATTACK_ACTION_FIRE]) {
       dt[2] = 0;
       float theta = acosf(vector_innerproduct(dt, dzstrikerVars->TorsoMoby->M0_03));
       if (pvars->MobVars.Action != DZSTRIKER_ACTION_AIM && fabsf(theta) < (30 * MATH_DEG2RAD))
@@ -422,7 +429,7 @@ enum DZStrikerAction dzstrikerGetPreferredAttack(Moby* moby)
   }
 
   // default to swing
-	return DZSTRIKER_ACTION_ATTACK;
+	return dzstrikerVars->ActionQueuedForTicks[DZSTRIKER_ATTACK_ACTION_MELEE] ? DZSTRIKER_ACTION_ATTACK : -1;
 }
 
 //--------------------------------------------------------------------------
@@ -620,7 +627,8 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
   }
 
   float shotTrail = 1;
-  float damage = pvars->MobVars.Config.Damage;
+  float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, DZSTRIKER_PARAM_FIRE_DAMAGE_MULTIPLIER);
+  vector_scale(vel, vel, mobGetFloat(moby, DZSTRIKER_PARAM_FIRE_PROJECTILE_SPEED));
   if (isSniper) {
     shotTrail = 3;
     vector_scale(vel, vel, 2); // speed
@@ -750,6 +758,7 @@ void dzstrikerDoAction(Moby* moby)
 		case DZSTRIKER_ACTION_FLINCH:
 		case DZSTRIKER_ACTION_BIG_FLINCH:
 		{
+      decTimerU8(&pvars->MobVars.Knockback.Ticks);
       if (pvars->MobVars.Action == DZSTRIKER_ACTION_BIG_FLINCH) {
         dzstrikerTransAnim(moby, DZSTRIKER_LEGS_ANIM_FLINCH_FALL_DOWN, DZSTRIKER_TORSO_ANIM_FLINCH_3_BAD_ANIM, 0);
       } else {
@@ -885,7 +894,7 @@ void dzstrikerDoAction(Moby* moby)
       }
       
 			if (swingAttackReady && damageFlags) {
-				dzstrikerDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage, damageFlags, 0);
+				dzstrikerDoDamage(moby, pvars->MobVars.Config.HitRadius, pvars->MobVars.Config.Damage * mobGetFloat(moby, DZSTRIKER_PARAM_MELEE_DAMAGE), damageFlags, 0);
 			}
       
       if (mobHasVelocity(pvars)) {
@@ -925,8 +934,9 @@ void dzstrikerDoAction(Moby* moby)
             if (animT < dzstrikerVars->LastShotAtAnimT)
               dzstrikerVars->LastShotAtAnimT = -1;
 
-            if (animT >= 1 && dzstrikerVars->LastShotAtAnimT < 0) {
+            if (animT >= 1 && dzstrikerVars->LastShotAtAnimT < 0 && dzstrikerVars->ShotCooldownTicks == 0) {
               dzstrikerFireShot(moby, target);
+              dzstrikerVars->ShotCooldownTicks = maxf(0, mobGetFloat(moby, DZSTRIKER_PARAM_FIRE_INTERVAL) * TPS);
               dzstrikerVars->LastShotAtAnimT = animT;
             }
           }
@@ -961,6 +971,13 @@ void dzstrikerDoDamage(Moby* moby, float radius, float amount, int damageFlags, 
 void dzstrikerForceLocalAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+
+  DZStrikerMobVars_t* attackVars = dzstrikerGetExtraVars(moby);
+  int attackAction = action == DZSTRIKER_ACTION_ATTACK ? DZSTRIKER_ATTACK_ACTION_MELEE : action == DZSTRIKER_ACTION_FIRE ? DZSTRIKER_ATTACK_ACTION_FIRE : -1;
+  if (attackAction >= 0) {
+    attackVars->ActionCooldownTicks[attackAction] = mobGetActionCooldownTicks(moby, attackAction);
+    attackVars->ActionQueuedForTicks[attackAction] = 0;
+  }
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   if (!dzstrikerVars->TorsoMoby) return;
   float difficulty = 1;
@@ -1096,9 +1113,9 @@ int dzstrikerShouldForceStateUpdateOnAction(Moby* moby, int action)
 {
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   
-  // only send state updates at regular intervals, unless dying
+  // only send state updates at regular intervals, unless dying or flinching
   // or if we're entering/leaving the roaming state
-  if (action == DZSTRIKER_ACTION_DIE) return 1;
+  if (action == DZSTRIKER_ACTION_DIE || action == DZSTRIKER_ACTION_FLINCH || action == DZSTRIKER_ACTION_BIG_FLINCH) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_ROAM || action == DZSTRIKER_ACTION_ROAM) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_AIM || action == DZSTRIKER_ACTION_AIM) return 1;
   if (pvars->MobVars.Action == DZSTRIKER_ACTION_FIRE || action == DZSTRIKER_ACTION_FIRE) return 1;
@@ -1173,7 +1190,7 @@ int dzstrikerShouldStrafe(Moby* moby)
   VECTOR dt;
   vector_subtract(dt, target->Position, moby->Position);
   float sqrDistToTarget = vector_sqrmag(dt);
-  float maxDistSqr = pvars->MobVars.Config.RangedMaxDistanceToTarget*pvars->MobVars.Config.RangedMaxDistanceToTarget;
+  float maxDistSqr = powf(mobGetFloat(moby, DZSTRIKER_PARAM_FIRE_MAX_DISTANCE), 2);
   if (sqrDistToTarget > maxDistSqr)
     return 0;
 

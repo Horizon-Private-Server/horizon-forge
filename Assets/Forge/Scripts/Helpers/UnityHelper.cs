@@ -922,8 +922,7 @@ public static class UnityHelper
                         if (!_raidsModeData)
                             _raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
 
-                        var mobIds = _raidsModeData ? _raidsModeData.Mobs.ToDictionary(x => x.Disabled ? $"{x.Name} (DISABLED)" : x.Name, x => (long)_raidsModeData.Mobs.IndexOf(x)) : new Dictionary<string, long>();
-                        mobIds.Add("None", -1);
+                        var mobIds = _raidsModeData ? _raidsModeData.GetMobOptions(includeNone: true) : new Dictionary<string, long> { { "None", -1 } };
 
                         EditorGUI.BeginChangeCheck();
                         value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, mobIds, dataSize);
@@ -959,7 +958,7 @@ public static class UnityHelper
                         {
                             var refValue = pvarValues[refPath];
                             if (int.TryParse(refValue, out int idx))
-                                mobId = _raidsModeData?.Mobs?.ElementAtOrDefault(idx)?.Mob;
+                                mobId = _raidsModeData ? _raidsModeData.GetMobs().ElementAtOrDefault(idx)?.Mob : null;
                         }
 
                         var mob = _raidsMobConfig?.Mobs?.FirstOrDefault(x => x.Mob == mobId);
@@ -969,10 +968,12 @@ public static class UnityHelper
                         if (mob?.Behaviors == null || !mob.Behaviors.Any())
                             return;
 
-                        var behaviors = mob.Behaviors.ToDictionary(x => x, x => (long)mob.Behaviors.IndexOf(x));
-
                         EditorGUI.BeginChangeCheck();
-                        value = PVarsPropertyField_EnumPopup(new GUIContent(name, def.Tooltip), value, behaviors, dataSize);
+                        var selected = EditorGUILayout.Popup(new GUIContent(name, def.Tooltip), (int)value,
+                            mob.Behaviors.Select((x, i) => new GUIContent($"{x.Name} [{i}]", x.Description)).ToArray());
+                        if (selected >= 0) value = selected;
+                        var description = mob.Behaviors.ElementAtOrDefault((int)value)?.Description;
+                        if (!string.IsNullOrEmpty(description)) EditorGUILayout.HelpBox(description, MessageType.Info);
                         if (EditorGUI.EndChangeCheck())
                         {
                             pvarValues.SetPropertyKeyValue(properties.PVarValues, path2, def.ToString(value));

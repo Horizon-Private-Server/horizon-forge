@@ -709,14 +709,14 @@ public class PvarOverlayDef
                     if (mobIdx >= 0)
                     {
                         var raidsModeData = GameObject.FindObjectOfType<RaidsModeData>();
-                        if (raidsModeData != null && raidsModeData?.Mobs != null)
+                        if (raidsModeData != null)
                         {
-
-                            var mob = raidsModeData.Mobs.ElementAtOrDefault((int)mobIdx);
-                            if (mob == null || mob.Disabled)
+                            var mobs = raidsModeData.GetMobs();
+                            var mob = mobs.ElementAtOrDefault((int)mobIdx);
+                            if (mob == null || !mob.isActiveAndEnabled)
                                 mobIdx = -1;
                             else
-                                mobIdx = raidsModeData.Mobs.Where(x => !x.Disabled).ToList().IndexOf(mob);
+                                mobIdx = mobs.Where(x => x.isActiveAndEnabled).ToList().IndexOf(mob);
                         }
                         else
                         {
@@ -871,7 +871,7 @@ public class PvarOverlayDef
             var raidsData = GameObject.FindObjectOfType<RaidsModeData>();
             var options = new Dictionary<string, long>();
             if (raidsData)
-                options = raidsData.Challenges.ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Challenges.IndexOf(x).ToString() : x.Name, x => (long)raidsData.Challenges.IndexOf(x));
+                options = raidsData.GetChallengeOptions();
 
             return options;
         }
@@ -883,10 +883,7 @@ public class PvarOverlayDef
             var maskCount = this.GetDataSize() * 8;
             if (raidsData)
             {
-                if (isMask)
-                    options = raidsData.Mobs.Take(maskCount).ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Mobs.IndexOf(x).ToString() : x.Name, x => (long)(1 << raidsData.Mobs.IndexOf(x)));
-                else
-                    options = raidsData.Mobs.ToDictionary(x => string.IsNullOrEmpty(x.Name) ? raidsData.Mobs.IndexOf(x).ToString() : x.Name, x => (long)raidsData.Mobs.IndexOf(x));
+                options = raidsData.GetMobOptions(asMask: isMask, maxCount: isMask ? maskCount : int.MaxValue);
             }
 
             return options;

@@ -7,10 +7,12 @@
  * AUTHOR :			Daniel "Dnawrkshp" Gerendasy
  */
 
+#include <float.h>
 #include <tamtypes.h>
 
 #include <libdl/dl.h>
 #include <libdl/player.h>
+#include <libdl/guber.h>
 #include <libdl/pad.h>
 #include <libdl/time.h>
 #include <libdl/net.h>
@@ -174,6 +176,72 @@ void dummyDrawHealthbar(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+void dummyDrawDamageBubble(Moby* moby, float damage, u32 damageFlags, int isLocal)
+{
+  struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+  if (!pvars->Config.DamageBubbles) return;
+
+#if SURVIVAL
+  VECTOR pos = {0,0,1,0};
+  vector_scale(pos, pos, pvars->TargetVars.targetHeight);
+  vector_add(pos, pos, moby->Position);
+
+  if (MapConfig.Functions.ModePushBubbleFunc)
+    MapConfig.Functions.ModePushBubbleFunc(pos, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
+#elif RAIDS
+  int team = TEAM_GREEN;
+  if (pvars->Config.IsOnEnemyTeam)
+    team = (damageFlags & 0x20000000) ? TEAM_RED : TEAM_YELLOW;
+
+  if (MapConfig.Functions.ModePushDamageBubbleFunc)
+    MapConfig.Functions.ModePushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, isLocal, team);
+#endif
+}
+
+//--------------------------------------------------------------------------
+void dummyBroadcastDamage(Moby* moby, Moby* source, float damage, u32 damageFlags)
+{
+  Player* player = guberMobyGetPlayerDamager(source);
+  struct DummyDamageEventArgs args = { damage, damageFlags, guberGetUID(source), player ? guberGetUID(player->PlayerMoby) : -1 };
+  GuberEvent* event = guberCreateEvent(moby, DUMMY_EVENT_DAMAGE);
+  if (event) {
+    guberEventWrite(event, &args, sizeof(args));
+    ((struct DummyPVar*)moby->PVar)->State.TicksSinceLastDamage = 0;
+  }
+}
+
+//--------------------------------------------------------------------------
+void dummyProcessDamage(Moby* moby)
+{
+  MobyColDamage* colDamage = moby->CollDamage >= 0 ? mobyGetDamage(moby, 0x80481C41, 0) : NULL;
+  float damage = colDamage ? colDamage->DamageHp : 0;
+  u32 damageFlags = colDamage ? colDamage->DamageFlags : 0;
+  mobyProcessDamage(moby, &damage, colDamage);
+  if (!colDamage || !colDamage->Damager || !(damage > 0 && damage <= FLT_MAX)) return;
+
+  // only send message if attacker is local player
+  // or if attacker is not player, if I'm the host
+  Moby* source = colDamage->Damager;
+  Player* player = guberMobyGetPlayerDamager(source);
+  if (playerIsValid(player) && !player->IsLocal) return;
+  else if (!playerIsValid(player) && !gameAmIHost()) return;
+
+  // check if can be damaged
+  struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+  int damageCooldownTicks = (int)(pvars->Config.DamageCooldownSeconds * TPS);
+  if (damageCooldownTicks > 0 && pvars->State.TicksSinceLastDamage <= damageCooldownTicks) return;
+
+#if RAIDS
+  // let raids adjust damage based on player stats
+  if (player && MapConfig.Functions.ModeProcessPlayerDamageFunc)
+    MapConfig.Functions.ModeProcessPlayerDamageFunc(moby, source, &damage, &damageFlags);
+#endif
+
+  if (damage > 0 && damage <= FLT_MAX)
+    dummyBroadcastDamage(moby, source, damage, damageFlags);
+}
+
+//--------------------------------------------------------------------------
 void dummyUpdate(Moby* moby)
 {
   struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
@@ -190,7 +258,7 @@ void dummyUpdate(Moby* moby)
 
     // check if completed
     if (moby->State == DUMMY_STATE_ACTIVATED && (pvars->TargetVars.hitPoints <= 0 || !pvars->Config.TargetMoby || mobyIsDestroyed(pvars->Config.TargetMoby))) {
-      DLOG(moby, "dummy %08X dead\n", (u32)moby);
+      DLOG(moby, "dummy %08X dead hp:%f\n", (u32)moby, pvars->TargetVars.hitPoints);
       dummyBroadcastState(moby, DUMMY_STATE_DEAD, 0);
     }
 
@@ -208,8 +276,8 @@ void dummyUpdate(Moby* moby)
   }
   
 #if RAIDS
-  // require active mission
-  if (!missionIsActive()) return;
+  // require active mission or hub world
+  if (!missionIsActive() && !isOnHubWorld()) return;
 #endif
 
   // increment ticks since last damage
@@ -251,68 +319,7 @@ void dummyUpdate(Moby* moby)
     gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&dummyDrawHealthbar, moby);
   }
 
-  // handle damage
-  if (gameAmIHost()) {
-    int damageIndex = moby->CollDamage;
-    u32 damageFlags = 0;
-    MobyColDamage* colDamage = NULL;
-    float damage = 0.0;
-    if (damageIndex >= 0) {
-      colDamage = mobyGetDamage(moby, 0x80481C41, 0);
-      if (colDamage) {
-        damage = colDamage->DamageHp;
-        damageFlags = colDamage->DamageFlags;
-      }
-    }
-    ((void (*)(Moby*, float*, MobyColDamage*))0x005184d0)(moby, &damage, colDamage);
-
-    int damageCooldownTicks = (int)(pvars->Config.DamageCooldownSeconds * TPS);
-    if (pvars->State.TicksSinceLastDamage > damageCooldownTicks && colDamage && colDamage->Damager && damage > 0) {
-      DLOG(moby, "dummy %08X hit for %f by %08X\n", (u32)moby, damage, (u32)colDamage->Damager);
-      
-      float newHealth = maxf(0, pvars->TargetVars.hitPoints - damage);
-      if (newHealth == 0) {
-        DLOG(moby, "dummy %08X dead\n", (u32)moby);
-        dummyBroadcastState(moby, DUMMY_STATE_DEAD, 0);
-        if (pvars->Config.OnKilledControllerMoby && !mobyIsDestroyed(pvars->Config.OnKilledControllerMoby)) {
-          controllerSetTriggerMoby(pvars->Config.OnKilledControllerMoby, colDamage->Damager);
-          //controllerBroadcastNewState(pvars->Config.OnKilledControllerMoby, CONTROLLER_STATE_ACTIVATED);
-        }
-      } else {
-        dummyBroadcastHealth(moby, newHealth);
-      }
-
-      // hit
-      Moby* onHitMoby = pvars->Config.OnHitControllerMoby;
-      if (onHitMoby && !mobyIsDestroyed(onHitMoby) && controllerAmIOwner(onHitMoby)) {
-        controllerSetTriggerMoby(onHitMoby, colDamage->Damager);
-        controllerBroadcastNewState(onHitMoby, CONTROLLER_STATE_ACTIVATED);
-      }
-
-      // bubble
-#if SURVIVAL
-      // if friendly, show as green damage
-      // otherwise use crit/noncrit team colors
-      int team = TEAM_GREEN;
-      if (pvars->Config.IsOnEnemyTeam)
-        team = (damageFlags & 0x20000000) ? TEAM_RED : TEAM_YELLOW;
-
-      VECTOR pos = {0,0,1,0};
-      vector_scale(pos, pos, pvars->TargetVars.targetHeight);
-      vector_add(pos, pos, moby->Position);
-
-      // push bubble
-      if (pvars->Config.DamageBubbles && MapConfig.Functions.ModePushBubbleFunc)
-        MapConfig.Functions.ModePushBubbleFunc(pos, pvars->Config.TargetRadius, damage, 0, pvars->Config.IsOnEnemyTeam ? TEAM_YELLOW : TEAM_GREEN);
-#elif RAIDS
-      if (pvars->Config.DamageBubbles && MapConfig.PushDamageBubbleFunc)
-        MapConfig.PushDamageBubbleFunc(moby->Position, pvars->Config.TargetRadius, damage, 0, 0);
-#endif
-
-      pvars->State.TicksSinceLastDamage = 0;
-    }
-  }
-
+  dummyProcessDamage(moby);
   moby->CollDamage = -1;
 }
 
@@ -383,6 +390,43 @@ int dummyHandleEvent_SetHealth(Moby* moby, GuberEvent* event)
 }
 
 //--------------------------------------------------------------------------
+int dummyHandleEvent_Damage(Moby* moby, GuberEvent* event)
+{
+  struct DummyDamageEventArgs args;
+  guberEventRead(event, &args, sizeof(args));
+  if (moby->State != DUMMY_STATE_ACTIVATED || !(args.Damage > 0 && args.Damage <= FLT_MAX)) return 0;
+
+  // get damager moby
+  Player* player = playerGetFromUID(args.PlayerUID);
+  Moby* source = player ? player->PlayerMoby : NULL;
+  Guber* sourceGuber = guberGetObjectByUID(args.SourceUID);
+  if (sourceGuber && sourceGuber->VTable && sourceGuber->VTable->GetMoby) {
+    Moby* sourceMoby = sourceGuber->VTable->GetMoby(sourceGuber);
+    if (sourceMoby && !mobyIsDestroyed(sourceMoby)) source = sourceMoby;
+  }
+
+  // apply damage and check for death
+  struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+  pvars->TargetVars.hitPoints = maxf(0, pvars->TargetVars.hitPoints - args.Damage);
+  pvars->State.TicksSinceLastDamage = 0;
+  if (pvars->TargetVars.hitPoints == 0) {
+    mobySetState(moby, DUMMY_STATE_DEAD, -1);
+    Moby* onKilledMoby = pvars->Config.OnKilledControllerMoby;
+    if (onKilledMoby && !mobyIsDestroyed(onKilledMoby) && controllerAmIOwner(onKilledMoby))
+      controllerSetTriggerMoby(onKilledMoby, source);
+  }
+
+  Moby* onHitMoby = pvars->Config.OnHitControllerMoby;
+  if (onHitMoby && !mobyIsDestroyed(onHitMoby) && controllerAmIOwner(onHitMoby)) {
+    controllerSetTriggerMoby(onHitMoby, source);
+    controllerBroadcastNewState(onHitMoby, CONTROLLER_STATE_ACTIVATED);
+  }
+  
+  dummyDrawDamageBubble(moby, args.Damage, args.DamageFlags, player && player->IsLocal);
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 struct Guber* dummyGetGuber(Moby* moby)
 {
 	if (moby->OClass == DUMMY_OCLASS && moby->PVar)
@@ -402,6 +446,7 @@ int dummyHandleEvent(Moby* moby, GuberEvent* event)
 
 		switch (eventId)
 		{
+      case DUMMY_EVENT_DAMAGE: { return dummyHandleEvent_Damage(moby, event); }
       case DUMMY_EVENT_SET_STATE: { return dummyHandleEvent_SetState(moby, event); }
       case DUMMY_EVENT_SET_HEALTH: { return dummyHandleEvent_SetHealth(moby, event); }
 			default:
@@ -413,6 +458,26 @@ int dummyHandleEvent(Moby* moby, GuberEvent* event)
 	}
 
 	return 0;
+}
+
+//--------------------------------------------------------------------------
+int dummyMineCanAcquireTarget(Moby* moby)
+{
+  if (!moby || !moby->Guber) return 0;
+
+  // Dummies inherit their visible object's PClass, which can be scenery.
+  if (moby->OClass == DUMMY_OCLASS) {
+    struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+    return pvars && moby->State == DUMMY_STATE_ACTIVATED
+        && pvars->Config.IsOnEnemyTeam && pvars->Config.Targetable
+        && pvars->TargetVars.hitPoints > 0 && pvars->Config.TargetMoby
+        && !mobyIsDestroyed(pvars->Config.TargetMoby);
+  }
+
+  // Preserve the native category filter for every other target.
+  if (!moby->PClass) return 0;
+  int category = *(u8*)((u32)moby->PClass + 0x46);
+  return category == 5 || category == 0xD || category == 1 || category == 0x10;
 }
 
 //--------------------------------------------------------------------------
@@ -450,6 +515,15 @@ void dummyInit(void)
 
 		++moby;
 	}
+
+  // Mine acquisition's Guber/category gate, including its loop back-edge.
+  // Keep the native exclusion at 0x003CCEF8 and subsequent team/range/LOS checks.
+  // These sites are in code.0006 and reload with the map.
+  HOOK_JAL_OP(0x003CCEC8, &dummyMineCanAcquireTarget, 0x0200202D); // move a0, s0
+  POKE_U32(0x003CCED0, 0x104000AA); // beq v0, zero, 0x003CD17C (next target)
+  POKE_U32(0x003CCED4, 0); // branch delay slot
+  POKE_U32(0x003CCED8, 0x10000007); // b 0x003CCEF8 (eligible target)
+  POKE_U32(0x003CCEDC, 0); // branch delay slot
 
   DPRINTF("dummy pvar size %d\n", sizeof(struct DummyPVar));
 }

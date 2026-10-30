@@ -13,6 +13,8 @@
 #include "game.h"
 #include "maputils.h"
 
+#define WRAP_DISTANCE(value, max) (((value % max) + max) % max)
+
 extern struct RaidsMapConfig MapConfig;
 
 void playEquipRejectSound(Player* player);
@@ -32,6 +34,8 @@ int mobyIsNpc(Moby* moby);
 
 int hasPendingWorldHop(void);
 int isOnHubWorld(void);
+int shouldCloseMenu(void);
+int shouldCloseHubMenu(void);
 int missionIsFailed(void);
 int missionIsComplete(void);
 int missionIsActive(void);
@@ -41,7 +45,5 @@ int missionIsOpenWorld(void);
 int bankTryChargeLocalAccount(Player* player, u32 cost);
 
 int getAmmoRefillCost(Player* player);
-
-void windowDrawDialog(Window_t* drawWindow, char* titleStr, char* subtitleStr, char* bodyStr, char* buttonStr);
 
 #endif // RAIDS_MAP_UTILS_H

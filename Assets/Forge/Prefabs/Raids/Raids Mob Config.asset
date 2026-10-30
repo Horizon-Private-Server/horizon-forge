@@ -14,141 +14,590 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Mobs:
   - Mob: 0
+    Description: 
     BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8438
       Bangles: 33
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5, g: 0.5, b: 0.5, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
     - Name: Goggle Eyes
+      Description: 
       OClass: 8438
       Bangles: 66
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
     - Name: V Chest/Head
+      Description: 
       OClass: 8438
       Bangles: 132
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
     - Name: Striped Head
+      Description: 
       OClass: 8438
       Bangles: 264
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
     - Name: Spike Head
+      Description: 
       OClass: 8438
       Bangles: 48
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 57130d28ce5e76a409239a422837a856, type: 3}
+      SpriteTextureTint: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8438
         SourceMapId: 2
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 5
-    Bolts: 100
-    Damage: 10
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 2.5
-    SpeedMax: 7.5
-    SpeedScale: 0.1
-    Health: 15
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
+    Behaviors:
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged Only
+      Description: Gets in range of target and throws its head.
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will throw head if in range and
+        can throw its head.
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Throw Head
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 3
+        TwoStars: 3
+        ThreeStars: 3
+        FourStars: 3
+        FiveStars: 3
+      MaxCooldownSeconds:
+        OneStar: 40
+        TwoStars: 40
+        ThreeStars: 40
+        FourStars: 40
+        FiveStars: 40
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 7
+        TwoStars: 7
+        ThreeStars: 7
+        FourStars: 7
+        FiveStars: 7
+    - Name: Throw Head Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
+    - Name: Throw Projectile Speed
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 30
+        TwoStars: 30
+        ThreeStars: 30
+        FourStars: 30
+        FiveStars: 30
+    - Name: Throw Head Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    Xp:
+      OneStar: 5
+      TwoStars: 10
+      ThreeStars: 20
+      FourStars: 40
+      FiveStars: 80
+    Bolts:
+      OneStar: 100
+      TwoStars: 200
+      ThreeStars: 400
+      FourStars: 700
+      FiveStars: 1000
+    Damage:
+      OneStar: 10
+      TwoStars: 18
+      ThreeStars: 55
+      FourStars: 160
+      FiveStars: 385
+    Speed:
+      OneStar: 3
+      TwoStars: 3
+      ThreeStars: 3
+      FourStars: 4
+      FiveStars: 6
+    Health:
+      OneStar: 15
+      TwoStars: 76
+      ThreeStars: 1084
+      FourStars: 10140
+      FiveStars: 60484
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 5
     HitRadius: 0.5
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0.017
   - Mob: 1
+    Description: 
     BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Blue
+      Description: 
       OClass: 9877
       Bangles: 0
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: bf3381224ced89e4da7f500d0f2aa460, type: 3}
+      SpriteTextureTint: {r: 0.7, g: 0.7, b: 0.7, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9877
         SourceMapId: 6
         SourceMissionId: 1
     - Name: Orange
+      Description: 
       OClass: 8273
       Bangles: 0
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 641ae97836734af428e8f22572539433, type: 3}
+      SpriteTextureTint: {r: 0.7, g: 0.7, b: 0.7, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8273
         SourceMapId: 1
         SourceMissionId: 14
     - Name: Desert
+      Description: 
       OClass: 9952
       Bangles: 0
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: a3b7c1ae46dcfa34c9cf02b5394a460b, type: 3}
+      SpriteTextureTint: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9952
         SourceMapId: 1
         SourceMissionId: 14
-    Behaviors: []
-    Xp: 3
-    Bolts: 50
-    Damage: 4
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 2
-    SpeedMax: 5
-    SpeedScale: 0.5
-    Health: 5
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
+    Behaviors:
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    Actions:
+    - Name: Bite
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Dodge
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0.1
+        TwoStars: 0.1
+        ThreeStars: 0.1
+        FourStars: 0.1
+        FiveStars: 0.1
+      MaxCooldownSeconds:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      Probability:
+        OneStar: 0.05
+        TwoStars: 0.05
+        ThreeStars: 0.05
+        FourStars: 0.05
+        FiveStars: 0.05
+      QueuedForTicks:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+    Parameters:
+    - Name: Bite Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Bite Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Bite Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 0.75
+        TwoStars: 0.75
+        ThreeStars: 0.75
+        FourStars: 0.75
+        FiveStars: 0.75
+    - Name: Dodge Velocity Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    Xp:
+      OneStar: 3
+      TwoStars: 6
+      ThreeStars: 12
+      FourStars: 24
+      FiveStars: 48
+    Bolts:
+      OneStar: 50
+      TwoStars: 100
+      ThreeStars: 200
+      FourStars: 350
+      FiveStars: 500
+    Damage:
+      OneStar: 4
+      TwoStars: 7
+      ThreeStars: 22
+      FourStars: 64
+      FiveStars: 154
+    Speed:
+      OneStar: 2
+      TwoStars: 2
+      ThreeStars: 4
+      FourStars: 5
+      FiveStars: 5
+    Health:
+      OneStar: 5
+      TwoStars: 25
+      ThreeStars: 361
+      FourStars: 3380
+      FiveStars: 20161
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 5
     HitRadius: 1.75
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0.017
   - Mob: 2
+    Description: 
     BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 9215
       Bangles: 0
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 0475598db46a449b88ad2153126857f1, type: 3}
+      SpriteTextureTint: {r: 0.6, g: 0.6, b: 0.6, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9215
         SourceMapId: 4
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 5
-    Bolts: 100
-    Damage: 7
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 2
-    SpeedMax: 5
-    SpeedScale: 0.5
-    Health: 5
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
+    - Name: Armored
+      Description: 
+      OClass: 9215
+      Bangles: 2
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 7614c32d6ff5c422296d802020d01f2e, type: 3}
+      SpriteTextureTint: {r: 0.6, g: 0.6, b: 0.6, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
+      Dependencies:
+      - OClass: 9215
+        SourceMapId: 4
+        SourceMissionId: -1
+    Behaviors:
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    Actions:
+    - Name: Bite
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Bite Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Bite Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1.5
+        TwoStars: 1.5
+        ThreeStars: 1.5
+        FourStars: 1.5
+        FiveStars: 1.5
+    - Name: Bite Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    Xp:
+      OneStar: 5
+      TwoStars: 10
+      ThreeStars: 20
+      FourStars: 40
+      FiveStars: 80
+    Bolts:
+      OneStar: 100
+      TwoStars: 200
+      ThreeStars: 400
+      FourStars: 700
+      FiveStars: 1000
+    Damage:
+      OneStar: 7
+      TwoStars: 12
+      ThreeStars: 39
+      FourStars: 112
+      FiveStars: 270
+    Speed:
+      OneStar: 2
+      TwoStars: 2
+      ThreeStars: 4
+      FourStars: 5
+      FiveStars: 5
+    Health:
+      OneStar: 5
+      TwoStars: 25
+      ThreeStars: 361
+      FourStars: 3380
+      FiveStars: 20161
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 5
     HitRadius: 2
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0.017
   - Mob: 3
+    Description: Stationary dual-gatling turret. Firing starts after its barrels
+      reach the configured activation speed.
     BlipType: 3
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8250
       Bangles: 0
+      SupportsTeamPalette: 1
+      SpriteTexture: {fileID: 0}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8304
         SourceMapId: 1
@@ -157,62 +606,409 @@ MonoBehaviour:
         SourceMapId: 46
         SourceMissionId: -1
     Behaviors: []
-    Xp: 50
-    Bolts: 500
-    Damage: 5
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 1
-    SpeedMax: 10
-    SpeedScale: 1
-    Health: 300
-    HealthMax: 0
-    HealthScale: 1.1
-    TurnSpeed: 1
+    Actions:
+    - Name: Fire Projectile
+      Description: Configures availability of this attack; firing cadence is configured
+        separately.
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Fire Projectile Damage Multiplier
+      Description: Applied after raids base stats, difficulty, and spawner scaling.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Fire Projectile Speed Multiplier
+      Description: Applied after raids base stats, difficulty, and spawner scaling.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Fire Max Gatling Speed
+      Description: Defaults to the existing raids attack setting.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+    - Name: Fire Gatling Acceleration
+      Description: Defaults to the existing raids attack setting.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
+    - Name: Fire Shoot At Gatling Speed
+      Description: Defaults to the existing raids attack setting.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 8
+        TwoStars: 8
+        ThreeStars: 8
+        FourStars: 8
+        FiveStars: 8
+    - Name: Fire Alternate Shot Delay (ticks)
+      Description: Defaults to the existing raids attack setting.
+      ValueType: 1
+      DefaultValue:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+    - Name: Fire Lock On Angle (degrees)
+      Description: Defaults to the existing raids attack setting.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Fire Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    BaseColor: {r: 0.2627451, g: 0.26666668, b: 0.27450982, a: 1}
+    GlowColor: {r: 0.7529412, g: 0.7529412, b: 0.7529412, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+    Xp:
+      OneStar: 50
+      TwoStars: 100
+      ThreeStars: 200
+      FourStars: 400
+      FiveStars: 800
+    Bolts:
+      OneStar: 500
+      TwoStars: 1000
+      ThreeStars: 2000
+      FourStars: 3500
+      FiveStars: 5000
+    Damage:
+      OneStar: 5
+      TwoStars: 9
+      ThreeStars: 28
+      FourStars: 80
+      FiveStars: 193
+    Speed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 3
+      FourStars: 6
+      FiveStars: 10
+    Health:
+      OneStar: 300
+      TwoStars: 1692
+      ThreeStars: 25669
+      FourStars: 243675
+      FiveStars: 1459519
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 50
     HitRadius: 0.5
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 0
+    DamageCooldownSeconds: 0.017
   - Mob: 4
+    Description: Setting Attributes to Boss overrides behavior to transition between
+      an evasive ranged and aggressive melee depending on % health remaining.
     BlipType: 3
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
+      OClass: 8388
+      Bangles: 7199
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 7e0a5c193766ae143a0cc5ac7df3b35a, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: aa9eb35cc825e6941bafcd532466fd36, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
+      Dependencies:
+      - OClass: 8388
+        SourceMapId: 4
+        SourceMissionId: -1
+    - Name: King
+      Description: Armored leviathan.
       OClass: 8388
       Bangles: 8191
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: e80cc84031f88e3408c3a998561f6834, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: aa9eb35cc825e6941bafcd532466fd36, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8388
         SourceMapId: 4
         SourceMissionId: -1
     Behaviors:
-    - Normal
-    - Aggressive (Chase)
-    - Evasive (Ranged)
-    Xp: 25
-    Bolts: 250
-    Damage: 10
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 5
-    SpeedMax: 20
-    SpeedScale: 0.1
-    Health: 100
-    HealthMax: 0
-    HealthScale: 1.1
-    TurnSpeed: 1
+    - Name: Normal
+      Description: Combined melee and ranged attacks.
+    - Name: Aggressive (Chase)
+      Description: Preserves raids chase behavior.
+    - Name: Evasive (Ranged)
+      Description: Preserves raids evasive behavior.
+    - Name: Melee Only
+      Description: Uses only melee attacks.
+    - Name: Ranged Only
+      Description: Uses only ranged attacks.
+    Actions:
+    - Name: Swing Tail
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Stab Ground
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Laser Sweep
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
+      MaxCooldownSeconds:
+        OneStar: 20
+        TwoStars: 20
+        ThreeStars: 20
+        FourStars: 20
+        FiveStars: 20
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Swing Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Swing Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Stab Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1.5
+        TwoStars: 1.5
+        ThreeStars: 1.5
+        FourStars: 1.5
+        FiveStars: 1.5
+    - Name: Stab Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Laser Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Laser Duration (sec)
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 3
+        TwoStars: 3
+        ThreeStars: 3
+        FourStars: 3
+        FiveStars: 3
+    - Name: Laser Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+    Xp:
+      OneStar: 25
+      TwoStars: 50
+      ThreeStars: 100
+      FourStars: 200
+      FiveStars: 400
+    Bolts:
+      OneStar: 250
+      TwoStars: 500
+      ThreeStars: 1000
+      FourStars: 1750
+      FiveStars: 2500
+    Damage:
+      OneStar: 10
+      TwoStars: 18
+      ThreeStars: 55
+      FourStars: 160
+      FiveStars: 385
+    Speed:
+      OneStar: 5
+      TwoStars: 5
+      ThreeStars: 6
+      FourStars: 8
+      FiveStars: 11
+    Health:
+      OneStar: 100
+      TwoStars: 564
+      ThreeStars: 8556
+      FourStars: 81225
+      FiveStars: 486506
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 4
     HitRadius: 0.5
     CollRadius: 2
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0.1
   - Mob: 5
+    Description: Deadlocked striker with separate melee and ranged attacks. Variants
+      retain their native projectile patterns.
     BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8496
       Bangles: 31
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: edbc87da449984d76a50b4228b7b28df, type: 3}
+      SpriteTextureTint: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8496
         SourceMapId: 1
@@ -221,8 +1017,15 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: -1
     - Name: Sniper
+      Description: 
       OClass: 8496
       Bangles: 286
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: e20bbbe22b1e446fb9b02bd8bff1c2cc, type: 3}
+      SpriteTextureTint: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8496
         SourceMapId: 1
@@ -231,8 +1034,15 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: -1
     - Name: Blaster
+      Description: 
       OClass: 8496
       Bangles: 542
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: acfeeb3e7802242acbdc3a2865748594, type: 3}
+      SpriteTextureTint: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8496
         SourceMapId: 1
@@ -241,110 +1051,1018 @@ MonoBehaviour:
         SourceMapId: 1
         SourceMissionId: -1
     Behaviors:
-    - Normal
-    - Hold Position
-    - Flying
-    Xp: 10
-    Bolts: 50
-    Damage: 5
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 3
-    SpeedMax: 7
-    SpeedScale: 0.6
-    Health: 20
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
+    - Name: Normal
+      Description: Pursues targets while aiming and firing.
+    - Name: Hold Position
+      Description: Remains near its spawn position while aiming and firing.
+    - Name: Flying
+      Description: Flies above the ground while pursuing and firing.
+    Actions:
+    - Name: Melee
+      Description: Configures availability of this attack; firing cadence is configured
+        separately.
+      MinCooldownSeconds:
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
+      MaxCooldownSeconds:
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Fire Projectile
+      Description: Configures availability of this attack; firing cadence is configured
+        separately.
+      MinCooldownSeconds:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+      MaxCooldownSeconds:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: Applied after raids base stats, difficulty, and spawner scaling.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: Applied after raids base stats, difficulty, and spawner scaling.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Fire Damage Multiplier
+      Description: Applied after raids base stats, difficulty, and spawner scaling.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Fire Projectile Speed Multiplier
+      Description: Applied after raids base stats, difficulty, and spawner scaling.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Fire Interval (sec)
+      Description: Defaults to the existing raids attack setting.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 0.25
+        TwoStars: 0.25
+        ThreeStars: 0.25
+        FourStars: 0.25
+        FiveStars: 0.25
+    - Name: Fire Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    BaseColor: {r: 0.2627451, g: 0.26666668, b: 0.27450982, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+    Xp:
+      OneStar: 10
+      TwoStars: 20
+      ThreeStars: 40
+      FourStars: 80
+      FiveStars: 160
+    Bolts:
+      OneStar: 50
+      TwoStars: 100
+      ThreeStars: 200
+      FourStars: 350
+      FiveStars: 500
+    Damage:
+      OneStar: 5
+      TwoStars: 9
+      ThreeStars: 28
+      FourStars: 80
+      FiveStars: 193
+    Speed:
+      OneStar: 3
+      TwoStars: 3
+      ThreeStars: 6
+      FourStars: 7
+      FiveStars: 7
+    Health:
+      OneStar: 20
+      TwoStars: 101
+      ThreeStars: 1445
+      FourStars: 13520
+      FiveStars: 80645
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 4
     HitRadius: 0.75
     CollRadius: 1.25
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 10
+    DamageCooldownSeconds: 0.017
   - Mob: 6
+    Description: 
     BlipType: 3
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 8353
       Bangles: 63
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 4aa807d23356093428a7e7ef9a22292e, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 8353
         SourceMapId: 6
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 25
-    Bolts: 250
-    Damage: 10
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 2
-    SpeedMax: 25
-    SpeedScale: 0.2
-    Health: 100
-    HealthMax: 0
-    HealthScale: 1.1
-    TurnSpeed: 1
+    Behaviors:
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will fire projectile if in range
+        and cooldown conditions are met.
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged Only
+      Description: Gets in range of target and fires AoE projectile.
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Fire Projectile
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 0.01
+        TwoStars: 0.01
+        ThreeStars: 0.01
+        FourStars: 0.01
+        FiveStars: 0.01
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Projectile Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Projectile Speed
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 30
+        TwoStars: 30
+        ThreeStars: 30
+        FourStars: 30
+        FiveStars: 30
+    - Name: Fire Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+    Xp:
+      OneStar: 25
+      TwoStars: 50
+      ThreeStars: 100
+      FourStars: 200
+      FiveStars: 400
+    Bolts:
+      OneStar: 250
+      TwoStars: 500
+      ThreeStars: 1000
+      FourStars: 1750
+      FiveStars: 2500
+    Damage:
+      OneStar: 10
+      TwoStars: 18
+      ThreeStars: 55
+      FourStars: 160
+      FiveStars: 385
+    Speed:
+      OneStar: 2
+      TwoStars: 2
+      ThreeStars: 3
+      FourStars: 4
+      FiveStars: 7
+    Health:
+      OneStar: 100
+      TwoStars: 564
+      ThreeStars: 8556
+      FourStars: 81225
+      FiveStars: 486506
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 5
     HitRadius: 0.5
     CollRadius: 1.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 7
+    DamageCooldownSeconds: 0.1
   - Mob: 7
+    Description: 
     BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 9584
       Bangles: 3
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: d4d69a07d08f02d43901aa01320a31b2, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: d4d69a07d08f02d43901aa01320a31b2, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9584
         SourceMapId: 13
         SourceMissionId: 0
-    Behaviors: []
-    Xp: 15
-    Bolts: 200
-    Damage: 15
-    DamageMax: 0
-    DamageScale: 1
-    Speed: 3
-    SpeedMax: 15
-    SpeedScale: 0.2
-    Health: 80
-    HealthMax: 0
-    HealthScale: 1
-    TurnSpeed: 1
+    Behaviors:
+    - Name: Melee Only
+      Description: 'Chases after target to deal melee damage up close.
+
+
+        Moves
+        slowly unless hit by target, then enters aggro state where it runs quickly
+        at the target and deals extra damage.'
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Aggro
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+    - Name: Aggro Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1.5
+        TwoStars: 1.5
+        ThreeStars: 1.5
+        FourStars: 1.5
+        FiveStars: 1.5
+    - Name: Aggro Move Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 3
+        TwoStars: 3
+        ThreeStars: 3
+        FourStars: 3
+        FiveStars: 3
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    Xp:
+      OneStar: 15
+      TwoStars: 30
+      ThreeStars: 60
+      FourStars: 120
+      FiveStars: 240
+    Bolts:
+      OneStar: 200
+      TwoStars: 400
+      ThreeStars: 800
+      FourStars: 1400
+      FiveStars: 2000
+    Damage:
+      OneStar: 15
+      TwoStars: 26
+      ThreeStars: 83
+      FourStars: 240
+      FiveStars: 578
+    Speed:
+      OneStar: 3
+      TwoStars: 3
+      ThreeStars: 4
+      FourStars: 6
+      FiveStars: 11
+    Health:
+      OneStar: 80
+      TwoStars: 405
+      ThreeStars: 5780
+      FourStars: 54080
+      FiveStars: 322580
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 5
     HitRadius: 1
     CollRadius: 1.25
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0.1
   - Mob: 8
+    Description: 
     BlipType: 4
     BlipTeam: 1
     Variants:
     - Name: Normal
+      Description: 
       OClass: 9427
       Bangles: 21
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
       Dependencies:
       - OClass: 9427
         SourceMapId: 5
         SourceMissionId: -1
-    Behaviors: []
-    Xp: 10
-    Bolts: 75
-    Damage: 10
-    DamageMax: 0
-    DamageScale: 0.2
-    Speed: 10
-    SpeedMax: 35
-    SpeedScale: 0.1
-    Health: 15
-    HealthMax: 0
-    HealthScale: 0.75
-    TurnSpeed: 2
+    - Name: Armored
+      Description: 
+      OClass: 9427
+      Bangles: 63
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 2800000, guid: 7ad3dc2c877053548be87f621d2b37a7, type: 3}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      ExistingBossSpriteUid: 0
+      Dependencies:
+      - OClass: 9427
+        SourceMapId: 5
+        SourceMissionId: -1
+    Behaviors:
+    - Name: Melee Only
+      Description: Chases after target to deal melee damage up close.
+    - Name: Ranged
+      Description: Gets in range of target and fires quake trail at target.
+    - Name: Melee + Ranged
+      Description: Chases target down for melee but will fire quake trail if in range
+        and cooldown conditions met.
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Ground Quake
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 3
+        TwoStars: 3
+        ThreeStars: 3
+        FourStars: 3
+        FiveStars: 3
+      MaxCooldownSeconds:
+        OneStar: 40
+        TwoStars: 40
+        ThreeStars: 40
+        FourStars: 40
+        FiveStars: 40
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 10
+        TwoStars: 10
+        ThreeStars: 10
+        FourStars: 10
+        FiveStars: 10
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Ground Quake Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Ground Quake Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 30
+        TwoStars: 30
+        ThreeStars: 30
+        FourStars: 30
+        FiveStars: 30
+    - Name: Ground Quake Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+    Xp:
+      OneStar: 10
+      TwoStars: 20
+      ThreeStars: 40
+      FourStars: 80
+      FiveStars: 160
+    Bolts:
+      OneStar: 75
+      TwoStars: 150
+      ThreeStars: 300
+      FourStars: 525
+      FiveStars: 750
+    Damage:
+      OneStar: 10
+      TwoStars: 12
+      ThreeStars: 19
+      FourStars: 40
+      FiveStars: 85
+    Speed:
+      OneStar: 10
+      TwoStars: 10
+      ThreeStars: 12
+      FourStars: 15
+      FiveStars: 23
+    Health:
+      OneStar: 15
+      TwoStars: 56
+      ThreeStars: 658
+      FourStars: 5851
+      FiveStars: 34380
+    TurnSpeed:
+      OneStar: 2
+      TwoStars: 2
+      ThreeStars: 2
+      FourStars: 2
+      FiveStars: 2
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
     AttackRadius: 5
     HitRadius: 1
     CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
+    DamageCooldownSeconds: 0.017
+  - Mob: 9
+    Description: Setting Attributes to Boss increases StartHealth by 300 per player
+      in lobby.
+    BlipType: 6
+    BlipTeam: 1
+    Variants:
+    - Name: Normal
+      Description: 
+      OClass: 8382
+      Bangles: 1
+      SupportsTeamPalette: 0
+      SpriteTexture: {fileID: 2800000, guid: 901b81b8dca48b24399fd08a5d4303b1, type: 3}
+      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 0.5019608}
+      BossTexture: {fileID: 0}
+      BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      ExistingBossSpriteUid: 30127
+      Dependencies:
+      - OClass: 8382
+        SourceMapId: 1
+        SourceMissionId: 16
+    Behaviors:
+    - Name: Default
+      Description: 'Boss behavior is determined by health remaining. Each amount
+        of health removed unlocks a new phase. Each phase adds a new attack to the
+        set of available attacks.
+
+
+
+        Phase 1 (> 80% health): Chase down target
+        and deal melee damage.
+
+        Phase 2 (> 60% health): Charge at target
+        dealing massive damage on impact.
+
+        Phase 3 (> 40% health): Fire "trailshot"
+        at target.
+
+        Phase 4 (< 40% health): Smash ground spawning minions
+        (if configured) and dealing AoE damage.'
+    Actions:
+    - Name: Melee
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      MaxCooldownSeconds:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+      Probability:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Charge
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 5
+        TwoStars: 5
+        ThreeStars: 5
+        FourStars: 5
+        FiveStars: 5
+      MaxCooldownSeconds:
+        OneStar: 15
+        TwoStars: 15
+        ThreeStars: 15
+        FourStars: 15
+        FiveStars: 15
+      Probability:
+        OneStar: 0.2
+        TwoStars: 0.2
+        ThreeStars: 0.2
+        FourStars: 0.2
+        FiveStars: 0.2
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Trail Shot
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 5
+        TwoStars: 5
+        ThreeStars: 5
+        FourStars: 5
+        FiveStars: 5
+      MaxCooldownSeconds:
+        OneStar: 20
+        TwoStars: 20
+        ThreeStars: 20
+        FourStars: 20
+        FiveStars: 20
+      Probability:
+        OneStar: 0.2
+        TwoStars: 0.2
+        ThreeStars: 0.2
+        FourStars: 0.2
+        FiveStars: 0.2
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    - Name: Ground Smash
+      Description: 
+      MinCooldownSeconds:
+        OneStar: 15
+        TwoStars: 15
+        ThreeStars: 15
+        FourStars: 15
+        FiveStars: 15
+      MaxCooldownSeconds:
+        OneStar: 60
+        TwoStars: 60
+        ThreeStars: 60
+        FourStars: 60
+        FiveStars: 60
+      Probability:
+        OneStar: 0.5
+        TwoStars: 0.5
+        ThreeStars: 0.5
+        FourStars: 0.5
+        FiveStars: 0.5
+      QueuedForTicks:
+        OneStar: 0
+        TwoStars: 0
+        ThreeStars: 0
+        FourStars: 0
+        FiveStars: 0
+    Parameters:
+    - Name: Melee Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Attack Speed Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Melee Lunge Factor
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Charge Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1.5
+        TwoStars: 1.5
+        ThreeStars: 1.5
+        FourStars: 1.5
+        FiveStars: 1.5
+    - Name: Charge Speed
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 250
+        TwoStars: 250
+        ThreeStars: 250
+        FourStars: 250
+        FiveStars: 250
+    - Name: Trailshot Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Trailshot Projectile Speed
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 30
+        TwoStars: 30
+        ThreeStars: 30
+        FourStars: 30
+        FiveStars: 30
+    - Name: Smash Damage Multiplier
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
+    - Name: Smash AoE Radius
+      Description: 
+      ValueType: 0
+      DefaultValue:
+        OneStar: 20
+        TwoStars: 20
+        ThreeStars: 20
+        FourStars: 20
+        FiveStars: 20
+    - Name: Charge Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 30
+        TwoStars: 30
+        ThreeStars: 30
+        FourStars: 30
+        FiveStars: 30
+    - Name: Trailshot Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
+    - Name: Smash Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 15
+        TwoStars: 15
+        ThreeStars: 15
+        FourStars: 15
+        FiveStars: 15
+    BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
+    GlowColor: {r: 0.1254902, g: 0.7529412, b: 0.1254902, a: 1}
+    SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
+    Xp:
+      OneStar: 1000
+      TwoStars: 2000
+      ThreeStars: 4000
+      FourStars: 8000
+      FiveStars: 16000
+    Bolts:
+      OneStar: 11000
+      TwoStars: 22000
+      ThreeStars: 44000
+      FourStars: 77000
+      FiveStars: 110000
+    Damage:
+      OneStar: 10
+      TwoStars: 25
+      ThreeStars: 100
+      FourStars: 310
+      FiveStars: 760
+    Speed:
+      OneStar: 5
+      TwoStars: 5
+      ThreeStars: 6
+      FourStars: 10
+      FiveStars: 15
+    Health:
+      OneStar: 3000
+      TwoStars: 16043
+      ThreeStars: 236297
+      FourStars: 2227688
+      FiveStars: 13316672
+    TurnSpeed:
+      OneStar: 1
+      TwoStars: 1
+      ThreeStars: 1
+      FourStars: 1
+      FiveStars: 1
+    VisionRange: 50
+    PeripheralVisionDegrees: 135
+    ForceAggroRange: 10
+    OutOfSightDeAggroTime: 60
+    AttackRadius: 4
+    HitRadius: 2
+    CollRadius: 1.5
+    ReactionDelaySeconds: 0.0875
+    AttackCooldownSeconds: 1
+    DamageCooldownSeconds: 0.25

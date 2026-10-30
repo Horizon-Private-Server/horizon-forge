@@ -94,7 +94,11 @@ void collectibleUpdate(Moby* moby)
     Player* local = playerGetFromSlot(i);
     if (!local) break;
 
-    if (vector_sqrdistance(moby->Position, local->PlayerPosition) < 6.25) {
+    // get center of player
+    VECTOR localPos = {0,0,1,0};
+    vector_scale(localPos, localPos, (local->Coll.top + local->Coll.bot) * 0.5);
+    vector_add(localPos, local->PlayerPosition, localPos);
+    if (vector_sqrdistance(moby->Position, localPos) < 6.25) {
       collectibleCollect(moby);
     }
   }

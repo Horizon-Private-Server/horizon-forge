@@ -868,7 +868,7 @@ void npcOnGuberCreated(Moby* moby)
 //--------------------------------------------------------------------------
 void npcStart(void)
 {
-  if (npcInitialized || !MapConfig.RegisterNpcFunc) return;
+  if (npcInitialized || !MapConfig.Functions.ModeRegisterNpcFunc) return;
   
   
   Moby* moby = mobyListGetStart();
@@ -879,7 +879,7 @@ void npcStart(void)
       struct NpcDifficultyConfig* difficultyConfig = npcGetDifficultyConfig(moby);
       pvars->Mob.MobVars.Config.Speed = pvars->Parameters.Speed * difficultyConfig->SpeedMult;
       pvars->Mob.MobVars.Config.Health = pvars->Parameters.Health * difficultyConfig->HealthMult;
-      MapConfig.RegisterNpcFunc(moby);
+      MapConfig.Functions.ModeRegisterNpcFunc(moby);
       DLOG(moby, "registered npc with mode\n");
     }
 

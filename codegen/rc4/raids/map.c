@@ -7,13 +7,15 @@
  */
 
 #include <libdl/moby.h>
+#include <libdl/guber.h>
 #include <libdl/stdio.h>
+#include <libdl/string.h>
 #include <libdl/game.h>
 #include <libdl/collision.h>
 #include <libdl/ui.h>
+#include <libdl/hud.h>
 #include <libdl/utils.h>
 #include <libdl/spawnpoint.h>
-#include "spawner.h"
 #include "mover.h"
 #include "gate.h"
 #include "dummy.h"
@@ -23,75 +25,34 @@
 #include "checkpoint.h"
 #include "mobs/mob.h"
 #include "game.h"
-#include "badges.h"
 #include "shared.h"
 #include "utils.h"
 
 extern struct RaidsMapConfig MapConfig;
 
+typedef struct HudBoss_CommonData
+{ // 0x38
+	/* 0x00 */ int iShown;
+	/* 0x04 */ int iState;
+	/* 0x08 */ float fHP;
+	/* 0x0c */ float fDisplayHP;
+	/* 0x10 */ unsigned int iColor;
+	/* 0x14 */ unsigned int iColor2;
+	/* 0x18 */ int iIcon;
+	/* 0x1c */ float fHideX;
+	/* 0x20 */ float fShown;
+	/* 0x24 */ char bShown;
+	/* 0x25 */ char bFancy;
+	/* 0x28 */ int iDelay;
+	/* 0x2c */ char bUpdate;
+	/* 0x30 */ float fPulse;
+	/* 0x34 */ int iFillMode;
+} HudBoss_CommonData_t;
+
+Moby* mapBossMoby = NULL;
+float mapBossLastHealth = -1;
+
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
-
-//--------------------------------------------------------------------------
-void mapOnMobUpdate(Moby* moby)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobUpdate(moby->PParent, moby, pvars->MobVars.Userdata);
-  }
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobDamaged(Moby* moby, struct MobDamageEventArgs* args)
-{
-  if (!moby || !moby->PVar) return;
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource source)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobKilled(moby->PParent, moby, pvars->MobVars.Userdata, killedByPlayerId, source);
-  }
-
-  if (killedByPlayerId >= 0) {
-    Player* killedByPlayer = playerGetAll()[killedByPlayerId];
-    int weaponId = getWeaponIdFromDamageSource(source);
-    int modStrength = bankGetEquippedWeaponModRarity(killedByPlayerId, weaponId, RAIDS_WEAPON_MOD_WILL_O_WISP) + 1;
-    if (killedByPlayer && modStrength > 0) {
-      u32 damageFlags = mobAmIOwner(moby) ? 0x00081801 : 0;
-      float radius = modStrength * BADGES_EXPLODINGENEMIES_RADIUS_MULT;
-      float damage = pvars->MobVars.LastHitByDamage * modStrength * BADGES_EXPLODINGENEMIES_DAMAGE_MULT;
-      spawnExplosionDamage(moby->Position, radius, 0x800000C0, killedByPlayer->PlayerMoby, damage, damageFlags);
-    }
-  }
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobDestroyed(Moby* moby)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobDestroyed(moby->PParent, moby, pvars->MobVars.Userdata);
-  }
-}
-
-//--------------------------------------------------------------------------
-void mapOnMobSpawned(Moby* moby)
-{
-  if (!moby || !moby->PVar) return;
-
-	struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
-  if (moby->PParent && moby->PParent->OClass == SPAWNER_OCLASS) {
-    spawnerOnChildMobSpawned(moby->PParent, moby, pvars->MobVars.Userdata);
-  }
-}
 
 //--------------------------------------------------------------------------
 int mapPathCanBeSkippedForTarget(struct PathGraph* path, Moby* moby)
@@ -188,6 +149,28 @@ void mapCustomMineMobyUpdate(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+int mapPlayerOnSpawnHoloshield(int playerId)
+{
+  // Each player has four holoshields, ordered from oldest to newest.
+  Moby** cacheList = (Moby**)0x003360e0 + (playerId * 4);
+  int i;
+  int count = 0;
+  for (i = 0; i < 4; ++i) {
+    if (cacheList[i])
+      ++count;
+  }
+
+  // Make room for the new shield by destroying the oldest one.
+  if (count == 4) {
+    guberMobyDestroy(cacheList[0]);
+    memmove(&cacheList[0], &cacheList[1], 3 * sizeof(Moby*));
+    cacheList[3] = NULL;
+  }
+
+  return 0;
+}
+
+//--------------------------------------------------------------------------
 void mapOnV10MagDamageMoby(Moby* target, MobyColDamageIn* in)
 {
   if (in->Damager) {
@@ -243,31 +226,6 @@ void mapGetResurrectPoint(Player* player, VECTOR outPos, VECTOR outRot, int firs
   playerGetSpawnpoint(player, outPos, outRot, firstRes);
 
   playerSetHealth(player, player->MaxHealth);
-}
-
-//--------------------------------------------------------------------------
-int mapCreateMob(struct MobCreateArgs* args)
-{
-  if (args->SpawnParamsIdx < 0 || args->SpawnParamsIdx >= MapConfig.MobSpawnParamsCount)
-  {
-    DPRINTF("unhandled create spawnParamsIdx %d\n", args->SpawnParamsIdx);
-    return 0;
-  }
-  
-  struct MobSpawnParams* spawnParams = &MapConfig.MobSpawnParams[args->SpawnParamsIdx];
-  if (spawnParams->MobCreate)
-    return spawnParams->MobCreate(args);
-    
-  DPRINTF("unhandled create spawnParamsIdx %d\n", args->SpawnParamsIdx);
-  return 0;
-}
-
-//--------------------------------------------------------------------------
-void mapOnHealthboxHeal(Player* player, float amount)
-{
-  if (amount > 100) amount = 100;
-
-  playerIncHealth(player, amount);
 }
 
 //--------------------------------------------------------------------------
@@ -349,6 +307,54 @@ void mapStart(void)
 }
 
 //--------------------------------------------------------------------------
+void mapUpdateBossMeter(void)
+{
+  int i;
+  HudBoss_CommonData_t* hudBossData = (HudBoss_CommonData_t*)0x00310400;
+
+  // Keep the current boss until it dies, then select the next boss in mob order.
+  if (!mapBossMoby) {
+    Moby* moby = mobyListGetStart();
+    Moby* end = mobyListGetEnd();
+    int order = 0xFF;
+    for (; moby < end; ++moby) {
+      if (mobyIsDestroyed(moby) || !mobyIsMob(moby) || mobyIsNpc(moby)) continue;
+      struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+      if (!mobIsBoss(moby) || pvars->MobVars.Health <= 0 || pvars->MobVars.Destroy || pvars->MobVars.Respawn) continue;
+      if ((u8)pvars->MobVars.Order <= order) {
+        mapBossMoby = moby;
+        order = (u8)pvars->MobVars.Order;
+      }
+    }
+  }
+
+  // show/hide boss meter
+  for (i = 0; i < GAME_MAX_LOCALS; ++i) {
+    PlayerHUDFlags* hud = hudGetPlayerFlags(i);
+    if (hud)
+      hud->Flags.Meter = mapBossMoby ? 1 : 0;
+  }
+
+  if (!mapBossMoby)
+    return;
+
+  struct MobPVar* pvars = (struct MobPVar*)mapBossMoby->PVar;
+  float health = pvars->MobVars.Health / pvars->MobVars.Config.MaxHealth;
+
+  // update meter and icon
+  hudBossData->fHP = health;
+  if (mapBossLastHealth != health) {
+    mapBossLastHealth = health;
+    hudBossData->bUpdate = 1;
+  }
+
+  u32 id = hudPanelGetElement((void*)0x222b18, 6);
+  struct HUDWidgetRectangleObject* bossImgRectObject = (struct HUDWidgetRectangleObject*)hudCanvasGetObject(hudGetCanvas(4), id);
+  if (bossImgRectObject)
+    ((void (*)(struct HUDWidgetRectangleObject*, int))0x005ca3e8)(bossImgRectObject, mobGetSpawnParams(mapBossMoby)->BossTexUid);
+}
+
+//--------------------------------------------------------------------------
 void mapTick(void)
 {
   mapApplyFixes();
@@ -357,6 +363,7 @@ void mapTick(void)
 //--------------------------------------------------------------------------
 void mapTickEnd(void)
 {
+  mapUpdateBossMeter();
 }
 
 //--------------------------------------------------------------------------
@@ -369,6 +376,10 @@ void mapInit(void)
 
   // disable holoshields from disappearing
   //*(u16*)0x00401478 = 2;
+
+  // Allow firing at the shield limit, replacing the oldest shield on spawn.
+  HOOK_JAL(0x00400A48, &mapPlayerOnSpawnHoloshield);
+  POKE_U32(0x003CF04C, 0x0000102D);
 
   // disable ammo drop despawn
   //POKE_U32(0x004FE814, 0);
@@ -469,9 +480,6 @@ void mapInit(void)
   // hook spawn
   HOOK_JAL(0x00610724, &mapGetResurrectPoint);
   HOOK_JAL(0x005e2d44, &mapGetResurrectPoint);
-
-  // hook healthbox heal
-  HOOK_JAL(0x004130F4, &mapOnHealthboxHeal);
 
   // hook set player target moby
   HOOK_JAL(0x005f7dcc, &mapOnSetPlayerTargetMoby);

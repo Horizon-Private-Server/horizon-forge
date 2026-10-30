@@ -184,8 +184,8 @@ void pushSnack(int localPlayerIdx, char* string, int ticksAlive)
   else
     uiShowPopup(localPlayerIdx, string);
 #elif RAIDS
-  if (MapConfig.PushSnackFunc)
-    MapConfig.PushSnackFunc(string, ticksAlive, localPlayerIdx);
+  if (MapConfig.Functions.ModePushSnackFunc)
+    MapConfig.Functions.ModePushSnackFunc(string, ticksAlive, localPlayerIdx);
   else
     uiShowPopup(localPlayerIdx, string);
 #else

@@ -2,6 +2,8 @@
 #include <libdl/stdio.h>
 #include <libdl/game.h>
 #include <libdl/graphics.h>
+#include <libdl/camera.h>
+#include <libdl/math3d.h>
 #include "common.h"
 #include "messageid.h"
 
@@ -131,7 +133,7 @@ void gfxHelperDrawText(float anchorX, float anchorY, float offsetX, float offset
     textCmd.AnchorX = anchorX / SCREEN_WIDTH;
     textCmd.AnchorY = anchorY / SCREEN_HEIGHT;
     memset(textCmd.Text, 0, sizeof(textCmd.Text));
-    safe_strcpy(textCmd.Text, str, (length >= 0 && length < 64) ? length : 64);
+    safe_strcpy(textCmd.Text, str, (length >= 0 && length < 64) ? (length + 1) : 64);
     PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT, sizeof(textCmd), &textCmd);
   }
 
@@ -156,7 +158,7 @@ void gfxHelperDrawText_WS(VECTOR worldPosition, float scale, u32 color, char* st
       textCmd.Alignment = alignment;
       textCmd.Color = color;
       memset(textCmd.Text, 0, sizeof(textCmd.Text));
-      safe_strcpy(textCmd.Text, str, (length >= 0 && length < 64) ? length : 64);
+      safe_strcpy(textCmd.Text, str, (length >= 0 && length < 64) ? (length + 1) : 64);
       PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_WS_TEXT, sizeof(textCmd), &textCmd);
     }
 
@@ -208,7 +210,13 @@ float gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float
 
   // pass to dzo
   if (dzoDrawType > 0 && PATCH_DZO_INTEROP_FUNCS && isInGame()) {
-    CustomDzoCommandDrawTextWindow_t textCmd;
+    char msgBuf[2048];
+    CustomDzoCommandDrawTextWindowVarStr_t textCmd;
+
+    int maxStrLen = sizeof(msgBuf) - sizeof(textCmd);
+    int strLen = length < 0 ? strlen(str) : length;
+    if (strLen > maxStrLen) strLen = maxStrLen;
+
     textCmd.X = OFFSET_TO_DZO_X(offsetX);
     textCmd.Y = OFFSET_TO_DZO_Y(offsetY);
     textCmd.TextX = OFFSET_TO_DZO_X(textOffsetX);
@@ -221,8 +229,10 @@ float gfxHelperDrawTextWindow(float anchorX, float anchorY, float offsetX, float
     textCmd.Color = color;
     textCmd.AnchorX = anchorX / SCREEN_WIDTH;
     textCmd.AnchorY = anchorY / SCREEN_HEIGHT;
-    safe_strcpy(textCmd.Text, str, (length >= 0 && length < 256) ? length : 256);
-    PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT_WINDOW, sizeof(textCmd), &textCmd);
+    textCmd.TextLen = strLen;
+    memcpy(msgBuf, &textCmd, sizeof(textCmd));
+    memcpy(&msgBuf[sizeof(textCmd)], str, strLen);
+    PATCH_DZO_INTEROP_FUNCS->SendCustomCommandToClient(CUSTOM_DZO_CMD_ID_DRAW_TEXT_WINDOW_VARSTR, sizeof(textCmd) + strLen, msgBuf);
   }
 
   // draw
@@ -290,4 +300,51 @@ void gfxHelperDrawSprite_WS(VECTOR worldPosition, float w, float h, int texWidth
       gfxDrawSprite(fx, fy, w, h, 0, 0, texWidth, texHeight, color, gfxGetFrameTex(texId));
     }
   }
+}
+
+//------------------------------------------------------------------------------
+void gfxHelperDrawBillboardQuad(VECTOR worldPosition, float offsetX, float offsetY, float w, float h, int texId, u32 color)
+{
+  if (!isInGame() || w <= 0 || h <= 0) return;
+
+  GameCamera* camera = cameraGetGameCamera(0);
+  if (!camera) return;
+
+  // face the camera
+  MATRIX world;
+  matrix_unit(world);
+  memcpy(world, camera->uMtx, sizeof(VECTOR) * 3);
+  vector_copy(&world[12], worldPosition);
+  world[15] = 1;
+
+  float left = w * 0.5 - offsetX;
+  float right = -w * 0.5 - offsetX;
+  float top = h * 0.5 + offsetY;
+  float bottom = -h * 0.5 + offsetY;
+  VECTOR corners[4] = {
+    {0, left, top, 1},
+    {0, right, top, 1},
+    {0, left, bottom, 1},
+    {0, right, bottom, 1}
+  };
+
+  // set draw args
+  struct QuadDef quad;
+  gfxResetQuad(&quad);
+  int i;
+  for (i = 0; i < 4; ++i) {
+    vector_copy(quad.VertexPositions[i], corners[i]);
+    quad.VertexColors[i] = color;
+  }
+  quad.VertexUVs[0] = (struct UV){0, 0};
+  quad.VertexUVs[1] = (struct UV){1, 0};
+  quad.VertexUVs[2] = (struct UV){0, 1};
+  quad.VertexUVs[3] = (struct UV){1, 1};
+  quad.Clamp = 0x0000000100000001;
+  quad.Tex0 = gfxGetFrameTex(texId);
+  quad.Tex1 = 0xFF9000000260;
+  quad.Alpha = 0x8000000044;
+
+  // draw
+  gfxDrawQuad((void*)0x00222590, &quad, world, 1);
 }

@@ -12,10 +12,57 @@ using UnityEngine.UIElements;
 [CustomEditor(typeof(RaidsModeData))]
 public class RaidsModeDataEditor : Editor
 {
+    private SerializedProperty m_DebugEnabledProperty;
+    private SerializedProperty m_DebugMenuProperty;
+    private SerializedProperty m_DebugPathProperty;
+    private SerializedProperty m_DebugMoveProperty;
+
+    private void OnEnable()
+    {
+        m_DebugEnabledProperty = serializedObject.FindProperty("DebugEnabled");
+        m_DebugMenuProperty = serializedObject.FindProperty("DebugMenu");
+        m_DebugPathProperty = serializedObject.FindProperty("DebugPath");
+        m_DebugMoveProperty = serializedObject.FindProperty("DebugMove");
+    }
+
     public override void OnInspectorGUI()
     {
         var manager = (target as RaidsModeData);
         base.OnInspectorGUI();
+
+        serializedObject.Update();
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(m_DebugEnabledProperty, new GUIContent("Debug"));
+        if (m_DebugEnabledProperty.boolValue)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(m_DebugMenuProperty, new GUIContent("Debug Menu", "Open with L1 + R1 + L2 + R2."));
+            EditorGUILayout.PropertyField(m_DebugPathProperty, new GUIContent("Mob Pathfinding"));
+            EditorGUILayout.PropertyField(m_DebugMoveProperty, new GUIContent("Mob Move"));
+            EditorGUI.indentLevel--;
+        }
+        serializedObject.ApplyModifiedProperties();
+
+        if (manager.MissionType == RaidsModeData.RAIDS_MISSION_TYPES.Raid)
+        {
+            serializedObject.Update();
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Class XP", EditorStyles.boldLabel);
+            var rewards = serializedObject.FindProperty("ClassXpOverrides");
+            var fields = new[] { "OneStar", "TwoStars", "ThreeStars", "FourStars", "FiveStars" };
+            for (var difficulty = 0; difficulty < fields.Length; ++difficulty)
+            {
+                UnityHelper.Int32Override(rewards, fields[difficulty], RaidsModeData.DEFAULT_CLASS_XP_REWARDS[difficulty],
+                    label: difficulty == 0 ? "1 Star" : $"{difficulty + 1} Stars",
+                    tooltip: "Class XP awarded on successful raid completion. Leave unchecked for the normal reward; override with 0 for no completion XP.");
+                var value = rewards.FindPropertyRelative(fields[difficulty]);
+                if (value.FindPropertyRelative("HasOverride").boolValue && value.FindPropertyRelative("OverrideValue").intValue < 0)
+                    EditorGUILayout.HelpBox("Class XP rewards must be nonnegative.", MessageType.Error);
+            }
+            serializedObject.ApplyModifiedProperties();
+        }
+        if (manager.GetMobs().Count > 16)
+            EditorGUILayout.HelpBox("Raids supports at most 16 mob definitions, including disabled mobs. Builds will be rejected until the count is reduced.", MessageType.Error);
         CheckForMissingMobAssets(manager);
     }
 
@@ -24,7 +71,8 @@ public class RaidsModeDataEditor : Editor
         var mobConfig = RaidsMobsScriptableObject.Load();
         var mobyDir = $"{FolderNames.GetMapFolder(SceneManager.GetActiveScene().name)}/{FolderNames.GetMapMobyFolder(RCVER.DL)}";
         var missingVariants = new List<RaidsMobsScriptableObject.RaidsMobVariant>();
-        foreach (var mob in raidsModeData.Mobs)
+        var mobs = raidsModeData.GetMobs().Where(x => x.isActiveAndEnabled).ToList();
+        foreach (var mob in mobs)
         {
             var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
             var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);
@@ -63,7 +111,7 @@ public class RaidsModeDataEditor : Editor
 
         if (GUILayout.Button("Reinstall All Mobs"))
         {
-            foreach (var mob in raidsModeData.Mobs)
+            foreach (var mob in mobs)
             {
                 var mobDefaults = mobConfig.Mobs.FirstOrDefault(x => x.Mob == mob.Mob);
                 var variant = mobDefaults.Variants.ElementAtOrDefault(mob.Variant);

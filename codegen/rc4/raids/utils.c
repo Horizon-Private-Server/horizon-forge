@@ -112,6 +112,10 @@ enum WEAPON_IDS getWeaponIdFromDamageSource(enum MobDamageSource source)
 int mobyIsMob(Moby* moby)
 {
   if (!moby) return 0;
+  if (mobyIsNpc(moby)) return 1;
+
+  // Thrown zombie heads share the model OClass, but have projectile PVars.
+  if (!moby->Guber) return 0;
 
   int i;
   for (i = 0; i < MapConfig.MobSpawnParamsCount; ++i) {
@@ -119,7 +123,7 @@ int mobyIsMob(Moby* moby)
       return 1;
   }
 
-  return moby->OClass == NPC_MOBY_OCLASS;
+  return 0;
 }
 
 //--------------------------------------------------------------------------
@@ -168,6 +172,19 @@ int missionIsOpenWorld(void)
 int isOnHubWorld(void)
 {
   return MapConfig.State && MapConfig.State->OnHubWorld;
+}
+
+//--------------------------------------------------------------------------
+int shouldCloseMenu(void)
+{
+  return !isInGame() || gameHasEnded() || hasPendingWorldHop()
+      || gameIsAnyStartMenuOpen() || PATCH_POINTERS_PATCHMENU != 0;
+}
+
+//--------------------------------------------------------------------------
+int shouldCloseHubMenu(void)
+{
+  return !isOnHubWorld() || shouldCloseMenu();
 }
 
 //--------------------------------------------------------------------------
@@ -268,42 +285,7 @@ double getXpForProficiency(int proficiency)
 int getAmmoRefillCost(Player* player)
 {
   if (!player || !player->GadgetBox) return -1;
-  if (!MapConfig.GetAmmoRefillCostFunc) return -1;
+  if (!MapConfig.Functions.ModeGetAmmoRefillCostFunc) return -1;
 
-  return MapConfig.GetAmmoRefillCostFunc(player);
-}
-
-//--------------------------------------------------------------------------
-void windowDrawDialog(Window_t* drawWindow, char* titleStr, char* subtitleStr, char* bodyStr, char* buttonStr)
-{
-  u32 textColor = 0x80FFFFFF; // white
-  Window_t window;
-  windowCreateFrom(&window, drawWindow, 0, 0, drawWindow->Width - 6, drawWindow->Height, TEXT_ALIGN_MIDDLECENTER);
-
-  // draw frame
-  windowFill(drawWindow, 0x80101030);
-  windowBorder(drawWindow, 0x80000000, 2, 2, 2, 2);
-
-  // draw title text
-  if (titleStr) {
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 2, 0.9, textColor, titleStr, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(&window, 0, 20);
-    window.Height -= 20;
-  }
-
-  // draw subtitle text
-  if (subtitleStr) {
-    windowDrawText(drawWindow, TEXT_ALIGN_TOPCENTER, 0, 20, 0.7, textColor, subtitleStr, -1, TEXT_ALIGN_TOPCENTER);
-    windowMove(&window, 0, 14);
-    window.Height -= 14;
-  }
-  
-  // draw body text
-  if (bodyStr) {
-    windowDrawTextWindow(&window, TEXT_ALIGN_TOPCENTER, 0, 0, 0.75, textColor, bodyStr, -1, TEXT_ALIGN_TOPCENTER);
-  }
-  
-  // footer buttons
-  windowDrawText(drawWindow, TEXT_ALIGN_BOTTOMCENTER, 0, -4, 0.9, textColor, buttonStr, -1, TEXT_ALIGN_BOTTOMCENTER);
-  windowReset(drawWindow);
+  return MapConfig.Functions.ModeGetAmmoRefillCostFunc(player);
 }

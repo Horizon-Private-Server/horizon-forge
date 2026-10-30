@@ -47,9 +47,40 @@ common.o : /src/common/common.c
 %.o : %.s
 	$(EE_AS) $(EE_ASFLAGS) $< -o $@
 
-$(EE_BIN) : $(EE_OBJS) crt0.o
+ifeq ($(EE_SEPARATE_CODE),1)
+# Check every allocated ELF section, including BSS and linker-generated sections.
+define CHECK_MAP_CODE_SIZE
+	@set -eu; \
+	code_bytes=$$(wc -c < "$(EE_BIN)"); \
+	if test "$$code_bytes" -gt 520192; then \
+		printf 'ERROR: %s is %d bytes; map code must fit within 520192 bytes (0x01B80000..0x01BFF000)\n' "$(EE_BIN)" "$$code_bytes"; \
+		exit 1; \
+	fi; \
+	code_sections=$$($(EE_PREFIX)objdump -h "$(EE_ELF)" | awk '/^[[:space:]]*[0-9]+[[:space:]]/ { address=$$4; size=$$3 } /ALLOC/ && size != "00000000" { print address ":" size }'); \
+	test -n "$$code_sections" || { echo "ERROR: Missing allocated sections in $(EE_ELF)"; exit 1; }; \
+	code_end=$$((0x01B80000)); \
+	for section in $$code_sections; do \
+		section_start=$$((0x$${section%:*})); \
+		section_end=$$((section_start + 0x$${section#*:})); \
+		if test "$$section_start" -lt $$((0x01B80000)) || test "$$section_end" -gt $$((0x01BFF000)); then \
+			printf 'ERROR: %s runtime section 0x%08X..0x%08X exceeds 0x01B80000..0x01BFF000 (including BSS)\n' "$(EE_ELF)" "$$section_start" "$$section_end"; \
+			exit 1; \
+		fi; \
+		if test "$$section_end" -gt "$$code_end"; then code_end=$$section_end; fi; \
+	done; \
+	printf '%s: %d binary bytes, runtime end 0x%08X (%d bytes free)\n' "$(EE_BIN)" "$$code_bytes" "$$code_end" $$((0x01BFF000 - code_end))
+endef
+
+.DELETE_ON_ERROR:
+.PHONY: check-size
+check-size: $(EE_BIN)
+	$(CHECK_MAP_CODE_SIZE)
+endif
+
+$(EE_BIN) : $(EE_OBJS) crt0.o linkfile
 	# $(EE_CC) -Os  -mno-crt0 -Tlinkfile $(EE_LDFLAGS) -s \
 	#	-o $(EE_BIN) crt0.o $(EE_OBJS) $(EE_LIBS) -Wl,--gc-sections -Wl,--oformat=binary
 	$(EE_CC) -g -mno-crt0 -Tlinkfile $(EE_LDFLAGS) \
 		-o $(EE_ELF) crt0.o $(EE_OBJS) $(EE_LIBS) -Wl,--gc-sections
 	$(EE_OBJCOPY) -O binary $(EE_ELF) $(EE_BIN)
+	$(CHECK_MAP_CODE_SIZE)

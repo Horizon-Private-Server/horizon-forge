@@ -463,7 +463,7 @@ int controllerPlayerKillsConditionTrue(Moby* moby, int conditionIdx)
             int spawnParamBit = 1 << k;
             if ((condition->PlayerKills.MobMask & spawnParamBit) != 0) {
 
-              int value = MapConfig.State->PlayerStates[i].State.AllKills[j][k];
+              int value = MapConfig.MapData->AllKills[i][j][k];
               int delta = value - playerKillsLast[i][j][k];
 
               result |= controllerConditionCompare(value, playerKillsLast[i][j][k], condition->PlayerKills.Value, condition->PlayerKills.CompareType);
@@ -912,7 +912,7 @@ int controllerControlCompleteMission(Moby* moby, struct ControllerTarget* target
   
   MapConfig.State->MissionStatus = RAIDS_MISSION_COMPLETED;
   MapConfig.State->MissionCompleteTime = controllerAmIOwner(moby) ? gameGetTime() : pvars->State.RemoteIterationTime;
-  if (MapConfig.OnMissionCompleteFunc) MapConfig.OnMissionCompleteFunc(target->Cuboid.DestIdx);
+  if (MapConfig.Functions.ModeOnMissionCompleteFunc) MapConfig.Functions.ModeOnMissionCompleteFunc(target->Cuboid.DestIdx);
   DLOG(moby, "mission end\n");
   return 1;
 #elif OBSTACLE
@@ -934,7 +934,7 @@ int controllerControlFailMission(Moby* moby, struct ControllerTarget* target)
   if (!MapConfig.State) return 0;
   if (!missionIsActive()) return 0;
   
-  if (MapConfig.OnMissionFailFunc) MapConfig.OnMissionFailFunc();
+  if (MapConfig.Functions.ModeOnMissionFailFunc) MapConfig.Functions.ModeOnMissionFailFunc();
   DLOG(moby, "mission fail\n");
   return 1;
   #else
@@ -1399,7 +1399,7 @@ void controllerStart(void)
     
 #if RAIDS
     if (MapConfig.State) {
-      memcpy(playerKillsLast[i], MapConfig.State->PlayerStates[i].State.AllKills, sizeof(playerKillsLast[i]));
+      memcpy(playerKillsLast[i], MapConfig.MapData->AllKills[i], sizeof(playerKillsLast[i]));
     }
 #endif
 
@@ -1410,6 +1410,10 @@ void controllerStart(void)
 //--------------------------------------------------------------------------
 void controllerInit(void)
 {
+#if RAIDS
+  memset(playerKillsLast, 0, sizeof(playerKillsLast));
+#endif
+
   Moby* temp = mobySpawn(CONTROLLER_OCLASS, 0);
   if (!temp)
     return;

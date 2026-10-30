@@ -273,8 +273,8 @@ MonoBehaviour:
       Description: 
       OClass: 9215
       Bangles: 0
-      SpriteTexture: {fileID: 0}
-      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      SpriteTexture: {fileID: 2800000, guid: 0475598db46a449b88ad2153126857f1, type: 3}
+      SpriteTextureTint: {r: 0.6, g: 0.6, b: 0.6, a: 0.5019608}
       BossTexture: {fileID: 0}
       BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
       ExistingBossSpriteUid: 0
@@ -286,8 +286,8 @@ MonoBehaviour:
       Description: 
       OClass: 9215
       Bangles: 2
-      SpriteTexture: {fileID: 0}
-      SpriteTextureTint: {r: 1, g: 1, b: 1, a: 1}
+      SpriteTexture: {fileID: 2800000, guid: 7614c32d6ff5c422296d802020d01f2e, type: 3}
+      SpriteTextureTint: {r: 0.6, g: 0.6, b: 0.6, a: 0.5019608}
       BossTexture: {fileID: 0}
       BossTextureTint: {r: 1, g: 1, b: 1, a: 1}
       ExistingBossSpriteUid: 0

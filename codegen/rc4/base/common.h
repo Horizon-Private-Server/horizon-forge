@@ -482,4 +482,27 @@ float gfxHelperDrawTextWindow(float x, float y, float offsetX, float offsetY, fl
 void gfxHelperDrawSprite(float x, float y, float offsetX, float offsetY, float w, float h, int texWidth, int texHeight, int texId, u32 color, enum TextAlign alignment, enum COMMON_DZO_DRAW_TYPE dzoDrawType);
 void gfxHelperDrawSprite_WS(VECTOR worldPosition, float w, float h, int texWidth, int texHeight, int texId, u32 color, enum TextAlign alignment, enum COMMON_DZO_DRAW_TYPE dzoDrawType);
 
+/*
+ * NAME :    gfxHelperDrawBillboardQuad
+ *
+ * DESCRIPTION :
+ *       Draws a textured quad facing the camera.
+ *
+ * NOTES :
+ *       Draws on PS2. DZO handles its own rendering.
+ *
+ * ARGS :
+ *      worldPosition:  Center position in world space.
+ *      offsetX:        Camera right offset in world units.
+ *      offsetY:        Camera up offset in world units.
+ *      w:              Width in world units.
+ *      h:              Height in world units.
+ *      texId:          Frame texture id.
+ *      color:          Color of quad.
+ *
+ * RETURN :
+ *
+ */
+void gfxHelperDrawBillboardQuad(VECTOR worldPosition, float offsetX, float offsetY, float w, float h, int texId, u32 color);
+
 #endif // _FORGE_RC4_COMMON_H_

@@ -3534,7 +3534,7 @@
     "Name": "Raids Spawner",
     "RCVersion": 4,
     "MobyOClass": 16385,
-    "Length": 528,
+    "Length": 592,
     "States": {
       "Destroyed": -1,
       "Off": 0,
@@ -3677,7 +3677,7 @@
         "Name": "Mob Parameters",
         "DataType": "Struct",
         "Offset": 156,
-        "DataSize": 28,
+        "DataSize": 36,
         "Count": 8,
         "Fields": [
           {
@@ -3692,7 +3692,7 @@
             "DataType": "RaidsMobBehavior",
             "DataSize": 1,
             "Default": 0,
-            "Offset": 25,
+            "Offset": 33,
             "Ref": "Mob Param Id"
           },
           {
@@ -3703,27 +3703,45 @@
             "Max": 1
           },
           {
-            "Name": "Difficulty Multiplier",
+            "Name": "Health Multiplier",
             "DataType": "Float",
             "Offset": 8,
-            "Default": 1
+            "Min": 0,
+            "Default": 1,
+            "Tooltip": "Multiplies the selected star-level health."
+          },
+          {
+            "Name": "Damage Multiplier",
+            "DataType": "Float",
+            "Offset": 12,
+            "Min": 0,
+            "Default": 1,
+            "Tooltip": "Multiplies the selected star-level damage."
+          },
+          {
+            "Name": "Speed Multiplier",
+            "DataType": "Float",
+            "Offset": 16,
+            "Min": 0,
+            "Default": 1,
+            "Tooltip": "Multiplies the selected star-level speed."
           },
           {
             "Name": "Max Can Spawn (0=Unlimited)",
             "DataType": "Integer",
-            "Offset": 12,
+            "Offset": 20,
             "Min": 0
           },
           {
             "Name": "Max Alive At Once (0=MAX)",
             "DataType": "Integer",
-            "Offset": 16,
+            "Offset": 24,
             "Min": 0
           },
           {
             "Name": "Spawn Cooldown (Ticks)",
             "DataType": "Integer",
-            "Offset": 20,
+            "Offset": 28,
             "Min": 0,
             "Default": 60
           },
@@ -3733,7 +3751,7 @@
             "OptionsLookupKey": "RaidsDifficultyMask",
             "DataSize": 1,
             "Default": 63,
-            "Offset": 24
+            "Offset": 32
           }
         ]
       }
@@ -5033,7 +5051,7 @@
     "Name": "Raids NPC Controller",
     "RCVersion": 4,
     "MobyOClass": 16390,
-    "Length": 1088,
+    "Length": 1104,
     "States": {
       "Destroyed": -1,
       "Off": 0,

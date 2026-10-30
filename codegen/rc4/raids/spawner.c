@@ -232,7 +232,7 @@ int spawnerGetRandomSpawnPoint(Moby* moby, int mobParamsIdx, VECTOR outPos, floa
 //--------------------------------------------------------------------------
 int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
 {
-  if (!MapConfig.TryCreateMobFunc) return 0;
+  if (!MapConfig.Functions.ModeTryCreateMobFunc) return 0;
   struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
   struct SpawnerMobParams* mobParams = &pvars->SpawnableMobParam[mobParamsIdx];
   struct MobSpawnParams* mobSpawnParams = &MapConfig.MobSpawnParams[mobParams->MobParamIdx];
@@ -242,22 +242,19 @@ int spawnerSpawn(Moby* moby, int mobParamsIdx, int fromUid)
     .Behavior = mobParams->MobBehavior,
     .Parent = moby,
     .Userdata = mobParamsIdx,
-    .DifficultyMult = mobParams->DifficultyMultiplier,
+    .HealthMultiplier = mobParams->HealthMultiplier,
+    .DamageMultiplier = mobParams->DamageMultiplier,
+    .SpeedMultiplier = mobParams->SpeedMultiplier,
+    .DifficultyStars = spawnerGetDifficultyStars(moby),
     .Config = &mobSpawnParams->Config,
     .SpawnFromUID = fromUid,
   };
-
-  // if we're in an open world
-  // use zone to determine difficulty mult
-  if (missionIsOpenWorld()) {
-    args.DifficultyMult *= Difficulties[spawnerGetDifficultyStars(moby)];
-  }
 
   if (spawnerGetRandomSpawnPoint(moby, mobParamsIdx, args.Position, &args.Yaw)) {
     spawnerRequestSpawn(moby, &args);
     DLOG(moby, "request spawn %d\n", gameGetTime());
     return 1;
-    // if (MapConfig.TryCreateMobFunc(&args)) {
+    // if (MapConfig.Functions.ModeTryCreateMobFunc(&args)) {
     //   pvars->State.NumSpawned[mobParamsIdx]++;
     //   pvars->State.NumTotalSpawned++;
     //   return 1;
@@ -438,7 +435,8 @@ void spawnerUpdate(Moby* moby)
     return;
   }
 
-  if (!missionIsActive()) return;
+  // only allow during active mission or if on hub world
+  if (!missionIsActive() && !isOnHubWorld()) return;
   if (moby->State != SPAWNER_STATE_ACTIVATED) return;
 
   // update closest player dist
@@ -722,7 +720,9 @@ void spawnerOnGuberCreated(Moby* moby)
     for (i = 0; i < SPAWNER_MAX_MOB_TYPES; ++i) {
       DLOG(moby, " [%d].MobParamIdx=%d\n", i, pvars->SpawnableMobParam[i].MobParamIdx);
       DLOG(moby, " [%d].Probability=%f\n", i, pvars->SpawnableMobParam[i].Probability);
-      DLOG(moby, " [%d].DifficultyMultiplier=%f\n", i, pvars->SpawnableMobParam[i].DifficultyMultiplier);
+      DLOG(moby, " [%d].HealthMultiplier=%f\n", i, pvars->SpawnableMobParam[i].HealthMultiplier);
+      DLOG(moby, " [%d].DamageMultiplier=%f\n", i, pvars->SpawnableMobParam[i].DamageMultiplier);
+      DLOG(moby, " [%d].SpeedMultiplier=%f\n", i, pvars->SpawnableMobParam[i].SpeedMultiplier);
       DLOG(moby, " [%d].MaxCanSpawnOrUnlimited=%d\n", i, pvars->SpawnableMobParam[i].MaxCanSpawnOrUnlimited);
     }
   #endif
@@ -878,13 +878,24 @@ void spawnerStart(void)
     int isRespawn = request->SpawnArgs.SpawnFromUID > 0;
     if (isRespawn) {
       //vector_copy(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition());
-      if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
+      if (MapConfig.Functions.ModeTryCreateMobFunc(&request->SpawnArgs)) {
         pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
         pvars->State.NumTotalSpawned++;
+        // The old mob's destroy event removes it from the alive counts.
+        pvars->State.NumAlive[request->SpawnArgs.Userdata]++;
+        pvars->State.NumTotalAlive++;
       }
       //DPRINTF("respawning mob %08X %04X for spawner %d (alive:%d spawning:%d)\n", request->SpawnArgs.SpawnFromUID, MapConfig.MobSpawnParams[request->SpawnArgs.SpawnParamsIdx].OClass, moby->UID, MapConfig.State->MobStats.TotalAlive, MapConfig.State->MobStats.TotalSpawning);
       continue;
     }
+
+    // Queued requests may outlive the conditions that allowed them to spawn.
+    struct SpawnerMobParams* mobParams = &pvars->SpawnableMobParam[request->SpawnArgs.Userdata];
+    if (!spawnerCanSpawn(moby)) continue;
+    if (mobParams->MaxCanSpawnOrUnlimited > 0 && pvars->State.NumSpawned[request->SpawnArgs.Userdata] >= mobParams->MaxCanSpawnOrUnlimited)
+      continue;
+    if (mobParams->MaxCanAliveAtOnce > 0 && pvars->State.NumAlive[request->SpawnArgs.Userdata] >= mobParams->MaxCanAliveAtOnce)
+      continue;
 
     // check priority
     float priority = (pvars->State.ClosestPlayerDistSqr - spawnerMinClosestDistToPlayerSqr) / ((spawnerMaxClosestDistToPlayerSqr-spawnerMinClosestDistToPlayerSqr) + 1);
@@ -986,7 +997,7 @@ void spawnerStart(void)
     }
 
     vector_add(request->SpawnArgs.Position, CollLine_Fix_GetHitPosition(), up);
-    if (MapConfig.TryCreateMobFunc(&request->SpawnArgs)) {
+    if (MapConfig.Functions.ModeTryCreateMobFunc(&request->SpawnArgs)) {
       pvars->State.NumSpawned[request->SpawnArgs.Userdata]++;
       pvars->State.NumTotalSpawned++;
       pvars->State.NumAlive[request->SpawnArgs.Userdata]++;
