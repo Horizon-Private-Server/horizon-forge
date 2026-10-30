@@ -23,6 +23,7 @@ void playUpgradeSound(Player* player);
 void playPaidSound(Player* player);
 
 enum WEAPON_IDS getWeaponIdFromDamageSource(enum MobDamageSource source);
+enum MobDamageSource getDamageSourceFromOClass(short oclass);
 
 int getProficiencyFromXp(double xp);
 double getXpForProficiency(int level);

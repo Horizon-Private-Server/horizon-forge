@@ -83,6 +83,25 @@ void playPaidSound(Player* player)
 }
 
 //--------------------------------------------------------------------------
+enum MobDamageSource getDamageSourceFromOClass(short oclass)
+{
+  switch (oclass)
+  {
+    case MOBY_ID_WRENCH: return MOB_DAMAGE_SOURCE_WRENCH;
+    case MOBY_ID_DUAL_VIPER_SHOT: return MOB_DAMAGE_SOURCE_DUAL_VIPERS;
+    case MOBY_ID_MAGMA_CANNON: return MOB_DAMAGE_SOURCE_MAGMA_CANNON;
+    case MOBY_ID_ARBITER_ROCKET0: return MOB_DAMAGE_SOURCE_ARBITER;
+    case MOBY_ID_FUSION_SHOT: return MOB_DAMAGE_SOURCE_FUSION_RIFLE;
+    case MOBY_ID_MINE_LAUNCHER_MINE: return MOB_DAMAGE_SOURCE_MINE_LAUNCHER;
+    case MOBY_ID_B6_BOMB_EXPLOSION: return MOB_DAMAGE_SOURCE_B6_OBLITERATOR;
+    case MOBY_ID_FLAIL: return MOB_DAMAGE_SOURCE_SCORPION_FLAIL;
+    case MOBY_ID_HOLOSHIELD_LAUNCHER:
+    case MOBY_ID_HOLOSHIELD_SHOT: return MOB_DAMAGE_SOURCE_HOLOSHIELD;
+    default: return MOB_DAMAGE_SOURCE_UNKNOWN;
+  }
+}
+
+//--------------------------------------------------------------------------
 enum WEAPON_IDS getWeaponIdFromDamageSource(enum MobDamageSource source)
 {
   switch (source)

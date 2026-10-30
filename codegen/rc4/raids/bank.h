@@ -465,6 +465,7 @@ float bankGetLevelProgress(void);
 double bankGetWeaponXP(int gadgetId);
 double bankAddWeaponXP(double amount, int gadgetId);
 float bankGetWeaponDamage(RaidsInventoryItem_t* item);
+float bankGetGadgetDamage(GadgetBox* gbox, int gadgetId, int damageType, int multiplier);
 
 void bankBroadcastAccount(void);
 void bankBroadcastEquippedInventory(void);

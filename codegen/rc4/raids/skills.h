@@ -54,6 +54,8 @@ enum RaidsClassSkillId
   RAIDS_CLASS_SKILL_FLAIL_MAX_RARITY = 42,
   RAIDS_CLASS_SKILL_HOLOSHIELD_MAX_RARITY = 43,
   RAIDS_CLASS_SKILL_ALPHA_IMPACT = 44,
+  RAIDS_CLASS_SKILL_BLOOD_FRENZY = 45,
+  RAIDS_CLASS_SKILL_IRONCLAD = 46,
   RAIDS_CLASS_SKILL_COUNT
 };
 
@@ -87,6 +89,7 @@ void skillsModifyPlayerCritDamage(struct RaidsPlayerDamageContext* context);
 void skillsFinalizePlayerDamage(struct RaidsPlayerDamageContext* context);
 void skillsOnMobKilled(Moby* moby, int killedByPlayerId);
 void skillsRegisterCooldown(enum RaidsClassSkillId skillId, int iconTexId, u32 color, float cooldown, int showCooldownBar);
+void skillsRegisterPowerupCooldown(enum RaidsClassSkillId skillId, int iconTexId, float cooldown, float progress, int active);
 void skillsDrawCooldowns(void);
 void skillsResetPlayer(Player* player);
 void skillsOnPlayerUpdate(Player* player);

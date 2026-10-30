@@ -45,6 +45,7 @@
 #if RAIDS
 #include "mobs/mob.h"
 #include "utils.h"
+#include "powerups.h"
 #endif
 
 #if DEBUG
@@ -209,7 +210,13 @@ void dummyDrawDamageBubble(Moby* moby, float damage, u32 damageFlags, int isLoca
 void dummyBroadcastDamage(Moby* moby, Moby* source, float damage, u32 damageFlags)
 {
   Player* player = guberMobyGetPlayerDamager(source);
-  struct DummyDamageEventArgs args = { damage, damageFlags, guberGetUID(source), player ? guberGetUID(player->PlayerMoby) : -1 };
+  struct DummyDamageEventArgs args = {
+    .Damage = damage,
+    .DamageFlags = damageFlags,
+    .SourceUID = guberGetUID(source),
+    .PlayerUID = player ? guberGetUID(player->PlayerMoby) : -1,
+    .SourceOClass = source->OClass
+  };
   GuberEvent* event = guberCreateEvent(moby, DUMMY_EVENT_DAMAGE);
   if (event) {
     guberEventWrite(event, &args, sizeof(args));
@@ -414,7 +421,16 @@ int dummyHandleEvent_Damage(Moby* moby, GuberEvent* event)
 
   // apply damage and check for death
   struct DummyPVar* pvars = (struct DummyPVar*)moby->PVar;
+#if RAIDS
+  float appliedDamage = minf(maxf(0, pvars->TargetVars.hitPoints), args.Damage);
+#endif
   pvars->TargetVars.hitPoints = maxf(0, pvars->TargetVars.hitPoints - args.Damage);
+#if RAIDS
+  if (pvars->Config.IsOnEnemyTeam) {
+    int weaponId = getWeaponIdFromDamageSource(getDamageSourceFromOClass(args.SourceOClass));
+    powerupsOnTargetDamaged(player, moby, weaponId, appliedDamage);
+  }
+#endif
   pvars->State.TicksSinceLastDamage = 0;
   if (pvars->TargetVars.hitPoints == 0) {
     mobySetState(moby, DUMMY_STATE_DEAD, -1);

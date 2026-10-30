@@ -15,6 +15,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public const int MAX_PARAMS_PER_MOB = 16;
     public static readonly int[] DEFAULT_CLASS_XP_REWARDS = new int[] { 250, 750, 1500, 2500, 4000 };
     [NonSerialized] private SpriteContainer _buildSprites;
+    private const string QUAD_ICON_PATH = "Assets/Forge/Textures/Raids/quad.png";
+    private const string SHIELD_ICON_PATH = "Assets/Forge/Textures/Raids/shield.png";
 
     public static readonly int MOB_SPAWNER_OCLASS = 0x4001;
     public static readonly int NPC_OCLASS = 0x4006;
@@ -179,6 +181,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/badges.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/bank.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skills.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/powerups.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/wallwalk.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/visibomb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skillfield.o");
@@ -391,17 +394,22 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         if (_buildSprites) DestroyImmediate(_buildSprites.gameObject);
         _buildSprites = null;
         var mapConfig = FindObjectOfType<MapConfig>();
-        var sprites = mapConfig.DLSprites.Count > 0 ? mapConfig.GetSpriteDefs(RCVER.DL).ToList() : new List<SpriteDef>();
+        if (!mapConfig || mapConfig.DLSprites == null || mapConfig.DLSprites.Count == 0)
+            throw new InvalidOperationException("Raids sprites require the map's base DL sprite bank.");
+        
         var added = new List<SpriteDef>();
+        var sprites = mapConfig.GetSpriteDefs(RCVER.DL).ToList();
+        Add(AssetDatabase.LoadAssetAtPath<Texture2D>(QUAD_ICON_PATH), Color.white);
+        Add(AssetDatabase.LoadAssetAtPath<Texture2D>(SHIELD_ICON_PATH), Color.white);
+        
         foreach (var mob in GetMobs().Where(x => x.isActiveAndEnabled))
         {
             var variant = mob.GetDefaults().Variants[mob.Variant];
             Add(variant.SpriteTexture, variant.SpriteTextureTint);
             if (mob.IsBoss) Add(variant.BossTexture, variant.BossTextureTint);
         }
+
         if (added.Count == 0) return;
-        if (mapConfig.DLSprites.Count == 0)
-            throw new InvalidOperationException("Raids mob sprites require the map's base DL sprite bank.");
         _buildSprites = new GameObject("Raids Build Sprites").AddComponent<SpriteContainer>();
         _buildSprites.transform.SetParent(transform, false);
         _buildSprites.gameObject.hideFlags = HideFlags.HideAndDontSave;
@@ -432,6 +440,8 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         var spriteDefs = mapConfig.DLSprites.Count > 0 ? mapConfig.GetSpriteDefs(RCVER.DL) : Array.Empty<SpriteDef>();
         var zones = GetZones();
         var contractRules = GetContractRules();
+        var quadTex = AssetDatabase.LoadAssetAtPath<Texture2D>(QUAD_ICON_PATH);
+        var shieldTex = AssetDatabase.LoadAssetAtPath<Texture2D>(SHIELD_ICON_PATH);
         var sb = new StringBuilder();
 
         sb.AppendLine("#include <libdl/utils.h>");
@@ -440,6 +450,9 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         sb.AppendLine("");
 
         sb.AppendLine("extern struct RaidsMapConfig MapConfig;");
+        sb.AppendLine("");
+        sb.AppendLine($"int powerupsQuadIconTexId = {Array.FindIndex(spriteDefs, x => x.m_Texture == quadTex)};");
+        sb.AppendLine($"int powerupsShieldIconTexId = {Array.FindIndex(spriteDefs, x => x.m_Texture == shieldTex)};");
         sb.AppendLine("");
 
         sb.AppendLine($"struct MobActionConfig mobActionConfigs[][RAIDS_DIFFICULTY_COUNT][MOB_MAX_ACTIONS_PER_MOB] = {{");

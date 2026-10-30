@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "spawner.h"
 #include "badges.h"
+#include "powerups.h"
 #include "mobs/mob.h"
 
 #define WEAPON_MOD_LIGHTFOOT_FACTOR (0.25)
@@ -135,7 +136,7 @@ void mapOnMobSpawned(Moby* moby)
 //--------------------------------------------------------------------------
 void mapMobAfterDamage(Moby* moby, struct MobDamageEventArgs* args, float appliedDamage)
 {
-  // Float applied damage is available here for future on-hit skills.
+  powerupsOnMobDamaged(moby, args, appliedDamage);
 }
 
 //--------------------------------------------------------------------------

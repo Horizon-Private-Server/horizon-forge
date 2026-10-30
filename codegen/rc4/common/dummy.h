@@ -24,6 +24,7 @@ struct DummyDamageEventArgs
   u32 DamageFlags;
   int SourceUID;
   int PlayerUID;
+  int SourceOClass;
 };
 
 enum DummyState {

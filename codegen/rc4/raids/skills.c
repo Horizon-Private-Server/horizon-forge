@@ -28,6 +28,7 @@
 #include "wallwalk.h"
 #include "visibomb.h"
 #include "menu.h"
+#include "powerups.h"
 
 #define SKILLS_FIELD_RADIUS (5.0)
 #define SKILLS_FIELD_DURATION_MS (10 * TIME_SECOND)
@@ -131,6 +132,9 @@ struct SkillsCooldownHudEntry
   u32 Color;
   float Cooldown;
   int ShowCooldownBar;
+  int ShowProgressBar;
+  float Progress;
+  int Active;
 } skillsCooldownHud[RAIDS_CLASS_SKILL_COUNT];
 
 // Cache both proximity results; collection changes invalidate immediately.
@@ -218,6 +222,8 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
     case RAIDS_CLASS_SKILL_HOVERBOOTS: return 1.5f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_WALL_WALKING: return 1.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_SECOND_WIND: return 5.0f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_BLOOD_FRENZY: return 3.0f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_IRONCLAD: return 3.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return 50.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CLUSTER_BOMBS:
       // Primary B6 explosions only; secondary bombs must not produce more clusters.
@@ -314,6 +320,8 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
       break;
     case RAIDS_CLASS_SKILL_HOVERBOOTS:
     case RAIDS_CLASS_SKILL_WALL_WALKING:
+    case RAIDS_CLASS_SKILL_BLOOD_FRENZY:
+    case RAIDS_CLASS_SKILL_IRONCLAD:
       snprintf(buf, bufSize, "+%.1f sec", bonus);
       break;
     case RAIDS_CLASS_SKILL_SECOND_WIND:
@@ -385,6 +393,8 @@ char* skillsGetName(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED: return "B6 Projectile Speed";
     case RAIDS_CLASS_SKILL_BLAST_REACH: return "Blast Reach";
     case RAIDS_CLASS_SKILL_SECOND_WIND: return "Second Wind";
+    case RAIDS_CLASS_SKILL_BLOOD_FRENZY: return "Blood Frenzy";
+    case RAIDS_CLASS_SKILL_IRONCLAD: return "Ironclad";
     case RAIDS_CLASS_SKILL_AIR_SUPERIORITY: return "Air Superiority";
     case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES: return "Efficient Supplies";
     case RAIDS_CLASS_SKILL_STEALTH: return "Stealth";
@@ -438,6 +448,8 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_B6_PROJECTILE_SPEED: return "Increase B6 projectile speed.";
     case RAIDS_CLASS_SKILL_BLAST_REACH: return "Retain more damage at the edges of explosions.";
     case RAIDS_CLASS_SKILL_SECOND_WIND: return "Kills heal you below 25% maximum health.";
+    case RAIDS_CLASS_SKILL_BLOOD_FRENZY: return "Deal 10 normal hits worth of actual close-range damage within 6 seconds to gain Quad. Weapons share progress. 20 second cooldown after Quad ends.";
+    case RAIDS_CLASS_SKILL_IRONCLAD: return "Lose 30% maximum health to enemies within 3 seconds to gain Shield. You must survive the hit. 30 second cooldown after Shield ends.";
     case RAIDS_CLASS_SKILL_AIR_SUPERIORITY: return "Increase damage while airborne.";
     case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES: return "Health and ammo pickups restore more.";
     case RAIDS_CLASS_SKILL_STEALTH: return "Reduce detection ranges. Mobs can still retaliate.";
@@ -670,10 +682,10 @@ void skillsFinalizePlayerDamage(struct RaidsPlayerDamageContext* context)
   if (context->WeaponId == WEAPON_ID_WRENCH)
     damageFactor += skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_WRENCH_DAMAGE) - 1;
   
-    if (!player->InVehicle && !player->Ground.onGood)
+  if (!player->InVehicle && !player->Ground.onGood)
     damageFactor += skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_AIR_SUPERIORITY) - 1;
   
-    context->Damage *= damageFactor;
+  context->Damage *= damageFactor;
 }
 
 //--------------------------------------------------------------------------
@@ -765,20 +777,27 @@ void skillsOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0)
   PlayerVTable* vtable = playerGetVTable(player);
   if (!vtable || !vtable->UpdateState) return;
 
+  float health = player->Health;
+  float maxHealth = player->MaxHealth;
+  int enemyDamage = 0;
   // The owner measures actual HP lost; remote state updates follow that owner.
   if (stateId == PLAYER_STATE_GET_HIT && player->IsLocal && !playerIsDead(player)
-      && (u8)player->PlayerMoby->CollDamage != 0xFF) {
+      && player->PlayerMoby && (u8)player->PlayerMoby->CollDamage != 0xFF) {
     float threshold = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_FLINCH_IMMUNITY);
     if (player->PlayerState == PLAYER_STATE_JUMP_ATTACK)
       threshold = maxf(threshold, skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_UNSTOPPABLE_SMASH));
     threshold = player->MaxHealth * threshold / 100.0f;
-    MobyColDamage* damage = threshold > 0 ? mobyGetDamage(player->PlayerMoby, 1, 0) : NULL;
-    if (damage) {
+    int hasIronclad = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_IRONCLAD) > 0;
+    MobyColDamage* damage = threshold > 0 || hasIronclad ? mobyGetDamage(player->PlayerMoby, 1, 0) : NULL;
+    enemyDamage = damage && hasIronclad && powerupsIsEnemyDamage(damage->Damager);
+    if (damage && threshold > 0) {
       // Native GET_HIT (0x00605724) applies damage as part of entering the state.
       // Measure its final damage, including armor/scaling/rounding, exactly once.
-      float health = player->Health;
       playerDecHealth(player, damage->DamageHp);
       player->PlayerMoby->CollDamage = -1;
+      // Consume this loss once, even when the native flinch transition is skipped.
+      if (enemyDamage) powerupsOnPlayerDamaged(player, health - player->Health, maxHealth);
+      enemyDamage = 0;
       if (player->Health > 0 && health - player->Health < threshold) {
         player->timers.postHitInvinc = 47;
         return;
@@ -789,6 +808,7 @@ void skillsOnPlayerGetHit(Player* player, int stateId, int a2, int a3, int t0)
   }
 
   vtable->UpdateState(player, stateId, a2, a3, t0);
+  if (enemyDamage) powerupsOnPlayerDamaged(player, health - player->Health, maxHealth);
 }
 
 //--------------------------------------------------------------------------
@@ -1122,6 +1142,20 @@ void skillsRegisterCooldown(enum RaidsClassSkillId skillId, int iconTexId, u32 c
   entry->Color = color;
   entry->Cooldown = clamp(cooldown, 0, 1);
   entry->ShowCooldownBar = showCooldownBar != 0;
+  entry->ShowProgressBar = 0;
+  entry->Progress = 0;
+  entry->Active = 0;
+}
+
+//--------------------------------------------------------------------------
+void skillsRegisterPowerupCooldown(enum RaidsClassSkillId skillId, int iconTexId, float cooldown, float progress, int active)
+{
+  if (!skillsIsValid(skillId) || iconTexId < 0) return;
+  skillsRegisterCooldown(skillId, iconTexId, 0x80FFFFFF, cooldown, 1);
+  struct SkillsCooldownHudEntry* entry = &skillsCooldownHud[skillId];
+  entry->ShowProgressBar = 1;
+  entry->Progress = clamp(progress, 0, 1);
+  entry->Active = active != 0;
 }
 
 //--------------------------------------------------------------------------
@@ -1158,11 +1192,12 @@ void skillsDrawCooldowns(void)
       entry->IconTexId, 0x20000000, TEXT_ALIGN_TOPLEFT);
     windowDrawSprite(&window, TEXT_ALIGN_TOPLEFT, x, y, iconSize, iconSize,
       entry->IconTexId, color, TEXT_ALIGN_TOPLEFT);
-    if (entry->ShowCooldownBar && entry->Cooldown > 0) {
+    if ((entry->ShowCooldownBar && entry->Cooldown > 0) || entry->ShowProgressBar) {
+      float progress = entry->Cooldown > 0 ? entry->Cooldown : entry->Progress;
       windowDrawBox(&window, TEXT_ALIGN_TOPLEFT, x, y + iconSize, iconSize, barHeight,
         RAIDS_MENU_TRACK_COLOR, TEXT_ALIGN_TOPLEFT);
-      windowDrawBox(&window, TEXT_ALIGN_TOPLEFT, x, y + iconSize, ceilf(iconSize * entry->Cooldown), barHeight,
-        0x80FFFFFF, TEXT_ALIGN_TOPLEFT);
+      windowDrawBox(&window, TEXT_ALIGN_TOPLEFT, x, y + iconSize, ceilf(iconSize * progress), barHeight,
+        entry->Active ? 0x804080FF : 0x80FFFFFF, TEXT_ALIGN_TOPLEFT);
     }
     ++index;
   }
@@ -1189,6 +1224,7 @@ void skillsResetPlayer(Player* player)
 
   wallwalkResetPlayer(player);
   visibombResetPlayer(player);
+  powerupsResetPlayer(player);
   memset(&skillsImmunityStates[player->PlayerId], 0, sizeof(skillsImmunityStates[0]));
   memset(&skillsAmmoStates[player->PlayerId], 0, sizeof(skillsAmmoStates[0]));
   struct SkillsMovementState* state = &skillsMovementStates[player->PlayerId];
@@ -1404,6 +1440,7 @@ void skillsTick(void)
   }
 
   // misc ticks
+  powerupsTick();
   visibombTick();
   skillsVehiclesTick();
 }
@@ -1413,6 +1450,7 @@ void skillsInit(void)
 {
   wallwalkInit();
   visibombInit();
+  powerupsInit();
 
   memset(skillsMovementStates, 0, sizeof(skillsMovementStates));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
@@ -1434,6 +1472,7 @@ void skillsInit(void)
 void skillsCleanup(void)
 {
   wallwalkCleanup();
+  powerupsCleanup();
   
   memset(skillsFieldCasters, 0, sizeof(skillsFieldCasters));
   memset(skillsImmunityStates, 0, sizeof(skillsImmunityStates));
