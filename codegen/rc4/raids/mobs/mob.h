@@ -436,6 +436,7 @@ int mobIsBoss(Moby* moby);
 int mobIsFrozen(Moby* moby);
 int mobGetBehavior(Moby* moby);
 float mobGetScaleMultiplier(Moby* moby);
+float mobGetLungeSpeed(Moby* moby, int animId, float startFrame, float endFrame, float multiplier);
 float mobGetTargetRadius(Moby* target);
 float mobGetDistanceToTarget(Moby* moby, Moby* target);
 int mobCanSeeMoby(Moby* moby, Moby* target);

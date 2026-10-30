@@ -54,14 +54,6 @@ SoundDef MenuSoundDef =
 	3			  // Bank
 };
 
-float Difficulties[RAIDS_DIFFICULTY_COUNT] = {
-  [RAIDS_DIFFICULTY_1STAR] 0,
-  [RAIDS_DIFFICULTY_2STAR] 25.0,
-  [RAIDS_DIFFICULTY_3STAR] 150.0,
-  [RAIDS_DIFFICULTY_4STAR] 500.0,
-  [RAIDS_DIFFICULTY_5STAR] 1250.0,
-};
-
 //--------------------------------------------------------------------------
 void playEquipRejectSound(Player* player)
 {	

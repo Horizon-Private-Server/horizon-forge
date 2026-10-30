@@ -730,15 +730,11 @@ void dzstrikerDoAction(Moby* moby)
 	Moby* target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
   int isSniper = dzstrikerIsSniper(moby);
-  float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
   float turnSpeed = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_TURN_RADIANS_PER_SEC : DZSTRIKER_TURN_AIR_RADIANS_PER_SEC;
   float acceleration = pvars->MobVars.MoveVars.Grounded ? DZSTRIKER_MOVE_ACCELERATION : DZSTRIKER_MOVE_AIR_ACCELERATION;
   int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded 
                       && (pvars->MobVars.LastAction == DZSTRIKER_ACTION_FLINCH || pvars->MobVars.LastAction == DZSTRIKER_ACTION_BIG_FLINCH);
-
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
 
   if (!torsoMoby) return;
 
@@ -980,10 +976,6 @@ void dzstrikerForceLocalAction(Moby* moby, int action)
   }
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   if (!dzstrikerVars->TorsoMoby) return;
-  float difficulty = 1;
-
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

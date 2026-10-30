@@ -448,15 +448,12 @@ void tremorDoAction(Moby *moby)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	Moby *target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
-	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? TREMOR_TURN_RADIANS_PER_SEC : TREMOR_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? TREMOR_MOVE_ACCELERATION : TREMOR_MOVE_AIR_ACCELERATION;
 	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == TREMOR_ACTION_FLINCH || pvars->MobVars.LastAction == TREMOR_ACTION_BIG_FLINCH);
 	u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	switch (pvars->MobVars.Action)
 	{
@@ -468,13 +465,12 @@ case TREMOR_ACTION_ATTACK:
 		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, TREMOR_PARAM_MELEE_DAMAGE_MULTIPLIER);
 		float lungeMult = mobGetFloat(moby, TREMOR_PARAM_MELEE_LUNGE_MULTIPLIER);
 
-		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < TREMOR_ATTACK_ANIM_LUNGE_DURATION;
-		float speed = lungeMult * clamp(difficulty * 2, 1, 5);
+		float speed = mobGetLungeSpeed(moby, attack1AnimId, 0, TREMOR_ATTACK_ANIM_LUNGE_DURATION, lungeMult);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= TREMOR_ATTACK_HIT_FRAME_START && moby->AnimSeqT < TREMOR_ATTACK_HIT_FRAME_END;
 
 		if (!isInAirFromFlinching)
 		{
-			if (target && lungeActive)
+			if (target && speed > 0)
 			{
 				mobTurnTowardsPredictiveWithSpeed(moby, target, TREMOR_TURN_LUNGE_RADIANS_PER_SEC, speed);
 				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
@@ -774,11 +770,7 @@ void tremorForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	TremorMobVars_t *tremorVars = (TremorMobVars_t *)pvars->AdditionalMobVarsPtr;
-	float difficulty = 1;
 	int stateCooldownTicks = TREMOR_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

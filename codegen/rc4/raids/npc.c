@@ -548,13 +548,9 @@ void npcDoAction(Moby* moby)
 	Moby* target = pvars->Mob.MobVars.MoveVars.Target;
   Moby* npcMoby = pvars->Parameters.NpcMoby;
 	VECTOR t;
-  float difficulty = 1;
   float turnSpeed = pvars->Parameters.TurnSpeed * (pvars->Mob.MobVars.MoveVars.Grounded ? NPC_TURN_RADIANS_PER_SEC : NPC_TURN_AIR_RADIANS_PER_SEC);
   float acceleration = pvars->Parameters.Acceleration * (pvars->Mob.MobVars.MoveVars.Grounded ? 1 : 0.2);
   int curAnimId = npcGetCurrentAnimId(moby);
-
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&npcRenderPath, moby);
@@ -673,10 +669,6 @@ void npcDoDamage(Moby* moby, float radius, float amount, int damageFlags, int fr
 void npcForceLocalAction(Moby* moby, int action)
 {
   struct NpcPVar* pvars = npcGetPVars(moby);
-  float difficulty = 1;
-
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->Mob.MobVars.Action)

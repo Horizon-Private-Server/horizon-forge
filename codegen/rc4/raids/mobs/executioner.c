@@ -490,14 +490,11 @@ void executionerDoAction(Moby *moby)
 	Moby *target = pvars->MobVars.MoveVars.Target;
 	ExecutionerMobVars_t *executionerVars = (ExecutionerMobVars_t *)pvars->AdditionalMobVarsPtr;
 	VECTOR t;
-	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? EXECUTIONER_TURN_RADIANS_PER_SEC : EXECUTIONER_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? EXECUTIONER_MOVE_ACCELERATION : EXECUTIONER_MOVE_AIR_ACCELERATION;
 	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == EXECUTIONER_ACTION_FLINCH || pvars->MobVars.LastAction == EXECUTIONER_ACTION_BIG_FLINCH);
 
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	switch (pvars->MobVars.Action)
 	{
@@ -507,7 +504,7 @@ case EXECUTIONER_ACTION_ATTACK:
 		mobTransAnim(moby, attack1AnimId, 0);
 
 		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, EXECUTIONER_PARAM_MELEE_DAMAGE_MULTIPLIER);
-		float speedMult = 0; // (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < 5) ? (difficulty * 2) : 1;
+		float speedMult = 0;
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= EXECUTIONER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < EXECUTIONER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
@@ -700,11 +697,7 @@ void executionerForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ExecutionerMobVars_t *executionerVars = (ExecutionerMobVars_t *)pvars->AdditionalMobVarsPtr;
-	float difficulty = 1;
 	int stateCooldownTicks = EXECUTIONER_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

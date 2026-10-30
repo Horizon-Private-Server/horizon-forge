@@ -548,13 +548,9 @@ void stalkerturretDoAction(Moby* moby)
   Moby* turretMoby = turretVars->TurretMoby;
   Moby* baseMoby = turretVars->BaseMoby;
 	VECTOR t;
-  float difficulty = 1;
   float speed = pvars->MobVars.Config.Speed;
   float freezeFactor = !stalkerturretIsDying(moby) ? mobGetFreezeSpeedFactor(moby) : 1;
   float turnSpeed = pvars->MobVars.Config.TurnSpeed * speed * freezeFactor * STALKERTURRET_TURN_RADIANS_PER_SEC;
-
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
   gfxRegisterDrawFunction((void**)0x0022251C, (gfxDrawFuncDef*)&stalkerturretRenderPath, moby);
@@ -657,10 +653,6 @@ void stalkerturretForceLocalAction(Moby* moby, int action)
     attackVars->ActionCooldownTicks[attackAction] = mobGetActionCooldownTicks(moby, attackAction);
     attackVars->ActionQueuedForTicks[attackAction] = 0;
   }
-  float difficulty = 1;
-
-  if (MapConfig.State)
-    difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

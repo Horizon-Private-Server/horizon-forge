@@ -1255,6 +1255,20 @@ float mobGetCurrentWalkAngle(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
+float mobGetLungeSpeed(Moby* moby, int animId, float startFrame, float endFrame, float multiplier)
+{
+  if (!moby || !moby->PVar || moby->AnimSeqId != animId || endFrame <= startFrame
+      || moby->AnimSeqT < startFrame || moby->AnimSeqT >= endFrame || multiplier <= 0)
+    return 0;
+
+  struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
+  float progress = clamp((moby->AnimSeqT - startFrame) / (endFrame - startFrame), 0, 1);
+  // Standard burst tapers from 5.0625x movement speed toward 1x over the lunge window.
+  float curve = lerpf(2.25, 1, progress);
+  return pvars->MobVars.Config.Speed * multiplier * curve * curve;
+}
+
+//--------------------------------------------------------------------------
 void mobMoveTowards(Moby* moby, VECTOR targetPosition, float speed, float turnSpeed, float acceleration, float curveNearTargetDir)
 {
   VECTOR t, t2;

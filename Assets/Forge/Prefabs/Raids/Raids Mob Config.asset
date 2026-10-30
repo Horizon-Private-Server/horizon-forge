@@ -168,15 +168,16 @@ MonoBehaviour:
         ThreeStars: 1
         FourStars: 1
         FiveStars: 1
-    - Name: Melee Lunge Factor
-      Description: 
+    - Name: Melee Lunge Speed Multiplier
+      Description: Multiplier for the lunge burst relative to movement speed. 1 uses
+        the standard burst; 0 disables lunging.
       ValueType: 0
       DefaultValue:
-        OneStar: 7
-        TwoStars: 7
-        ThreeStars: 7
-        FourStars: 7
-        FiveStars: 7
+        OneStar: 1
+        TwoStars: 1
+        ThreeStars: 1
+        FourStars: 1
+        FiveStars: 1
     - Name: Throw Head Damage Multiplier
       Description: 
       ValueType: 0
@@ -247,7 +248,7 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 5
+    AttackRadius: 4
     HitRadius: 0.5
     CollRadius: 1
     ReactionDelaySeconds: 0.25
@@ -375,15 +376,16 @@ MonoBehaviour:
         ThreeStars: 1
         FourStars: 1
         FiveStars: 1
-    - Name: Bite Lunge Factor
-      Description: 
+    - Name: Bite Lunge Speed Multiplier
+      Description: Multiplier for the lunge burst relative to movement speed. 1 uses
+        the standard burst; 0 disables lunging.
       ValueType: 0
       DefaultValue:
-        OneStar: 0.75
-        TwoStars: 0.75
-        ThreeStars: 0.75
-        FourStars: 0.75
-        FiveStars: 0.75
+        OneStar: 1
+        TwoStars: 1.2
+        ThreeStars: 1.4
+        FourStars: 1.6
+        FiveStars: 1.8
     - Name: Dodge Velocity Multiplier
       Description: 
       ValueType: 0
@@ -436,7 +438,7 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 5
+    AttackRadius: 4
     HitRadius: 1.75
     CollRadius: 0.5
     ReactionDelaySeconds: 0.25
@@ -524,15 +526,16 @@ MonoBehaviour:
         ThreeStars: 1.5
         FourStars: 1.5
         FiveStars: 1.5
-    - Name: Bite Lunge Factor
-      Description: 
+    - Name: Bite Lunge Speed Multiplier
+      Description: Multiplier for the lunge burst relative to movement speed. 1 uses
+        the standard burst; 0 disables lunging.
       ValueType: 0
       DefaultValue:
-        OneStar: 1
-        TwoStars: 1
-        ThreeStars: 1
-        FourStars: 1
-        FiveStars: 1
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     SpriteColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
@@ -576,9 +579,9 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 5
-    HitRadius: 2
-    CollRadius: 1
+    AttackRadius: 4
+    HitRadius: 1
+    CollRadius: 0.5
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0.017
@@ -944,6 +947,16 @@ MonoBehaviour:
         ThreeStars: 50
         FourStars: 50
         FiveStars: 50
+    - Name: Laser Cooldown Reset Health Divisions
+      Description: Number of equal maximum health bands for laser cooldown resets.
+        4 resets every 25%, 10 every 10%; 0 or 1 disables damage-triggered resets.
+      ValueType: 1
+      DefaultValue:
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 2
+        FourStars: 2
+        FiveStars: 2
     BaseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     GlowColor: {r: 0.1254902, g: 1, b: 0.1254902, a: 1}
     SpriteColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
@@ -987,7 +1000,7 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 4
+    AttackRadius: 3
     HitRadius: 0.5
     CollRadius: 2
     ReactionDelaySeconds: 0.25
@@ -1385,7 +1398,7 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 5
+    AttackRadius: 6
     HitRadius: 0.5
     CollRadius: 1.5
     ReactionDelaySeconds: 0.25
@@ -1490,15 +1503,16 @@ MonoBehaviour:
         ThreeStars: 1
         FourStars: 1
         FiveStars: 1
-    - Name: Melee Lunge Factor
-      Description: 
+    - Name: Melee Lunge Speed Multiplier
+      Description: Multiplier for the lunge burst relative to movement speed. 1 uses
+        the standard burst; 0 disables lunging.
       ValueType: 0
       DefaultValue:
-        OneStar: 10
-        TwoStars: 10
-        ThreeStars: 10
-        FourStars: 10
-        FiveStars: 10
+        OneStar: 2
+        TwoStars: 2
+        ThreeStars: 3
+        FourStars: 3
+        FiveStars: 4
     - Name: Aggro Damage Multiplier
       Description: 
       ValueType: 0
@@ -1539,11 +1553,11 @@ MonoBehaviour:
       FourStars: 240
       FiveStars: 578
     Speed:
-      OneStar: 3
-      TwoStars: 3
-      ThreeStars: 4
-      FourStars: 6
-      FiveStars: 11
+      OneStar: 1.5
+      TwoStars: 2
+      ThreeStars: 2.5
+      FourStars: 3
+      FiveStars: 3
     Health:
       OneStar: 80
       TwoStars: 405
@@ -1560,9 +1574,9 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 5
+    AttackRadius: 4
     HitRadius: 1
-    CollRadius: 1.25
+    CollRadius: 1
     ReactionDelaySeconds: 0.25
     AttackCooldownSeconds: 2
     DamageCooldownSeconds: 0.1
@@ -1679,8 +1693,9 @@ MonoBehaviour:
         ThreeStars: 1
         FourStars: 1
         FiveStars: 1
-    - Name: Melee Lunge Factor
-      Description: 
+    - Name: Melee Lunge Speed Multiplier
+      Description: Multiplier for the lunge burst relative to movement speed. 1 uses
+        the standard burst; 0 disables lunging.
       ValueType: 0
       DefaultValue:
         OneStar: 0
@@ -1737,11 +1752,11 @@ MonoBehaviour:
       FourStars: 40
       FiveStars: 85
     Speed:
-      OneStar: 10
-      TwoStars: 10
-      ThreeStars: 12
-      FourStars: 15
-      FiveStars: 23
+      OneStar: 6
+      TwoStars: 7
+      ThreeStars: 8
+      FourStars: 9
+      FiveStars: 9
     Health:
       OneStar: 15
       TwoStars: 56
@@ -1758,7 +1773,7 @@ MonoBehaviour:
     PeripheralVisionDegrees: 135
     ForceAggroRange: 10
     OutOfSightDeAggroTime: 60
-    AttackRadius: 5
+    AttackRadius: 4
     HitRadius: 1
     CollRadius: 1
     ReactionDelaySeconds: 0.25
@@ -1927,8 +1942,9 @@ MonoBehaviour:
         ThreeStars: 1
         FourStars: 1
         FiveStars: 1
-    - Name: Melee Lunge Factor
-      Description: 
+    - Name: Melee Lunge Speed Multiplier
+      Description: Multiplier for the lunge burst relative to movement speed. 1 uses
+        the standard burst; 0 disables lunging.
       ValueType: 0
       DefaultValue:
         OneStar: 1
@@ -1954,6 +1970,15 @@ MonoBehaviour:
         ThreeStars: 250
         FourStars: 250
         FiveStars: 250
+    - Name: Charge Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 30
+        TwoStars: 30
+        ThreeStars: 30
+        FourStars: 30
+        FiveStars: 30
     - Name: Trailshot Damage Multiplier
       Description: 
       ValueType: 0
@@ -1972,6 +1997,15 @@ MonoBehaviour:
         ThreeStars: 30
         FourStars: 30
         FiveStars: 30
+    - Name: Trailshot Max Distance
+      Description: Maximum target distance for this attack.
+      ValueType: 0
+      DefaultValue:
+        OneStar: 50
+        TwoStars: 50
+        ThreeStars: 50
+        FourStars: 50
+        FiveStars: 50
     - Name: Smash Damage Multiplier
       Description: 
       ValueType: 0
@@ -1990,24 +2024,6 @@ MonoBehaviour:
         ThreeStars: 20
         FourStars: 20
         FiveStars: 20
-    - Name: Charge Max Distance
-      Description: Maximum target distance for this attack.
-      ValueType: 0
-      DefaultValue:
-        OneStar: 30
-        TwoStars: 30
-        ThreeStars: 30
-        FourStars: 30
-        FiveStars: 30
-    - Name: Trailshot Max Distance
-      Description: Maximum target distance for this attack.
-      ValueType: 0
-      DefaultValue:
-        OneStar: 50
-        TwoStars: 50
-        ThreeStars: 50
-        FourStars: 50
-        FiveStars: 50
     - Name: Smash Max Distance
       Description: Maximum target distance for this attack.
       ValueType: 0

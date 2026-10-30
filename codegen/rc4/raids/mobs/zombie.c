@@ -483,14 +483,11 @@ void zombieDoAction(Moby *moby)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	Moby *target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
-	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_TURN_RADIANS_PER_SEC : ZOMBIE_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? ZOMBIE_MOVE_ACCELERATION : ZOMBIE_MOVE_AIR_ACCELERATION;
 	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == ZOMBIE_ACTION_FLINCH || pvars->MobVars.LastAction == ZOMBIE_ACTION_BIG_FLINCH);
 
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&zombieRenderPath, moby);
@@ -504,14 +501,14 @@ void zombieDoAction(Moby *moby)
 		mobTransAnim(moby, attack1AnimId, 0);
 
 		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, ZOMBIE_PARAM_MELEE_DAMAGE_MULTIPLIER);
-		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < ZOMBIE_SLAP_ANIM_LUNGE_DURATION;
-		float speed = mobGetFloat(moby, ZOMBIE_PARAM_MELEE_LUNGE_MULTIPLIER) * clamp(difficulty * 2, 1, 5);
+		float lungeMult = mobGetFloat(moby, ZOMBIE_PARAM_MELEE_LUNGE_MULTIPLIER);
+		float speed = mobGetLungeSpeed(moby, attack1AnimId, 0, ZOMBIE_SLAP_ANIM_LUNGE_DURATION, lungeMult);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= ZOMBIE_ATTACK_HIT_FRAME_START && moby->AnimSeqT < ZOMBIE_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
 		if (!isInAirFromFlinching)
 		{
-			if (target && lungeActive)
+			if (target && speed > 0)
 			{
 				mobTurnTowardsPredictiveWithSpeed(moby, target, ZOMBIE_TURN_LUNGE_RADIANS_PER_SEC, speed);
 				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
@@ -938,11 +935,7 @@ void zombieForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ZombieMobVars_t *zombieVars = (ZombieMobVars_t *)pvars->AdditionalMobVarsPtr;
-	float difficulty = 1;
 	int stateCooldownTicks = ZOMBIE_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

@@ -489,14 +489,11 @@ void swarmerDoAction(Moby *moby)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	Moby *target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
-	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? SWARMER_TURN_RADIANS_PER_SEC : SWARMER_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? SWARMER_MOVE_ACCELERATION : SWARMER_MOVE_AIR_ACCELERATION;
 	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == SWARMER_ACTION_FLINCH || pvars->MobVars.LastAction == SWARMER_ACTION_BIG_FLINCH);
 
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&swarmerRenderPath, moby);
@@ -558,16 +555,13 @@ case SWARMER_ACTION_DODGE:
 		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, SWARMER_PARAM_BITE_DAMAGE_MULTIPLIER);
 		float lungeMult = mobGetFloat(moby, SWARMER_PARAM_BITE_LUNGE_MULTIPLIER);
 
-		float speedCurve = pvars->MobVars.Config.Speed * powf(clamp(SWARMER_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT, 1, 2.25), 2) * lungeMult;
-		float speed = (moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < SWARMER_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 1;
+		float speed = mobGetLungeSpeed(moby, attack1AnimId, 0, SWARMER_ATTACK_ANIM_LUNGE_DURATION, lungeMult);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= SWARMER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < SWARMER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
-		// printf("speed:%f lunge:%f final:%f\n", pvars->MobVars.Config.Speed, lungeMult, speed);
-
 		if (!isInAirFromFlinching)
 		{
-			if (target)
+			if (target && speed > 0)
 			{
 				mobTurnTowardsPredictiveWithSpeed(moby, target, SWARMER_TURN_LUNGE_RADIANS_PER_SEC, speed);
 				mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
@@ -717,11 +711,7 @@ void swarmerDoDamage(Moby *moby, float radius, float amount, int damageFlags, in
 void swarmerForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	float difficulty = 1;
 	int stateCooldownTicks = SWARMER_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

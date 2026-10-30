@@ -10,7 +10,7 @@ using UnityEngine.Serialization;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int RAIDS_VERSION = 4;
+    public static readonly int RAIDS_VERSION = 5;
     public const int MAX_ACTIONS_PER_MOB = 8;
     public const int MAX_PARAMS_PER_MOB = 16;
     public static readonly int[] DEFAULT_CLASS_XP_REWARDS = new int[] { 250, 750, 1500, 2500, 4000 };
@@ -20,15 +20,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     public static readonly int NPC_OCLASS = 0x4006;
     public static readonly int GOLDBOLT_OCLASS = 0x400E;
     public static readonly int SKILLFIELD_OCLASS = 0x4013;
-
-    public static readonly float[] DIFFICULTY_FACTORS = new float[]
-    {
-        0,
-        25,
-        150,
-        500,
-        1250
-    };
 
     public enum RAIDS_MISSION_TYPES
     {
@@ -730,42 +721,6 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
     }
 
     #endregion
-
-
-    #region Helpers
-
-    public static float ScaleDamage(float baseDamage, float maxDamage, float scale, int difficulty)
-    {
-        var dfactor = DIFFICULTY_FACTORS[difficulty];
-        var damage = baseDamage * (1 + (0.03f * scale * dfactor));
-        if (maxDamage > 0 && damage > maxDamage)
-            damage = maxDamage;
-
-        return damage;
-    }
-
-    public static float ScaleSpeed(float baseSpeed, float maxSpeed, float scale, int difficulty)
-    {
-        var dfactor = DIFFICULTY_FACTORS[difficulty];
-        float speed = baseSpeed * (1 + (0.03f * scale * dfactor));
-        if (maxSpeed > 0 && speed > maxSpeed)
-            speed = maxSpeed;
-
-        return speed;
-    }
-
-    public static float ScaleHealth(float baseHealth, float maxHealth, float scale, int difficulty)
-    {
-        var dfactor = DIFFICULTY_FACTORS[difficulty];
-        var health = baseHealth * Mathf.Pow(1 + (0.05f * scale * dfactor), 2);
-        if (maxHealth > 0 && health > maxHealth)
-            health = maxHealth;
-
-        return health;
-    }
-
-    #endregion
-
 }
 
 public enum RaidsMob

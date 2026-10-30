@@ -288,7 +288,6 @@ void mapApplyZoning(void)
     }
   }
   
-  MapConfig.State->Difficulty = 1;
   MapConfig.State->LivesLeft = 2;
 }
 

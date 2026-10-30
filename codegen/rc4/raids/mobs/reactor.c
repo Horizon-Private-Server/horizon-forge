@@ -601,14 +601,11 @@ void reactorDoAction(Moby *moby)
 	VECTOR t;
 	u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 	int walkBackwards = 0;
-	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? REACTOR_TURN_RADIANS_PER_SEC : REACTOR_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? REACTOR_MOVE_ACCELERATION : REACTOR_MOVE_AIR_ACCELERATION;
 	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == REACTOR_ACTION_FLINCH || pvars->MobVars.LastAction == REACTOR_ACTION_BIG_FLINCH);
 
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// MATRIX *joints = (MATRIX *)moby->JointCache;
 	// static int asd = 3;
@@ -854,8 +851,7 @@ void reactorDoAction(Moby *moby)
 		float lungeMult = mobGetFloat(moby, REACTOR_PARAM_SWING_LUNGE_MULTIPLIER);
 		float damage = pvars->MobVars.Config.Damage * mobGetFloat(moby, REACTOR_PARAM_SWING_DAMAGE_MULTIPLIER);
 
-		float speedCurve = powf(clamp((REACTOR_SWING_ATTACK_ANIM_LUNGE_DURATION - moby->AnimSeqT) / 2, 0, 2.5), 2) * lungeMult;
-		float speed = MOB_BASE_SPEED * ((moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= 0 && moby->AnimSeqT <= REACTOR_SWING_ATTACK_ANIM_LUNGE_DURATION) ? speedCurve : 0);
+		float speed = mobGetLungeSpeed(moby, attack1AnimId, 0, REACTOR_SWING_ATTACK_ANIM_LUNGE_DURATION, lungeMult);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REACTOR_SWING_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REACTOR_SWING_ATTACK_HIT_FRAME_END;
 
 		if (target)
@@ -1221,11 +1217,7 @@ void reactorForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	ReactorMobVars_t *reactorVars = (ReactorMobVars_t *)pvars->AdditionalMobVarsPtr;
-	float difficulty = 1;
 	int stateCooldownTicks = REACTOR_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

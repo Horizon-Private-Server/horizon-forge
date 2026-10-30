@@ -465,12 +465,9 @@ void reaperDoAction(Moby *moby)
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
 	Moby *target = pvars->MobVars.MoveVars.Target;
 	VECTOR t;
-	float difficulty = 1;
 	float turnSpeed = pvars->MobVars.MoveVars.Grounded ? REAPER_TURN_RADIANS_PER_SEC : REAPER_TURN_AIR_RADIANS_PER_SEC;
 	float acceleration = pvars->MobVars.MoveVars.Grounded ? REAPER_MOVE_ACCELERATION : REAPER_MOVE_AIR_ACCELERATION;
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&reaperRenderPath, moby);
@@ -551,12 +548,11 @@ case REAPER_ACTION_AGGRO:
 		float damageMultiplier = mobGetFloat(moby, (pvars->MobVars.LastAction == REAPER_ACTION_AGGRO) ? REAPER_PARAM_MELEE_AGGRO_DAMAGE_MULTIPLIER : REAPER_PARAM_MELEE_DAMAGE_MULTIPLIER);
 		float damage = pvars->MobVars.Config.Damage * damageMultiplier;
 
-		int lungeActive = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT < REAPER_ATTACK_ANIM_LUNGE_DURATION;
-		float speed = lungeMult * clamp(difficulty * 2, 1, 5);
+		float speed = mobGetLungeSpeed(moby, attack1AnimId, 0, REAPER_ATTACK_ANIM_LUNGE_DURATION, lungeMult);
 		int swingAttackReady = moby->AnimSeqId == attack1AnimId && moby->AnimSeqT >= REAPER_ATTACK_HIT_FRAME_START && moby->AnimSeqT < REAPER_ATTACK_HIT_FRAME_END;
 		u32 damageFlags = mobGetDamageFlags(moby, MOB_DAMAGE_FLAG_BASE);
 
-		if (target && lungeActive)
+		if (target && speed > 0)
 		{
 			mobTurnTowardsPredictiveWithSpeed(moby, target, REAPER_TURN_LUNGE_RADIANS_PER_SEC, speed);
 			mobMoveTowards(moby, target->Position, speed, 0, acceleration, 0);
@@ -684,7 +680,7 @@ case REAPER_ACTION_AGGRO:
       if (pvars->MobVars.MoveVars.QueueJumpSpeed) {
         reaperForceLocalAction(moby, REAPER_ACTION_JUMP);
       } else if (mobHasVelocity(pvars)) {
-				mobTransAnim(moby, REAPER_ANIM_RUN, 0);
+				mobTransAnim(moby, REAPER_ANIM_WALK, 0);
       } else {
 				mobTransAnim(moby, REAPER_ANIM_IDLE, 0);
       }
@@ -722,11 +718,7 @@ void reaperDoDamage(Moby *moby, float radius, float amount, int damageFlags, int
 void reaperForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	float difficulty = 1;
 	int stateCooldownTicks = REAPER_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)

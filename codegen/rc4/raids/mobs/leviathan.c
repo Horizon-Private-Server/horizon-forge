@@ -309,12 +309,19 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float newHp = pvars->MobVars.Health - damage;
 	int canFlinch = pvars->MobVars.Action != LEVIATHAN_ACTION_FLINCH && pvars->MobVars.Action != LEVIATHAN_ACTION_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
 
-	// every quarter health reset laser cooldown
-	if ((int)(newHp * 4) != (int)(pvars->MobVars.Health * 4))
-	{
-		leviathanResetActionCooldownTicks(moby, LEVIATHAN_ATTACK_ACTION_LASER);
-		leviathanVars->ActionCooldownTicks[LEVIATHAN_ATTACK_ACTION_LASER] = 1;
-	}
+  // Reset the laser cooldown when damage crosses a configured max-health band.
+  int healthDivisions = mobGetInt(moby, LEVIATHAN_PARAM_LASER_COOLDOWN_RESET_HEALTH_DIVISIONS);
+	float maxHealth = pvars->MobVars.Config.MaxHealth;
+  if (healthDivisions > 1 && maxHealth > 0 && newHp > 0)
+  {
+    int newHealthBand = (int)ceilf(healthDivisions * (newHp / maxHealth));
+    int oldHealthBand = (int)ceilf(healthDivisions * (pvars->MobVars.Health / maxHealth));
+    if (newHealthBand != oldHealthBand)
+    {
+      leviathanResetActionCooldownTicks(moby, LEVIATHAN_ATTACK_ACTION_LASER);
+      leviathanVars->ActionCooldownTicks[LEVIATHAN_ATTACK_ACTION_LASER] = 1;
+    }
+  }
 
 #if ALWAYS_FLINCH
 	canFlinch = 1;
@@ -664,15 +671,12 @@ void leviathanDoAction(Moby *moby)
 	Moby *laserbeamMoby = leviathanVars->LaserbeamMoby;
 	VECTOR t;
 	int isBoss = leviathanIsBoss(moby);
-	float difficulty = 1;
 	// float speed = pvars->MobVars.Config.Speed;
 	float turnSpeed = 1 * (pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_TURN_RADIANS_PER_SEC : LEVIATHAN_TURN_AIR_RADIANS_PER_SEC);
 	// float acceleration = pvars->MobVars.MoveVars.Grounded ? LEVIATHAN_MOVE_ACCELERATION : LEVIATHAN_MOVE_AIR_ACCELERATION;
 	int isInAirFromFlinching = !pvars->MobVars.MoveVars.Grounded && (pvars->MobVars.LastAction == LEVIATHAN_ACTION_FLINCH || pvars->MobVars.LastAction == LEVIATHAN_ACTION_BIG_FLINCH);
 
 	turnSpeed *= pvars->MobVars.Config.TurnSpeed;
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 #if DEBUGPATH
 	gfxRegisterDrawFunction((void **)0x0022251C, (gfxDrawFuncDef *)&leviathanRenderPath, moby);
@@ -1024,11 +1028,7 @@ void leviathanDoDamage(Moby *moby, float radius, float amount, int damageFlags, 
 void leviathanForceLocalAction(Moby *moby, int action)
 {
 	struct MobPVar *pvars = (struct MobPVar *)moby->PVar;
-	float difficulty = 1;
 	int stateCooldownTicks = LEVIATHAN_ACTION_COOLDOWN_TICKS;
-
-	if (MapConfig.State)
-		difficulty = MapConfig.State->Difficulty;
 
 	// from
 	switch (pvars->MobVars.Action)
