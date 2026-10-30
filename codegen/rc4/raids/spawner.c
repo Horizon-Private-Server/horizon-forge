@@ -390,10 +390,15 @@ void spawnerOnStateChanged(Moby* moby)
 //--------------------------------------------------------------------------
 void spawnerBroadcastNewState(Moby* moby, enum SpawnerState state)
 {
+  struct SpawnerPVar* pvars = (struct SpawnerPVar*)moby->PVar;
+
 	// create event
 	GuberEvent * guberEvent = guberCreateEvent(moby, SPAWNER_EVENT_SET_STATE);
   if (guberEvent) {
     guberEventWrite(guberEvent, &state, 4);
+
+    // A queued state takes precedence over the default, even before it is received.
+    pvars->Init = 1;
   }
 }
 

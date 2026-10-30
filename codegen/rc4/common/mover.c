@@ -583,6 +583,7 @@ void moverOnStateChanged(Moby* moby)
 //--------------------------------------------------------------------------
 void moverBroadcastNewState(Moby* moby, enum MoverState state)
 {
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
   int time = gameGetTime();
 
 	// create event
@@ -590,6 +591,9 @@ void moverBroadcastNewState(Moby* moby, enum MoverState state)
   if (guberEvent) {
     guberEventWrite(guberEvent, &state, 4);
     guberEventWrite(guberEvent, &time, 4);
+
+    // A queued state takes precedence over the default, even before it is received.
+    pvars->Init = 1;
   }
 }
 

@@ -1137,6 +1137,9 @@ void controllerBroadcastNewState(Moby* moby, enum ControllerState state)
 	GuberEvent * guberEvent = guberCreateEvent(moby, CONTROLLER_EVENT_SET_STATE);
   if (guberEvent) {
     guberEventWrite(guberEvent, &state, 4);
+    
+    // A queued state takes precedence over the default, even before it is received.
+    pvars->Init = 1;
   }
 }
 
