@@ -261,7 +261,7 @@ void stalkerturretOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSour
 	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
-  //mobBlowCorn(moby);
+  //mobBlowCorn(moby, moby->Bangles);
 
   struct MobPVar* pvars = (struct MobPVar*)moby->PVar;
   StalkerTurretMobVars_t* turretVars = (StalkerTurretMobVars_t*)pvars->AdditionalMobVarsPtr;

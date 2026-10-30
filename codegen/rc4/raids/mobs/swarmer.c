@@ -220,7 +220,7 @@ void swarmerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource sou
 	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
-  mobBlowCorn(moby);
+  mobBlowCorn(moby, moby->Bangles);
 }
 
 //--------------------------------------------------------------------------

@@ -279,11 +279,11 @@ void dzstrikerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource s
 	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
-  mobBlowCorn(moby);
+  mobBlowCorn(moby, moby->Bangles);
 
   DZStrikerMobVars_t* dzstrikerVars = dzstrikerGetExtraVars(moby);
   if (dzstrikerVars->TorsoMoby && !mobyIsDestroyed(dzstrikerVars->TorsoMoby)) {
-    mobBlowCorn(dzstrikerVars->TorsoMoby);
+    mobBlowCorn(dzstrikerVars->TorsoMoby, dzstrikerVars->TorsoMoby->Bangles);
     mobyDestroy(dzstrikerVars->TorsoMoby);
     dzstrikerVars->TorsoMoby = NULL;
   }

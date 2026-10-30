@@ -224,6 +224,7 @@ void interopInit(void)
   MapConfig.Functions.FinalizePlayerDamageFunc = &mapFinalizePlayerDamage;
   MapConfig.Functions.MobAfterDamageFunc = &mapMobAfterDamage;
   MapConfig.Functions.GetAmmoDropChanceFunc = &mapGetAmmoDropChance;
+  MapConfig.Functions.MobBlowCornFunc = &mobBlowCorn;
 }
 
 //--------------------------------------------------------------------------

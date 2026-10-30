@@ -109,7 +109,7 @@ int mobAmIOwner(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-void mobBlowCorn(Moby* moby)
+void mobBlowCorn(Moby* moby, int bangles)
 {
   static int alt = 0;
   int lod = 2;
@@ -119,7 +119,7 @@ void mobBlowCorn(Moby* moby)
   if (PATCH_INTEROP && PATCH_INTEROP->Config)
     lod = PATCH_INTEROP->Config->levelOfDetailMobs;
   
-  int cornCob = *(short*)(moby->PClass + 0x2e);
+  int cornCob = *(short*)(moby->PClass + 0x2e) & bangles;
   if (!cornCob) return;
 
   alt = !alt;
@@ -1889,7 +1889,7 @@ u32 mobGetDamageFlags(Moby* moby, u32 flags)
 //--------------------------------------------------------------------------
 void mobSpawnCorn(Moby* moby, int bangle)
 {
-  mobBlowCorn(moby);
+  mobBlowCorn(moby, bangle);
 }
 
 //--------------------------------------------------------------------------

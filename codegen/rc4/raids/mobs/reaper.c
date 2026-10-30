@@ -197,7 +197,7 @@ void reaperOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource sour
 	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
-  mobBlowCorn(moby);
+  mobBlowCorn(moby, moby->Bangles);
 }
 
 //--------------------------------------------------------------------------

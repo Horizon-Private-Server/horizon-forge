@@ -206,7 +206,7 @@ void executionerOnDestroy(Moby* moby, int killedByPlayerId, enum MobDamageSource
 	moby->PrimaryColor = mobGetSpawnParams(moby)->BaseColor;
   
   // spawn corn
-  mobBlowCorn(moby);
+  mobBlowCorn(moby, moby->Bangles);
 }
 
 //--------------------------------------------------------------------------
