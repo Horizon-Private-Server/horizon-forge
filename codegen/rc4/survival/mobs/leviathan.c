@@ -311,12 +311,19 @@ void leviathanOnDamage(Moby *moby, struct MobDamageEventArgs *e)
 	float newHp = pvars->MobVars.Health - damage;
 	int canFlinch = pvars->MobVars.State != LEVIATHAN_STATE_FLINCH && pvars->MobVars.State != LEVIATHAN_STATE_BIG_FLINCH && pvars->MobVars.FlinchCooldownTicks == 0;
 
-	// every quarter health reset laser cooldown
-	if ((int)(newHp * 4) != (int)(pvars->MobVars.Health * 4))
-	{
-		leviathanResetActionCooldownTicks(moby, LEVIATHAN_ACTION_LASER);
-		leviathanVars->ActionCooldownTicks[LEVIATHAN_ACTION_LASER] = 1;
-	}
+  // Reset the laser cooldown when damage crosses a configured max-health band.
+  int healthDivisions = mobGetInt(moby, LEVIATHAN_PARAM_LASER_COOLDOWN_RESET_HEALTH_DIVISIONS);
+  float maxHealth = pvars->MobVars.Config.MaxHealth;
+  if (healthDivisions > 1 && maxHealth > 0 && newHp > 0)
+  {
+    int newHealthBand = (int)ceilf(healthDivisions * (newHp / maxHealth));
+    int oldHealthBand = (int)ceilf(healthDivisions * (pvars->MobVars.Health / maxHealth));
+    if (newHealthBand != oldHealthBand)
+    {
+      leviathanResetActionCooldownTicks(moby, LEVIATHAN_ACTION_LASER);
+      leviathanVars->ActionCooldownTicks[LEVIATHAN_ACTION_LASER] = 1;
+    }
+  }
 
 #if ALWAYS_FLINCH
 	canFlinch = 1;
