@@ -10,7 +10,7 @@ using UnityEngine.Serialization;
 
 public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
 {
-    public static readonly int RAIDS_VERSION = 5;
+    public static readonly int RAIDS_VERSION = 6;
     public const int MAX_ACTIONS_PER_MOB = 8;
     public const int MAX_PARAMS_PER_MOB = 16;
     public static readonly int[] DEFAULT_CLASS_XP_REWARDS = new int[] { 250, 750, 1500, 2500, 4000 };

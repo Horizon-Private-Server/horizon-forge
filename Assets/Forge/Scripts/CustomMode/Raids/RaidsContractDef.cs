@@ -15,6 +15,8 @@ public class RaidsContractDef : MonoBehaviour
     [Min(1)]
     public int MaxCount = 1000;
     public float BaseXpPerMob = 1;
+    [Min(0), Tooltip("Class XP awarded per required mob kill when completing the contract.")]
+    public float BaseClassXpPerMob = 0;
     public float BaseBoltsPerMob = 1;
     public ushort ExpirationTimeMinutes = 30;
 
@@ -29,6 +31,8 @@ public class RaidsContractDef : MonoBehaviour
             throw new InvalidOperationException($"{Name}: exported contract group name exceeds 31 UTF-8 bytes.");
         if (MobDefinitions == null || MobDefinitions.Count == 0)
             throw new InvalidOperationException($"{Name}: contract group must include at least one mob definition.");
+        if (float.IsNaN(BaseClassXpPerMob) || float.IsInfinity(BaseClassXpPerMob) || BaseClassXpPerMob < 0)
+            throw new InvalidOperationException($"{Name}: base Class XP per mob must be finite and nonnegative.");
 
         ushort mask = 0;
         foreach (var mob in MobDefinitions)
@@ -52,6 +56,7 @@ public class RaidsContractDef : MonoBehaviour
         sb.AppendLine($"\t\t.MaxCount = {(ushort)MaxCount},");
         sb.AppendLine($"\t\t.XpMult = {BaseXpPerMob.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.BoltMult = {BaseBoltsPerMob.ToInvariantCulture()},");
+        sb.AppendLine($"\t\t.ClassXpPerMob = {BaseClassXpPerMob.ToInvariantCulture()},");
         sb.AppendLine($"\t\t.ExpirationMinutes = {ExpirationTimeMinutes},");
         sb.AppendLine($"\t\t.Name = \"{ExportName.Escape()}\"");
         sb.AppendLine("\t},");

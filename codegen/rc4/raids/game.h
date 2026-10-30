@@ -240,6 +240,7 @@ struct RaidsMobContractRule
   u16 ExpirationMinutes;
   float XpMult;
   float BoltMult;
+  float ClassXpPerMob;
   char Name[32];
 };
 
