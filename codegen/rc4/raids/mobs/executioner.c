@@ -460,7 +460,7 @@ Moby *executionerFireShot(Moby *moby, Moby *target)
 
 	// fire shot
 	float rangedAttack = mobGetFloat(moby, EXECUTIONER_PARAM_FIRE_MAX_DISTANCE);
-	Moby *shotMoby = ((Moby * (*)(float, float, VECTOR, VECTOR, Moby *, int, int, int, int))0x0045d598)(4, damage, from, vel, moby, 1, 0x222124, -1, 0);
+	Moby *shotMoby = holoshieldSpawnEnemyVehicleMobShot(4, damage, from, vel, moby, moby);
 	if (shotMoby)
 	{
 		((void (*)(Moby *, int))0x0045d758)(shotMoby, 2);														// shot type

@@ -862,6 +862,7 @@ case LEVIATHAN_ACTION_CHASE:
 					colorGlow = 0x5020FF20;
 				}
 				laserbeamSet(laserbeamMoby, &mtxTailHead[12], leviathanVars->LaserbeamDirection, 100, width, damage, MOB_DAMAGE_FLAG_BASE, colorBeam, colorGlow, 0x00ff00, 0x00ff00, 0x45, 0x0E);
+				holoshieldDamageBeam(laserbeamMoby);
 			}
 
 			// check for laser hit target

@@ -185,6 +185,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/wallwalk.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/visibomb.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/skillfield.o");
+        state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/holoshield.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/interop.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/classes.o");
         state.ObjectFiles.Add($"{FolderNames.CodeBuildSrcFolder}/collectible.o");
@@ -250,6 +251,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         state.Includes.Add("#include \"interop.h\"");
         state.Includes.Add("#include \"skills.h\"");
         state.Includes.Add("#include \"skillfield.h\"");
+        state.Includes.Add("#include \"holoshield.h\"");
 
         // declarations
         {
@@ -263,6 +265,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.InitBody.Add($"bankInit();");
             state.InitBody.Add($"inventoryInit();");
             state.InitBody.Add($"mapInit();");
+            state.InitBody.Add("holoshieldInit();");
             state.InitBody.Add($"mobInit();");
             state.InitBody.Add($"levelselectInit();");
             state.InitBody.Add($"contractsInit();");
@@ -306,6 +309,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
         // draw functions
         {
             state.DrawBody.Insert(0, "mapDrawHud();");
+            state.DrawBody.Add("holoshieldDraw();");
             state.DrawBody.Add("levelselectFrameTick();");
             state.DrawBody.Add("contractsFrameTick();");
             state.DrawBody.Add("inventoryFrameTick();");

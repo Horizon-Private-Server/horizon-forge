@@ -12,6 +12,7 @@
 #include "mobs/mob.h"
 #include "utils.h"
 #include "maputils.h"
+#include "holoshield.h"
 
 VECTOR trailshotCenterOffset = {0, 0, 1, 0};
 int trailshotGlobalIndex = 0;
@@ -259,6 +260,9 @@ void trailshotUpdate(Moby *moby)
 			float slope = getSignedSlope(velNormal, hitNormal);
 			if (fabsf(slope) > (25 * MATH_DEG2RAD))
 			{
+				Moby* shield = CollLine_Fix_GetHitMoby();
+				if (holoshieldIsEnemySource(moby->PParent))
+					holoshieldDamage(shield, pvars->Damage);
 				trailshotOnImpact(moby);
 				mobySetState(moby, TRAILSHOT_WAITING_TO_DIE, -1);
 				return;

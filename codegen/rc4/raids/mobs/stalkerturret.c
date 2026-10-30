@@ -383,7 +383,7 @@ Moby* stalkerturretFireShot(Moby* moby, Moby* target, int jointId)
   vector_scale(vel, vel, mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_PROJECTILE_SPEED));
 
   // fire shot
-  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(4.0, pvars->MobVars.Config.Damage * mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_PROJECTILE_DAMAGE), from, vel, turretVars->TurretMoby, 1, 0x222124, -1, 0);
+  Moby* shotMoby = holoshieldSpawnEnemyVehicleMobShot(4.0, pvars->MobVars.Config.Damage * mobGetFloat(moby, STALKERTURRET_PARAM_FIRE_PROJECTILE_DAMAGE), from, vel, turretVars->TurretMoby, moby);
   if (shotMoby) {
     ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0); // shot type
     ((void (*)(Moby*, int))0x0045d788)(shotMoby, turretVars->Team); // shot color

@@ -19,6 +19,8 @@
 #include "bank.h"
 #include "inventory.h"
 #include "common.h"
+#include "holoshield.h"
+#include "skills.h"
 
 enum InventoryItemAction
 {
@@ -355,6 +357,15 @@ void inventoryDrawWeaponInfo(Window_t* drawWindow)
   snprintf(equippedBuf, sizeof(equippedBuf), "%d", (int)baseDamage);
   snprintf(selectedBuf, sizeof(selectedBuf), "%d", (int)selectedDamage);
   inventoryDrawComparisonRow(drawWindow, "Damage", equippedBuf, selectedBuf, inventoryDrawGetCompareColor(selectedDamage - baseDamage), hasComparison);
+
+  if (selectedItem->WeaponData.GadgetId == WEAPON_ID_OMNI_SHIELD) {
+    int impactBonus = skillsGetAlphaModBonus(playerGetFromSlot(0), ALPHA_MOD_IMPACT);
+    float baseCapacity = holoshieldGetCapacity(baseItem, impactBonus);
+    float selectedCapacity = holoshieldGetCapacity(selectedItem, impactBonus);
+    snprintf(equippedBuf, sizeof(equippedBuf), "%.f", baseCapacity);
+    snprintf(selectedBuf, sizeof(selectedBuf), "%.f", selectedCapacity);
+    inventoryDrawComparisonRow(drawWindow, "Absorption", equippedBuf, selectedBuf, inventoryDrawGetCompareColor(selectedCapacity - baseCapacity), hasComparison);
+  }
 
   snprintf(equippedBuf, sizeof(equippedBuf), "%.f%%", (baseItem->WeaponData.CritChance / 255.0) * 100);
   snprintf(selectedBuf, sizeof(selectedBuf), "%.f%%", (selectedItem->WeaponData.CritChance / 255.0) * 100);
@@ -738,7 +749,7 @@ void inventoryDraw(void)
 
   u32 borderColor = RAIDS_MENU_BORDER_COLOR;
   const float windowWidth = 480;
-  const float windowHeight = 290;
+  const float windowHeight = 304; // Room for the holoshield absorption comparison row.
   const float titleHeight = RAIDS_MENU_TITLE_HEIGHT;
   const float accountHeight = 44;
   const float gridWidth = 225;

@@ -156,9 +156,10 @@ int mapPlayerOnSpawnHoloshield(int playerId)
   int i;
   int count = 0;
   for (i = 0; i < 4; ++i) {
-    if (cacheList[i])
-      ++count;
+    if (cacheList[i] && !mobyIsDestroyed(cacheList[i]))
+      cacheList[count++] = cacheList[i];
   }
+  for (i = count; i < 4; ++i) cacheList[i] = NULL;
 
   // Make room for the new shield by destroying the oldest one.
   if (count == 4) {

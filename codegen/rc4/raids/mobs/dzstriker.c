@@ -635,7 +635,7 @@ Moby* dzstrikerFireShot(Moby* moby, Moby* target)
   }
 
   // fire shot
-  Moby* shotMoby = ((Moby* (*)(float, float, VECTOR, VECTOR, Moby*, int, int, int, int))0x0045d598)(shotTrail, damage, from, vel, dzstrikerVars->TorsoMoby, 1, 0x222124, -1, 0);
+  Moby* shotMoby = holoshieldSpawnEnemyVehicleMobShot(shotTrail, damage, from, vel, dzstrikerVars->TorsoMoby, moby);
   if (shotMoby) {
     ((void (*)(Moby*, int))0x0045d758)(shotMoby, 0); // shot type
     ((void (*)(Moby*, int))0x0045d788)(shotMoby, TEAM_RED); // shot color

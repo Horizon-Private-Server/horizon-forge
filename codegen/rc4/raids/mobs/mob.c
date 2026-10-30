@@ -28,6 +28,7 @@
 #include "pathfind.h"
 #include "dummy.h"
 #include "skills.h"
+#include "holoshield.h"
 
 Moby* mobOtherTargets[MOB_MAX_OTHER_TARGETS];
 Moby* mobOtherTargets2[MOB_MAX_OTHER_TARGETS];
