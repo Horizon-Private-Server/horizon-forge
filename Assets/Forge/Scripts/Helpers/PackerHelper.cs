@@ -402,7 +402,17 @@ public static class PackerHelper
         // assets
         if (ops.HasFlag(PACKER_PACK_OPS.PACK_ASSETS))
         {
-            result = RunPacker(out _, "pack-assets", "-i", Path.Combine(inFolder, FolderNames.BinaryAssetsFolder), "-o", inFolder, "-v", racVersion.ToString());
+            var assetsFolder = Path.Combine(inFolder, FolderNames.BinaryAssetsFolder);
+            if (Directory.Exists(Path.Combine(assetsFolder, "sound_remap")))
+            {
+                // for some reason packer can fail to delete sounds folder on pack
+                // so delete it ahead of time
+                var soundsFolder = Path.Combine(inFolder, FolderNames.BinarySoundsFolder);
+                if (Directory.Exists(soundsFolder)) Directory.Delete(soundsFolder, true);
+                Directory.CreateDirectory(soundsFolder);
+            }
+
+            result = RunPacker(out _, "pack-assets", "-i", assetsFolder, "-o", inFolder, "-v", racVersion.ToString());
             if (result != PACKER_STATUS_CODES.SUCCESS) return result;
             onProgressCallback?.Invoke(0.7f);
         }
