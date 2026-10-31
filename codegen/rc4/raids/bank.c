@@ -1351,6 +1351,24 @@ float bankGetGadgetDamage(GadgetBox* gbox, int gadgetId, int damageType, int mul
 {
   float (*getNativeDamage)(int, int, int, int) = (float (*)(int, int, int, int))0x00627520;
   int level = gbox->Gadgets[gadgetId].Level;
+
+  // add hero levels to base wrench damage before native attack multipliers
+  if (gadgetId == WEAPON_ID_WRENCH) {
+    float damage = getNativeDamage(gadgetId, level, damageType, multiplier);
+    struct RaidsState* state = MapConfig.State;
+    int playerIdx = bankGetPlayerIdxFromGadgetBox(gbox);
+    if (!state || playerIdx < 0 || playerIdx >= GAME_MAX_PLAYERS) return damage;
+
+    Player* player = playerGetFromIndex(playerIdx);
+    if (!player || (player->IsLocal && !bankGetHasAccount())) return damage;
+
+    float baseDamage = getNativeDamage(gadgetId, level, 0, 1);
+    if (baseDamage > 0)
+      damage *= 1 + (PLAYER_LEVEL_WRENCH_DAMAGE * state->PlayerStates[playerIdx].State.Level) / baseDamage;
+
+    return damage;
+  }
+
   RaidsInventoryItem_t* bankWeapon = bankGetEquippedWeaponFromGadgetBox(gbox, gadgetId);
   if (!bankWeapon) return getNativeDamage(gadgetId, level, damageType, multiplier);
 
