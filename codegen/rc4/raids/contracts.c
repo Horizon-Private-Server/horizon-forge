@@ -114,7 +114,12 @@ void contractsComplete(RaidsContract_t* item)
   if (!bank) return;
 
   if (!bankGetHasAccount()) return;
-  if (item->RewardClassXp > 0 && !classesGetDefinition(item->CompletedClassType)) return;
+  if (item->RewardClassXp > 0 && !classesGetDefinition(item->CompletedClassType)) {
+    // older kill contracts did not save the completion class
+    if (item->CompletedClassType >= 0 || !item->Activated || !item->RequiredKills || item->Kills < item->RequiredKills) return;
+    if (!classesGetDefinition(bank->Account.EquippedClass)) return;
+    item->CompletedClassType = bank->Account.EquippedClass;
+  }
 
   // apply
   bankAddBolts(item->RewardBolts);
