@@ -107,7 +107,7 @@
 #define PLAYER_COLL_RADIUS          					(0.5)
 
 #define PLAYER_LEVEL_HEALTH_FACTOR            (10)
-#define PLAYER_LEVEL_DAMAGE_FACTOR            (0.0)
+#define PLAYER_LEVEL_DAMAGE_FACTOR            (0.04)
 #define PLAYER_LEVEL_WRENCH_DAMAGE            (10)
 
 #define SNACK_ITEM_MAX_COUNT                  (16)
