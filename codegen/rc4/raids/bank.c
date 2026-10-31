@@ -708,25 +708,58 @@ int bankGetLevel(void)
 //--------------------------------------------------------------------------
 u64 bankGetClassXpForLevel(RaidsPlayerClassProgress_t* playerClass, int level)
 {
+  static struct {
+    float CurveMultiplier;
+    u16 ValidLevels;
+    u64 Xp[RAIDS_CLASS_MAX_LEVEL + 1];
+  } cache[BANK_MAX_CLASSES];
+
   // Class levels and cumulative XP thresholds both use levels 0-10.
   if (level <= 0) return 0;
   if (level > RAIDS_CLASS_MAX_LEVEL) level = RAIDS_CLASS_MAX_LEVEL;
   const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
-  if (!def) return 0;
-  return (u64)((10.0 * level * level * level * level + 250.0 * level) * (double)def->ExperienceCurveMultiplier);
+  if (!def || playerClass->ClassType < 0 || playerClass->ClassType >= BANK_MAX_CLASSES) return 0;
+
+  // keep the original thresholds without repeating software double arithmetic
+  int idx = playerClass->ClassType;
+  if (cache[idx].CurveMultiplier != def->ExperienceCurveMultiplier) {
+    cache[idx].CurveMultiplier = def->ExperienceCurveMultiplier;
+    cache[idx].ValidLevels = 0;
+  }
+  if (!(cache[idx].ValidLevels & (1 << level))) {
+    cache[idx].Xp[level] = (u64)((10.0 * level * level * level * level + 250.0 * level) * (double)def->ExperienceCurveMultiplier);
+    cache[idx].ValidLevels |= 1 << level;
+  }
+  return cache[idx].Xp[level];
 }
 
 //--------------------------------------------------------------------------
 int bankGetClassLevel(RaidsPlayerClassProgress_t* playerClass, u64 xp)
 {
+  static struct {
+    u64 Xp;
+    float CurveMultiplier;
+    int Level;
+    char Valid;
+  } cache[BANK_MAX_CLASSES];
+
   // A class starts at level 0 and earns one point for each level gained.
-  if (!playerClass || !classesGetDefinition(playerClass->ClassType)) return 0;
+  const RaidsClassDef_t* def = playerClass ? classesGetDefinition(playerClass->ClassType) : NULL;
+  if (!def || playerClass->ClassType < 0 || playerClass->ClassType >= BANK_MAX_CLASSES) return 0;
+  int idx = playerClass->ClassType;
+  if (cache[idx].Valid && cache[idx].Xp == xp && cache[idx].CurveMultiplier == def->ExperienceCurveMultiplier)
+    return cache[idx].Level;
+
   int level = 0;
   while (level < RAIDS_CLASS_MAX_LEVEL) {
     u64 nextXp = bankGetClassXpForLevel(playerClass, level + 1);
     if (xp < nextXp) break;
     ++level;
   }
+  cache[idx].Xp = xp;
+  cache[idx].CurveMultiplier = def->ExperienceCurveMultiplier;
+  cache[idx].Level = level;
+  cache[idx].Valid = 1;
   return level;
 }
 
@@ -858,7 +891,36 @@ RaidsPlayerClassProgress_t* bankGetPlayerEquippedClass(int playerId)
 //--------------------------------------------------------------------------
 int bankGetClassSkillMask(RaidsPlayerClassProgress_t* playerClass, const RaidsClassDef_t* def, u8* ranks, int level)
 {
+  static struct {
+    RaidsPlayerClassProgress_t* PlayerClass;
+    RaidsPlayerClassProgress_t Snapshot;
+    const RaidsClassDef_t* Definition;
+    int Level;
+    int Connected;
+    u8 Ranks[BANK_MAX_CLASS_SKILLS];
+  } cache[GAME_MAX_PLAYERS + 1];
+  static int nextCacheIdx = 0;
+
   int i, j, pass;
+  int cacheIdx = -1;
+  for (i = 0; i < COUNT_OF(cache); ++i) {
+    if (cache[i].PlayerClass == playerClass) {
+      cacheIdx = i;
+      break;
+    }
+  }
+
+  // responses can replace allocations in place without a map callback
+  if (cacheIdx >= 0 && cache[cacheIdx].Definition == def && cache[cacheIdx].Level == level
+      && !memcmp(&cache[cacheIdx].Snapshot, playerClass, sizeof(*playerClass))) {
+    memcpy(ranks, cache[cacheIdx].Ranks, sizeof(cache[cacheIdx].Ranks));
+    return cache[cacheIdx].Connected;
+  }
+  if (cacheIdx < 0) {
+    cacheIdx = nextCacheIdx;
+    nextCacheIdx = (nextCacheIdx + 1) % COUNT_OF(cache);
+  }
+
   // Resolve saved skill IDs into definition slots and apply caps without editing saved data.
   memset(ranks, 0, BANK_MAX_CLASS_SKILLS);
   for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
@@ -893,6 +955,12 @@ int bankGetClassSkillMask(RaidsPlayerClassProgress_t* playerClass, const RaidsCl
     }
     if (connected == previous) break;
   }
+  cache[cacheIdx].PlayerClass = playerClass;
+  memcpy(&cache[cacheIdx].Snapshot, playerClass, sizeof(*playerClass));
+  cache[cacheIdx].Definition = def;
+  cache[cacheIdx].Level = level;
+  cache[cacheIdx].Connected = connected;
+  memcpy(cache[cacheIdx].Ranks, ranks, sizeof(cache[cacheIdx].Ranks));
   return connected;
 }
 
@@ -903,12 +971,14 @@ int bankGetClassSkillRankAtLevel(RaidsPlayerClassProgress_t* playerClass, enum R
   const RaidsClassDef_t* def = classesGetDefinition(playerClass->ClassType);
   if (!def) return 0;
 
-  // Saved ranks use global skill IDs; the connectivity mask uses definition slots.
-  u8 ranks[BANK_MAX_CLASS_SKILLS];
-  int connected = bankGetClassSkillMask(playerClass, def, ranks, level);
+  // skip resolution for skills absent from this class
   int i;
   for (i = 0; i < BANK_MAX_CLASS_SKILLS; ++i) {
-    if (def->Skills[i].SkillId == skillId) return (connected & (1 << i)) ? ranks[i] : 0;
+    if (def->Skills[i].SkillId == skillId) {
+      u8 ranks[BANK_MAX_CLASS_SKILLS];
+      int connected = bankGetClassSkillMask(playerClass, def, ranks, level);
+      return (connected & (1 << i)) ? ranks[i] : 0;
+    }
   }
   return 0;
 }
@@ -1122,21 +1192,35 @@ RaidsInventoryItem_t* bankGetEquippedWeaponFromGadgetBox(GadgetBox* gbox, int ga
 //--------------------------------------------------------------------------
 float bankGetWeaponXpProgressFromGadgetBox(GadgetBox* gbox, int gadgetId)
 {
+  static struct {
+    u64 XpBits;
+    float Progress;
+    char Valid;
+  } cache[WEAPON_SLOT_COUNT - 1];
   RaidsPlayerBank_t* localBank = bankGetLocalBank();
 
   int slot = bankGetEquipSlotFromGadgetId(gadgetId);
-  if (slot < 0) return 0;
+  if (slot < 0 || slot >= COUNT_OF(cache)) return 0;
 
-  double xp = localBank->Account.WeaponXp[slot];
-  int prof = getProficiencyFromXp(xp);
-  if (prof == 98) return 1; // maxed
+  // compare the stored bits without a software double comparison
+  union { double Value; u64 Bits; } xp = { .Value = localBank->Account.WeaponXp[slot] };
+  if (cache[slot].Valid && cache[slot].XpBits == xp.Bits)
+    return cache[slot].Progress;
 
-  double lastXp = getXpForProficiency(prof);
-  double nextXp = getXpForProficiency(prof + 1);
-  if (xp < lastXp) xp = lastXp;
-  float xpPerc = (float)((xp - lastXp) / (double)(nextXp - lastXp));
-  //DPRINTF("lvl:%d perc:%f %ld=>%ld xp:%ld\n", prof, xpPerc, lastXp, nextXp, xp);
-  return xpPerc;
+  int prof = getProficiencyFromXp(xp.Value);
+  float progress = 1;
+  if (prof != 98) {
+    double lastXp = getXpForProficiency(prof);
+    double nextXp = getXpForProficiency(prof + 1);
+    double currentXp = xp.Value;
+    if (currentXp < lastXp) currentXp = lastXp;
+    progress = (float)((currentXp - lastXp) / (double)(nextXp - lastXp));
+  }
+
+  cache[slot].XpBits = xp.Bits;
+  cache[slot].Progress = progress;
+  cache[slot].Valid = 1;
+  return progress;
 }
 
 //--------------------------------------------------------------------------

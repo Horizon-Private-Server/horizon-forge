@@ -245,7 +245,7 @@ u64 getXpForLevel(int level)
 }
 
 //--------------------------------------------------------------------------
-int getProficiencyFromXp(double xp)
+const double* getProficiencyXpTable(void)
 {
   static int init = 0;
   static double xpCache[LEVELUP_MAX_PROF_LEVEL + 1];
@@ -253,10 +253,17 @@ int getProficiencyFromXp(double xp)
     init = 1;
     int i;
     for (i = 0; i <= LEVELUP_MAX_PROF_LEVEL; ++i) {
-      xpCache[i] = getXpForProficiency(i);
+      xpCache[i] = i > 0 ? 10*pow(i, 3) + 100*i + 250 : 0;
     }
   }
-  
+  return xpCache;
+}
+
+//--------------------------------------------------------------------------
+int getProficiencyFromXp(double xp)
+{
+  const double* xpCache = getProficiencyXpTable();
+
   if (xp < 0) return 0;
 
   // binary search xpCache for the proficiency level
@@ -287,9 +294,7 @@ double getXpForProficiency(int proficiency)
   if (proficiency > LEVELUP_MAX_PROF_LEVEL) proficiency = LEVELUP_MAX_PROF_LEVEL;
   if (proficiency <= 0) return 0;
 
-  // 10x^3 + 100x + 250
-  return 10*pow(proficiency, 3) + 100*proficiency + 250;
-  //return getXpFromLevelQuadratic(proficiency, 250, 500);
+  return getProficiencyXpTable()[proficiency];
 }
 
 //--------------------------------------------------------------------------
