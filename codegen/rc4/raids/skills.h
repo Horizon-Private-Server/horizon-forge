@@ -62,7 +62,7 @@ enum RaidsClassSkillId
 // Factors are multipliers; unlearned and unknown skills return 1.
 float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float multiplier);
 
-// Flat bonuses use the skill's units (counts, seconds, ticks, HP, pickups, or percentage points).
+// Flat bonuses use the skill's units (counts, seconds, ticks, HP, ammo fractions, or percentage points).
 float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float multiplier);
 int skillsIsValid(enum RaidsClassSkillId skillId);
 int skillsIsUnlock(enum RaidsClassSkillId skillId);

@@ -94,6 +94,7 @@ void mapOnMobKilled(Moby* moby, int killedByPlayerId, enum MobDamageSource sourc
     spawnerOnChildMobKilled(moby->PParent, moby, pvars->MobVars.Userdata, killedByPlayerId, source);
   }
 
+  ammodropOnMobKilled(moby, killedByPlayerId);
   skillsOnMobKilled(moby, killedByPlayerId);
 
   if (killedByPlayerId >= 0 && killedByPlayerId < GAME_MAX_PLAYERS) {
@@ -137,18 +138,6 @@ void mapOnMobSpawned(Moby* moby)
 void mapMobAfterDamage(Moby* moby, struct MobDamageEventArgs* args, float appliedDamage)
 {
   powerupsOnMobDamaged(moby, args, appliedDamage);
-}
-
-//--------------------------------------------------------------------------
-void mapCreateAmmoDropAt(Moby* moby)
-{
-  ammodropCreateAt(moby);
-}
-
-//--------------------------------------------------------------------------
-float mapGetAmmoDropChance(Player* player, Moby* moby, float baseChance)
-{
-  return skillsGetAmmoDropChance(player, baseChance);
 }
 
 //--------------------------------------------------------------------------
@@ -215,7 +204,6 @@ void interopInit(void)
   MapConfig.Functions.OnMobDamagedFunc = &mapOnMobDamaged;
   MapConfig.Functions.OnMobKilledFunc = &mapOnMobKilled;
   MapConfig.Functions.OnMobDestroyedFunc = &mapOnMobDestroyed;
-  MapConfig.Functions.CreateAmmoDropAtFunc = &mapCreateAmmoDropAt;
   MapConfig.Functions.ModifyPlayerStatsFunc = &mapModifyPlayerStats;
   MapConfig.Functions.OnPlayerUpdateFunc = &mapOnPlayerUpdate;
   MapConfig.Functions.OnPlayerDiedFunc = &mapOnPlayerDied;
@@ -224,7 +212,6 @@ void interopInit(void)
   MapConfig.Functions.ModifyPlayerCritDamageFunc = &mapModifyPlayerCritDamage;
   MapConfig.Functions.FinalizePlayerDamageFunc = &mapFinalizePlayerDamage;
   MapConfig.Functions.MobAfterDamageFunc = &mapMobAfterDamage;
-  MapConfig.Functions.GetAmmoDropChanceFunc = &mapGetAmmoDropChance;
   MapConfig.Functions.MobBlowCornFunc = &mobBlowCorn;
 }
 

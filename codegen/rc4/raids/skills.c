@@ -211,9 +211,9 @@ float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float mult
       return skillPoints;
     case RAIDS_CLASS_SKILL_HEALING_FIELD: return 10.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_AMMO_FIELD:
-      // Normal ammo-pickup equivalents per pulse, using ammodrop's per-weapon tuning.
-      return 0.25f * skillPoints * multiplier;
-    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return 5.0f * skillPoints * multiplier;
+      // Fraction of maximum ammo restored per pulse.
+      return 0.075f * skillPoints * multiplier;
+    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return 10.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return 5.0f * skillPoints * multiplier;
     case RAIDS_CLASS_SKILL_DEADEYE:
       // Chance to upgrade a normal crit while stationary with Fusion.
@@ -303,10 +303,10 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
       snprintf(buf, bufSize, "+%.0f HP/pulse", bonus);
       break;
     case RAIDS_CLASS_SKILL_AMMO_FIELD:
-      snprintf(buf, bufSize, "%.2fx drop/pulse", bonus);
+      snprintf(buf, bufSize, "%.1f%% ammo/pulse", 100.0f * bonus);
       break;
     case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE:
-      snprintf(buf, bufSize, "+%.0f%% drop chance", bonus);
+      snprintf(buf, bufSize, "+%.0f%% drop rate", bonus);
       break;
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE:
       snprintf(buf, bufSize, "+%.0f%% crit", bonus);
@@ -371,7 +371,7 @@ char* skillsGetName(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_EXTRA_JUMPS: return "Extra Jumps";
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH: return "Chargeboot Length";
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE: return "Wrench Damage";
-    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Ammo Drop Chance";
+    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Ammo Drop Rate";
     case RAIDS_CLASS_SKILL_HEALING_FIELD: return "Healing Field";
     case RAIDS_CLASS_SKILL_AMMO_FIELD: return "Ammo Field";
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return "Critical Chance";
@@ -426,7 +426,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_EXTRA_JUMPS: return "Add extra jumps before landing.";
     case RAIDS_CLASS_SKILL_CHARGEBOOT_LENGTH: return "Extend chargeboot travel duration.";
     case RAIDS_CLASS_SKILL_WRENCH_DAMAGE: return "Increase wrench damage.";
-    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Add percentage points to the chance of an ammo drop.";
+    case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE: return "Earn personal ammo drops more often from your kills and nearby teammates' kills.";
     case RAIDS_CLASS_SKILL_HEALING_FIELD: return "Wrench hyperstrike creates a healing field. Has cooldown.";
     case RAIDS_CLASS_SKILL_AMMO_FIELD: return "Wrench hyperstrike creates an ammo field. Has cooldown.";
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE: return "Add percentage points to critical hit chance.";
@@ -653,10 +653,12 @@ void skillsB6OnExplode(Moby* moby)
 }
 
 //--------------------------------------------------------------------------
-// Ammo-drop bonuses are percentage points.
+// Skill bonuses add percentage points to personal ammo-drop progress.
 float skillsGetAmmoDropChance(Player* player, float baseChance)
 {
-  return baseChance + skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE) / 100.0f;
+  if (!(baseChance >= 0 && baseChance <= FLT_MAX)) baseChance = 0;
+  return clamp(minf(baseChance, 1.0f)
+    + skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE) / 100.0f, 0, 1);
 }
 
 //--------------------------------------------------------------------------
@@ -1046,8 +1048,8 @@ void skillsFieldsActivate(Player* player)
   // check for ammo
   if (!(caster->CooldownMask & SKILLFIELD_TYPE_AMMO)
       || (int)((u32)args.StartTime - (u32)caster->AmmoActivatedAt) >= SKILLS_FIELD_COOLDOWN_MS) {
-    args.AmmoAmount = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_AMMO_FIELD);
-    if (args.AmmoAmount > 0)
+    args.AmmoFraction = skillsGetPlayerBonus(player, RAIDS_CLASS_SKILL_AMMO_FIELD);
+    if (args.AmmoFraction > 0)
       args.Type |= SKILLFIELD_TYPE_AMMO;
   }
 

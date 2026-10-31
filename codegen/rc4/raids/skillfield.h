@@ -28,7 +28,7 @@ struct SkillFieldSpawnArgs
   float Position[3];
   float Radius;
   float HealingAmount;
-  float AmmoAmount;
+  float AmmoFraction;
   int StartTime;
   int DurationMs;
   int PulseIntervalMs;

@@ -52,7 +52,6 @@ typedef void (*MapOnMobUpdate_func)(Moby* moby);
 typedef void (*MapOnMobDamaged_func)(Moby* moby, struct MobDamageEventArgs* args);
 typedef void (*MapOnMobKilled_func)(Moby* moby, int killedByPlayerId, enum MobDamageSource source);
 typedef void (*MapOnMobDestroyed_func)(Moby* moby);
-typedef void (*MapCreateAmmoDropAt_func)(Moby* moby);
 typedef void (*MapFrameTick_func)(void);
 typedef void (*MapModifyPlayerStats_func)(Player* player, struct RaidsPlayerStats* stats);
 typedef void (*MapOnPlayerUpdate_func)(Player* player);
@@ -62,7 +61,6 @@ typedef void (*MapModifyPlayerCritChance_func)(struct RaidsPlayerDamageContext* 
 typedef void (*MapModifyPlayerCritDamage_func)(struct RaidsPlayerDamageContext* context);
 typedef void (*MapFinalizePlayerDamage_func)(struct RaidsPlayerDamageContext* context);
 typedef void (*MapMobAfterDamage_func)(Moby* moby, struct MobDamageEventArgs* args, float appliedDamage);
-typedef float (*MapGetAmmoDropChance_func)(Player* player, Moby* moby, float baseChance);
 typedef void (*MapMobBlowCorn_func)(Moby* moby, int bangles);
 
 struct RaidsInteropTable
@@ -90,7 +88,6 @@ struct RaidsInteropTable
   MapOnMobDamaged_func OnMobDamagedFunc;
   MapOnMobKilled_func OnMobKilledFunc;
   MapOnMobDestroyed_func OnMobDestroyedFunc;
-  MapCreateAmmoDropAt_func CreateAmmoDropAtFunc;
   MapFrameTick_func OnFrameTickFunc;
   MapModifyPlayerStats_func ModifyPlayerStatsFunc;
   MapOnPlayerUpdate_func OnPlayerUpdateFunc;
@@ -100,7 +97,6 @@ struct RaidsInteropTable
   MapModifyPlayerCritDamage_func ModifyPlayerCritDamageFunc;
   MapFinalizePlayerDamage_func FinalizePlayerDamageFunc;
   MapMobAfterDamage_func MobAfterDamageFunc;
-  MapGetAmmoDropChance_func GetAmmoDropChanceFunc;
   MapMobBlowCorn_func MobBlowCornFunc;
 
   // Reserved for future callbacks.
@@ -108,13 +104,12 @@ struct RaidsInteropTable
 };
 
 typedef char RaidsInteropPointerSizeCheck[sizeof(void*) == 4 ? 1 : -1];
-typedef char RaidsInteropSizeCheck[sizeof(struct RaidsInteropTable) == 188 ? 1 : -1];
+typedef char RaidsInteropSizeCheck[sizeof(struct RaidsInteropTable) == 180 ? 1 : -1];
 typedef char RaidsInteropMapOffsetCheck[offsetof(struct RaidsInteropTable, OnMobCreateFunc) == 56 ? 1 : -1];
-typedef char RaidsInteropAmmoDropOffsetCheck[offsetof(struct RaidsInteropTable, GetAmmoDropChanceFunc) == 120 ? 1 : -1];
 typedef char RaidsInteropPlayerDamageOffsetCheck[offsetof(struct RaidsInteropTable, ModeProcessPlayerDamageFunc) == 48 ? 1 : -1];
 typedef char RaidsInteropDrawHudOffsetCheck[offsetof(struct RaidsInteropTable, ModeDrawHudFunc) == 52 ? 1 : -1];
-typedef char RaidsInteropMobBlowCornOffsetCheck[offsetof(struct RaidsInteropTable, MobBlowCornFunc) == 124 ? 1 : -1];
-typedef char RaidsInteropReservedOffsetCheck[offsetof(struct RaidsInteropTable, PlaceholderForFutureUseFuncs) == 128 ? 1 : -1];
+typedef char RaidsInteropMobBlowCornOffsetCheck[offsetof(struct RaidsInteropTable, MobBlowCornFunc) == 116 ? 1 : -1];
+typedef char RaidsInteropReservedOffsetCheck[offsetof(struct RaidsInteropTable, PlaceholderForFutureUseFuncs) == 120 ? 1 : -1];
 
 void mapDrawHud(void);
 void interopInit(void);

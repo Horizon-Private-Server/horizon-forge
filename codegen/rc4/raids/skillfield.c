@@ -9,12 +9,12 @@
 #include <libdl/camera.h>
 #include <libdl/utils.h>
 #include <libdl/stdio.h>
+#include <libdl/weapon.h>
 
 #include "skillfield.h"
 #include "skills.h"
 #include "game.h"
 #include "utils.h"
-#include "ammodrop.h"
 #include "maputils.h"
 #include "common.h"
 
@@ -36,7 +36,7 @@ int skillfieldArgsAreValid(struct SkillFieldSpawnArgs* args)
   if (args->Type == SKILLFIELD_TYPE_NONE || (args->Type & ~SKILLFIELD_TYPE_ALL)) return 0;
   if ((args->Type & SKILLFIELD_TYPE_HEALING) && !(args->HealingAmount > 0 && args->HealingAmount <= FLT_MAX))
     return 0;
-  if ((args->Type & SKILLFIELD_TYPE_AMMO) && !(args->AmmoAmount > 0 && args->AmmoAmount <= FLT_MAX))
+  if ((args->Type & SKILLFIELD_TYPE_AMMO) && !(args->AmmoFraction > 0 && args->AmmoFraction <= FLT_MAX))
     return 0;
 
   return args->CasterPlayerId < GAME_MAX_PLAYERS
@@ -63,7 +63,12 @@ void skillfieldPulse(Moby* moby)
 
     if ((config->Type & SKILLFIELD_TYPE_AMMO) && player->GadgetBox) {
       int weaponId = player->WeaponHeldId;
-      skillsGiveAmmo(player, weaponId, ammodropGetPickupAmount(player, weaponId) * config->AmmoAmount);
+      int slot = weaponIdToSlot(weaponId);
+      if (slot <= 0 || slot >= WEAPON_SLOT_COUNT || player->GadgetBox->Gadgets[weaponId].Level < 0)
+        continue;
+
+      int maxAmmo = playerGetWeaponMaxAmmo(player->GadgetBox, weaponId);
+      skillsGiveAmmo(player, weaponId, maxAmmo * config->AmmoFraction);
     }
   }
 }
