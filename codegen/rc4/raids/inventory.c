@@ -460,7 +460,7 @@ void inventoryDrawItemInfo(Window_t* drawWindow)
 
   // Reserve this line so status changes do not move the comparison table.
   if (tooStrong) {
-    snprintf(strBuf, sizeof(strBuf), "Must be P%d to equip%s", selectedItem->WeaponData.Proficiency + 1, classRestricted ? "; class restricted" : "");
+    snprintf(strBuf, sizeof(strBuf), "Must be Proficiency %d to equip%s", selectedItem->WeaponData.Proficiency + 1, classRestricted ? "; class restricted" : "");
     menuDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, strBuf, TEXT_ALIGN_TOPLEFT);
   } else if (classRestricted) {
     menuDrawFittedText(drawWindow, 8, 0, drawWindow->Width - 16, 0.6, textRedColor, "Not usable by current class", TEXT_ALIGN_TOPLEFT);

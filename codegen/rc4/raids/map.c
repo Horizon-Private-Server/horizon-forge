@@ -111,7 +111,7 @@ char * mapCustomGetGadgetVersionName(int localPlayerIndex, int weaponId, int sho
   }
 
 	char* str = uiMsgString(msgId);
-  snprintf(buf, 0x40, "%s P%d", str, item->WeaponData.Proficiency+1);
+  snprintf(buf, 0x40, "%s V%d", str, item->WeaponData.Proficiency+1);
   return buf;
 }
 

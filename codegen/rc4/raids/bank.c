@@ -855,7 +855,7 @@ double bankAddWeaponXP(double amount, int gadgetId)
   if (nextLevel > level) {
     struct GadgetDef* gadgetDef = weaponGetDef(gadgetId, 0);
     //bankAddXP(LEVELUP_PLAYER_INCREMENT_AMOUNT);
-    snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached %s P%d", uiMsgString(gadgetDef->quickSelectTag), nextLevel + 1);
+    snprintf(bankLevelUpBuf, sizeof(bankLevelUpBuf), "You have reached %s proficiency %d", uiMsgString(gadgetDef->quickSelectTag), nextLevel + 1);
     pushSnack(0, bankLevelUpBuf, 120);
     bankSendAccountToServer(); // send to server
   }
@@ -1141,7 +1141,7 @@ void bankGetItemName(RaidsInventoryItem_t* item, char* buf, int bufSize)
     snprintf(buf, bufSize, "%cClass Mod\x08", bankRarityCode[rarity]);
   } else {
     struct GadgetDef* gadgetDef = weaponGetDef(item->WeaponData.GadgetId, 0);
-    snprintf(buf, bufSize, "%c%s P%d\x08", bankRarityCode[rarity], uiMsgString(rarity > RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
+    snprintf(buf, bufSize, "%c%s V%d\x08", bankRarityCode[rarity], uiMsgString(rarity > RAIDS_ITEM_RARITY_LEGENDARY ? gadgetDef->upgQSTag : gadgetDef->quickSelectTag), item->WeaponData.Proficiency + 1);
   }
 }
 
