@@ -33,6 +33,8 @@
 #define SKILLS_FIELD_RADIUS (5.0)
 #define SKILLS_FIELD_DURATION_MS (10 * TIME_SECOND)
 #define SKILLS_FIELD_COOLDOWN_MS (30 * TIME_SECOND)
+#define SKILLS_HEALTH_PICKUP_FRACTION (0.25f)
+#define SKILLS_HEALTH_PICKUP_MIN (50.0f)
 #define SKILLS_GOLD_BOLT_CACHE_TICKS (6)
 #define SKILLS_COOLDOWN_HUD_ICON_SIZE (24)
 #define SKILLS_COOLDOWN_HUD_SPACING (4)
@@ -188,6 +190,13 @@ float skillsGetFactor(enum RaidsClassSkillId skillId, int skillPoints, float mul
 }
 
 //--------------------------------------------------------------------------
+float skillsGetHealthPickupFraction(float suppliesFactor)
+{
+  // three ranks heal 50%, 75%, or 100% with tier 1, 2, or 3 supplies
+  return minf(1.0f, SKILLS_HEALTH_PICKUP_FRACTION + (suppliesFactor - 1.0f) / 3.0f);
+}
+
+//--------------------------------------------------------------------------
 float skillsGetBonus(enum RaidsClassSkillId skillId, int skillPoints, float multiplier)
 {
   if (skillPoints <= 0 || !(multiplier > 0 && multiplier <= FLT_MAX)) return 0.0f;
@@ -308,6 +317,12 @@ void skillsFormatRank(enum RaidsClassSkillId skillId, int skillPoints, float mul
     case RAIDS_CLASS_SKILL_AMMO_DROP_CHANCE:
       snprintf(buf, bufSize, "+%.0f%% drop rate", bonus);
       break;
+    case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES:
+    {
+      float factor = skillsGetFactor(skillId, skillPoints, multiplier);
+      snprintf(buf, bufSize, "%.1f%% HP / +%.0f%% ammo", skillsGetHealthPickupFraction(factor) * 100, (factor - 1) * 100);
+      break;
+    }
     case RAIDS_CLASS_SKILL_CRITICAL_CHANCE:
       snprintf(buf, bufSize, "+%.0f%% crit", bonus);
       break;
@@ -451,7 +466,7 @@ char* skillsGetDescription(enum RaidsClassSkillId skillId)
     case RAIDS_CLASS_SKILL_BLOOD_FRENZY: return "Deal 10 normal hits worth of actual close-range damage within 6 seconds to gain Quad. Weapons share progress. 20 second cooldown after Quad ends.";
     case RAIDS_CLASS_SKILL_IRONCLAD: return "Lose 30% maximum health to enemies within 3 seconds to gain Shield. You must survive the hit. 30 second cooldown after Shield ends.";
     case RAIDS_CLASS_SKILL_AIR_SUPERIORITY: return "Increase damage while airborne.";
-    case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES: return "Health and ammo pickups restore more.";
+    case RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES: return "Health orbs and ammo pickups restore more.";
     case RAIDS_CLASS_SKILL_STEALTH: return "Reduce detection ranges. Mobs can still retaliate.";
     case RAIDS_CLASS_SKILL_DEADEYE: return "While standing still with Fusion, critical hits can become red super crits for 6x damage instead of 3x.";
     case RAIDS_CLASS_SKILL_COMBAT_MEDIC: return "Direct Fusion hits heal living teammates up to max HP. Uses normal ammo.";
@@ -888,10 +903,10 @@ void skillsOnAmmoPickup(Player* player, int weaponId, int amount)
 void skillsOnHealthboxHeal(Player* player, float amount)
 {
   if (!playerIsValid(player) || !player->IsLocal || playerIsDead(player) || player->Health <= 0) return;
+  if (!(player->MaxHealth > 0 && player->MaxHealth <= FLT_MAX)) return;
 
-  amount = minf(amount, 100);
-  if (!(amount > 0 && amount <= FLT_MAX)) return;
-  amount *= skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES);
+  float fraction = skillsGetHealthPickupFraction(skillsGetPlayerFactor(player, RAIDS_CLASS_SKILL_EFFICIENT_SUPPLIES));
+  amount = maxf(SKILLS_HEALTH_PICKUP_MIN, player->MaxHealth * fraction);
   playerSetHealth(player, minf(player->MaxHealth, player->Health + amount));
 }
 
