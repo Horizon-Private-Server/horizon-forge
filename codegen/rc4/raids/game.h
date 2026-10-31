@@ -148,6 +148,7 @@ enum RaidsCustomMenus
   RAIDS_CUSTOM_MENU_CONTRACTS,
   RAIDS_CUSTOM_MENU_WELCOME,
   RAIDS_CUSTOM_MENU_DEBUG,
+  RAIDS_CUSTOM_MENU_SETTINGS,
   RAIDS_CUSTOM_MENU_RESERVED_FOR_MAP = 100,
 };
 
@@ -252,10 +253,21 @@ struct RaidsMobContractRule
   char Name[32];
 };
 
+typedef struct RaidsUserSettings
+{
+  int Version;
+  int MapLod;
+  int MobLod;
+  int AmmoDropPopups;
+} RaidsUserSettings_t;
+
+typedef char RaidsUserSettingsSizeCheck[sizeof(RaidsUserSettings_t) == 16 ? 1 : -1];
+
 struct RaidsState
 {
 	int InitializedTime;
   int MapBaseComplexity;
+  const RaidsUserSettings_t* Settings;
   struct RaidsMobStats MobStats;
 	struct RaidsPlayer PlayerStates[GAME_MAX_PLAYERS];
   int ClientsReady;

@@ -21,6 +21,7 @@
 #include "common.h"
 #include "holoshield.h"
 #include "skills.h"
+#include "interop.h"
 
 enum InventoryItemAction
 {
@@ -735,9 +736,7 @@ void inventoryDrawFooter(Window_t* drawWindow)
     if (selectedItem) strcat(strBuf, "\x11 FAV    ");
     if (canSell) { strcat(strBuf, "\x13 SELL    "); }
   }
-  strcat(strBuf, "\x12 CLOSE");
-  
-  // draw bg
+  strcat(strBuf, "R2 SETTINGS    \x12 CLOSE");
   menuDrawFooter(drawWindow, strBuf);
 }
 
@@ -749,7 +748,7 @@ void inventoryDraw(void)
 
   u32 borderColor = RAIDS_MENU_BORDER_COLOR;
   const float windowWidth = 480;
-  const float windowHeight = 304; // Room for the holoshield absorption comparison row.
+  const float windowHeight = 304; // room for item comparisons
   const float titleHeight = RAIDS_MENU_TITLE_HEIGHT;
   const float accountHeight = 44;
   const float gridWidth = 225;
@@ -873,6 +872,11 @@ void inventoryHandleInput(void)
   // handle close input
   if (padGetButtonDown(0, PAD_TRIANGLE) > 0) {
     inventoryClose();
+    return;
+  }
+
+  if (padGetButtonDown(0, PAD_R2) > 0 && MapConfig.Functions.ModeOpenSettingsFunc) {
+    MapConfig.Functions.ModeOpenSettingsFunc();
     return;
   }
 

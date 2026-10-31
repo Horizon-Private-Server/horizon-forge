@@ -413,6 +413,16 @@ enum CustomMessageId
     CUSTOM_MSG_ID_RAIDS_RESET_CLASS_SKILLS_REQUEST = 76,
 
     /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_GET_SETTINGS_REQUEST = 77,
+    
+    /*
+     * 
+     */
+    CUSTOM_MSG_ID_RAIDS_SAVE_SETTINGS_REQUEST = 78,
+
+    /*
      * Start of custom message ids reserved for custom game modes.
      */
     CUSTOM_MSG_ID_GAME_MODE_START = 100,

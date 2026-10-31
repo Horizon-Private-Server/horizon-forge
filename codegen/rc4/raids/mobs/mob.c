@@ -117,8 +117,8 @@ void mobBlowCorn(Moby* moby, int bangles)
   if (!MapConfig.State) return;
   if (!moby || !moby->PClass) return;
   if (mobyIsDestroyed(moby)) return;
-  if (PATCH_INTEROP && PATCH_INTEROP->Config)
-    lod = PATCH_INTEROP->Config->levelOfDetailMobs;
+  if (MapConfig.State->Settings)
+    lod = MapConfig.State->Settings->MobLod;
   
   int cornCob = *(short*)(moby->PClass + 0x2e) & bangles;
   if (!cornCob) return;
