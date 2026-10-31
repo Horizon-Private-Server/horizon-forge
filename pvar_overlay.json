@@ -3913,9 +3913,17 @@
       },
       {
         "Name": "Align Targets",
-        "DataType": "Bool",
+        "DataType": "Enum",
+        "DataSize": 1,
         "Order": 31,
         "Offset": 130,
+        "Tooltip": "Orbit modes rotate each target's current offset as the parent moby turns, composing with other movers in update order. Yaw mode inherits only yaw. With spline attachments, all nonzero modes use the existing spline rotation alignment.",
+        "Options": {
+          "Off": 0,
+          "Align Rotation": 1,
+          "Align + Orbit (Yaw)": 2,
+          "Align + Orbit (All Axes)": 3
+        },
         "DisplayIf": [
           { "Field": "Attached Type", "Op": "!=", "Value": "0" }
         ]

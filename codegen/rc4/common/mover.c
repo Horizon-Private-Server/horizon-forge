@@ -289,12 +289,29 @@ void moverMoveSpline(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
 }
 
 //--------------------------------------------------------------------------
+int moverIsMobyOrbit(Moby* moby)
+{
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  return pvars->AttachedType == MOVER_ATTACHED_MOBY
+    && (pvars->AttachedAlign == MOVER_ATTACHED_ALIGN_ORBIT_YAW || pvars->AttachedAlign == MOVER_ATTACHED_ALIGN_ORBIT_ALL);
+}
+
+//--------------------------------------------------------------------------
 void moverInitMoby(Moby* moby)
 {
   int i;
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
   if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
+
+  // restart orbit motion without undoing the current placement
+  if (moverIsMobyOrbit(moby)) {
+    vector_write(pvars->State.LastAppliedPositionDelta, 0);
+    vector_write(pvars->State.LastAppliedRotationDelta, 0);
+    vector_write(pvars->State.MobyLastPosition, 0);
+    vector_write(pvars->State.MobyLastRotation, 0);
+  }
+
   if (!pvars->AttachedToMoby || mobyIsDestroyed(pvars->AttachedToMoby)) {
     pvars->AttachedToMoby = NULL;
     return;
@@ -324,6 +341,22 @@ void moverMoveMoby(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   if (pvars->AttachedType != MOVER_ATTACHED_MOBY) return;
 
   Moby* attachedToMoby = pvars->AttachedToMoby;
+  if (moverIsMobyOrbit(moby)) {
+    // keep the last parent pose if it disappears
+    if (attachedToMoby && !mobyIsDestroyed(attachedToMoby)) {
+      vector_copy(pvars->State.MobyLastPosition, attachedToMoby->Position);
+      vector_copy(pvars->State.MobyLastRotation, attachedToMoby->Rotation);
+      vector_copy(moby->Position, attachedToMoby->Position);
+    } else {
+      pvars->AttachedToMoby = NULL;
+    }
+
+    // apply parent pose changes separately from configured motion in moverUpdate
+    vector_write(outPosDelta, 0);
+    vector_write(outRotDelta, 0);
+    return;
+  }
+
   if (!attachedToMoby || mobyIsDestroyed(attachedToMoby)) {
     pvars->AttachedToMoby = NULL;
     return;
@@ -336,6 +369,54 @@ void moverMoveMoby(Moby* moby, VECTOR outPosDelta, VECTOR outRotDelta)
   vector_copy(pvars->State.MobyLastPosition, attachedToMoby->Position);
   vector_copy(pvars->State.MobyLastRotation, attachedToMoby->Rotation);
   vector_copy(moby->Position, attachedToMoby->Position);
+}
+
+//--------------------------------------------------------------------------
+void moverGetOrbitRotation(Moby* moby, VECTOR previousRotation, MATRIX out)
+{
+  struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
+  matrix_unit(out);
+  if (!moverIsMobyOrbit(moby)) return;
+
+  if (pvars->AttachedAlign == MOVER_ATTACHED_ALIGN_ORBIT_YAW) {
+    matrix_rotate_z(out, out, clampAngle(pvars->State.MobyLastRotation[2] - previousRotation[2]));
+    return;
+  }
+
+  // keep an unchanged parent exactly at identity
+  if (pvars->State.MobyLastRotation[0] == previousRotation[0]
+    && pvars->State.MobyLastRotation[1] == previousRotation[1]
+    && pvars->State.MobyLastRotation[2] == previousRotation[2]) return;
+
+  MATRIX previousInverse;
+  matrix_unit(previousInverse);
+  matrix_rotate_x(previousInverse, previousInverse, previousRotation[0]);
+  matrix_rotate_y(previousInverse, previousInverse, previousRotation[1]);
+  matrix_rotate_z(previousInverse, previousInverse, previousRotation[2]);
+  matrix_transpose(previousInverse, previousInverse);
+
+  matrix_rotate_x(out, out, pvars->State.MobyLastRotation[0]);
+  matrix_rotate_y(out, out, pvars->State.MobyLastRotation[1]);
+  matrix_rotate_z(out, out, pvars->State.MobyLastRotation[2]);
+
+  // libdl multiplies input1 * input0, undoing the previous parent rotation first
+  matrix_multiply(out, previousInverse, out);
+}
+
+//--------------------------------------------------------------------------
+void moverGetTargetPositionDelta(Moby* moby, VECTOR out, VECTOR targetPosition, VECTOR posDelta, VECTOR previousParentPosition, MATRIX orbitRotation)
+{
+  VECTOR previousOffset, currentOffset, orbitChange;
+  vector_copy(out, posDelta);
+  if (!moverIsMobyOrbit(moby)) return;
+
+  vector_subtract(previousOffset, targetPosition, previousParentPosition);
+  vector_apply(currentOffset, previousOffset, orbitRotation);
+
+  // rotate the current offset so other movers compose in update order
+  // use the previous parent position before applying this frame's translation
+  vector_subtract(orbitChange, currentOffset, previousOffset);
+  vector_add(out, out, orbitChange);
 }
 
 //--------------------------------------------------------------------------
@@ -601,7 +682,10 @@ void moverBroadcastNewState(Moby* moby, enum MoverState state)
 void moverUpdate(Moby* moby)
 {
   int i;
-  VECTOR posDelta, rotDelta;
+  VECTOR posDelta, rotDelta, targetPosDelta;
+  VECTOR appliedPosDelta, appliedRotDelta;
+  VECTOR previousParentPosition, previousParentRotation;
+  MATRIX orbitRotation;
   struct MoverPVar* pvars = (struct MoverPVar*)moby->PVar;
 
   // initialize by sending first state
@@ -632,8 +716,29 @@ void moverUpdate(Moby* moby)
     return;
   }
 
-  // run move logic
+  // capture the previous parent pose before move logic updates it
+  vector_copy(previousParentPosition, pvars->State.MobyLastPosition);
+  vector_copy(previousParentRotation, pvars->State.MobyLastRotation);
   moverMove(moby, posDelta, rotDelta);
+  moverGetOrbitRotation(moby, previousParentRotation, orbitRotation);
+
+  vector_copy(appliedPosDelta, posDelta);
+  vector_copy(appliedRotDelta, rotDelta);
+  if (moverIsMobyOrbit(moby)) {
+    VECTOR parentPosDelta, parentRotDelta;
+    vector_subtract(parentPosDelta, pvars->State.MobyLastPosition, previousParentPosition);
+    vector_subtract(parentRotDelta, pvars->State.MobyLastRotation, previousParentRotation);
+    vector_clampeuler(parentRotDelta, parentRotDelta);
+    if (pvars->AttachedAlign == MOVER_ATTACHED_ALIGN_ORBIT_YAW) {
+      parentRotDelta[0] = 0;
+      parentRotDelta[1] = 0;
+    }
+
+    // parent motion is incremental; only configured deltas are removed next frame
+    vector_add(appliedPosDelta, appliedPosDelta, parentPosDelta);
+    vector_add(appliedRotDelta, appliedRotDelta, parentRotDelta);
+    vector_clampeuler(appliedRotDelta, appliedRotDelta);
+  }
 
   // update target mobys
   for (i = 0; i < MOVER_MAX_TARGETS; ++i) {
@@ -643,7 +748,8 @@ void moverUpdate(Moby* moby)
       continue;
     }
 
-    moverApplyMoby(moby, targetMoby, posDelta, rotDelta);
+    moverGetTargetPositionDelta(moby, targetPosDelta, targetMoby->Position, appliedPosDelta, previousParentPosition, orbitRotation);
+    moverApplyMoby(moby, targetMoby, targetPosDelta, appliedRotDelta);
   }
 
   // update target cuboids
@@ -651,7 +757,9 @@ void moverUpdate(Moby* moby)
     int cuboidIdx = pvars->CuboidTargets[i];
     if (cuboidIdx < 0) continue;
 
-    moverApplyCuboid(moby, spawnPointGet(cuboidIdx), posDelta, rotDelta);
+    SpawnPoint* targetCuboid = spawnPointGet(cuboidIdx);
+    moverGetTargetPositionDelta(moby, targetPosDelta, &targetCuboid->M0[12], appliedPosDelta, previousParentPosition, orbitRotation);
+    moverApplyCuboid(moby, targetCuboid, targetPosDelta, appliedRotDelta);
   }
 
   vector_copy(pvars->State.LastAppliedPositionDelta, posDelta);
