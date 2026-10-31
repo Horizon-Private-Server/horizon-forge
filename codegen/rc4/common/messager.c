@@ -35,6 +35,10 @@
 #include "mover.h"
 #include "messager.h"
 
+#if RAIDS
+#include "utils.h"
+#endif
+
 #if DEBUG
 #define DLOG(moby, format, ...) if (((struct MessagerPVar*)moby->PVar)->Log) { DPRINTF("uid:%d " format, (moby)->UID, ##__VA_ARGS__); }
 #else
@@ -44,6 +48,18 @@
 int messagerDrawQueueCount = 0;
 Moby* messagerDrawQueueMobys[MESSAGER_MAX_DRAW_QUEUE] = {};
 gfxDrawFuncDef messagerDrawQueueCallbacks[MESSAGER_MAX_DRAW_QUEUE] = {};
+
+//--------------------------------------------------------------------------
+int messagerCanDraw(void)
+{
+  if (gameIsAnyStartMenuOpen() || PATCH_POINTERS_PATCHMENU) return 0;
+
+#if RAIDS
+  if (MapConfig.State && MapConfig.State->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return 0;
+#endif
+
+  return 1;
+}
 
 //--------------------------------------------------------------------------
 void messagerQueueDraw(Moby* moby, gfxDrawFuncDef callback)
@@ -157,12 +173,14 @@ void messagerUpdate(Moby* moby)
 //--------------------------------------------------------------------------
 void messagerFrameUpdate(void)
 {
+  int canDraw = messagerCanDraw();
+
   // draw callbacks
   while (messagerDrawQueueCount > 0) {
     --messagerDrawQueueCount;
     Moby* moby = messagerDrawQueueMobys[messagerDrawQueueCount];
     gfxDrawFuncDef callback = messagerDrawQueueCallbacks[messagerDrawQueueCount];
-    if (callback && moby) callback(moby);
+    if (canDraw && callback && moby) callback(moby);
 
     messagerDrawQueueCallbacks[messagerDrawQueueCount] = NULL;
   }
