@@ -220,7 +220,7 @@ void holoshieldUpdate(Moby* moby)
 //--------------------------------------------------------------------------
 void holoshieldDraw(void)
 {
-  if (!isInGame() || !MapConfig.State) return;
+  if (!MapConfig.State || MapConfig.State->MenuOpen != RAIDS_CUSTOM_MENU_NONE || shouldCloseMenu()) return;
 
   // Draw 2D bars in the HUD pass, never between native transparent FX draws.
   // The 2D helpers change GS state without updating the FX renderer's state cache.
