@@ -3,7 +3,7 @@
 
 #include "game.h"
 
-#define LEVIATHAN_RENDER_COST                    (200)
+#define LEVIATHAN_RENDER_COST                    (300)
 
 #define LEVIATHAN_CHASE_TARGET_RADIUS						 (20.0)
 #define LEVIATHAN_CHASE_SPEED_MULT	             (2.0)
