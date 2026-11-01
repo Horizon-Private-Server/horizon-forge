@@ -326,8 +326,7 @@ public class RaidsModeData : CustomModeData, ICodeGen, IBuildHook
             state.MainBodyReady.Add("badgesStart();");
             state.MainBodyReady.Add("ammodropStart();");
             state.MainBodyReady.Add("npcStart();");
-            if (MissionType == RAIDS_MISSION_TYPES.OpenWorld)
-                state.MainBodyReady.Add("mapApplyZoning();");
+            state.MainBodyReady.Add("mapApplyZoning();");
         }
 
         // tick

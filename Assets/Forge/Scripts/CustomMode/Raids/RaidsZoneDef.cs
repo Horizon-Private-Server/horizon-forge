@@ -8,6 +8,8 @@ public class RaidsZoneDef : MonoBehaviour
 {
     public Cuboid Cuboid;
     public DLRaidsDifficulties Difficulty;
+    [Tooltip("Show the zone name and difficulty on the local HUD for 3 seconds when entering this zone.")]
+    public bool ShowEntryOverlay;
 
     public string Name => gameObject.name;
 
@@ -23,7 +25,8 @@ public class RaidsZoneDef : MonoBehaviour
         sb.AppendLine("\t{");
         sb.AppendLine($"\t\t.CuboidIdx = {cuboidIdx},");
         sb.AppendLine($"\t\t.Difficulty = {(int)this.Difficulty},");
-        sb.AppendLine($"\t\t.Name = \"{Name.MaxLength(31).Escape()}\"");
+        sb.AppendLine($"\t\t.Name = \"{Name.MaxLength(31).Escape()}\",");
+        sb.AppendLine($"\t\t.ShowEntryOverlay = {(ShowEntryOverlay ? 1 : 0)}");
         sb.AppendLine("\t},");
 
         return sb.ToString();

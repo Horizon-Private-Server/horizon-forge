@@ -25,6 +25,8 @@ void mapDrawHud(void)
 {
   if (MapConfig.State && MapConfig.Functions.ModeDrawHudFunc)
     MapConfig.Functions.ModeDrawHudFunc();
+    
+  mapDrawZoneOverlay();
 }
 
 //--------------------------------------------------------------------------

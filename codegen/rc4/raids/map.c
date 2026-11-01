@@ -16,6 +16,10 @@
 #include <libdl/hud.h>
 #include <libdl/utils.h>
 #include <libdl/spawnpoint.h>
+#include <libdl/graphics.h>
+#include <libdl/time.h>
+#include <libdl/math.h>
+#include <libdl/player.h>
 #include "mover.h"
 #include "gate.h"
 #include "dummy.h"
@@ -27,6 +31,7 @@
 #include "game.h"
 #include "shared.h"
 #include "utils.h"
+#include "menu.h"
 
 extern struct RaidsMapConfig MapConfig;
 
@@ -51,6 +56,8 @@ typedef struct HudBoss_CommonData
 
 Moby* mapBossMoby = NULL;
 float mapBossLastHealth = -1;
+int mapCurrentZoneIdx = -1;
+int mapZoneOverlayEndTime = 0;
 
 u8 mobPlaySoundCooldownTicks[MAX_MOB_SPAWN_PARAMS][MOBS_PLAY_SOUND_COOLDOWN_MAX_SOUNDIDS] = {};
 
@@ -274,8 +281,13 @@ void mapApplyFixes(void)
 void mapApplyZoning(void)
 {
   Player* player = playerGetFromSlot(0);
-  if (!player || !MapConfig.State) return;
+  if (!player || !MapConfig.State) {
+    mapCurrentZoneIdx = -1;
+    mapZoneOverlayEndTime = 0;
+    return;
+  }
 
+  int zoneIdx = -1;
   int i;
   for (i = 0; i < mapDifficultyZonesCount; ++i) {
     int cuboidIdx = mapDifficultyZones[i].CuboidIdx;
@@ -285,12 +297,44 @@ void mapApplyZoning(void)
     if (!cuboid) continue;
 
     if (spawnPointIsPointInside(cuboid, player->PlayerPosition, NULL)) {
-      MapConfig.State->DifficultyStars = mapDifficultyZones[i].Difficulty;
+      zoneIdx = i;
       break;
     }
   }
   
-  MapConfig.State->LivesLeft = 2;
+  // entry notifications belong to the local player, independent of difficulty changes
+  if (zoneIdx != mapCurrentZoneIdx) {
+    mapCurrentZoneIdx = zoneIdx;
+    mapZoneOverlayEndTime = zoneIdx >= 0 && mapDifficultyZones[zoneIdx].ShowEntryOverlay
+      ? gameGetTime() + 3 * TIME_SECOND : 0;
+  }
+
+  if (missionIsOpenWorld()) {
+    if (zoneIdx >= 0) MapConfig.State->DifficultyStars = mapDifficultyZones[zoneIdx].Difficulty;
+    MapConfig.State->LivesLeft = 2;
+  }
+}
+
+//--------------------------------------------------------------------------
+void mapDrawZoneOverlay(void)
+{
+  if (!MapConfig.State || shouldCloseMenu() || MapConfig.State->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
+  if (mapCurrentZoneIdx < 0 || mapCurrentZoneIdx >= mapDifficultyZonesCount) return;
+  if (gameGetTime() >= mapZoneOverlayEndTime) return;
+
+  struct RaidsDifficultyZone* zone = &mapDifficultyZones[mapCurrentZoneIdx];
+  Window_t window;
+  windowCreate(&window, SCREEN_WIDTH * 0.5, SCREEN_HEIGHT * 0.2, 0, 0, 280, 52, TEXT_ALIGN_TOPCENTER);
+  menuDrawFittedText(&window, window.Width * 0.5, 10, window.Width, 0.9, RAIDS_MENU_TEXT_COLOR, zone->Name, TEXT_ALIGN_MIDDLECENTER);
+  windowDrawBox(&window, TEXT_ALIGN_TOPLEFT, (window.Width - 180) * 0.5, 24, 180, 1, RAIDS_MENU_SECONDARY_COLOR, TEXT_ALIGN_TOPLEFT);
+
+  int stars = clamp(zone->Difficulty + 1, 1, RAIDS_DIFFICULTY_COUNT);
+  int i;
+  gfxSetupGifPaging(0);
+  for (i = 0; i < stars; ++i) {
+    windowDrawSprite(&window, TEXT_ALIGN_TOPLEFT, window.Width * 0.5 + (i - (stars - 1) * 0.5) * 20, 38, 16, 16, 88, 0x80008080, TEXT_ALIGN_MIDDLECENTER);
+  }
+  gfxDoGifPaging();
 }
 
 //--------------------------------------------------------------------------

@@ -33,6 +33,7 @@ struct Guber* mapGetGuber(Moby* moby);
 void mapHandleEvent(Moby* moby, GuberEvent* event);
 void mapInstallMobyFunctions(MobyFunctions* mobyFunctions);
 void mapApplyZoning(void);
+void mapDrawZoneOverlay(void);
 void mapStart(void);
 void mapTick(void);
 void mapTickEnd(void);
