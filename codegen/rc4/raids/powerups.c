@@ -317,6 +317,7 @@ float powerupsReferenceDamage(Player* player, Moby* target, int weaponId)
     RaidsInventoryItem_t* item = bankGetEquippedWeaponFromGadgetBox(player->GadgetBox, weaponId);
     if (item)
       damage = bankGetWeaponDamage(item);
+    damage *= 1 + PLAYER_LEVEL_DAMAGE_FACTOR * MapConfig.State->PlayerStates[player->PlayerId].State.Level;
   }
 
   // Use the same Hero/class calculation as a hit, without crits, falloff, or Quad.
@@ -324,7 +325,7 @@ float powerupsReferenceDamage(Player* player, Moby* target, int weaponId)
     .Attacker = player,
     .Target = target,
     .WeaponId = weaponId,
-    .Damage = damage * (1 + PLAYER_LEVEL_DAMAGE_FACTOR * MapConfig.State->PlayerStates[player->PlayerId].State.Level)
+    .Damage = damage
   };
   skillsFinalizePlayerDamage(&context);
   return context.Damage > 0 && context.Damage <= FLT_MAX ? context.Damage : 0;
