@@ -31,12 +31,21 @@
 #define INVENTORY_DRAW_INFO_W                       (INVENTORY_DRAW_FULL_W - (INVENTORY_DRAW_WEAPONS_W))
 #define INVENTORY_DRAW_INFO_H                       (INVENTORY_DRAW_INFO_W)
 
+enum InventorySort
+{
+  INVENTORY_SORT_RARITY = 0,
+  INVENTORY_SORT_PROFICIENCY,
+  INVENTORY_SORT_FAVORITES,
+  INVENTORY_SORT_COUNT,
+};
+
 typedef struct InventoryDrawState
 {
   int SelectedIdx;
   int FilterIdx;
   int PageIdx;
   char ShowSellDialog;
+  int SortIdx;
 } InventoryDrawState_t;
 
 void inventoryOpen(void);

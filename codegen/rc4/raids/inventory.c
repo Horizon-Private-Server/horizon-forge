@@ -12,6 +12,7 @@
 #include <libdl/string.h>
 #include <libdl/hud.h>
 #include <libdl/graphics.h>
+#include <libdl/pad.h>
 #include "utils.h"
 #include "game.h"
 #include "window.h"
@@ -42,6 +43,12 @@ InventoryDrawState_t inventoryDrawState = {
   .SelectedIdx = 0,
   .FilterIdx = 1,
   .ShowSellDialog = 0,
+};
+
+char* inventorySortNames[] = {
+  "RARITY",
+  "LEVEL",
+  "FAVS",
 };
 
 char* inventoryRarityNames[] = {
@@ -136,7 +143,8 @@ char* inventoryBadgeNames[] = {
 //--------------------------------------------------------------------------
 int inventoryGetHasInventoryPage(void)
 {
-  return inventoryPage.HasFlag && inventoryPage.Filter == inventoryDrawState.FilterIdx && inventoryPage.Page == inventoryDrawState.PageIdx;
+  return inventoryPage.HasFlag && inventoryPage.Filter == inventoryDrawState.FilterIdx && inventoryPage.Page == inventoryDrawState.PageIdx
+    && inventoryPage.Sort == inventoryDrawState.SortIdx;
 }
 
 //--------------------------------------------------------------------------
@@ -147,8 +155,19 @@ int inventoryHasPendingInventoryPageRequest(void)
 }
 
 //--------------------------------------------------------------------------
+int inventoryGetPageCount(void)
+{
+  int filter = inventoryDrawState.FilterIdx;
+  if (filter < 0 || filter >= COUNT_OF(inventoryPage.TotalByFilter)) return 1;
+
+  int count = (inventoryPage.TotalByFilter[filter] + BANK_MAX_ITEMS - 1) / BANK_MAX_ITEMS;
+  return count > 0 ? count : 1;
+}
+
+//--------------------------------------------------------------------------
 RaidsInventoryItem_t* inventoryGetLocalItem(int index)
 {
+  if (!inventoryGetHasInventoryPage()) return NULL;
   if (index < 0) return NULL;
   if (index >= BANK_MAX_ITEMS) return NULL;
 
@@ -159,9 +178,48 @@ RaidsInventoryItem_t* inventoryGetLocalItem(int index)
 }
 
 //--------------------------------------------------------------------------
+void inventorySaveState(void)
+{
+  struct RaidsState* state = MapConfig.State;
+  if (!state) return;
+
+  struct RaidsInventoryMenuState* saved = &state->InventoryMenu;
+  saved->SelectedIdx = inventoryDrawState.SelectedIdx;
+  saved->FilterIdx = inventoryDrawState.FilterIdx;
+  saved->PageIdx = inventoryDrawState.PageIdx;
+  saved->SortIdx = inventoryDrawState.SortIdx;
+  saved->HasState = 1;
+}
+
+//--------------------------------------------------------------------------
+void inventoryRestoreState(void)
+{
+  struct RaidsState* state = MapConfig.State;
+  if (!state) return;
+
+  struct RaidsInventoryMenuState* saved = &state->InventoryMenu;
+  inventoryDrawState.SelectedIdx = 0;
+  inventoryDrawState.FilterIdx = 1;
+  inventoryDrawState.PageIdx = 0;
+  inventoryDrawState.SortIdx = INVENTORY_SORT_RARITY;
+  if (!saved->HasState) return;
+
+  if (saved->SelectedIdx >= 0 && saved->SelectedIdx < BANK_MAX_ITEMS)
+    inventoryDrawState.SelectedIdx = saved->SelectedIdx;
+  if (saved->FilterIdx >= 1 && saved->FilterIdx < INVENTORY_TAB_COUNT)
+    inventoryDrawState.FilterIdx = saved->FilterIdx;
+  if (saved->PageIdx >= 0)
+    inventoryDrawState.PageIdx = saved->PageIdx;
+  if (saved->SortIdx >= 0 && saved->SortIdx < INVENTORY_SORT_COUNT)
+    inventoryDrawState.SortIdx = saved->SortIdx;
+}
+
+//--------------------------------------------------------------------------
 void inventoryRequestPage(void)
 {
-  bankRequestInventoryFromServer(&inventoryPage, inventoryDrawState.FilterIdx, inventoryDrawState.PageIdx);
+  inventorySaveState();
+  bankRequestInventoryFromServer(&inventoryPage, inventoryDrawState.FilterIdx, inventoryDrawState.PageIdx,
+    inventoryDrawState.SortIdx);
 }
 
 //--------------------------------------------------------------------------
@@ -173,9 +231,9 @@ void inventoryOpen(void)
   if (shouldCloseMenu()) return;
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_NONE) return;
 
+  inventoryRestoreState();
   state->MenuOpen = RAIDS_CUSTOM_MENU_INVENTORY;
-  inventoryDrawState.SelectedIdx = 0;
-  inventoryDrawState.PageIdx = 0;
+  inventoryDrawState.ShowSellDialog = 0;
   inventoryRequestPage();
   padDisableInput();
 }
@@ -188,6 +246,7 @@ void inventoryClose(void)
 
   if (state->MenuOpen != RAIDS_CUSTOM_MENU_INVENTORY) return;
   
+  inventorySaveState();
   state->MenuOpen = RAIDS_CUSTOM_MENU_NONE;
   padEnableInput();
   //bankSendInventoryToServer();
@@ -716,28 +775,40 @@ void inventoryDrawFooter(Window_t* drawWindow)
   int selectedTooStrong = 0;
   int canSell = 0;
   int alreadyEquipped = 0;
-  int badgeAndMissionActive = 0;
   int isLoading = !inventoryGetHasInventoryPage();
-  u32 sellPrice = 0;
-  Player* localPlayer = playerGetFromSlot(0);
-
-  RaidsPlayerBank_t* localBank = bankGetLocalBank();
   RaidsInventoryItem_t* selectedItem = inventoryGetLocalItem(inventoryDrawState.SelectedIdx);
-  if (selectedItem) {
-    sellPrice = selectedItem->Price;
-    inventoryGetSelectedItemInteraction(&canSell, &alreadyEquipped, &canEquip, &selectedTooStrong);
-  }
-  
-  // draw footer text
+  inventoryGetSelectedItemInteraction(&canSell, &alreadyEquipped, &canEquip, &selectedTooStrong);
+
   strBuf[0] = 0;
   if (!isLoading) {
-    strcat(strBuf, "\x14 \x15 FILTER    ");
-    if (canEquip) strcat(strBuf, "\x10 EQUIP    ");
-    if (selectedItem) strcat(strBuf, "\x11 FAV    ");
-    if (canSell) { strcat(strBuf, "\x13 SELL    "); }
+    strcat(strBuf, "\x14 \x15 TAB  ");
+    if (canEquip) strcat(strBuf, "\x10 EQUIP  ");
+    if (selectedItem) strcat(strBuf, "\x11 FAV  ");
+    if (canSell) strcat(strBuf, "\x13 SELL  ");
   }
-  strcat(strBuf, "R2 SETTINGS    \x12 CLOSE");
+  strcat(strBuf, "\x17 SETTINGS  ");
+  int length = strlen(strBuf);
+  snprintf(strBuf + length, sizeof(strBuf) - length, "\x16 SORT: %s  \x12 CLOSE", inventorySortNames[inventoryDrawState.SortIdx]);
   menuDrawFooter(drawWindow, strBuf);
+}
+
+//--------------------------------------------------------------------------
+void inventoryDrawPaging(Window_t* drawWindow)
+{
+  char strBuf[32];
+  int hasPage = inventoryGetHasInventoryPage();
+  int pageCount = inventoryGetPageCount();
+  u32 prevColor = hasPage && inventoryDrawState.PageIdx > 0 ? RAIDS_MENU_TEXT_COLOR : RAIDS_MENU_SECONDARY_COLOR;
+  u32 nextColor = hasPage && inventoryDrawState.PageIdx + 1 < pageCount ? RAIDS_MENU_TEXT_COLOR : RAIDS_MENU_SECONDARY_COLOR;
+
+  windowFill(drawWindow, RAIDS_MENU_FOOTER_COLOR);
+  windowDrawText(drawWindow, TEXT_ALIGN_MIDDLELEFT, 4, 0, 0.55, prevColor, "LEFT Prev", -1, TEXT_ALIGN_MIDDLELEFT);
+  windowDrawText(drawWindow, TEXT_ALIGN_MIDDLERIGHT, -4, 0, 0.55, nextColor, "Next RIGHT", -1, TEXT_ALIGN_MIDDLERIGHT);
+  if (hasPage)
+    snprintf(strBuf, sizeof(strBuf), "Page %d/%d", inventoryDrawState.PageIdx + 1, pageCount);
+  else
+    snprintf(strBuf, sizeof(strBuf), "Page %d/...", inventoryDrawState.PageIdx + 1);
+  windowDrawText(drawWindow, TEXT_ALIGN_MIDDLECENTER, 0, 0, 0.55, RAIDS_MENU_TEXT_COLOR, strBuf, -1, TEXT_ALIGN_MIDDLECENTER);
 }
 
 //--------------------------------------------------------------------------
@@ -753,6 +824,7 @@ void inventoryDraw(void)
   const float accountHeight = 44;
   const float gridWidth = 225;
   const float tabHeaderHeight = 24;
+  const float pagingHeight = 16;
   const float footerHeight = RAIDS_MENU_FOOTER_HEIGHT;
   const float bodyY = titleHeight + accountHeight;
   const float bodyHeight = windowHeight - bodyY - footerHeight;
@@ -791,8 +863,12 @@ void inventoryDraw(void)
 
   // draw tab
   Window_t drawWindowTab;
-  windowCreateFrom(&drawWindowTab, &drawWindow, 0, bodyY + tabHeaderHeight, gridWidth, bodyHeight - tabHeaderHeight, TEXT_ALIGN_TOPLEFT);
+  windowCreateFrom(&drawWindowTab, &drawWindow, 0, bodyY + tabHeaderHeight, gridWidth, bodyHeight - tabHeaderHeight - pagingHeight, TEXT_ALIGN_TOPLEFT);
   inventoryDrawTab(&drawWindowTab);
+
+  Window_t drawWindowPaging;
+  windowCreateFrom(&drawWindowPaging, &drawWindow, 0, bodyY + bodyHeight - pagingHeight, gridWidth, pagingHeight, TEXT_ALIGN_TOPLEFT);
+  inventoryDrawPaging(&drawWindowPaging);
 
   // draw info
   Window_t drawWindowInfo;
@@ -883,14 +959,29 @@ void inventoryHandleInput(void)
   // handle input
   if (inventoryGetHasInventoryPage()) {
     int selIdx = inventoryDrawState.SelectedIdx;
-    if (padGetButtonDown(0, PAD_LEFT) > 0) {                              // NAV LEFT
+    if (padGetButtonDown(0, PAD_L2) > 0) {                              // SORT
+      inventoryDrawState.SortIdx = (inventoryDrawState.SortIdx + 1) % INVENTORY_SORT_COUNT;
+      inventoryDrawState.PageIdx = 0;
+      selIdx = 0;
+      inventoryRequestPage();
+    } else if (padGetButtonDown(0, PAD_LEFT) > 0) {                       // NAV LEFT
       int row = (selIdx-1)%INVENTORY_DRAW_WEAPONS_DIM;
-      if (row < 0 || row > (selIdx%INVENTORY_DRAW_WEAPONS_DIM)) selIdx += INVENTORY_DRAW_WEAPONS_DIM-1;
-      else selIdx--;
+      if (row < 0 || row > (selIdx%INVENTORY_DRAW_WEAPONS_DIM)) {
+        selIdx += INVENTORY_DRAW_WEAPONS_DIM-1;
+        if (inventoryDrawState.PageIdx > 0) {
+          --inventoryDrawState.PageIdx;
+          inventoryRequestPage();
+        }
+      } else selIdx--;
     } else if (padGetButtonDown(0, PAD_RIGHT) > 0) {                      // NAV RIGHT
       int row = (selIdx+1)%INVENTORY_DRAW_WEAPONS_DIM;
-      if (row < (selIdx%INVENTORY_DRAW_WEAPONS_DIM)) selIdx -= INVENTORY_DRAW_WEAPONS_DIM-1;
-      else selIdx++;
+      if (row < (selIdx%INVENTORY_DRAW_WEAPONS_DIM)) {
+        selIdx -= INVENTORY_DRAW_WEAPONS_DIM-1;
+        if (inventoryDrawState.PageIdx + 1 < inventoryGetPageCount()) {
+          ++inventoryDrawState.PageIdx;
+          inventoryRequestPage();
+        }
+      } else selIdx++;
     } else if (padGetButtonDown(0, PAD_DOWN) > 0) {                       // NAV DOWN
       selIdx = (selIdx+INVENTORY_DRAW_WEAPONS_DIM) % BANK_MAX_ITEMS;
     } else if (padGetButtonDown(0, PAD_UP) > 0) {                         // NAV UP
@@ -924,9 +1015,11 @@ void inventoryHandleInput(void)
       else selectedItem->Notify = RAIDS_ITEM_NOTIFY_FAV;
 
       bankSendInventoryItemToServer(selectedItem, RAIDS_ITEM_UPDATE_SET_NOTIFY);
+      inventoryRequestPage();
     }
 
     inventoryDrawState.SelectedIdx = selIdx;
+    inventorySaveState();
   }
 }
 
@@ -954,6 +1047,13 @@ void inventoryTick(void)
   }
 
   if (MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_INVENTORY) {
+
+    // return to the last page when selling removes a page
+    if (inventoryGetHasInventoryPage() && inventoryDrawState.PageIdx >= inventoryGetPageCount()) {
+      inventoryDrawState.PageIdx = inventoryGetPageCount() - 1;
+      inventoryDrawState.SelectedIdx = 0;
+      inventoryRequestPage();
+    }
       
     // reset filter when inventory changes while menu is open
     RaidsPlayerBank_t* localBank = bankGetLocalBank();

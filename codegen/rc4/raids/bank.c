@@ -330,19 +330,20 @@ void bankRequestEquippedInventoryFromServer(void)
 }
 
 //--------------------------------------------------------------------------
-void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page)
+void bankRequestInventoryFromServer(RaidsPlayerInventoryPage_t* inventory, int filter, int page, int sort)
 {
   void* connection = netGetLobbyServerConnection();
   if (!connection) return;
 
   inventory->LastRequestTime = timerGetSystemTime();
   inventory->HasFlag = 0;
-  struct RaidsGetBankRequest msg = {
+  struct RaidsGetBankInventoryRequest msg = {
     .DestAddress = (u32)inventory,
     .DestHasFlagAddress = (u32)&inventory->HasFlag,
     .DestTimeFlagAddress = (u32)&inventory->LastRequestTime,
     .Filter = filter,
-    .Page = page
+    .Page = page,
+    .Sort = sort
   };
   netSendCustomAppMessage(NET_DELIVERY_CRITICAL, connection, NET_LOBBY_CLIENT_INDEX, CUSTOM_MSG_ID_GET_RAIDS_BANK_INVENTORY_REQUEST, sizeof(msg), &msg);
   DPRINTF("request inventory\n");
