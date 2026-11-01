@@ -59,6 +59,7 @@ struct ContractsState {
   int ShowRerollDialog;
   int CanInteract;
   int AutoRefreshTicker;
+  u32 NotifiedExpiredContractUids[BANK_MAX_CONTRACTS];
 } contractsState;
 
 extern char inventoryAlphaModSpriteIds[];
@@ -570,6 +571,21 @@ int contractsPlayerIsLookingAtVendor(Player* player, float radius, float radians
 void contractsTick(void)
 {
   if (!MapConfig.State) return;
+
+  // notify once for each expired contract using the menu's status check
+  RaidsPlayerBank_t* bank = bankGetLocalBank();
+  if (bank && bankGetHasContracts()) {
+    int i;
+    for (i = 0; i < BANK_MAX_CONTRACTS; ++i) {
+      RaidsContract_t* contract = &bank->Contracts[i];
+      if (!contractsIsContractExpired(contract) || contractsState.NotifiedExpiredContractUids[i] == contract->Uid) continue;
+
+      char buf[64];
+      snprintf(buf, sizeof(buf), "Contract #%d Expired", i + 1);
+      pushSnack(0, buf, 240);
+      contractsState.NotifiedExpiredContractUids[i] = contract->Uid;
+    }
+  }
 
   if (shouldCloseMenu()
       || (MapConfig.State->MenuOpen == RAIDS_CUSTOM_MENU_CONTRACTS
