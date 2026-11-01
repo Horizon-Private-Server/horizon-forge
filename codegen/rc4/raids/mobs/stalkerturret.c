@@ -604,7 +604,7 @@ void stalkerturretDoAction(Moby* moby)
         // face target
         if (target) {
           float dist = vector_distance(target->Position, moby->Position);
-          float predictFactor = MapConfig.State->DifficultyStars * STALKERTURRET_TURN_PREDICT_FACTOR_PER_STAR * lerpf(1, 7, clamp(dist / 30, 0, 1));
+          float predictFactor = pvars->MobVars.DifficultyStars * STALKERTURRET_TURN_PREDICT_FACTOR_PER_STAR * lerpf(1, 7, clamp(dist / 30, 0, 1));
           mobTurnTowardsPredictive(turretMoby, target, turnSpeed, predictFactor);
         }
 
@@ -614,12 +614,12 @@ void stalkerturretDoAction(Moby* moby)
 
         if (stalkerturretCanShoot(pvars) && turretVars->GatlingDelay1 == 0) {
           stalkerturretFireShot(moby, target, 3);
-          turretVars->GatlingDelay1 = (u8)clamp(mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY) - (2 * MapConfig.State->DifficultyStars), 0, 255);
+          turretVars->GatlingDelay1 = (u8)clamp(mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY) - (2 * pvars->MobVars.DifficultyStars), 0, 255);
           turretVars->GatlingActive = !turretVars->GatlingActive;
         }
         if (stalkerturretCanShoot(pvars) && turretVars->GatlingDelay2 == 0) {
           stalkerturretFireShot(moby, target, 8);
-          turretVars->GatlingDelay2 = (u8)clamp(mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY) - (2 * MapConfig.State->DifficultyStars), 0, 255);
+          turretVars->GatlingDelay2 = (u8)clamp(mobGetInt(moby, STALKERTURRET_PARAM_FIRE_SHOT_DELAY) - (2 * pvars->MobVars.DifficultyStars), 0, 255);
           turretVars->GatlingActive = !turretVars->GatlingActive;
         }
       }

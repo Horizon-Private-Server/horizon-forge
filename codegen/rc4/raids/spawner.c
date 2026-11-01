@@ -61,8 +61,7 @@ int spawnerGetDifficultyStars(Moby* moby)
   if (!MapConfig.State) return 0;
   if (!missionIsOpenWorld()) return MapConfig.State->DifficultyStars;
 
-  // if we're in an open world
-  // use zone to determine difficulty mult
+  // use the first difficulty zone containing the spawner
   int i;
   for (i = 0; i < mapDifficultyZonesCount; ++i) {
     int cuboidIdx = mapDifficultyZones[i].CuboidIdx;

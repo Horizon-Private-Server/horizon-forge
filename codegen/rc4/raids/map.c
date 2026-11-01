@@ -286,6 +286,7 @@ void mapApplyZoning(void)
 
     if (spawnPointIsPointInside(cuboid, player->PlayerPosition, NULL)) {
       MapConfig.State->DifficultyStars = mapDifficultyZones[i].Difficulty;
+      break;
     }
   }
   
