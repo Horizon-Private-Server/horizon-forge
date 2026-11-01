@@ -157,7 +157,7 @@ void contractsReroll(RaidsContract_t* item)
   RaidsPlayerBank_t* bank = bankGetLocalBank();
   if (!bank) return;
 
-  // Expired contracts can be dismissed for free; other buyouts cost bolts.
+  // expired contracts are free to dismiss; rejecting other contracts costs bolts
 #if !DEV_BUILD
   if (!contractsIsContractExpired(item)) {
     if (bankGetBolts() < CONTRACTS_REROLL_COST) return;
@@ -394,7 +394,7 @@ void contractsDrawFooter(Window_t* drawWindow)
       if (!selectedContract->Activated && selectedContract->RefreshInMinutes > 0) strcat(strBuf, "\x10 ACCEPT    ");
       else if (isCompleted) strcat(strBuf, "\x10 CLAIM    ");
       else if (isExpired) strcat(strBuf, "\x10 DISMISS    ");
-      if (!isCompleted && !isExpired) strcat(strBuf, "\x13 BUYOUT    ");
+      if (!isCompleted && !isExpired) strcat(strBuf, "\x13 REJECT    ");
     }
   }
   strcat(strBuf, "\x12 CLOSE");
@@ -412,7 +412,7 @@ void contractsDrawRerollDialog(Window_t* drawWindow, int contractInfoHeight)
   const float detailsX = 192;
   float detailsWidth = drawWindow->Width - detailsX - padding;
 
-  menuDrawPopupFrame(drawWindow, "Buyout Contract", RAIDS_MENU_TEXT_COLOR, "\x10 PAY        \x12 CANCEL");
+  menuDrawPopupFrame(drawWindow, "Reject Contract", RAIDS_MENU_TEXT_COLOR, "\x10 REJECT     \x12 CANCEL");
   Window_t windowContractInfo;
   windowCreateFrom(&windowContractInfo, drawWindow, padding, 40, 168, contractInfoHeight, TEXT_ALIGN_TOPLEFT);
   contractsDrawContractInfo(&windowContractInfo, selectedContract, -1);
@@ -420,7 +420,7 @@ void contractsDrawRerollDialog(Window_t* drawWindow, int contractInfoHeight)
   Window_t costWindow;
   windowCreateFrom(&costWindow, drawWindow, detailsX, 40, detailsWidth, 144, TEXT_ALIGN_TOPLEFT);
   windowFill(&costWindow, RAIDS_MENU_TRACK_COLOR);
-  menuDrawFittedText(&costWindow, detailsWidth * 0.5, 12, detailsWidth - 16, 0.55, RAIDS_MENU_SECONDARY_COLOR, "Buyout cost", TEXT_ALIGN_TOPCENTER);
+  menuDrawFittedText(&costWindow, detailsWidth * 0.5, 12, detailsWidth - 16, 0.55, RAIDS_MENU_SECONDARY_COLOR, "Rejection cost", TEXT_ALIGN_TOPCENTER);
   snprintf(strBuf, sizeof(strBuf), "%'u bolts", cost);
   menuDrawFittedText(&costWindow, detailsWidth * 0.5, 30, detailsWidth - 16, 0.95, bankGetBolts() < cost ? RAIDS_MENU_WARNING_COLOR : RAIDS_MENU_TEXT_COLOR, strBuf, TEXT_ALIGN_TOPCENTER);
   menuDrawFittedText(&costWindow, detailsWidth * 0.5, 66, detailsWidth - 16, 0.55, RAIDS_MENU_SECONDARY_COLOR, "Bolts available", TEXT_ALIGN_TOPCENTER);
